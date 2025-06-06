@@ -1,4 +1,4 @@
-//! CHANGEME library-level docs.
+//! CHANGE ME
 
 #[cfg(test)]
 mod tests {
