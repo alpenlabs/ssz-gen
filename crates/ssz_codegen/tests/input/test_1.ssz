@@ -1,0 +1,84 @@
+val_x = 42
+val_y = 64
+
+alias_uint_alias = uint16
+alias_vec_a = Vector[uint8, 10]
+alias_vec_b = alias_vec_a
+alias_list_alias = List[uint8, 5]
+alias_nested = alias_uint_alias
+
+size_alias = val_y
+bit_alias = Bitlist[val_x]
+
+class Alpha(Container):
+    a: uint8
+    b: uint16
+    c: alias_vec_b
+
+class Beta(Container):
+    d: alias_list_alias
+    e: uint8
+    f: alias_uint_alias
+
+class Gamma(StableContainer[val_x]):
+    g: Optional[uint8]
+    h: Optional[List[alias_uint_alias, 8]]
+
+base_container = Container
+big_stable = StableContainer[128]
+
+class Delta(base_container):
+    z: boolean
+    w: byte
+
+class Epsilon(Gamma):
+    i: Optional[uint8]
+    j: Optional[alias_nested]
+
+class Zeta(big_stable):
+    u: Optional[Vector[uint8, 16]]
+    v: Optional[alias_list_alias]
+
+class TestType(Container):
+    ccc: uint8
+    ddd: byte
+    eee: List[uint16, 3]
+
+class Eta(Container):
+    l: Zeta
+    m: TestType
+    n: Union[uint8, uint16]
+
+union_a = Union[uint8, uint8, uint16]
+union_b = Union[uint8, union_a, uint32, List[byte, 12]]
+
+class Theta(Container):
+    o: union_b
+    p: Union[alias_uint_alias, alias_uint_alias]
+    q: alias_vec_a
+
+class Iota(Epsilon):
+    r: Optional[List[alias_nested, 2]]
+    s: Optional[uint8]
+
+class Kappa(Container):
+    t: Optional[Alpha]
+    u: Optional[Beta]
+    v: Bitvector[val_y]
+
+stable_class_alias = StableContainer[4]
+
+class Lambda(stable_class_alias):
+    w: Optional[uint16]
+    x: Optional[uint8]
+
+class Mu(Container):
+    y: Lambda
+    z: union_a
+
+alias_mu = Mu
+
+class Nu(Container):
+    zz: alias_mu
+    aaa: Vector[bit, 4]
+    bbb: bit_alias

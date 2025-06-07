@@ -2,10 +2,10 @@
 # Original source licensed under the Apache License 2.0
 
 [package]
-name = "ssz_types"
-version = "0.11.0"
+name = "ssz"
+version = "0.9.0"
 edition = "2021"
-description = "List, vector and bitfield types for SSZ"
+description = "SimpleSerialize (SSZ)"
 license = "Apache-2.0"
 readme = "README.md"
 repository.workspace = true
@@ -15,16 +15,22 @@ keywords.workspace = true
 [lints]
 workspace = true
 
-[dependencies]
-ethereum_serde_utils.workspace = true
-ssz.workspace = true
-tree_hash.workspace = true
-serde.workspace = true
-serde_derive.workspace = true
-typenum.workspace = true
-arbitrary = { workspace = true, optional = true }
-itertools.workspace = true
+[lib]
+name = "ssz"
 
 [dev-dependencies]
+alloy-primitives = { workspace = true, features = ["getrandom"] }
+ssz_derive.workspace = true
 serde_json.workspace = true
-tree_hash_derive.workspace = true
+
+[dependencies]
+alloy-primitives.workspace = true
+ethereum_serde_utils.workspace = true
+smallvec.workspace = true
+itertools.workspace = true
+serde.workspace = true
+typenum.workspace = true
+arbitrary = { workspace = true, optional = true }
+
+[features]
+arbitrary = ["dep:arbitrary", "alloy-primitives/arbitrary"]
