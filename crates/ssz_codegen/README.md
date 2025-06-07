@@ -64,6 +64,6 @@ The variants within the enum are named `Selector{index}`.
 Equivalent aliases being used in a union will not result in a new enum creation. `Union[byte]` and `Union[uint8]` will both be treated as the exact same union.
 
 # Example Input / Output
-Input: [tests/input/test_1.ssz](/crates/ssz_codegen/tests/input/test_1.ssz)
+Input: [tests/input/test_1.ssz](crates/ssz_codegen/tests/input/test_1.ssz)
 
-Output: [tests/expected_output/test_1.rs](/crates/ssz_codegen/tests/expected_output/test_1.rs)
+Output: [tests/expected_output/test_1.rs](crates/ssz_codegen/tests/expected_output/test_1.rs)
