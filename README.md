@@ -1,37 +1,29 @@
-# CHANGE ME
+# ssz-gen
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache-blue.svg)](https://opensource.org/licenses/apache-2-0)
 [![ci](https://github.com/alpenlabs/ssz-gen/actions/workflows/lint.yml/badge.svg?event=push)](https://github.com/alpenlabs/ssz-gen/actions)
 [![docs](https://img.shields.io/badge/docs-docs.rs-orange)](https://docs.rs/ssz-gen)
 
-This repo is a template for easy setup of a Rust project within
-[`AlpenLabs` GitHub organization](https://github.com/alpenlabs).
+A Rust codegen tool that generates Rust code from pythonic SSZ (Simple Serialize) definitions. This project parses Python-style SSZ schema definitions using [sizzle-parser](https://codeberg.org/treyd/sizzle-parser/) and generates equivalent Rust implementations utilizing modified versions of libraries from [sigp](https://github.com/sigp):
 
-- It comes with a preconfigured `.justfile` for common tasks.
-- Licensing is taken care of, with dual MIT-Apache 2.0 licenses.
-- Continuous Integration is already set up with the common GitHub actions jobs
-hardened with [`zizmor`](https://docs.zizmor.sh).
-- Dependabot is enabled to automatically bump Rust and GitHub actions dependencies monthly.
-- There are 1 pull request template and 2 issues templates for bug reports and feature requests.
-- Proper lints for code maintainability are added to `Cargo.toml`.
-- If you need to publish crates to `crates.io`, you can use the `just publish` command,
-  and it will be automatically triggered by CI on every new tag release.
-  You just need to add a crates.io token to the `CARGO_REGISTRY_TOKEN` repository secret variable.
+- `ethereum_ssz` (ssz and ssz_derive): For SSZ encoding / decoding
+- `ssz_types`: For SSZ types such as List, Vector, Bitfield, etc
+- `tree_hash` (tree_hash and tree_hash_derive): For merklelization
 
-This template has a lot of `CHANGEME` placeholders that you should replace with your own values.
-Please do a repository-wide search and replace all occurrences of `CHANGEME` with your own values.
+These libraries have been modified to add StableContainer support and other enhancements.
 
 ## Features
 
-- Feature 1
-- Feature 2
+- Support for Container, StableContainer, and Profile types
+- Inheritance in container definitions
+- Union types
+- Constants and type aliases
+- Built-in type aliases (byte, bit, null, BytesX)
 
 ## Usage
 
-```rust
-// How to use the library/binary.
-```
+There is currently no clean way to use the library as it is in very early stages, however there is a test in `ssz_codegen` that reads all the `.ssz` files in [crates/ssz_codegen/tests/input](crates/ssz_codegen/tests/input) and generates rust code for them in [crates/ssz_codegen/tests/output](crates/ssz_codegen/tests/output)
 
 ## Contributing
 

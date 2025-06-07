@@ -1,18 +1,25 @@
 [workspace]
-members = ["crates/ssz_types"]
+members = [
+    "crates/ssz",
+    "crates/ssz_derive",
+    "crates/tree_hash",
+    "crates/tree_hash_derive",
+    "crates/ssz_types",
+    "crates/sizzle-parser",
+    "crates/ssz_codegen"
+]
 resolver = "2"
 
 [workspace.package]
-version = "0.0.0" # CHANGEME
-edition = "2024" # CHANGEME
+version = "0.1.0"
+edition = "2024"
 authors = [
-    "John Doe <noreply@alpenlabs.io>",  # CHANGEME
-    "Janet Doe <noreply@alpenlabs.io>", # CHANGEME
+    "Ali Rezai <ali.baghbidi@nethermind.io>"
 ]
-license = "MIT OR Apache-2.0" # CHANGEME
-repository = "https://github.com/alpenlabs/ssz-gen" # CHANGEME
-categories = ["cryptography::cryptocurrencies"] # CHANGEME
-keywords = ["crypto", "bitcoin"] # CHANGEME
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/alpenlabs/ssz-gen"
+categories = ["cryptography::cryptocurrencies"]
+keywords = ["crypto", "bitcoin"]
 
 [workspace.lints]
 rust.missing_debug_implementations = "warn"
@@ -32,3 +39,27 @@ lto = true        # Enable Link Time Optimization
 codegen-units = 1 # Reduced to increase optimizations
 panic = "abort"   # Abort on panic
 strip = "symbols" # Strip symbols from binary
+
+[workspace.dependencies]
+ssz_types =  { path = "crates/ssz_types" }
+ssz = { path = "crates/ssz" }
+ssz_derive = { path = "crates/ssz_derive" }
+tree_hash = { path = "crates/tree_hash" }
+tree_hash_derive = { path = "crates/tree_hash_derive" }
+sizzle-parser = { path = "crates/sizzle-parser" }
+
+alloy-primitives = "1.0"
+ethereum_serde_utils = "0.8.0"
+smallvec = { version = "1.6.1", features = ["const_generics"] }
+itertools = "0.13.0"
+serde = "1.0.0"
+serde_derive = "1.0.0"
+typenum = "1.12.0"
+serde_json = "1.0.0"
+arbitrary = { version = "1.0", features = ["derive"] }
+syn = "2.0.69"
+proc-macro2 = "1.0.23"
+quote = "1.0.18"
+darling = "0.20.9"
+rand = "0.8.5"
+ethereum_hashing = "0.7.0"
