@@ -1,0 +1,27 @@
+[package]
+name = "ssz_codegen"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Codegen tool for generating rust code from pythonic SSZ definitions"
+license.workspace = true
+readme = "README.md"
+repository.workspace = true
+categories.workspace = true
+keywords.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+ssz.workspace = true
+ssz_derive.workspace = true
+tree_hash.workspace = true
+tree_hash_derive.workspace = true
+ssz_types.workspace = true
+typenum.workspace = true
+sizzle-parser.workspace = true
+proc-macro2.workspace = true
+quote.workspace = true
+syn = { workspace = true, features = ["extra-traits"] }
+prettyplease = "0.2.33"

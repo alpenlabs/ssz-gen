@@ -91,3 +91,6 @@ coverage.xml
 
 # backup files
 *.bak
+
+# ssz_codegen test outputs
+crates/ssz_codegen/tests/output/
