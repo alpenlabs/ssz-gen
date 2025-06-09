@@ -5,8 +5,7 @@ members = [
     "crates/tree_hash",
     "crates/tree_hash_derive",
     "crates/ssz_types",
-    "crates/sizzle-parser",
-    "crates/ssz_codegen"
+    "crates/sizzle-parser"
 ]
 resolver = "2"
 
