@@ -918,16 +918,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "prettyplease"
-version = "0.2.33"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9dee91521343f4c5c6a63edd65e54f31f5c92fe8978c40a4282f8372194c6a7d"
-dependencies = [
- "proc-macro2",
- "syn 2.0.101",
-]
-
-[[package]]
 name = "primitive-types"
 version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1377,23 +1367,6 @@ dependencies = [
  "serde_json",
  "smallvec",
  "ssz_derive",
- "typenum",
-]
-
-[[package]]
-name = "ssz_codegen"
-version = "0.1.0"
-dependencies = [
- "prettyplease",
- "proc-macro2",
- "quote",
- "sizzle-parser",
- "ssz",
- "ssz_derive",
- "ssz_types",
- "syn 2.0.101",
- "tree_hash",
- "tree_hash_derive",
  "typenum",
 ]
 
