@@ -1,3 +1,8 @@
+// Modified in 2025 from the original version
+// Original source licensed under the Apache License 2.0
+
+//! Bitfield implementation
+
 use crate::{Decode, DecodeError, Encode};
 use core::marker::PhantomData;
 use serde::de::{Deserialize, Deserializer};
@@ -5,22 +10,27 @@ use serde::ser::{Serialize, Serializer};
 use serde_utils::hex::{encode as hex_encode, PrefixedHexVisitor};
 use smallvec::{smallvec, SmallVec, ToSmallVec};
 use typenum::Unsigned;
-pub mod bitvector_dynamic;
+pub(crate) mod bitvector_dynamic;
 
 /// Returned when an item encounters an error.
 #[derive(PartialEq, Debug, Clone)]
 pub enum Error {
+    /// The bitfield is out of bounds
     OutOfBounds {
+        /// The index
         i: usize,
+        /// The length
         len: usize,
     },
-    /// A `BitList` does not have a set bit, therefore it's length is unknowable.
+    /// A `BitList` does not have a set bit, therefore its length is unknowable.
     MissingLengthInformation,
     /// A `BitList` has excess bits set to true.
     ExcessBits,
     /// A `BitList` has an invalid number of bytes for a given bit length.
     InvalidByteCount {
+        /// The given length
         given: usize,
+        /// The expected length
         expected: usize,
     },
 }
@@ -30,7 +40,7 @@ pub enum Error {
 /// 128 bytes is enough to take us through to ~2M active validators, as the byte
 /// length of attestation bitfields is roughly `N // 32 slots // 64 committes //
 /// 8 bits`.
-pub const SMALLVEC_LEN: usize = 128;
+pub(crate) const SMALLVEC_LEN: usize = 128;
 
 /// A marker trait applied to `Variable` and `Fixed` that defines the behaviour of a `Bitfield`.
 pub trait BitfieldBehaviour: Clone {}
@@ -570,6 +580,7 @@ fn bytes_for_bit_len(bit_len: usize) -> usize {
 }
 
 /// An iterator over the bits in a `Bitfield`.
+#[derive(Debug)]
 pub struct BitIter<'a, T> {
     bitfield: &'a Bitfield<T>,
     i: usize,
@@ -716,12 +727,12 @@ mod bitvector {
     use super::*;
     use crate::BitVector;
 
-    pub type BitVector0 = BitVector<typenum::U0>;
-    pub type BitVector1 = BitVector<typenum::U1>;
-    pub type BitVector4 = BitVector<typenum::U4>;
-    pub type BitVector8 = BitVector<typenum::U8>;
-    pub type BitVector16 = BitVector<typenum::U16>;
-    pub type BitVector64 = BitVector<typenum::U64>;
+    pub(crate) type BitVector0 = BitVector<typenum::U0>;
+    pub(crate) type BitVector1 = BitVector<typenum::U1>;
+    pub(crate) type BitVector4 = BitVector<typenum::U4>;
+    pub(crate) type BitVector8 = BitVector<typenum::U8>;
+    pub(crate) type BitVector16 = BitVector<typenum::U16>;
+    pub(crate) type BitVector64 = BitVector<typenum::U64>;
 
     #[test]
     fn ssz_encode() {
@@ -921,11 +932,11 @@ mod bitlist {
     use super::*;
     use crate::BitList;
 
-    pub type BitList0 = BitList<typenum::U0>;
-    pub type BitList1 = BitList<typenum::U1>;
-    pub type BitList8 = BitList<typenum::U8>;
-    pub type BitList16 = BitList<typenum::U16>;
-    pub type BitList1024 = BitList<typenum::U1024>;
+    pub(crate) type BitList0 = BitList<typenum::U0>;
+    pub(crate) type BitList1 = BitList<typenum::U1>;
+    pub(crate) type BitList8 = BitList<typenum::U8>;
+    pub(crate) type BitList16 = BitList<typenum::U16>;
+    pub(crate) type BitList1024 = BitList<typenum::U1024>;
 
     #[test]
     fn ssz_encode() {

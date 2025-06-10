@@ -1,3 +1,8 @@
+// Modified in 2025 from the original version
+// Original source licensed under the Apache License 2.0
+
+//! SSZ decoding module
+
 use super::*;
 use smallvec::{smallvec, SmallVec};
 use std::cmp::Ordering;
@@ -11,9 +16,19 @@ pub mod try_from_iter;
 #[derive(Debug, PartialEq, Clone)]
 pub enum DecodeError {
     /// The bytes supplied were too short to be decoded into the specified type.
-    InvalidByteLength { len: usize, expected: usize },
+    InvalidByteLength {
+        /// The length of the bytes
+        len: usize,
+        /// The expected length
+        expected: usize,
+    },
     /// The given bytes were too short to be read as a length prefix.
-    InvalidLengthPrefix { len: usize, expected: usize },
+    InvalidLengthPrefix {
+        /// The length of the bytes
+        len: usize,
+        /// The expected length
+        expected: usize,
+    },
     /// A length offset pointed to a byte that was out-of-bounds (OOB).
     ///
     /// A bytes may be OOB for the following reasons:
@@ -22,7 +37,10 @@ pub enum DecodeError {
     /// - When decoding variable length items, the 1st offset points "backwards" into the fixed
     ///   length items (i.e., `length[0] < BYTES_PER_LENGTH_OFFSET`).
     /// - When decoding variable-length items, the `n`'th offset was less than the `n-1`'th offset.
-    OutOfBoundsByte { i: usize },
+    OutOfBoundsByte {
+        /// The index of the byte
+        i: usize,
+    },
     /// An offset points “backwards” into the fixed-bytes portion of the message, essentially
     /// double-decoding bytes that will also be decoded as fixed-length.
     ///
@@ -119,9 +137,12 @@ pub trait Decode: Sized {
     fn from_ssz_bytes(bytes: &[u8]) -> Result<Self, DecodeError>;
 }
 
+/// An offset into the SSZ bytes.
 #[derive(Copy, Clone, Debug)]
 pub struct Offset {
+    /// The position of the offset
     position: usize,
+    /// The offset
     offset: usize,
 }
 
@@ -131,6 +152,7 @@ pub struct Offset {
 /// then converted into a `SszDecoder` which decodes those values into object instances.
 ///
 /// See [`SszDecoder`](struct.SszDecoder.html) for usage examples.
+#[derive(Debug)]
 pub struct SszDecoderBuilder<'a> {
     bytes: &'a [u8],
     items: SmallVec8<&'a [u8]>,
@@ -304,6 +326,7 @@ impl<'a> SszDecoderBuilder<'a> {
 /// }
 ///
 /// ```
+#[derive(Debug)]
 pub struct SszDecoder<'a> {
     items: SmallVec8<&'a [u8]>,
 }

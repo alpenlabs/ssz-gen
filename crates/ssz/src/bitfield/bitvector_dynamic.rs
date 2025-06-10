@@ -1,3 +1,6 @@
+// Modified in 2025 from the original version
+// Original source licensed under the Apache License 2.0
+
 //! Provides `Bitfield<Dynamic>` (BitVectorDynamic)
 /// for encoding and decoding bitvectors that have a dynamic length.
 use crate::{
@@ -42,6 +45,7 @@ impl Bitfield<Dynamic> {
         })
     }
 
+    /// Convert the bitfield into a `SmallVec<[u8; SMALLVEC_LEN]>`.
     pub fn into_bytes(self) -> SmallVec<[u8; SMALLVEC_LEN]> {
         self.into_raw_bytes()
     }
@@ -150,8 +154,8 @@ mod dynamic_bitfield_tests {
         assert!(bitfield.set(15, true).is_ok());
         assert!(bitfield.set(16, true).is_err()); // Out of bounds
 
-        assert_eq!(bitfield.get(0)?, true);
-        assert_eq!(bitfield.get(15)?, true);
+        assert!(bitfield.get(0)?);
+        assert!(bitfield.get(15)?);
         assert!(bitfield.get(16).is_err());
 
         Ok(())
@@ -277,9 +281,9 @@ mod dynamic_bitfield_tests {
         b.set(4, true)?;
 
         let diff = a.difference(&b);
-        assert_eq!(diff.get(1)?, true);
-        assert_eq!(diff.get(3)?, false);
-        assert_eq!(diff.get(4)?, false);
+        assert!(diff.get(1)?);
+        assert!(!diff.get(3)?);
+        assert!(!diff.get(4)?);
 
         Ok(())
     }
@@ -291,9 +295,9 @@ mod dynamic_bitfield_tests {
         bitfield.set(1, true)?;
 
         bitfield.shift_up(1)?;
-        assert_eq!(bitfield.get(0)?, false);
-        assert_eq!(bitfield.get(1)?, true);
-        assert_eq!(bitfield.get(2)?, true);
+        assert!(!bitfield.get(0)?);
+        assert!(bitfield.get(1)?);
+        assert!(bitfield.get(2)?);
 
         // Test error case
         assert!(bitfield.shift_up(17).is_err());

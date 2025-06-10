@@ -1,6 +1,10 @@
 // Modified in 2025 from the original version
 // Original source licensed under the Apache License 2.0
 
+//! Tests for the SSZ crate
+
+#[cfg(feature = "arbitrary")]
+use arbitrary as _;
 use itertools as _;
 use serde as _;
 use serde_json as _;

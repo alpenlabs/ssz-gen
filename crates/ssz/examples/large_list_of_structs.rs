@@ -6,6 +6,8 @@
 //! Useful for `cargo flamegraph`.
 
 use alloy_primitives as _;
+#[cfg(feature = "arbitrary")]
+use arbitrary as _;
 use itertools as _;
 use serde as _;
 use serde_json as _;
@@ -16,7 +18,8 @@ use typenum as _;
 use ssz::{Decode, Encode};
 use ssz_derive::{Decode, Encode};
 
-#[derive(Clone, Copy, Encode, Decode)]
+/// A struct with 4 fixed length fields
+#[derive(Clone, Copy, Encode, Decode, Debug)]
 pub struct FixedLen {
     a: u64,
     b: u64,

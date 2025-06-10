@@ -1,6 +1,8 @@
 // Modified in 2025 from the original version
 // Original source licensed under the Apache License 2.0
 
+//! SSZ encoding module
+
 use super::*;
 
 pub mod impls;
@@ -87,6 +89,7 @@ pub trait Encode {
 /// }
 ///
 /// ```
+#[derive(Debug)]
 pub struct SszEncoder<'a> {
     offset: usize,
     buf: &'a mut Vec<u8>,

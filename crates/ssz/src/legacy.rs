@@ -1,3 +1,6 @@
+// Modified in 2025 from the original version
+// Original source licensed under the Apache License 2.0
+
 //! Provides a "legacy" version of SSZ encoding for `Option<T> where T: Encode + Decode`.
 //!
 //! The SSZ specification changed in 2021 to use a 1-byte union selector, instead of a 4-byte one
@@ -23,6 +26,7 @@
 
 use crate::*;
 
+/// A macro to implement the `Encode` and `Decode` traits for `Option<T>` where `T: Encode + Decode`.
 #[macro_export]
 macro_rules! four_byte_option_impl {
     ($mod_name: ident, $type: ty) => {
@@ -30,19 +34,25 @@ macro_rules! four_byte_option_impl {
         mod $mod_name {
             use super::*;
 
+            #[expect(unreachable_pub)]
             pub mod encode {
+                //! SSZ encoding implementation for `Option<T>`
+
                 use super::*;
                 #[allow(unused_imports)]
                 use ssz::*;
 
+                /// Returns true if the SSZ encoding of `Option<T>` is a fixed length.
                 pub fn is_ssz_fixed_len() -> bool {
                     false
                 }
 
+                /// The fixed length of the SSZ encoding of `Option<T>`.
                 pub fn ssz_fixed_len() -> usize {
                     BYTES_PER_LENGTH_OFFSET
                 }
 
+                /// The length of the SSZ encoding of `Option<T>`.
                 pub fn ssz_bytes_len(opt: &Option<$type>) -> usize {
                     if let Some(some) = opt {
                         let len = if <$type as Encode>::is_ssz_fixed_len() {
@@ -56,6 +66,7 @@ macro_rules! four_byte_option_impl {
                     }
                 }
 
+                /// Appends the SSZ encoding of `Option<T>` to the given buffer.
                 pub fn ssz_append(opt: &Option<$type>, buf: &mut Vec<u8>) {
                     match opt {
                         None => buf.extend_from_slice(&legacy::encode_four_byte_union_selector(0)),
@@ -66,6 +77,7 @@ macro_rules! four_byte_option_impl {
                     }
                 }
 
+                /// Returns the SSZ encoding of `Option<T>` as a vector of bytes.
                 pub fn as_ssz_bytes(opt: &Option<$type>) -> Vec<u8> {
                     let mut buf = vec![];
 
@@ -75,19 +87,25 @@ macro_rules! four_byte_option_impl {
                 }
             }
 
+            #[expect(unreachable_pub)]
             pub mod decode {
+                //! SSZ decoding implementation for `Option<T>`
+
                 use super::*;
                 #[allow(unused_imports)]
                 use ssz::*;
 
+                /// Returns true if the SSZ encoding of `Option<T>` is a fixed length.
                 pub fn is_ssz_fixed_len() -> bool {
                     false
                 }
 
+                /// The fixed length of the SSZ encoding of `Option<T>`.
                 pub fn ssz_fixed_len() -> usize {
                     BYTES_PER_LENGTH_OFFSET
                 }
 
+                /// Decodes the SSZ encoding of `Option<T>` from the given bytes.
                 pub fn from_ssz_bytes(bytes: &[u8]) -> Result<Option<$type>, DecodeError> {
                     if bytes.len() < BYTES_PER_LENGTH_OFFSET {
                         return Err(DecodeError::InvalidByteLength {
@@ -115,10 +133,12 @@ macro_rules! four_byte_option_impl {
     };
 }
 
+/// Encodes a four-byte union selector for the given selector.
 pub fn encode_four_byte_union_selector(selector: usize) -> [u8; BYTES_PER_LENGTH_OFFSET] {
     encode_length(selector)
 }
 
+/// Reads a four-byte union selector from the given bytes.
 pub fn read_four_byte_union_selector(bytes: &[u8]) -> Result<usize, DecodeError> {
     read_offset(bytes)
 }

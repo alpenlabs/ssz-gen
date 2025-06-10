@@ -6,13 +6,15 @@
 //! Useful for `cargo flamegraph`.
 
 use alloy_primitives as _;
+#[cfg(feature = "arbitrary")]
+use arbitrary as _;
 use itertools as _;
 use serde as _;
 use serde_json as _;
 use serde_utils as _;
 use smallvec as _;
-use typenum as _;
 use ssz_derive as _;
+use typenum as _;
 
 use ssz::{Decode, Encode};
 
