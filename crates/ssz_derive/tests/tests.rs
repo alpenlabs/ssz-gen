@@ -1,6 +1,8 @@
 // Modified in 2025 from the original version
 // Original source licensed under the Apache License 2.0
 
+//! SSZ derive tests
+
 use darling as _;
 use proc_macro2 as _;
 use quote as _;
@@ -317,7 +319,7 @@ fn shape_1() {
         radius: None,
     };
 
-    assert_encode_decode(&shape, &vec![3, 42, 0, 1]);
+    assert_encode_decode(&shape, &[3, 42, 0, 1]);
 }
 
 #[test]
@@ -330,7 +332,7 @@ fn shape_2() {
         radius: Some(42),
     };
 
-    assert_encode_decode(&shape, &vec![6, 1, 42, 0]);
+    assert_encode_decode(&shape, &[6, 1, 42, 0]);
 }
 
 #[test]
@@ -343,7 +345,7 @@ fn square() {
         color: 1,
     };
 
-    assert_encode_decode(&square, &vec![42, 0, 1]);
+    assert_encode_decode(&square, &[42, 0, 1]);
 }
 
 #[test]
@@ -355,7 +357,7 @@ fn circle() {
         color: 1,
     };
 
-    assert_encode_decode(&circle, &vec![1, 42, 0])
+    assert_encode_decode(&circle, &[1, 42, 0])
 }
 
 #[test]
@@ -366,7 +368,7 @@ fn shape_3() {
         skip: vec![],
         radius: Some(vec![1, 2, 3, 4].into()),
     };
-    assert_encode_decode(&shape, &vec![6, 1, 5, 0, 0, 0, 1, 2, 3, 4]);
+    assert_encode_decode(&shape, &[6, 1, 5, 0, 0, 0, 1, 2, 3, 4]);
 
     let shape = ShapeVec {
         side: None,
@@ -375,7 +377,7 @@ fn shape_3() {
         radius: None,
     };
 
-    assert_encode_decode(&shape, &vec![2, 1]);
+    assert_encode_decode(&shape, &[2, 1]);
 }
 
 // Test for Optional[T] and Union[None, T] together
@@ -389,5 +391,8 @@ struct OptionalOptionU64 {
 fn optional_option_u64() {
     assert_encode_decode(&OptionalOptionU64 { a: None }, &[0]);
     assert_encode_decode(&OptionalOptionU64 { a: Some(None) }, &[1, 4, 0, 0, 0, 0]);
-    assert_encode_decode(&OptionalOptionU64 { a: Some(Some(2)) }, &[1, 4, 0, 0, 0, 1, 2]);
+    assert_encode_decode(
+        &OptionalOptionU64 { a: Some(Some(2)) },
+        &[1, 4, 0, 0, 0, 1, 2],
+    );
 }

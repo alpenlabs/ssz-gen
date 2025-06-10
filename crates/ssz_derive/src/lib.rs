@@ -513,9 +513,13 @@ fn ssz_encode_derive_stable_container(
             });
         } else {
             let inner_ty = ty_inner_type("Option", ty).unwrap();
-            field_is_ssz_fixed_len.push(quote! { ssz::encode::impls::optional::is_ssz_fixed_len::<#inner_ty>() });
-            field_fixed_len.push(quote! { ssz::encode::impls::optional::ssz_fixed_len::<#inner_ty>() });
-            field_ssz_bytes_len.push(quote! { ssz::encode::impls::optional::ssz_bytes_len::<#inner_ty>(&self.#ident) });
+            field_is_ssz_fixed_len
+                .push(quote! { ssz::encode::impls::optional::is_ssz_fixed_len::<#inner_ty>() });
+            field_fixed_len
+                .push(quote! { ssz::encode::impls::optional::ssz_fixed_len::<#inner_ty>() });
+            field_ssz_bytes_len.push(
+                quote! { ssz::encode::impls::optional::ssz_bytes_len::<#inner_ty>(&self.#ident) },
+            );
             field_encoder_append.push(quote! {
                 encoder.append_parameterized(
                     ssz::encode::impls::optional::is_ssz_fixed_len::<#inner_ty>(),
@@ -1082,7 +1086,9 @@ pub fn ssz_decode_derive(input: TokenStream) -> TokenStream {
             StructBehaviour::Transparent => ssz_decode_derive_struct_transparent(&item, data),
             StructBehaviour::Container => ssz_decode_derive_struct(&item, data),
         },
-        Procedure::StableStruct { data, max_fields} => ssz_decode_derive_stable_container(&item, data, max_fields),
+        Procedure::StableStruct { data, max_fields } => {
+            ssz_decode_derive_stable_container(&item, data, max_fields)
+        }
         Procedure::ProfileStruct { data } => ssz_decode_derive_profile_container(&item, data),
         Procedure::Enum { data, behaviour } => match behaviour {
             EnumBehaviour::Union => ssz_decode_derive_enum_union(&item, data),
@@ -1332,8 +1338,8 @@ fn ssz_decode_derive_struct_transparent(
 /// ## Field attributes
 ///
 /// - `#[ssz(skip_deserializing)]`: during de-serialization the field will be instantiated from a
-/// `Default` implementation. The decoder will assume that the field was not serialized at all
-/// (e.g., if it has been serialized, an error will be raised instead of `Default` overriding it).
+///   `Default` implementation. The decoder will assume that the field was not serialized at all
+///   (e.g., if it has been serialized, an error will be raised instead of `Default` overriding it).
 fn ssz_decode_derive_stable_container(
     item: &DeriveInput,
     struct_data: &DataStruct,
@@ -1395,9 +1401,11 @@ fn ssz_decode_derive_stable_container(
         } else {
             let inner_ty = ty_inner_type("Option", ty).unwrap();
 
-            is_ssz_fixed_len = quote! { ssz::decode::impls::optional::is_ssz_fixed_len::<#inner_ty>() };
+            is_ssz_fixed_len =
+                quote! { ssz::decode::impls::optional::is_ssz_fixed_len::<#inner_ty>() };
             ssz_fixed_len = quote! { ssz::decode::impls::optional::ssz_fixed_len::<#inner_ty>() };
-            from_ssz_bytes = quote! { ssz::decode::impls::optional::from_ssz_bytes::<#inner_ty>(slice) };
+            from_ssz_bytes =
+                quote! { ssz::decode::impls::optional::from_ssz_bytes::<#inner_ty>(slice) };
 
             register_types.push(quote! {
                 if bitvector.get(#working_index).unwrap() {
@@ -1462,7 +1470,7 @@ fn ssz_decode_derive_stable_container(
 
             fn from_ssz_bytes(bytes: &[u8]) -> std::result::Result<Self, ssz::DecodeError> {
                 // Decode the leading BitVector first.
-                let bitvector_length: usize = (#max_fields::to_usize() + 7) / 8;
+                let bitvector_length: usize = #max_fields::to_usize().div_ceil(8);
                 let bitvector = BitVector::<#max_fields>::from_ssz_bytes(&bytes[0..bitvector_length]).unwrap();
 
                 let bytes = &bytes[bitvector_length..];
@@ -1573,34 +1581,34 @@ fn ssz_decode_derive_profile_container(
             decodes.push(quote! {
                 let #ident = decoder.decode_next_with(|slice| #module::from_ssz_bytes(slice))?;
             });
-        } else {
-            if is_optional {
-                is_ssz_fixed_len = quote! { ssz::decode::impls::optional::is_ssz_fixed_len::<#inner_ty>() };
-                ssz_fixed_len = quote! { ssz::decode::impls::optional::ssz_fixed_len::<#inner_ty>() };
-                from_ssz_bytes = quote! { ssz::decode::impls::optional::from_ssz_bytes::<#inner_ty>(slice) };
-    
-                register_types.push(quote! {
-                    builder.register_type_parameterized(#is_ssz_fixed_len, #ssz_fixed_len)?;
-                });
-                decodes.push(quote! {
+        } else if is_optional {
+            is_ssz_fixed_len =
+                quote! { ssz::decode::impls::optional::is_ssz_fixed_len::<#inner_ty>() };
+            ssz_fixed_len = quote! { ssz::decode::impls::optional::ssz_fixed_len::<#inner_ty>() };
+            from_ssz_bytes =
+                quote! { ssz::decode::impls::optional::from_ssz_bytes::<#inner_ty>(slice) };
+
+            register_types.push(quote! {
+                builder.register_type_parameterized(#is_ssz_fixed_len, #ssz_fixed_len)?;
+            });
+            decodes.push(quote! {
                     let #ident = if bitvector.get(#working_optional_index).unwrap() {
                         decoder.decode_next_with(|slice| ssz::decode::impls::optional::from_ssz_bytes::<#inner_ty>(slice))?
                     } else {
                         <_>::default()
                     };
                 });
-            } else {
-                is_ssz_fixed_len = quote! { <#ty as ssz::Decode>::is_ssz_fixed_len() };
-                ssz_fixed_len = quote! { <#ty as ssz::Decode>::ssz_fixed_len() };
-                from_ssz_bytes = quote! { <#ty as ssz::Decode>::from_ssz_bytes(slice) };
-    
-                register_types.push(quote! {
-                    builder.register_type::<#ty>()?;
-                });
-                decodes.push(quote! {
-                    let #ident = decoder.decode_next()?;
-                });
-            }
+        } else {
+            is_ssz_fixed_len = quote! { <#ty as ssz::Decode>::is_ssz_fixed_len() };
+            ssz_fixed_len = quote! { <#ty as ssz::Decode>::ssz_fixed_len() };
+            from_ssz_bytes = quote! { <#ty as ssz::Decode>::from_ssz_bytes(slice) };
+
+            register_types.push(quote! {
+                builder.register_type::<#ty>()?;
+            });
+            decodes.push(quote! {
+                let #ident = decoder.decode_next()?;
+            });
         }
 
         // If the field is optional, we need to check the bitvector before decoding.
@@ -1684,7 +1692,7 @@ fn ssz_decode_derive_profile_container(
 
             fn from_ssz_bytes(bytes: &[u8]) -> std::result::Result<Self, ssz::DecodeError> {
                 // Decode the leading BitVector first.
-                let bitvector_length: usize = (#max_optional_fields::to_usize() + 7) / 8;
+                let bitvector_length: usize = #max_optional_fields::to_usize().div_ceil(8);
                 let bitvector = if bitvector_length == 0 {
                     ssz_types::BitVector::<#max_optional_fields>::new()
                 } else {
