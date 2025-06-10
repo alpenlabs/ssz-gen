@@ -1,9 +1,12 @@
+// Modified in 2025 from the original version
+// Original source licensed under the Apache License 2.0
+
 use crate::*;
 
 /// Provides the one-byte "selector" from the SSZ union specification:
 ///
 /// <https://github.com/ethereum/consensus-specs/blob/v1.1.0-beta.3/ssz/simple-serialize.md#union>
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct UnionSelector(u8);
 
 impl From<UnionSelector> for u8 {

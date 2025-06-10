@@ -1,3 +1,8 @@
+// Modified in 2025 from the original version
+// Original source licensed under the Apache License 2.0
+
+//! TryFromIter trait definition and implementations
+
 use smallvec::SmallVec;
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::Infallible;
@@ -8,8 +13,10 @@ use std::fmt::Debug;
 /// This trait is implemented for types which can be constructed from an iterator of decoded SSZ
 /// values, but which may refuse values once a length limit is reached.
 pub trait TryFromIter<T>: Sized {
+    /// The error type returned by `try_from_iter`
     type Error: Debug;
 
+    /// Try to construct the type from an iterator of decoded SSZ values
     fn try_from_iter<I>(iter: I) -> Result<Self, Self::Error>
     where
         I: IntoIterator<Item = T>;
@@ -85,6 +92,7 @@ where
 
 /// Partial variant of `collect`.
 pub trait TryCollect: Iterator {
+    /// Try to collect the iterator into a type that implements `TryFromIter`
     fn try_collect<C>(self) -> Result<C, C::Error>
     where
         C: TryFromIter<Self::Item>;

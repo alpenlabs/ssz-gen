@@ -1,17 +1,22 @@
 // Modified in 2025 from the original version
 // Original source licensed under the Apache License 2.0
 
+//! Encode and decode a struct
+
 use alloy_primitives as _;
+#[cfg(feature = "arbitrary")]
+use arbitrary as _;
 use itertools as _;
 use serde as _;
 use serde_json as _;
 use serde_utils as _;
 use smallvec as _;
-use typenum as _;
 use ssz_derive as _;
+use typenum as _;
 
 use ssz::{Decode, DecodeError, Encode, SszDecoderBuilder, SszEncoder};
 
+/// A struct with 3 fields
 #[derive(Debug, PartialEq)]
 pub struct Foo {
     a: u16,
