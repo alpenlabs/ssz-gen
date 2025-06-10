@@ -2,7 +2,7 @@
 // Original source licensed under the Apache License 2.0
 
 #![recursion_limit = "256"]
-//! Provides procedural derive macros for the `Encode` and `Decode` traits of ssz`
+//! Provides procedural derive macros for the `Encode` and `Decode` traits of `ssz`
 //! crate.
 //!
 //! ## Attributes

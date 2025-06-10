@@ -210,10 +210,10 @@ impl_encode_for_tuples! {
 }
 
 pub mod optional {
-    //! For ease of use despite using Option<T> to represent Union[None, T] in all other contexts
-    //! Inside StableContainer and Profile we want to use it to represent Optional[T]
-    //! This module implements all the necessary "alternative" logic to treat Option<T> as Optional[T]
-    //! Keep in mind Option<Option<T>> will be treated as Optional[Union[None, T]] if inside a struct
+    //! For ease of use despite using `Option<T>` to represent Union[None, T] in all other contexts
+    //! Inside StableContainer and Profile we want to use it to represent `Optional[T]`
+    //! This module implements all the necessary "alternative" logic to treat `Option<T>` as `Optional[T]`
+    //! Keep in mind `Option<Option<T>>` will be treated as `Optional[Union[None, T]]` if inside a struct
 
     use super::*;
 

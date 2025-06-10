@@ -93,7 +93,7 @@ impl std::fmt::Debug for HalfNode {
 ///
 /// ### Start
 ///
-/// ```ignore
+/// ```text
 ///           -
 ///          / \
 ///         -   -
@@ -103,7 +103,7 @@ impl std::fmt::Debug for HalfNode {
 ///
 /// ### Provide first leaf
 ///
-/// ```ignore
+/// ```text
 ///           -
 ///          / \
 ///         2   -
@@ -113,7 +113,7 @@ impl std::fmt::Debug for HalfNode {
 ///
 /// ### Provide second leaf
 ///
-/// ```ignore
+/// ```text
 ///           1
 ///          / \
 ///         X   -
@@ -123,7 +123,7 @@ impl std::fmt::Debug for HalfNode {
 ///
 /// ### Provide third leaf
 ///
-/// ```ignore
+/// ```text
 ///           1
 ///          / \
 ///         X   3
@@ -133,7 +133,7 @@ impl std::fmt::Debug for HalfNode {
 ///
 /// ### Provide fourth and final leaf
 ///
-/// ```ignore
+/// ```text
 ///           1
 ///          / \
 ///         X   X
@@ -334,7 +334,7 @@ impl MerkleHasher {
     /// will also provide the right-node for the `1` node. This function will complete both of
     /// those nodes and ultimately find the root of the tree.
     ///
-    /// ```ignore
+    /// ```text
     ///           1 <-- completed
     ///          / \
     ///         2   3  <-- completed

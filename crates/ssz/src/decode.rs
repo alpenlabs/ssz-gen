@@ -89,7 +89,7 @@ pub enum DecodeError {
 ///
 /// The checks here are derived from this document:
 ///
-/// https://notes.ethereum.org/ruKvDXl6QOW3gnqVYb8ezA?view
+/// <https://notes.ethereum.org/ruKvDXl6QOW3gnqVYb8ezA?view>
 pub fn sanitize_offset(
     offset: usize,
     previous_offset: Option<usize>,
