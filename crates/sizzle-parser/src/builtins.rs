@@ -1,16 +1,13 @@
 //! Built-in schema type recognition.
 
-use std::any::TypeId;
-
 use crate::{
-    ast::ComplexTySpec,
-    ty_resolver::{CtorArg, CtorSig, TypeCtorData, TypeData, TypeResolver},
-    tysys::{ConstValue, Ty, TyExpr},
+    ty_resolver::{CtorArg, CtorSig, TypeData, TypeResolver},
+    tysys::{Ty, TyExpr},
     Identifier,
 };
 
 /// Populates a type resolver with the builtin types.
-pub fn populate_builtin_types(resolv: &mut TypeResolver) {
+pub(crate) fn populate_builtin_types(resolv: &mut TypeResolver) {
     // Basic types.
     insert_ty(resolv, "boolean");
     for i in [8, 16, 32, 64, 128, 256] {

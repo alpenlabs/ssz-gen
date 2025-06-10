@@ -3,34 +3,34 @@
 /// Type for getting windows over a slice and sensibly gobbling them.
 ///
 /// It's like a cursor type, but optimized around slicing buffers.
-pub struct Gobbler<'b, T> {
+pub(crate) struct Gobbler<'b, T> {
     buf: &'b [T],
     at: usize,
 }
 
 impl<'b, T> Gobbler<'b, T> {
-    pub fn new(buf: &'b [T]) -> Self {
+    pub(crate) fn new(buf: &'b [T]) -> Self {
         Self { buf, at: 0 }
     }
 
-    pub fn len(&self) -> usize {
+    pub(crate) fn len(&self) -> usize {
         self.buf.len()
     }
 
-    pub fn at(&self) -> usize {
+    pub(crate) fn at(&self) -> usize {
         self.at
     }
 
-    pub fn remaining(&self) -> usize {
+    pub(crate) fn remaining(&self) -> usize {
         self.buf.len() - self.at
     }
 
     /// Gets if there's an entry to be processed.
-    pub fn has_entry(&self) -> bool {
+    pub(crate) fn has_entry(&self) -> bool {
         self.remaining() > 0
     }
 
-    pub fn view(&self) -> &[T] {
+    pub(crate) fn view(&self) -> &[T] {
         &self.buf[self.at..]
     }
 
@@ -39,7 +39,7 @@ impl<'b, T> Gobbler<'b, T> {
     /// # Panics
     ///
     /// If `.has_entry()` return false.
-    pub fn gobble_one(&mut self) {
+    pub(crate) fn gobble_one(&mut self) {
         self.gobble_exact(1);
     }
 
@@ -48,7 +48,7 @@ impl<'b, T> Gobbler<'b, T> {
     /// # Panics
     ///
     /// If we run over the end of the input.
-    pub fn gobble_exact(&mut self, n: usize) {
+    pub(crate) fn gobble_exact(&mut self, n: usize) {
         let new_at = self.at() + n;
         if new_at > self.len() {
             panic!(
@@ -62,7 +62,7 @@ impl<'b, T> Gobbler<'b, T> {
     /// Tries to gobble an entry satisfying a specific predicate.
     ///
     /// Returns if we gobbled the thing.
-    pub fn try_gobble(&mut self, cond: impl Fn(&T) -> bool) -> bool {
+    pub(crate) fn _try_gobble(&mut self, cond: impl Fn(&T) -> bool) -> bool {
         if self.remaining() > 0 {
             let cur = self.get_expect();
             let ok = cond(cur);
@@ -78,7 +78,7 @@ impl<'b, T> Gobbler<'b, T> {
     /// Gobbles entries until the condition returns true or we run out of entries.
     ///
     /// Returns if we met the condition (true), or if we ran out of items (false).
-    pub fn gobble_until(&mut self, cond: impl Fn(&T) -> bool) -> bool {
+    pub(crate) fn gobble_until(&mut self, cond: impl Fn(&T) -> bool) -> bool {
         while self.has_entry() {
             let entry = self.get_expect();
             if cond(entry) {
@@ -99,7 +99,7 @@ impl<'b, T> Gobbler<'b, T> {
     /// The returned slice does not contain the entry that satisfied the
     /// condition.  The `.get()` entry will be the entry that satisfied the
     /// condition.
-    pub fn gobble_slice_up_to(&mut self, cond: impl Fn(&T) -> bool) -> Option<&[T]> {
+    pub(crate) fn gobble_slice_up_to(&mut self, cond: impl Fn(&T) -> bool) -> Option<&[T]> {
         let start = self.at;
 
         while self.has_entry() {
@@ -121,12 +121,12 @@ impl<'b, T> Gobbler<'b, T> {
     /// # Panics
     ///
     /// If `.has_entry()` return false.
-    pub fn get_expect(&self) -> &T {
+    pub(crate) fn get_expect(&self) -> &T {
         &self.buf[self.at]
     }
 
     /// Gets the item we're currently at, if there is one.
-    pub fn get(&self) -> Option<&T> {
+    pub(crate) fn get(&self) -> Option<&T> {
         self.buf.get(self.at)
     }
 }

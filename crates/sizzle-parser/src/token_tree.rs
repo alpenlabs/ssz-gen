@@ -4,42 +4,54 @@
 use thiserror::Error;
 
 use crate::{
-    names::{FieldName, Identifier},
+    names::Identifier,
     src_pos::SrcPos,
     token::{SrcToken, TaggedToken},
-    ConstName, TypeName,
 };
 
 /// Token tree with an empty tag value.
 pub type Toktr = TaggedToktr<()>;
 
-pub type SrcToktr = TaggedToktr<SrcPos>;
+pub(crate) type SrcToktr = TaggedToktr<SrcPos>;
 
 /// Token tree with a tag.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TaggedToktr<T> {
     // Keywords and structural elements.
+    /// `class` keyword.
     Class(T),
+    /// `:` keyword.
     Colon(T),
+    /// `=` keyword.
     Eq(T),
+    /// `,` keyword.
     Comma(T),
+    /// `\n` newline.
     Newline(T),
 
     // Identifiers.
+    /// An identifier.
     Identifier(T, Identifier),
 
     // Expressions.
+    /// An integer literal.
     IntegerLiteral(T, u64),
+    /// `<<` operator.
     Shl(T),
+    /// `*` operator.
     Mul(T),
 
     // Token tree nodes with children.
+    /// A bracket block.
     BracketBlock(T, Box<NodeData<T>>),
+    /// A parenthesis block.
     ParenBlock(T, Box<NodeData<T>>),
+    /// An indent block.
     IndentBlock(T, Box<NodeData<T>>),
 }
 
 impl<T> TaggedToktr<T> {
+    /// Gets the tag of the token.
     pub fn tag(&self) -> &T {
         match self {
             Self::Class(t) => t,
@@ -57,13 +69,15 @@ impl<T> TaggedToktr<T> {
         }
     }
 
+    /// Gets if the token is a block.
     pub fn is_block(&self) -> bool {
-        match self {
-            Self::BracketBlock(_, _) | Self::ParenBlock(_, _) | Self::IndentBlock(_, _) => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            Self::BracketBlock(_, _) | Self::ParenBlock(_, _) | Self::IndentBlock(_, _)
+        )
     }
 
+    /// Gets the node data of the token.
     pub fn node_data(&self) -> Option<&NodeData<T>> {
         match self {
             Self::BracketBlock(_, data)
@@ -118,7 +132,7 @@ struct ToktrBuilder {
 }
 
 impl ToktrBuilder {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             block_ty_stack: vec![BlockType::Root],
             block_sp_stack: vec![],
@@ -134,17 +148,17 @@ impl ToktrBuilder {
         self.block_ty_stack.last().expect("toktr: top_ty")
     }
 
-    pub fn push_token(&mut self, tt: SrcToktr) {
+    pub(crate) fn push_token(&mut self, tt: SrcToktr) {
         self.top_block_mut().push(tt);
     }
 
-    pub fn push_block(&mut self, ty: BlockType, sp: SrcPos) {
+    pub(crate) fn push_block(&mut self, ty: BlockType, sp: SrcPos) {
         self.contexts.push(Vec::new());
         self.block_ty_stack.push(ty);
         self.block_sp_stack.push(sp);
     }
 
-    pub fn try_pop_block(&mut self, ty: BlockType) -> Result<SrcToktr, ToktrError> {
+    pub(crate) fn try_pop_block(&mut self, ty: BlockType) -> Result<SrcToktr, ToktrError> {
         // This shouldn't be allowed.
         if ty == BlockType::Root {
             panic!("toktr: tried to pop root");
@@ -169,7 +183,7 @@ impl ToktrBuilder {
         Ok(tt)
     }
 
-    pub fn finish(mut self) -> Result<Vec<SrcToktr>, ToktrError> {
+    pub(crate) fn finish(mut self) -> Result<Vec<SrcToktr>, ToktrError> {
         if self.contexts.len() != 1 {
             return Err(ToktrError::UnclosedBlock(*self.top_ty()));
         }
@@ -179,7 +193,7 @@ impl ToktrBuilder {
     }
 }
 
-pub fn parse_tokens_to_toktrs(tokens: &[SrcToken]) -> Result<Vec<SrcToktr>, ToktrError> {
+pub(crate) fn parse_tokens_to_toktrs(tokens: &[SrcToken]) -> Result<Vec<SrcToktr>, ToktrError> {
     let mut i = 0;
 
     let mut builder = ToktrBuilder::new();

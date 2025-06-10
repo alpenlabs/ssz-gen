@@ -43,7 +43,7 @@ impl TryFrom<&'_ str> for Identifier {
 
     fn try_from(value: &'_ str) -> Result<Self, Self::Error> {
         check_str(
-            &value,
+            value,
             is_valid_ident_initial_char,
             is_valid_ident_continuing_char,
             NameError::InvalidIdentifier,
@@ -52,11 +52,11 @@ impl TryFrom<&'_ str> for Identifier {
     }
 }
 
-pub fn is_valid_ident_initial_char(c: char) -> bool {
+pub(crate) fn is_valid_ident_initial_char(c: char) -> bool {
     c.is_alphabetic()
 }
 
-pub fn is_valid_ident_continuing_char(c: char) -> bool {
+pub(crate) fn is_valid_ident_continuing_char(c: char) -> bool {
     c.is_alphanumeric() || c == '_'
 }
 
@@ -105,7 +105,7 @@ impl TryFrom<String> for ConstName {
 }
 
 fn is_valid_const_name_char(c: char) -> bool {
-    c == '_' || (c >= 'A' && c <= 'Z')
+    c == '_' || c.is_ascii_uppercase()
 }
 
 /// A field name.
@@ -129,7 +129,7 @@ impl TryFrom<String> for FieldName {
 }
 
 fn is_valid_field_name_char(c: char) -> bool {
-    c == '_' || (c >= 'a' && c <= 'z')
+    c == '_' || c.is_ascii_lowercase()
 }
 
 fn check_str(

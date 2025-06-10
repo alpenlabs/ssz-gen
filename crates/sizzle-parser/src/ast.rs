@@ -1,11 +1,11 @@
 //! AST types
 
-use std::{any::Any, fmt::Debug};
+use std::fmt::Debug;
 
 use thiserror::Error;
 
 use crate::{
-    gobbler::{self, Gobbler},
+    gobbler::Gobbler,
     token_tree::SrcToktr,
     tysys::{Binop, ConstValue},
     Identifier, SrcPos, TaggedToktr,
@@ -13,23 +13,23 @@ use crate::{
 
 /// A module file containing a list of definitions.
 #[derive(Clone, Debug)]
-pub struct Module {
+pub(crate) struct Module {
     entries: Vec<ModuleEntry>,
 }
 
 impl Module {
-    pub fn new(entry: Vec<ModuleEntry>) -> Self {
+    pub(crate) fn new(entry: Vec<ModuleEntry>) -> Self {
         Self { entries: entry }
     }
 
-    pub fn entries(&self) -> &[ModuleEntry] {
+    pub(crate) fn entries(&self) -> &[ModuleEntry] {
         &self.entries
     }
 }
 
 /// A definition within a module, in the order it was listed.
 #[derive(Clone, Debug)]
-pub enum ModuleEntry {
+pub(crate) enum ModuleEntry {
     /// An assignment with some name being assigned to a value.  This could be
     /// declaring a const or declaring a type alias.
     Assignment(AssignEntry),
@@ -39,7 +39,7 @@ pub enum ModuleEntry {
 }
 
 impl ModuleEntry {
-    pub fn name(&self) -> &Identifier {
+    pub(crate) fn name(&self) -> &Identifier {
         match self {
             ModuleEntry::Assignment(d) => d.name(),
             ModuleEntry::Class(d) => d.name(),
@@ -49,28 +49,28 @@ impl ModuleEntry {
 
 /// A const definition.
 #[derive(Clone, Debug)]
-pub struct AssignEntry {
+pub(crate) struct AssignEntry {
     name: Identifier,
     value: AssignExpr,
 }
 
 impl AssignEntry {
-    pub fn new(name: Identifier, value: AssignExpr) -> Self {
+    pub(crate) fn new(name: Identifier, value: AssignExpr) -> Self {
         Self { name, value }
     }
 
-    pub fn name(&self) -> &Identifier {
+    pub(crate) fn name(&self) -> &Identifier {
         &self.name
     }
 
-    pub fn value(&self) -> &AssignExpr {
+    pub(crate) fn value(&self) -> &AssignExpr {
         &self.value
     }
 }
 
 /// An expression that we can assign to a name.
 #[derive(Clone, Debug)]
-pub enum AssignExpr {
+pub(crate) enum AssignExpr {
     /// A name.
     ///
     /// This could be another const name or a type expression.
@@ -87,14 +87,14 @@ pub enum AssignExpr {
 ///
 /// Classes must always have parent types.
 #[derive(Clone, Debug)]
-pub struct ClassDefEntry {
+pub(crate) struct ClassDefEntry {
     name: Identifier,
     parent_ty: TyExprSpec,
     fields: Vec<FieldDef>,
 }
 
 impl ClassDefEntry {
-    pub fn new(name: Identifier, parent_ty: TyExprSpec, fields: Vec<FieldDef>) -> Self {
+    pub(crate) fn new(name: Identifier, parent_ty: TyExprSpec, fields: Vec<FieldDef>) -> Self {
         Self {
             name,
             parent_ty,
@@ -102,36 +102,36 @@ impl ClassDefEntry {
         }
     }
 
-    pub fn name(&self) -> &Identifier {
+    pub(crate) fn name(&self) -> &Identifier {
         &self.name
     }
 
-    pub fn parent_ty(&self) -> &TyExprSpec {
+    pub(crate) fn parent_ty(&self) -> &TyExprSpec {
         &self.parent_ty
     }
 
-    pub fn fields(&self) -> &[FieldDef] {
+    pub(crate) fn fields(&self) -> &[FieldDef] {
         &self.fields
     }
 }
 
 /// A field definition within a class.
 #[derive(Clone, Debug)]
-pub struct FieldDef {
+pub(crate) struct FieldDef {
     name: Identifier,
     ty: TyExprSpec,
 }
 
 impl FieldDef {
-    pub fn new(name: Identifier, ty: TyExprSpec) -> Self {
+    pub(crate) fn new(name: Identifier, ty: TyExprSpec) -> Self {
         Self { name, ty }
     }
 
-    pub fn name(&self) -> &Identifier {
+    pub(crate) fn name(&self) -> &Identifier {
         &self.name
     }
 
-    pub fn ty(&self) -> &TyExprSpec {
+    pub(crate) fn ty(&self) -> &TyExprSpec {
         &self.ty
     }
 }
@@ -140,7 +140,7 @@ impl FieldDef {
 ///
 /// This needs to be further resolved to figure out ambiguous identifiers.
 #[derive(Clone, Debug)]
-pub enum TyExprSpec {
+pub(crate) enum TyExprSpec {
     /// This is just a single identifier.  It could refer to a type or a const.
     Simple(Identifier),
 
@@ -150,7 +150,7 @@ pub enum TyExprSpec {
 }
 
 impl TyExprSpec {
-    pub fn base_name(&self) -> &Identifier {
+    pub(crate) fn base_name(&self) -> &Identifier {
         match self {
             TyExprSpec::Simple(name) => name,
             TyExprSpec::Complex(spec) => &spec.base_name,
@@ -213,7 +213,7 @@ pub enum ParseError {
 }
 
 /// Parses a module from a sequence of tokens.
-pub fn parse_module_from_toktrs(toktrs: &[SrcToktr]) -> Result<Module, ParseError> {
+pub(crate) fn parse_module_from_toktrs(toktrs: &[SrcToktr]) -> Result<Module, ParseError> {
     let mut gob = Gobbler::new(toktrs);
 
     let mut defs = Vec::new();
@@ -262,7 +262,7 @@ fn parse_assignment(gob: &mut Gobbler<'_, SrcToktr>) -> Result<AssignEntry, Pars
     let Some(expr_slice) = gob.gobble_slice_up_to(is_toktr_newline) else {
         return Err(ParseError::UnexpectedEnd);
     };
-    let val = parse_assign_expr(&expr_slice)?;
+    let val = parse_assign_expr(expr_slice)?;
 
     Ok(AssignEntry::new(ident, val))
 }
@@ -334,7 +334,7 @@ fn parse_class(gob: &mut Gobbler<'_, SrcToktr>) -> Result<ClassDefEntry, ParseEr
             Ok(cd)
         }
 
-        _ => return Err(ParseError::MalformedBlock(sp)),
+        _ => Err(ParseError::MalformedBlock(sp)),
     }
 }
 
