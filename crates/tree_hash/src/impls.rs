@@ -1,3 +1,8 @@
+// Modified in 2025 from the original version
+// Original source licensed under the Apache License 2.0
+
+//! Tree hash implementations for different types
+
 use super::*;
 use alloy_primitives::{Address, FixedBytes, U128, U256};
 use ssz::{Bitfield, Fixed, Variable};
@@ -286,7 +291,7 @@ mod test {
             ]
         );
         assert_eq!(
-            int_to_hash256(u64::max_value()).as_slice(),
+            int_to_hash256(u64::MAX).as_slice(),
             &[
                 255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0

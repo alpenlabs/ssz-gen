@@ -1,9 +1,11 @@
 // Modified in 2025 from the original version
 // Original source licensed under the Apache License 2.0
 
+//! Tree hash tests
+
+use alloy_primitives::{Address, U128, U160, U256};
 use rand as _;
 use smallvec as _;
-use alloy_primitives::{Address, U128, U160, U256};
 use ssz_derive::Encode;
 use ssz_types::BitVector;
 use tree_hash::{self, Hash256, MerkleHasher, PackedEncoding, TreeHash, BYTES_PER_CHUNK};
@@ -200,7 +202,7 @@ struct Circle {
     #[tree_hash(stable_index = 1)]
     color: u8,
     #[tree_hash(skip_hashing)]
-    phantom: u8,
+    _phantom: u8,
     // Note that we do not need to specify `stable_index = 2` here since
     // we always increment by 1 from the previous index.
     radius: u16,
@@ -236,7 +238,7 @@ fn shape_2() {
 
     let circle = Circle {
         color: 1,
-        phantom: 6,
+        _phantom: 6,
         radius: 42,
     };
 
@@ -249,7 +251,7 @@ fn shape_enum() {
 
     let circle = Circle {
         color: 1,
-        phantom: 6,
+        _phantom: 6,
         radius: 14,
     };
 

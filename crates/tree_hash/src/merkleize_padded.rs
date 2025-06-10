@@ -1,3 +1,6 @@
+// Modified in 2025 from the original version
+// Original source licensed under the Apache License 2.0
+
 use super::{get_zero_hash, Hash256, BYTES_PER_CHUNK};
 use ethereum_hashing::{hash32_concat, hash_fixed};
 
@@ -220,7 +223,7 @@ mod test {
     use super::*;
     use crate::ZERO_HASHES_MAX_INDEX;
 
-    pub fn reference_root(bytes: &[u8]) -> Hash256 {
+    fn reference_root(bytes: &[u8]) -> Hash256 {
         crate::merkleize_standard(bytes)
     }
 

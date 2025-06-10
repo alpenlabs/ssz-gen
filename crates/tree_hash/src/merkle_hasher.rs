@@ -8,10 +8,14 @@ use std::mem;
 
 type SmallVec8<T> = SmallVec<[T; 8]>;
 
+/// Error type for the MerkleHasher.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Error {
     /// The maximum number of leaves defined by the initialization `depth` has been exceed.
-    MaximumLeavesExceeded { max_leaves: usize },
+    MaximumLeavesExceeded {
+        /// The maximum number of leaves that can be hashed.
+        max_leaves: usize,
+    },
 }
 
 /// Helper struct to store either a hash digest or a slice.
@@ -55,6 +59,20 @@ impl HalfNode {
     fn finish(mut self, right: Preimage<'_>) -> [u8; HASH_LEN] {
         self.context.update(right.as_bytes());
         self.context.finalize()
+    }
+}
+
+impl std::fmt::Debug for HalfNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.context {
+            #[cfg(target_arch = "x86_64")]
+            Context::Sha2(_) => {
+                write!(f, "HalfNode {{ id: {}, context variant: Sha2 }}", self.id)
+            }
+            Context::Ring(_) => {
+                write!(f, "HalfNode {{ id: {}, context variant: Ring }}", self.id)
+            }
+        }
     }
 }
 
@@ -123,6 +141,7 @@ impl HalfNode {
 ///       L  L L  L
 /// ```
 ///
+#[derive(Debug)]
 pub struct MerkleHasher {
     /// Stores the nodes that are half-complete and awaiting a right node.
     ///

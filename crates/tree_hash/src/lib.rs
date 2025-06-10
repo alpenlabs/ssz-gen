@@ -1,6 +1,8 @@
 // Modified in 2025 from the original version
 // Original source licensed under the Apache License 2.0
 
+//! Tree hash implementation
+
 pub mod impls;
 mod merkle_hasher;
 mod merkleize_padded;
@@ -13,13 +15,21 @@ pub use merkleize_standard::merkleize_standard;
 use ethereum_hashing::{hash_fixed, ZERO_HASHES, ZERO_HASHES_MAX_INDEX};
 use smallvec::SmallVec;
 
+/// Number of bytes in a chunk
 pub const BYTES_PER_CHUNK: usize = 32;
+/// Size of a hash
 pub const HASHSIZE: usize = 32;
+/// Size of a merkle hash chunk
 pub const MERKLE_HASH_CHUNK: usize = 2 * BYTES_PER_CHUNK;
+/// Maximum union selector
 pub const MAX_UNION_SELECTOR: u8 = 127;
+/// Size of a smallvec
 pub const SMALLVEC_SIZE: usize = 32;
 
+/// 256-bit hash
 pub type Hash256 = alloy_primitives::B256;
+
+/// Packed encoding
 pub type PackedEncoding = SmallVec<[u8; SMALLVEC_SIZE]>;
 
 /// Convenience method for `MerkleHasher` which also provides some fast-paths for small trees.
@@ -92,6 +102,7 @@ pub fn mix_in_selector(root: &Hash256, selector: u8) -> Option<Hash256> {
     Some(Hash256::from_slice(&root))
 }
 
+/// Returns `root` created by hashing `root` and `aux`.
 pub fn mix_in_aux(root: &Hash256, aux: &Hash256) -> Hash256 {
     Hash256::from_slice(&ethereum_hashing::hash32_concat(
         root.as_slice(),
@@ -108,22 +119,33 @@ fn get_zero_hash(height: usize) -> &'static [u8] {
     }
 }
 
+/// Type of the tree hash.
 #[derive(Debug, PartialEq, Clone)]
 pub enum TreeHashType {
+    /// Basic tree hash.
     Basic,
+    /// Vector tree hash.
     Vector,
+    /// List tree hash.
     List,
+    /// Container tree hash.
     Container,
+    /// Stable container tree hash.
     StableContainer,
 }
 
+/// Trait for types that can be hashed into a merkle tree.
 pub trait TreeHash {
+    /// Returns the type of the tree hash.
     fn tree_hash_type() -> TreeHashType;
 
+    /// Returns the packed encoding of the tree hash.
     fn tree_hash_packed_encoding(&self) -> PackedEncoding;
 
+    /// Returns the packing factor of the tree hash.
     fn tree_hash_packing_factor() -> usize;
 
+    /// Returns the root of the tree hash.
     fn tree_hash_root(&self) -> Hash256;
 }
 
@@ -149,6 +171,7 @@ where
     }
 }
 
+/// Macro for implementing `TreeHash` for a type that is encoded as a vector.
 #[macro_export]
 macro_rules! tree_hash_ssz_encoding_as_vector {
     ($type: ident) => {
@@ -172,6 +195,7 @@ macro_rules! tree_hash_ssz_encoding_as_vector {
     };
 }
 
+/// Macro for implementing `TreeHash` for a type that is encoded as a list.
 #[macro_export]
 macro_rules! tree_hash_ssz_encoding_as_list {
     ($type: ident) => {
