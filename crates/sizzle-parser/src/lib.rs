@@ -1,3 +1,5 @@
+//! Pythinic SSZ definition parser.
+
 mod ast;
 
 mod builtins;

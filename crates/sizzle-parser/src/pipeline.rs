@@ -14,18 +14,23 @@ use crate::{
 /// Represents an error from any of the phases of parsing a raw schema.
 #[derive(Debug, Error)]
 pub enum SszError {
+    /// Error from the tokenizer.
     #[error("tokenizer: {0}")]
     Token(#[from] TokenError),
 
+    /// Error from the token tree parser.
     #[error("treeizer: {0}")]
     TokenTree(#[from] ToktrError),
 
+    /// Error from the AST parser.
     #[error("parser: {0}")]
     Parser(#[from] ParseError),
 
+    /// Error from the type resolver.
     #[error("type resolution: {0}")]
     TyResolver(#[from] ResolverError),
 
+    /// Error from the schema generator.
     #[error("schema generation: {0}")]
     SchemaGen(#[from] SchemaError),
 }
@@ -44,7 +49,7 @@ pub fn parse_str_schema(s: &str) -> Result<SszSchema, SszError> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{pipeline::parse_str_schema, Identifier};
+    use crate::pipeline::parse_str_schema;
 
     /*fn make_ident(s: &str) -> Identifier {
         Identifier::try_from(s.to_owned()).expect("test: make ident")

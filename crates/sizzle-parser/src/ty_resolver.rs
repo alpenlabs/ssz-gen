@@ -2,15 +2,12 @@
 //!
 //! Does the weird bookkeeping to figure out if schema types are well-formed.
 
-use std::{
-    collections::{HashMap, HashSet},
-    error::Error,
-};
+use std::collections::HashMap;
 
 use thiserror::Error;
 
 use crate::{
-    ast::{ComplexTySpec, TyArgSpec, TyExprSpec},
+    ast::{TyArgSpec, TyExprSpec},
     tysys::{ConstValue, Ty, TyExpr},
     Identifier,
 };
@@ -41,12 +38,12 @@ pub enum ResolverError {
 
 /// Describes information for a concrete type.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct TypeData {
+pub(crate) struct TypeData {
     // TODO
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct TypeCtorData {
+pub(crate) struct TypeCtorData {
     /// The signature.
     sig: CtorSig,
 
@@ -55,22 +52,22 @@ pub struct TypeCtorData {
 }
 
 impl TypeCtorData {
-    pub fn new(sig: CtorSig, type_data: TypeData) -> Self {
+    pub(crate) fn new(sig: CtorSig, type_data: TypeData) -> Self {
         Self { sig, type_data }
     }
 
-    pub fn sig(&self) -> &CtorSig {
+    pub(crate) fn _sig(&self) -> &CtorSig {
         &self.sig
     }
 
-    pub fn type_data(&self) -> &TypeData {
+    pub(crate) fn _type_data(&self) -> &TypeData {
         &self.type_data
     }
 }
 
 /// Describes the structure of arguments a type constructor accepts.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum CtorSig {
+pub(crate) enum CtorSig {
     /// Fixed arguments.  It could be no arguments and be like a thunk.
     ///
     /// Ex: `StableContainer[N]`, `List[T, N]`
@@ -94,7 +91,7 @@ pub enum CtorArg {
 
 /// Describes something an identifier can point to.
 #[derive(Clone, Debug)]
-pub enum IdentTarget {
+pub(crate) enum IdentTarget {
     Const(ConstValue),
     Ty(TypeData),
     TyCtor(TypeCtorData),
@@ -103,13 +100,13 @@ pub enum IdentTarget {
 /// Describes something an alias can point to.  Right now this is always just a
 /// direct reference to a concrete type.
 #[derive(Clone, Debug)]
-pub enum AliasRef {
+pub(crate) enum AliasRef {
     /// Direct alias of another type.
     Direct(Ty),
 }
 
 #[derive(Clone)]
-pub struct TypeResolver {
+pub(crate) struct TypeResolver {
     // TODO some way to express types that can be inherited from and types that can only be used as a member
     /// Constants in the module scope.
     idents: HashMap<Identifier, IdentTarget>,
@@ -119,7 +116,7 @@ pub struct TypeResolver {
 }
 
 impl TypeResolver {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             idents: HashMap::new(),
             aliases: HashMap::new(),
@@ -160,7 +157,7 @@ impl TypeResolver {
 
     /// Declares a user type (which is a `Unit` type which does not accept
     /// arguments).
-    pub fn decl_user_type(&mut self, ident: Identifier) -> Result<(), ResolverError> {
+    pub(crate) fn decl_user_type(&mut self, ident: Identifier) -> Result<(), ResolverError> {
         self.check_name_unused(&ident)?;
         self.insert_type(ident, TypeData {})
     }
@@ -173,12 +170,16 @@ impl TypeResolver {
     }
 
     /// Declares a type alias.  The target type MUST exist here, will cause errors otherwise.
-    pub fn decl_type_alias(&mut self, ident: Identifier, ty: Ty) -> Result<(), ResolverError> {
+    pub(crate) fn decl_type_alias(
+        &mut self,
+        ident: Identifier,
+        ty: Ty,
+    ) -> Result<(), ResolverError> {
         self.insert_alias(ident, AliasRef::Direct(ty))
     }
 
     /// Declares a const with an unspecified value.
-    pub fn decl_const(
+    pub(crate) fn decl_const(
         &mut self,
         ident: Identifier,
         value: ConstValue,
@@ -189,7 +190,7 @@ impl TypeResolver {
     }
 
     /// Gets an identifier if it's a type.
-    pub fn get_ident_as_ty(&self, ident: &Identifier) -> Result<&TypeData, ResolverError> {
+    pub(crate) fn _get_ident_as_ty(&self, ident: &Identifier) -> Result<&TypeData, ResolverError> {
         match self
             .idents
             .get(ident)
@@ -201,28 +202,31 @@ impl TypeResolver {
     }
 
     /// Queries an identifier to the underlying `TypeData`, following alias references.
-    pub fn query_ident_typedata<'t>(
+    pub(crate) fn _query_ident_typedata<'t>(
         &'t self,
         ident: &Identifier,
-    ) -> Result<&TypeData, ResolverError> {
+    ) -> Result<&'t TypeData, ResolverError> {
         if let Some(s) = self.idents.get(ident) {
             return Ok(match s {
                 IdentTarget::Ty(td) => td,
-                IdentTarget::TyCtor(ctor) => ctor.type_data(),
+                IdentTarget::TyCtor(ctor) => ctor._type_data(),
                 _ => return Err(ResolverError::MismatchedArgKind(ident.clone())),
             });
         }
 
         match self.aliases.get(ident) {
             Some(ar) => Ok(match ar {
-                AliasRef::Direct(conc_ty) => self.query_ident_typedata(conc_ty.base_name())?,
+                AliasRef::Direct(conc_ty) => self._query_ident_typedata(conc_ty.base_name())?,
             }),
             None => Err(ResolverError::UnknownIdent(ident.clone())),
         }
     }
 
     /// Gets an identifier if it's simply a const.
-    pub fn get_ident_as_const(&self, ident: &Identifier) -> Result<&ConstValue, ResolverError> {
+    pub(crate) fn _get_ident_as_const(
+        &self,
+        ident: &Identifier,
+    ) -> Result<&ConstValue, ResolverError> {
         match self
             .idents
             .get(ident)
@@ -234,12 +238,12 @@ impl TypeResolver {
     }
 
     /// Gets the referent of an identifier.
-    pub fn get_ident_referent(&self, ident: &Identifier) -> Option<&IdentTarget> {
+    pub(crate) fn get_ident_referent(&self, ident: &Identifier) -> Option<&IdentTarget> {
         self.idents.get(ident)
     }
 
     /// Resolves an identifier as an argument, possibly with its own arguments.
-    pub fn resolve_ident_with_args(
+    pub(crate) fn resolve_ident_with_args(
         &self,
         ident: &Identifier,
         args: Option<&[TyArgSpec]>,
@@ -300,7 +304,7 @@ impl TypeResolver {
                     for (sig_arg, spec_arg) in sig_args.iter().zip(spec_args.iter()) {
                         let arg: TyExpr = match (sig_arg, spec_arg) {
                             (CtorArg::Ty, TyArgSpec::Ident(arg_ident)) => {
-                                self.resolve_ident_with_args(&arg_ident, None)?
+                                self.resolve_ident_with_args(arg_ident, None)?
                             }
                             (CtorArg::Ty, TyArgSpec::Complex(complex)) => {
                                 match self.resolve_ident_with_args(
@@ -321,7 +325,7 @@ impl TypeResolver {
                                 ))
                             }
                             (CtorArg::Int, TyArgSpec::Ident(arg_ident)) => {
-                                self.resolve_ident_with_args(&arg_ident, None)?
+                                self.resolve_ident_with_args(arg_ident, None)?
                             }
                             (CtorArg::Int, TyArgSpec::Complex(_)) => {
                                 return Err(ResolverError::MismatchedArgKind(ident.clone()))
@@ -373,7 +377,7 @@ impl TypeResolver {
     /// Resolves a type spec to a type expr.
     ///
     /// This is so huge so that we can preserve context for error reporting.
-    pub fn resolve_spec_as_ty(&self, spec: &TyExprSpec) -> Result<Ty, ResolverError> {
+    pub(crate) fn resolve_spec_as_ty(&self, spec: &TyExprSpec) -> Result<Ty, ResolverError> {
         // Just match on the expression simply, then go from there.
         let expr = match spec {
             TyExprSpec::Simple(name) => self.resolve_ident_with_args(name, None)?,

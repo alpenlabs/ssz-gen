@@ -1,9 +1,6 @@
 //! Schema definitions.
 
-use std::{
-    collections::{HashMap, HashSet},
-    ops::Deref,
-};
+use std::collections::{HashMap, HashSet};
 
 use thiserror::Error;
 
@@ -39,14 +36,17 @@ pub struct SszSchema {
 }
 
 impl SszSchema {
+    /// All constants in the schema.
     pub fn constants(&self) -> &[ConstDef] {
         &self.constants
     }
 
+    /// All classes in the schema.
     pub fn classes(&self) -> &[ClassDef] {
         &self.classes
     }
 
+    /// All aliases in the schema.
     pub fn aliases(&self) -> &[AliasDef] {
         &self.aliases
     }
@@ -68,6 +68,7 @@ impl ConstDef {
     }
 }
 
+/// Class definition.
 #[derive(Clone, Debug)]
 pub struct ClassDef {
     name: Identifier,
@@ -76,14 +77,17 @@ pub struct ClassDef {
 }
 
 impl ClassDef {
+    /// Name of the class.
     pub fn name(&self) -> &Identifier {
         &self.name
     }
 
+    /// Parent type of the class.
     pub fn parent_ty(&self) -> &Ty {
         &self.parent_ty
     }
 
+    /// Fields of the class.
     pub fn fields(&self) -> &[ClassFieldDef] {
         &self.fields
     }
@@ -97,10 +101,12 @@ pub struct ClassFieldDef {
 }
 
 impl ClassFieldDef {
+    /// Name of the field.
     pub fn name(&self) -> &Identifier {
         &self.name
     }
 
+    /// Type of the field.
     pub fn ty(&self) -> &Ty {
         &self.ty
     }
@@ -114,6 +120,7 @@ pub struct AliasDef {
 }
 
 impl AliasDef {
+    /// Name of the alias.
     pub fn name(&self) -> &Identifier {
         &self.name
     }
@@ -125,7 +132,7 @@ impl AliasDef {
 }
 
 /// Converts a AST module to a full schema.
-pub fn conv_module_to_schema(m: &Module) -> Result<SszSchema, SchemaError> {
+pub(crate) fn conv_module_to_schema(m: &Module) -> Result<SszSchema, SchemaError> {
     let mut resolver = TypeResolver::new();
     builtins::populate_builtin_types(&mut resolver);
 

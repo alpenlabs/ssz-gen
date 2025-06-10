@@ -15,7 +15,7 @@ use crate::{
 pub type Token = TaggedToken<()>;
 
 /// Token tagged with a srcpos.
-pub type SrcToken = TaggedToken<SrcPos>;
+pub(crate) type SrcToken = TaggedToken<SrcPos>;
 
 /// Token with a tag.
 ///
@@ -24,26 +24,41 @@ pub type SrcToken = TaggedToken<SrcPos>;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TaggedToken<T> {
     // Keywords and structural elements.
+    /// `class` keyword.
     Class(T),
+    /// `:` keyword.
     Colon(T),
+    /// `=` keyword.
     Eq(T),
+    /// `,` keyword.
     Comma(T),
+    /// `\n` newline.
     Newline(T),
 
     // Identifiers.
+    /// An identifier.
     Identifier(T, Identifier),
 
     // Expressions.
+    /// An integer literal.
     IntegerLiteral(T, u64),
+    /// `<<` operator.
     Shl(T),
+    /// `*` operator.
     Mul(T),
 
     // Structural, these are treated specially in token trees later.
+    /// `[` open bracket.
     OpenBracket(T),
+    /// `]` close bracket.
     CloseBracket(T),
+    /// `(` open parenthesis.
     OpenParen(T),
+    /// `)` close parenthesis.
     CloseParen(T),
+    /// `indent` token.
     Indent(T),
+    /// `deindent` token.
     Deindent(T),
 }
 
@@ -119,14 +134,14 @@ pub enum Indent {
     Tab,
 }
 
-pub struct TokenSeqBuilder {
+pub(crate) struct TokenSeqBuilder {
     indent_ty: Option<Indent>,
     indent_level: usize,
     output: Vec<SrcToken>,
 }
 
 impl TokenSeqBuilder {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             indent_ty: None,
             indent_level: 0,
@@ -134,7 +149,7 @@ impl TokenSeqBuilder {
         }
     }
 
-    fn indent_level(&self) -> usize {
+    fn _indent_level(&self) -> usize {
         self.indent_level
     }
 
@@ -166,7 +181,7 @@ impl TokenSeqBuilder {
                 let is_tabs = is_all_tabs(indent);
 
                 // Doesn't matter what it is, this is just zero.
-                if indent.len() == 0 {
+                if indent.is_empty() {
                     return Ok(0);
                 }
 
@@ -231,7 +246,7 @@ fn is_all_tabs<'c>(iter: impl IntoIterator<Item = &'c char>) -> bool {
     iter.into_iter().all(|c| *c == '\t')
 }
 
-pub fn parse_char_array_to_tokens(s: &[char]) -> Result<Vec<SrcToken>, TokenError> {
+pub(crate) fn parse_char_array_to_tokens(s: &[char]) -> Result<Vec<SrcToken>, TokenError> {
     let sp_tbl = PosTbl::generate(s.iter().copied());
 
     let mut builder = TokenSeqBuilder::new();
@@ -244,7 +259,7 @@ pub fn parse_char_array_to_tokens(s: &[char]) -> Result<Vec<SrcToken>, TokenErro
         #[cfg(test)]
         eprintln!(
             "considering {cur:?} (indent level {})",
-            builder.indent_level()
+            builder._indent_level()
         );
 
         let next = s.get(i + 1).copied();

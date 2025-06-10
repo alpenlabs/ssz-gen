@@ -18,14 +18,17 @@ pub enum TyExpr {
 }
 
 impl TyExpr {
+    /// Create a new simple type expression.
     pub fn new_simple(ident: Identifier) -> Self {
         Self::Ty(Ty::Simple(ident))
     }
 
+    /// Create a new integer type expression.
     pub fn new_int(v: u64) -> Self {
         Self::Int(ConstValue::Int(v))
     }
 
+    /// Iterate over all the identifiers in the type expression.
     pub fn iter_idents(&self) -> impl Iterator<Item = &Identifier> {
         // FIXME I couldn't figure out how to make this no-alloc.
         let idents = match self {
@@ -51,6 +54,7 @@ pub enum Ty {
 }
 
 impl Ty {
+    /// The base name of the type, without any arguments.
     pub fn base_name(&self) -> &Identifier {
         match self {
             Ty::Simple(name) => name,
@@ -58,6 +62,7 @@ impl Ty {
         }
     }
 
+    /// Iterate over all the identifiers in the type.
     pub fn iter_idents(&self) -> impl Iterator<Item = &Identifier> {
         let bn = self.base_name();
 
@@ -70,6 +75,7 @@ impl Ty {
     }
 }
 
+/// A constant value.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ConstValue {
     /// Literal integer values.
@@ -80,6 +86,7 @@ pub enum ConstValue {
     Binop(Binop, u64, u64),
 }
 
+/// A binary operation.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Binop {
     /// Addition.
@@ -93,16 +100,15 @@ pub enum Binop {
 }
 
 impl ConstValue {
+    /// Evaluate the constant value.
     pub fn eval(&self) -> u64 {
         match self {
             ConstValue::Int(v) => *v,
-            ConstValue::Binop(op, a, b) => {
-                match op {
-                    Binop::Add => a + b,
-                    Binop::Mul => a * b,
-                    Binop::Shl => a << b,
-                }
-            }
+            ConstValue::Binop(op, a, b) => match op {
+                Binop::Add => a + b,
+                Binop::Mul => a * b,
+                Binop::Shl => a << b,
+            },
         }
     }
 }
