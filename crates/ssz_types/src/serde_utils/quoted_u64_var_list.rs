@@ -15,6 +15,8 @@ use ssz::TryFromIter;
 use std::iter;
 use std::marker::PhantomData;
 
+/// Visitor for deserializing quoted or unquoted integers
+#[derive(Debug)]
 pub struct QuotedIntVarListVisitor<C> {
     _phantom: PhantomData<C>,
 }
@@ -40,6 +42,7 @@ where
     }
 }
 
+/// Serialize a `VariableList<u64, N>`
 pub fn serialize<'a, C, I, S>(value: &'a C, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
@@ -54,6 +57,7 @@ where
     seq.end()
 }
 
+/// Deserialize a `VariableList<u64, N>`
 pub fn deserialize<'de, D, C>(deserializer: D) -> Result<C, D::Error>
 where
     D: Deserializer<'de>,

@@ -1,18 +1,20 @@
+// Modified in 2025 from the original version
+// Original source licensed under the Apache License 2.0
+
 use tree_hash::{Hash256, MerkleHasher, TreeHash, TreeHashType};
 use typenum::Unsigned;
 
 /// A helper function providing common functionality between the `TreeHash` implementations for
 /// `FixedVector` and `VariableList`.
-pub fn vec_tree_hash_root<T, N>(vec: &[T]) -> Hash256
+pub(crate) fn vec_tree_hash_root<T, N>(vec: &[T]) -> Hash256
 where
     T: TreeHash,
     N: Unsigned,
 {
     match T::tree_hash_type() {
         TreeHashType::Basic => {
-            let mut hasher = MerkleHasher::with_leaves(
-                (N::to_usize() + T::tree_hash_packing_factor() - 1) / T::tree_hash_packing_factor(),
-            );
+            let mut hasher =
+                MerkleHasher::with_leaves(N::to_usize().div_ceil(T::tree_hash_packing_factor()));
 
             for item in vec {
                 hasher

@@ -1,3 +1,6 @@
+// Modified in 2025 from the original version
+// Original source licensed under the Apache License 2.0
+
 use crate::tree_hash::vec_tree_hash_root;
 use crate::Error;
 use serde::Deserialize;
@@ -7,9 +10,6 @@ use std::ops::{Deref, DerefMut, Index, IndexMut};
 use std::slice::SliceIndex;
 use tree_hash::Hash256;
 use typenum::Unsigned;
-
-pub use typenum;
-
 /// Emulates a SSZ `Vector` (distinct from a Rust `Vec`).
 ///
 /// An ordered, heap-allocated, fixed-length, homogeneous collection of `T`, with `N` values.
@@ -376,7 +376,7 @@ impl<'a, T: arbitrary::Arbitrary<'a>, N: 'static + Unsigned> arbitrary::Arbitrar
         for _ in 0..size {
             vec.push(<T>::arbitrary(u)?);
         }
-        Ok(Self::new(vec).map_err(|_| arbitrary::Error::IncorrectFormat)?)
+        Self::new(vec).map_err(|_| arbitrary::Error::IncorrectFormat)
     }
 }
 

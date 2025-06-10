@@ -7,18 +7,21 @@ use serde::{ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer}
 use std::marker::PhantomData;
 use typenum::Unsigned;
 
-#[derive(Deserialize)]
+/// A wrapper for a `FixedVector<u8, N>`
+#[derive(Deserialize, Debug)]
 #[serde(transparent)]
 pub struct WrappedListOwned<N: Unsigned>(
     #[serde(with = "crate::serde_utils::hex_fixed_vec")] FixedVector<u8, N>,
 );
 
-#[derive(Serialize)]
+/// A wrapper for a `&FixedVector<u8, N>`
+#[derive(Serialize, Debug)]
 #[serde(transparent)]
 pub struct WrappedListRef<'a, N: Unsigned>(
     #[serde(with = "crate::serde_utils::hex_fixed_vec")] &'a FixedVector<u8, N>,
 );
 
+/// Serialize a `VariableList<FixedVector<u8, M>, N>`
 pub fn serialize<S, M, N>(
     list: &VariableList<FixedVector<u8, M>, N>,
     serializer: S,
@@ -35,7 +38,8 @@ where
     seq.end()
 }
 
-#[derive(Default)]
+/// Visitor for deserializing a `VariableList<FixedVector<u8, M>, N>`
+#[derive(Default, Debug)]
 pub struct Visitor<M, N> {
     _phantom_m: PhantomData<M>,
     _phantom_n: PhantomData<N>,
@@ -68,6 +72,7 @@ where
     }
 }
 
+/// Deserialize a `VariableList<FixedVector<u8, M>, N>`
 pub fn deserialize<'de, D, M, N>(
     deserializer: D,
 ) -> Result<VariableList<FixedVector<u8, M>, N>, D::Error>
