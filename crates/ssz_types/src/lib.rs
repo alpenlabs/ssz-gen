@@ -52,14 +52,18 @@ pub use typenum;
 pub use variable_list::VariableList;
 
 pub mod length {
+    //! Length types for SSZ.
     pub use ssz::{Fixed, Variable};
 }
 
 /// Returned when an item encounters an error.
 #[derive(PartialEq, Debug, Clone)]
 pub enum Error {
+    /// An index is out of bounds.
     OutOfBounds {
+        /// The index that is out of bounds.
         i: usize,
+        /// The length of the list.
         len: usize,
     },
     /// A `BitList` does not have a set bit, therefore it's length is unknowable.
@@ -68,7 +72,9 @@ pub enum Error {
     ExcessBits,
     /// A `BitList` has an invalid number of bytes for a given bit length.
     InvalidByteCount {
+        /// The number of bytes given.
         given: usize,
+        /// The number of bytes expected.
         expected: usize,
     },
 }

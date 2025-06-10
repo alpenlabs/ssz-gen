@@ -1,8 +1,14 @@
+// Modified in 2025 from the original version
+// Original source licensed under the Apache License 2.0
+
+//! Serde utilities for `FixedVector`
+
 use crate::FixedVector;
 use serde::{Deserializer, Serializer};
 use serde_utils::hex::{self, PrefixedHexVisitor};
 use typenum::Unsigned;
 
+/// Serialize a `FixedVector` as a hex string.
 pub fn serialize<S, U>(bytes: &FixedVector<u8, U>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
@@ -11,6 +17,7 @@ where
     serializer.serialize_str(&hex::encode(&bytes[..]))
 }
 
+/// Deserialize a `FixedVector` from a hex string.
 pub fn deserialize<'de, D, U>(deserializer: D) -> Result<FixedVector<u8, U>, D::Error>
 where
     D: Deserializer<'de>,
