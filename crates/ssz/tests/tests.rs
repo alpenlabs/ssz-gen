@@ -172,8 +172,7 @@ mod round_trip {
             assert_eq!(
                 items[i].as_ssz_bytes(),
                 expected_encodings[i],
-                "Failed on {}",
-                i
+                "Failed on {i}"
             );
         }
     }
@@ -293,8 +292,7 @@ mod round_trip {
             assert_eq!(
                 items[i].as_ssz_bytes(),
                 expected_encodings[i],
-                "Failed on {}",
-                i
+                "Failed on {i}"
             );
         }
     }

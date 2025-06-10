@@ -64,7 +64,7 @@ where
 
         while let Some(val) = seq.next_element::<WrappedListOwned<M>>()? {
             list.push(val.0).map_err(|e| {
-                serde::de::Error::custom(format!("failed to push value to list: {:?}.", e))
+                serde::de::Error::custom(format!("failed to push value to list: {e:?}."))
             })?;
         }
 

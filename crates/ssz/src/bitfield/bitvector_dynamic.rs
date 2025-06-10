@@ -116,7 +116,7 @@ impl Decode for Bitfield<Dynamic> {
 
         let len = bytes.len() * 8;
         Self::from_raw_bytes(bytes.to_smallvec(), len).map_err(|e| {
-            DecodeError::BytesInvalid(format!("BitVectorDynamic failed to decode: {:?}", e))
+            DecodeError::BytesInvalid(format!("BitVectorDynamic failed to decode: {e:?}"))
         })
     }
 }
@@ -137,7 +137,7 @@ impl<'de> Deserialize<'de> for Bitfield<Dynamic> {
     {
         let bytes = deserializer.deserialize_str(PrefixedHexVisitor)?;
         Self::from_ssz_bytes(&bytes)
-            .map_err(|e| serde::de::Error::custom(format!("BitVectorDynamic {:?}", e)))
+            .map_err(|e| serde::de::Error::custom(format!("BitVectorDynamic {e:?}")))
     }
 }
 

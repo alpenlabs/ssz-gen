@@ -268,8 +268,7 @@ impl<'a> Procedure<'a> {
                         behaviour: StructBehaviour::Transparent,
                     },
                     Some(other) => panic!(
-                        "{} is not a valid struct behaviour, use \"container\", \"stable_container\" or \"transparent\"",
-                        other
+                        "{other} is not a valid struct behaviour, use \"container\", \"stable_container\" or \"transparent\""
                     ),
                 }
             }
@@ -292,8 +291,7 @@ impl<'a> Procedure<'a> {
                         behaviour: EnumBehaviour::Tag,
                     },
                     Some(other) => panic!(
-                        "{} is not a valid enum behaviour, use \"container\" or \"transparent\"",
-                        other
+                        "{other} is not a valid enum behaviour, use \"container\" or \"transparent\""
                     ),
                     None => panic!("{}", NO_ENUM_BEHAVIOUR_ERROR),
                 }
@@ -812,8 +810,7 @@ fn ssz_encode_derive_struct_transparent(
 
     if num_fields != 1 {
         panic!(
-            "A \"transparent\" struct must have exactly one non-skipped field ({} fields found)",
-            num_fields
+            "A \"transparent\" struct must have exactly one non-skipped field ({num_fields} fields found)"
         );
     }
 
@@ -1271,8 +1268,7 @@ fn ssz_decode_derive_struct_transparent(
 
     if num_fields != 1 {
         panic!(
-            "A \"transparent\" struct must have exactly one non-skipped field ({} fields found)",
-            num_fields
+            "A \"transparent\" struct must have exactly one non-skipped field ({num_fields} fields found)"
         );
     }
 
@@ -1920,9 +1916,7 @@ fn compute_union_selectors(num_variants: usize) -> Vec<u8> {
 
     assert!(
         highest_selector <= MAX_UNION_SELECTOR,
-        "union selector {} exceeds limit of {}, enum has too many variants",
-        highest_selector,
-        MAX_UNION_SELECTOR
+        "union selector {highest_selector} exceeds limit of {MAX_UNION_SELECTOR}, enum has too many variants"
     );
 
     union_selectors

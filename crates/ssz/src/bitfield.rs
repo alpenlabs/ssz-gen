@@ -619,7 +619,7 @@ impl<N: Unsigned + Clone> Decode for Bitfield<Variable<N>> {
 
     fn from_ssz_bytes(bytes: &[u8]) -> Result<Self, DecodeError> {
         Self::from_bytes(bytes.to_smallvec())
-            .map_err(|e| DecodeError::BytesInvalid(format!("BitList failed to decode: {:?}", e)))
+            .map_err(|e| DecodeError::BytesInvalid(format!("BitList failed to decode: {e:?}")))
     }
 }
 
@@ -652,7 +652,7 @@ impl<N: Unsigned + Clone> Decode for Bitfield<Fixed<N>> {
 
     fn from_ssz_bytes(bytes: &[u8]) -> Result<Self, DecodeError> {
         Self::from_bytes(bytes.to_smallvec())
-            .map_err(|e| DecodeError::BytesInvalid(format!("BitVector failed to decode: {:?}", e)))
+            .map_err(|e| DecodeError::BytesInvalid(format!("BitVector failed to decode: {e:?}")))
     }
 }
 
@@ -674,7 +674,7 @@ impl<'de, N: Unsigned + Clone> Deserialize<'de> for Bitfield<Variable<N>> {
     {
         let bytes = deserializer.deserialize_str(PrefixedHexVisitor)?;
         Self::from_ssz_bytes(&bytes)
-            .map_err(|e| serde::de::Error::custom(format!("Bitfield {:?}", e)))
+            .map_err(|e| serde::de::Error::custom(format!("Bitfield {e:?}")))
     }
 }
 
@@ -696,7 +696,7 @@ impl<'de, N: Unsigned + Clone> Deserialize<'de> for Bitfield<Fixed<N>> {
     {
         let bytes = deserializer.deserialize_str(PrefixedHexVisitor)?;
         Self::from_ssz_bytes(&bytes)
-            .map_err(|e| serde::de::Error::custom(format!("Bitfield {:?}", e)))
+            .map_err(|e| serde::de::Error::custom(format!("Bitfield {e:?}")))
     }
 }
 
@@ -908,7 +908,7 @@ mod bitvector {
                 bitfield.set(j, true).expect("should set bit in bounds");
             }
             let bytes = bitfield.as_ssz_bytes();
-            assert_eq!(bitfield.ssz_bytes_len(), bytes.len(), "i = {}", i);
+            assert_eq!(bitfield.ssz_bytes_len(), bytes.len(), "i = {i}");
         }
     }
 
@@ -1430,7 +1430,7 @@ mod bitlist {
                 bitfield.set(j, true).expect("should set bit in bounds");
             }
             let bytes = bitfield.as_ssz_bytes();
-            assert_eq!(bitfield.ssz_bytes_len(), bytes.len(), "i = {}", i);
+            assert_eq!(bitfield.ssz_bytes_len(), bytes.len(), "i = {i}");
         }
     }
 
