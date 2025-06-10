@@ -1,6 +1,8 @@
 // Modified in 2025 from the original version
 // Original source licensed under the Apache License 2.0
 
+//! Provides procedural derive macros for the `tree_hash::TreeHash` trait of `tree_hash` crate.
+
 #![recursion_limit = "256"]
 use darling::{FromDeriveInput, FromMeta};
 use proc_macro::TokenStream;
@@ -51,7 +53,7 @@ enum StructBehaviour {
 }
 
 impl StructBehaviour {
-    pub fn new(s: Option<String>) -> Option<Self> {
+    pub(crate) fn new(s: Option<String>) -> Option<Self> {
         s.map(|s| match s.as_ref() {
             STRUCT_CONTAINER => StructBehaviour::Container,
             STRUCT_STABLE_CONTAINER => StructBehaviour::StableContainer,
@@ -71,7 +73,7 @@ enum EnumBehaviour {
 }
 
 impl EnumBehaviour {
-    pub fn new(s: Option<String>) -> Option<Self> {
+    pub(crate) fn new(s: Option<String>) -> Option<Self> {
         s.map(|s| match s.as_ref() {
             ENUM_TRANSPARENT => EnumBehaviour::Transparent,
             ENUM_TRANSPARENT_STABLE => EnumBehaviour::TransparentStable,
@@ -139,7 +141,11 @@ fn parse_tree_hash_fields(
             let field_opts_candidates = field
                 .attrs
                 .iter()
-                .filter(|attr| attr.path().get_ident().is_some_and(|ident| *ident == "tree_hash"))
+                .filter(|attr| {
+                    attr.path()
+                        .get_ident()
+                        .is_some_and(|ident| *ident == "tree_hash")
+                })
                 .collect::<Vec<_>>();
 
             if field_opts_candidates.len() > 1 {
