@@ -58,10 +58,9 @@ impl StructBehaviour {
             STRUCT_CONTAINER => StructBehaviour::Container,
             STRUCT_STABLE_CONTAINER => StructBehaviour::StableContainer,
             STRUCT_PROFILE => StructBehaviour::Profile,
-            other => panic!(
-                "{} is an invalid struct_behaviour, use one of: {:?}",
-                other, STRUCT_VARIANTS
-            ),
+            other => {
+                panic!("{other} is an invalid struct_behaviour, use one of: {STRUCT_VARIANTS:?}")
+            }
         })
     }
 }
@@ -78,10 +77,7 @@ impl EnumBehaviour {
             ENUM_TRANSPARENT => EnumBehaviour::Transparent,
             ENUM_TRANSPARENT_STABLE => EnumBehaviour::TransparentStable,
             ENUM_UNION => EnumBehaviour::Union,
-            other => panic!(
-                "{} is an invalid enum_behaviour, use either {:?}",
-                other, ENUM_VARIANTS
-            ),
+            other => panic!("{other} is an invalid enum_behaviour, use either {ENUM_VARIANTS:?}"),
         })
     }
 }
@@ -577,9 +573,7 @@ fn compute_union_selectors(num_variants: usize) -> Vec<u8> {
 
     assert!(
         highest_selector <= MAX_UNION_SELECTOR,
-        "union selector {} exceeds limit of {}, enum has too many variants",
-        highest_selector,
-        MAX_UNION_SELECTOR
+        "union selector {highest_selector} exceeds limit of {MAX_UNION_SELECTOR}, enum has too many variants"
     );
 
     union_selectors

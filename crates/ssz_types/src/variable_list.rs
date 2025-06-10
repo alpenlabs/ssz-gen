@@ -295,8 +295,7 @@ where
 
             if num_items > max_len {
                 return Err(ssz::DecodeError::BytesInvalid(format!(
-                    "VariableList of {} items exceeds maximum of {}",
-                    num_items, max_len
+                    "VariableList of {num_items} items exceeds maximum of {max_len}"
                 )));
             }
 
@@ -510,8 +509,7 @@ mod test {
             assert_eq!(
                 fixed.tree_hash_root(),
                 padded_root_with_length(&repeat(a.tree_hash_root().as_slice(), i), i, 1),
-                "U1 {}",
-                i
+                "U1 {i}"
             );
         }
 
@@ -520,8 +518,7 @@ mod test {
             assert_eq!(
                 fixed.tree_hash_root(),
                 padded_root_with_length(&repeat(a.tree_hash_root().as_slice(), i), i, 8),
-                "U8 {}",
-                i
+                "U8 {i}"
             );
         }
 
@@ -530,8 +527,7 @@ mod test {
             assert_eq!(
                 fixed.tree_hash_root(),
                 padded_root_with_length(&repeat(a.tree_hash_root().as_slice(), i), i, 13),
-                "U13 {}",
-                i
+                "U13 {i}"
             );
         }
 
@@ -540,8 +536,7 @@ mod test {
             assert_eq!(
                 fixed.tree_hash_root(),
                 padded_root_with_length(&repeat(a.tree_hash_root().as_slice(), i), i, 16),
-                "U16 {}",
-                i
+                "U16 {i}"
             );
         }
     }

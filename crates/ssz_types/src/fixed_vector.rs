@@ -311,8 +311,7 @@ where
 
             if num_items != fixed_len {
                 return Err(ssz::DecodeError::BytesInvalid(format!(
-                    "FixedVector of {} items has {} items",
-                    num_items, fixed_len
+                    "FixedVector of {num_items} items has {fixed_len} items"
                 )));
             }
 
@@ -325,16 +324,14 @@ where
             )?;
             Self::new(vec).map_err(|e| {
                 ssz::DecodeError::BytesInvalid(format!(
-                    "Wrong number of FixedVector elements: {:?}",
-                    e
+                    "Wrong number of FixedVector elements: {e:?}"
                 ))
             })
         } else {
             let vec = ssz::decode_list_of_variable_length_items(bytes, Some(fixed_len))?;
             Self::new(vec).map_err(|e| {
                 ssz::DecodeError::BytesInvalid(format!(
-                    "Wrong number of FixedVector elements: {:?}",
-                    e
+                    "Wrong number of FixedVector elements: {e:?}"
                 ))
             })
         }
