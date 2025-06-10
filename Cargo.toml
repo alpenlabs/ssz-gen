@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "crates/ssz_codegen",
     "crates/ssz",
     "crates/ssz_derive",
     "crates/tree_hash",
