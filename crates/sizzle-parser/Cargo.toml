@@ -2,6 +2,7 @@
 name = "sizzle-parser"
 description = "Pythonic SSZ definition parser"
 license = "MPL-2.0"
+authors.workspace = true
 version.workspace = true
 edition.workspace = true
 readme.workspace = true
