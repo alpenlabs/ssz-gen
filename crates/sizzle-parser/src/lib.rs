@@ -1,4 +1,4 @@
-//! Pythinic SSZ definition parser.
+//! Pythonic SSZ definition parser.
 
 mod ast;
 
