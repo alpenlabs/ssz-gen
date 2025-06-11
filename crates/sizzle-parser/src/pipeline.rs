@@ -3,12 +3,12 @@
 use thiserror::Error;
 
 use crate::{
+    SszSchema,
     ast::{self, ParseError},
     schema::{self, SchemaError},
     token::{self, TokenError},
     token_tree::{self, ToktrError},
     ty_resolver::ResolverError,
-    SszSchema,
 };
 
 /// Represents an error from any of the phases of parsing a raw schema.

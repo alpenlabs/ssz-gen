@@ -260,7 +260,7 @@ mod test {
     use super::*;
     use ssz::{BitList, BitVector};
     use std::str::FromStr;
-    use typenum::{U32, U8};
+    use typenum::{U8, U32};
 
     #[test]
     fn bool() {

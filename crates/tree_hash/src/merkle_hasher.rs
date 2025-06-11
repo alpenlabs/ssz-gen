@@ -1,9 +1,9 @@
 // Modified in 2025 from the original version
 // Original source licensed under the Apache License 2.0
 
-use crate::{get_zero_hash, Hash256, HASHSIZE};
-use ethereum_hashing::{Context, Sha256Context, HASH_LEN};
-use smallvec::{smallvec, SmallVec};
+use crate::{HASHSIZE, Hash256, get_zero_hash};
+use ethereum_hashing::{Context, HASH_LEN, Sha256Context};
+use smallvec::{SmallVec, smallvec};
 use std::mem;
 
 type SmallVec8<T> = SmallVec<[T; 8]>;

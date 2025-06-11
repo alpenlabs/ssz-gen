@@ -3,7 +3,7 @@
 
 //! Serialize `VaraibleList<VariableList<u8, M>, N>` as list of 0x-prefixed hex string.
 use crate::VariableList;
-use serde::{ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, ser::SerializeSeq};
 use std::marker::PhantomData;
 use typenum::Unsigned;
 

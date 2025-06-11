@@ -4,14 +4,14 @@
 //! Provides `Bitfield<Dynamic>` (BitVectorDynamic)
 /// for encoding and decoding bitvectors that have a dynamic length.
 use crate::{
-    bitfield::{bytes_for_bit_len, Bitfield, BitfieldBehaviour, Error, SMALLVEC_LEN},
     Decode, DecodeError, Encode,
+    bitfield::{Bitfield, BitfieldBehaviour, Error, SMALLVEC_LEN, bytes_for_bit_len},
 };
 use core::marker::PhantomData;
 use serde::de::{Deserialize, Deserializer};
 use serde::ser::{Serialize, Serializer};
-use serde_utils::hex::{encode as hex_encode, PrefixedHexVisitor};
-use smallvec::{smallvec, SmallVec, ToSmallVec};
+use serde_utils::hex::{PrefixedHexVisitor, encode as hex_encode};
+use smallvec::{SmallVec, ToSmallVec, smallvec};
 
 /// A marker struct used to declare dynamic length behaviour on a Bitfield.
 #[derive(Clone, PartialEq, Eq, Debug)]

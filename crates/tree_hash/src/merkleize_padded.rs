@@ -1,8 +1,8 @@
 // Modified in 2025 from the original version
 // Original source licensed under the Apache License 2.0
 
-use super::{get_zero_hash, Hash256, BYTES_PER_CHUNK};
-use ethereum_hashing::{hash32_concat, hash_fixed};
+use super::{BYTES_PER_CHUNK, Hash256, get_zero_hash};
+use ethereum_hashing::{hash_fixed, hash32_concat};
 
 /// Merkleize `bytes` and return the root, optionally padding the tree out to `min_leaves` number of
 /// leaves.

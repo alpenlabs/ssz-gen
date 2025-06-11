@@ -259,7 +259,7 @@ impl<T: Encode> Encode for Option<T> {
                 let union_selector: u8 = 0u8;
                 buf.push(union_selector);
             }
-            Some(ref inner) => {
+            Some(inner) => {
                 let union_selector: u8 = 1u8;
                 buf.push(union_selector);
                 inner.ssz_append(buf);
@@ -269,7 +269,7 @@ impl<T: Encode> Encode for Option<T> {
     fn ssz_bytes_len(&self) -> usize {
         match self {
             None => 1usize,
-            Some(ref inner) => inner
+            Some(inner) => inner
                 .ssz_bytes_len()
                 .checked_add(1)
                 .expect("encoded length must be less than usize::max_value"),
@@ -516,7 +516,7 @@ impl Encode for Bloom {
 
     #[inline]
     fn ssz_append(&self, buf: &mut Vec<u8>) {
-        buf.extend_from_slice(&self.0 .0);
+        buf.extend_from_slice(&self.0.0);
     }
 
     #[inline]
@@ -678,7 +678,9 @@ mod tests {
         );
         assert_eq!(
             (!0_u128).as_ssz_bytes(),
-            vec![255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]
+            vec![
+                255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255
+            ]
         );
     }
 

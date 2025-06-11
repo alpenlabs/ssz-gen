@@ -26,4 +26,4 @@ pub mod tysys;
 mod gobbler;
 
 mod pipeline;
-pub use pipeline::{parse_str_schema, SszError};
+pub use pipeline::{SszError, parse_str_schema};

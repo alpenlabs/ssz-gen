@@ -8,7 +8,7 @@ use rand as _;
 use smallvec as _;
 use ssz_derive::Encode;
 use ssz_types::BitVector;
-use tree_hash::{self, Hash256, MerkleHasher, PackedEncoding, TreeHash, BYTES_PER_CHUNK};
+use tree_hash::{self, BYTES_PER_CHUNK, Hash256, MerkleHasher, PackedEncoding, TreeHash};
 use tree_hash_derive::TreeHash;
 use typenum::Unsigned;
 

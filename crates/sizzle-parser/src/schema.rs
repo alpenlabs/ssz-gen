@@ -5,11 +5,11 @@ use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 
 use crate::{
+    Identifier,
     ast::{AssignExpr, ClassDefEntry, Module, ModuleEntry},
     builtins,
     ty_resolver::{ResolverError, TypeResolver},
     tysys::{ConstValue, Ty, TyExpr},
-    Identifier,
 };
 
 #[derive(Debug, Error)]

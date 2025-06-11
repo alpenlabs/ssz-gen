@@ -7,8 +7,8 @@ use crate::{Decode, DecodeError, Encode};
 use core::marker::PhantomData;
 use serde::de::{Deserialize, Deserializer};
 use serde::ser::{Serialize, Serializer};
-use serde_utils::hex::{encode as hex_encode, PrefixedHexVisitor};
-use smallvec::{smallvec, SmallVec, ToSmallVec};
+use serde_utils::hex::{PrefixedHexVisitor, encode as hex_encode};
+use smallvec::{SmallVec, ToSmallVec, smallvec};
 use typenum::Unsigned;
 pub(crate) mod bitvector_dynamic;
 
@@ -366,11 +366,7 @@ impl<N: Unsigned + Clone> std::fmt::Display for Bitfield<Fixed<N>> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut field: String = "".to_string();
         for i in self.iter() {
-            if i {
-                field.push('1')
-            } else {
-                field.push('0')
-            }
+            if i { field.push('1') } else { field.push('0') }
         }
         write!(f, "{field}")
     }

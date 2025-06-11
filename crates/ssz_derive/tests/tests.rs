@@ -11,8 +11,8 @@ use syn as _;
 use ssz::{Decode, DecodeError, Encode};
 use ssz_derive::{Decode, Encode};
 use ssz_types::{
-    typenum::{self, Unsigned},
     BitVector,
+    typenum::{self, Unsigned},
 };
 use std::fmt::Debug;
 use std::marker::PhantomData;

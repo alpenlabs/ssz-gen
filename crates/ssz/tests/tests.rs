@@ -12,7 +12,7 @@ use serde_utils as _;
 use smallvec as _;
 use typenum as _;
 
-use alloy_primitives::{Address, Bloom, Bytes, B256, U128, U256};
+use alloy_primitives::{Address, B256, Bloom, Bytes, U128, U256};
 use ssz::{Decode, DecodeError, Encode};
 use ssz_derive::{Decode, Encode};
 use std::num::NonZeroUsize;

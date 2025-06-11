@@ -12,7 +12,7 @@ pub use merkle_hasher::{Error, MerkleHasher};
 pub use merkleize_padded::merkleize_padded;
 pub use merkleize_standard::merkleize_standard;
 
-use ethereum_hashing::{hash_fixed, ZERO_HASHES, ZERO_HASHES_MAX_INDEX};
+use ethereum_hashing::{ZERO_HASHES, ZERO_HASHES_MAX_INDEX, hash_fixed};
 use smallvec::SmallVec;
 
 /// Number of bytes in a chunk

@@ -3,7 +3,7 @@
 
 //! Serialize `VariableList<FixedVector<u8, M>, N>` as list of 0x-prefixed hex string.
 use crate::{FixedVector, VariableList};
-use serde::{ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, ser::SerializeSeq};
 use std::marker::PhantomData;
 use typenum::Unsigned;
 

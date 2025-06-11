@@ -1,8 +1,8 @@
 // Modified in 2025 from the original version
 // Original source licensed under the Apache License 2.0
 
-use crate::tree_hash::vec_tree_hash_root;
 use crate::Error;
+use crate::tree_hash::vec_tree_hash_root;
 use serde::Deserialize;
 use serde_derive::Serialize;
 use std::marker::PhantomData;
@@ -382,7 +382,7 @@ mod test {
     use super::*;
     use ssz::*;
     use std::collections::HashSet;
-    use tree_hash::{merkle_root, TreeHash};
+    use tree_hash::{TreeHash, merkle_root};
     use tree_hash_derive::TreeHash;
     use typenum::*;
 

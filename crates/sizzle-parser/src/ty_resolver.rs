@@ -7,9 +7,9 @@ use std::collections::HashMap;
 use thiserror::Error;
 
 use crate::{
+    Identifier,
     ast::{TyArgSpec, TyExprSpec},
     tysys::{ConstValue, Ty, TyExpr},
-    Identifier,
 };
 
 #[derive(Debug, Error)]
@@ -322,13 +322,13 @@ impl TypeResolver {
                                     ident.clone(),
                                     sig_arg.clone(),
                                     spec_arg.clone(),
-                                ))
+                                ));
                             }
                             (CtorArg::Int, TyArgSpec::Ident(arg_ident)) => {
                                 self.resolve_ident_with_args(arg_ident, None)?
                             }
                             (CtorArg::Int, TyArgSpec::Complex(_)) => {
-                                return Err(ResolverError::MismatchedArgKind(ident.clone()))
+                                return Err(ResolverError::MismatchedArgKind(ident.clone()));
                             }
                             (CtorArg::Int, TyArgSpec::IntLiteral(v)) => {
                                 TyExpr::Int(ConstValue::Int(*v))
@@ -358,7 +358,7 @@ impl TypeResolver {
                                 TyExpr::Int(_) => panic!("tyresolv: complex type resolved to int"),
                             },
                             TyArgSpec::IntLiteral(_) => {
-                                return Err(ResolverError::MismatchedArgKind(ident.clone()))
+                                return Err(ResolverError::MismatchedArgKind(ident.clone()));
                             }
                         };
 
@@ -397,10 +397,10 @@ impl TypeResolver {
 #[cfg(test)]
 mod tests {
     use crate::{
+        Identifier,
         ast::{ComplexTySpec, TyArgSpec, TyExprSpec},
         builtins,
         tysys::ConstValue,
-        Identifier,
     };
 
     use super::TypeResolver;

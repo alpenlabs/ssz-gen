@@ -8,7 +8,7 @@ use darling::{FromDeriveInput, FromMeta};
 use proc_macro::TokenStream;
 use quote::quote;
 use std::convert::TryInto;
-use syn::{parse_macro_input, DataEnum, DataStruct, DeriveInput, Expr, Ident};
+use syn::{DataEnum, DataStruct, DeriveInput, Expr, Ident, parse_macro_input};
 
 /// The highest possible union selector value (higher values are reserved for backwards compatible
 /// extensions).
@@ -338,9 +338,11 @@ fn tree_hash_derive_struct_profile(
         }
 
         let ident = match ident {
-            Some(ref ident) => ident,
+            Some(ident) => ident,
             _ => {
-                panic!("#[tree_hash(struct_behaviour = \"profile\")] only supports named struct fields.")
+                panic!(
+                    "#[tree_hash(struct_behaviour = \"profile\")] only supports named struct fields."
+                )
             }
         };
 
@@ -452,7 +454,7 @@ fn tree_hash_derive_enum_transparent(
             }
 
             let pattern = quote! {
-                #name::#variant_name(ref inner)
+                #name::#variant_name(inner)
             };
 
             let ty = &(&variant.fields).into_iter().next().unwrap().ty;
@@ -520,7 +522,7 @@ fn tree_hash_derive_enum_union(derive_input: &DeriveInput, enum_data: &DataEnum)
             }
 
             quote! {
-                #name::#variant_name(ref inner)
+                #name::#variant_name(inner)
             }
         })
         .collect();
@@ -580,18 +582,18 @@ fn compute_union_selectors(num_variants: usize) -> Vec<u8> {
 }
 
 fn ty_inner_type<'a>(wrapper: &str, ty: &'a syn::Type) -> Option<&'a syn::Type> {
-    if let syn::Type::Path(ref p) = ty {
+    if let syn::Type::Path(p) = ty {
         if p.path.segments.len() != 1 || p.path.segments[0].ident != wrapper {
             return None;
         }
 
-        if let syn::PathArguments::AngleBracketed(ref inner_ty) = p.path.segments[0].arguments {
+        if let syn::PathArguments::AngleBracketed(inner_ty) = &p.path.segments[0].arguments {
             if inner_ty.args.len() != 1 {
                 return None;
             }
 
             let inner_ty = inner_ty.args.first().unwrap();
-            if let syn::GenericArgument::Type(ref t) = inner_ty {
+            if let syn::GenericArgument::Type(t) = inner_ty {
                 return Some(t);
             }
         }

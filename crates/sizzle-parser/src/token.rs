@@ -7,7 +7,7 @@
 use thiserror::Error;
 
 use crate::{
-    names::{is_valid_ident_continuing_char, is_valid_ident_initial_char, Identifier, NameError},
+    names::{Identifier, NameError, is_valid_ident_continuing_char, is_valid_ident_initial_char},
     src_pos::{PosTbl, SrcPos},
 };
 
@@ -383,7 +383,7 @@ fn find_satisfying_range(arr: &[char], start: usize, cond: impl Fn(char) -> bool
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_char_array_to_tokens, TokenSeqBuilder};
+    use super::{TokenSeqBuilder, parse_char_array_to_tokens};
 
     #[test]
     fn test_whitespace_spaces() {

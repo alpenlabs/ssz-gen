@@ -9,7 +9,7 @@
 
 use itertools::process_results;
 use serde::ser::SerializeSeq;
-use serde::{de::Error, Deserializer, Serializer};
+use serde::{Deserializer, Serializer, de::Error};
 use serde_utils::quoted_u64_vec::QuotedIntWrapper;
 use ssz::TryFromIter;
 use std::iter;

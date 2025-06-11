@@ -5,10 +5,10 @@ use std::fmt::Debug;
 use thiserror::Error;
 
 use crate::{
+    Identifier, SrcPos, TaggedToktr,
     gobbler::Gobbler,
     token_tree::SrcToktr,
     tysys::{Binop, ConstValue},
-    Identifier, SrcPos, TaggedToktr,
 };
 
 /// A module file containing a list of definitions.
@@ -310,7 +310,13 @@ fn parse_class(gob: &mut Gobbler<'_, SrcToktr>) -> Result<ClassDefEntry, ParseEr
     let sp = *gob.get_expect().tag();
 
     match gob.view() {
-        [Class(_), Identifier(_, name), ParenBlock(_, ty_data), Colon(_), ..] => {
+        [
+            Class(_),
+            Identifier(_, name),
+            ParenBlock(_, ty_data),
+            Colon(_),
+            ..,
+        ] => {
             // Parse basic information out of the header.
             let name = name.clone();
             let mut ty_gob = Gobbler::new(ty_data.children());
@@ -443,7 +449,12 @@ fn parse_class_body(gob: &mut Gobbler<'_, SrcToktr>) -> Result<Vec<FieldDef>, Pa
     while gob.has_entry() {
         match gob.gobble_slice_up_to(is_toktr_newline) {
             Some(
-                [Identifier(_, fname), Colon(_), Identifier(_, tyname), BracketBlock(_, tyarg_data)],
+                [
+                    Identifier(_, fname),
+                    Colon(_),
+                    Identifier(_, tyname),
+                    BracketBlock(_, tyarg_data),
+                ],
             ) => {
                 let mut arg_gob = Gobbler::new(tyarg_data.children());
                 let ty_args = parse_ty_args(&mut arg_gob)?;

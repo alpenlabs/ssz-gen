@@ -47,10 +47,11 @@ pub use bitfield::bitvector_dynamic::{BitVectorDynamic, Dynamic};
 #[doc(hidden)]
 pub use bitfield::{BitList, BitVector, Bitfield, Error as BitfieldError, Fixed, Variable};
 pub use decode::{
+    Decode, DecodeError, SszDecoder, SszDecoderBuilder,
     impls::decode_list_of_variable_length_items, read_offset, split_union_bytes,
-    try_from_iter::TryFromIter, Decode, DecodeError, SszDecoder, SszDecoderBuilder,
+    try_from_iter::TryFromIter,
 };
-pub use encode::{encode_length, Encode, SszEncoder};
+pub use encode::{Encode, SszEncoder, encode_length};
 pub use union_selector::UnionSelector;
 
 /// The number of bytes used to represent an offset.

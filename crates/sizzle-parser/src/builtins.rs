@@ -1,9 +1,9 @@
 //! Built-in schema type recognition.
 
 use crate::{
+    Identifier,
     ty_resolver::{CtorArg, CtorSig, TypeData, TypeResolver},
     tysys::{Ty, TyExpr},
-    Identifier,
 };
 
 /// Populates a type resolver with the builtin types.

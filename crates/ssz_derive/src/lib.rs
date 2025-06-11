@@ -173,7 +173,7 @@ use darling::{FromDeriveInput, FromMeta};
 use proc_macro::TokenStream;
 use quote::quote;
 use std::convert::TryInto;
-use syn::{parse_macro_input, DataEnum, DataStruct, DeriveInput, Expr, Ident, Index};
+use syn::{DataEnum, DataStruct, DeriveInput, Expr, Ident, Index, parse_macro_input};
 
 /// The highest possible union selector value (higher values are reserved for backwards compatible
 /// extensions).
@@ -248,20 +248,18 @@ impl<'a> Procedure<'a> {
                         data,
                         behaviour: StructBehaviour::Container,
                     },
-                    Some("stable_container") => if let Some(max_fields_string) = opts.max_fields {
-                        let max_fields_ref = max_fields_string.as_ref();
-                        let max_fields_ty: Expr = syn::parse_str(max_fields_ref).expect("\"max_fields\" is not a valid type.");
-                        let max_fields: proc_macro2::TokenStream = quote! { #max_fields_ty };
+                    Some("stable_container") => {
+                        if let Some(max_fields_string) = opts.max_fields {
+                            let max_fields_ref = max_fields_string.as_ref();
+                            let max_fields_ty: Expr = syn::parse_str(max_fields_ref)
+                                .expect("\"max_fields\" is not a valid type.");
+                            let max_fields: proc_macro2::TokenStream = quote! { #max_fields_ty };
 
-                        Procedure::StableStruct {
-                            data,
-                            max_fields,
+                            Procedure::StableStruct { data, max_fields }
+                        } else {
+                            panic!("\"stable_container\" requires \"max_fields\"")
                         }
-                    } else {
-                        panic!(
-                            "\"stable_container\" requires \"max_fields\""
-                            )
-                    },
+                    }
                     Some("profile") => Procedure::ProfileStruct { data },
                     Some("transparent") => Procedure::Struct {
                         data,
@@ -376,7 +374,7 @@ fn ssz_encode_derive_struct(derive_input: &DeriveInput, struct_data: &DataStruct
         }
 
         let ident = match ident {
-            Some(ref ident) => ident,
+            Some(ident) => ident,
             _ => panic!(
                 "#[ssz(struct_behaviour = \"container\")] only supports named struct fields."
             ),
@@ -490,7 +488,7 @@ fn ssz_encode_derive_stable_container(
         }
 
         let ident = match ident {
-            Some(ref ident) => ident,
+            Some(ident) => ident,
             _ => panic!(
                 "#[ssz(struct_behaviour = \"stable_container\")] only supports named struct fields."
             ),
@@ -647,7 +645,7 @@ fn ssz_encode_derive_profile_container(
         }
 
         let ident = match ident {
-            Some(ref ident) => ident,
+            Some(ident) => ident,
             _ => {
                 panic!("#[ssz(struct_behaviour = \"profile\")] only supports named struct fields.")
             }
@@ -902,7 +900,7 @@ fn ssz_encode_derive_enum_transparent(
             }
 
             let pattern = quote! {
-                #name::#variant_name(ref inner)
+                #name::#variant_name(inner)
             };
 
             let ty = &(&variant.fields).into_iter().next().unwrap().ty;
@@ -1030,7 +1028,7 @@ fn ssz_encode_derive_enum_union(derive_input: &DeriveInput, enum_data: &DataEnum
             }
 
             let pattern = quote! {
-                #name::#variant_name(ref inner)
+                #name::#variant_name(inner)
             };
             pattern
         })
@@ -1117,7 +1115,7 @@ fn ssz_decode_derive_struct(item: &DeriveInput, struct_data: &DataStruct) -> Tok
 
     for (ty, ident, field_opts) in parse_ssz_fields(struct_data) {
         let ident = match ident {
-            Some(ref ident) => ident,
+            Some(ident) => ident,
             _ => panic!(
                 "#[ssz(struct_behaviour = \"container\")] only supports named struct fields."
             ),
@@ -1355,7 +1353,7 @@ fn ssz_decode_derive_stable_container(
 
     for (ty, ident, field_opts) in parse_ssz_fields(struct_data) {
         let ident = match ident {
-            Some(ref ident) => ident,
+            Some(ident) => ident,
             _ => panic!(
                 "#[ssz(struct_behaviour = \"stable_container\")] only supports named struct fields."
             ),
@@ -1531,7 +1529,7 @@ fn ssz_decode_derive_profile_container(
     for (ty, ident, field_opts) in parse_ssz_fields(struct_data) {
         let mut is_optional = false;
         let ident = match ident {
-            Some(ref ident) => ident,
+            Some(ident) => ident,
             _ => {
                 panic!("#[ssz(struct_behaviour = \"profile\")] only supports named struct fields.")
             }
@@ -1923,18 +1921,18 @@ fn compute_union_selectors(num_variants: usize) -> Vec<u8> {
 }
 
 fn ty_inner_type<'a>(wrapper: &str, ty: &'a syn::Type) -> Option<&'a syn::Type> {
-    if let syn::Type::Path(ref p) = ty {
+    if let syn::Type::Path(p) = ty {
         if p.path.segments.len() != 1 || p.path.segments[0].ident != wrapper {
             return None;
         }
 
-        if let syn::PathArguments::AngleBracketed(ref inner_ty) = p.path.segments[0].arguments {
+        if let syn::PathArguments::AngleBracketed(inner_ty) = &p.path.segments[0].arguments {
             if inner_ty.args.len() != 1 {
                 return None;
             }
 
             let inner_ty = inner_ty.args.first().unwrap();
-            if let syn::GenericArgument::Type(ref t) = inner_ty {
+            if let syn::GenericArgument::Type(t) = inner_ty {
                 return Some(t);
             }
         }
