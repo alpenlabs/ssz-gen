@@ -16,7 +16,6 @@ keywords.workspace = true
 workspace = true
 
 [dependencies]
-ethereum_serde_utils.workspace = true
 ssz.workspace = true
 tree_hash.workspace = true
 serde.workspace = true
@@ -24,6 +23,7 @@ serde_derive.workspace = true
 typenum.workspace = true
 arbitrary = { workspace = true, optional = true }
 itertools.workspace = true
+hex = "0.4"
 
 [dev-dependencies]
 serde_json.workspace = true

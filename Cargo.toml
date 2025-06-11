@@ -5,7 +5,7 @@ members = [
     "crates/tree_hash",
     "crates/tree_hash_derive",
     "crates/ssz_types",
-    "crates/sizzle-parser"
+    "crates/sizzle-parser",
 ]
 resolver = "2"
 
@@ -42,25 +42,25 @@ panic = "abort"   # Abort on panic
 strip = "symbols" # Strip symbols from binary
 
 [workspace.dependencies]
-ssz_types =  { path = "crates/ssz_types" }
+sizzle-parser = { path = "crates/sizzle-parser" }
 ssz = { path = "crates/ssz" }
 ssz_derive = { path = "crates/ssz_derive" }
+ssz_types = { path = "crates/ssz_types" }
 tree_hash = { path = "crates/tree_hash" }
 tree_hash_derive = { path = "crates/tree_hash_derive" }
-sizzle-parser = { path = "crates/sizzle-parser" }
 
 alloy-primitives = "1.0"
-ethereum_serde_utils = "0.8.0"
-smallvec = { version = "1.6.1", features = ["const_generics"] }
-itertools = "0.13.0"
-serde = "1.0.0"
-serde_derive = "1.0.0"
-typenum = "1.12.0"
-serde_json = "1.0.0"
 arbitrary = { version = "1.0", features = ["derive"] }
-syn = "2.0.69"
+darling = "0.20.9"
+ethereum_hashing = "0.7.0"
+ethereum_serde_utils = "0.8.0"
+itertools = "0.13.0"
 proc-macro2 = "1.0.23"
 quote = "1.0.18"
-darling = "0.20.9"
 rand = "0.8.5"
-ethereum_hashing = "0.7.0"
+serde = "1.0.0"
+serde_derive = "1.0.0"
+serde_json = "1.0.0"
+smallvec = { version = "1.6.1", features = ["const_generics"] }
+syn = "2.0.69"
+typenum = "1.12.0"
