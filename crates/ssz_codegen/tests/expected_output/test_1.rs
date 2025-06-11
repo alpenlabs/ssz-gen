@@ -134,8 +134,8 @@ pub struct Iota {
 #[ssz(struct_behaviour = "container")]
 #[tree_hash(struct_behaviour = "container")]
 pub struct Kappa {
-    pub t: Option<Alpha>,
-    pub u: Option<Beta>,
+    pub t: Alpha,
+    pub u: Beta,
     pub v: BitVector<typenum::U64>,
 }
 #[derive(Encode, Decode, TreeHash)]

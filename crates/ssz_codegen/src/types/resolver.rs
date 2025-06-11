@@ -87,7 +87,7 @@ impl TypeResolver {
             .types
             .insert("boolean".to_string(), TypeDefinition::Boolean);
         for i in [8, 16, 32, 64, 128, 256] {
-            let uint_name = format!("uint{}", i);
+            let uint_name = format!("uint{i}");
             resolver.types.insert(uint_name, TypeDefinition::UInt(i));
         }
         resolver
@@ -118,7 +118,7 @@ impl TypeResolver {
             .types
             .insert("Union".to_string(), TypeDefinition::Union);
         for i in 1..=64 {
-            let bytes_name = format!("Bytes{}", i);
+            let bytes_name = format!("Bytes{i}");
             resolver.types.insert(bytes_name, TypeDefinition::Bytes(i));
         }
 
@@ -175,12 +175,13 @@ impl TypeResolver {
             Ty::Complex(_, args) => {
                 let mut resolved_args = Vec::with_capacity(args.len());
                 for arg in args.iter() {
-                    match self.resolve_type_expr(arg) {
-                        TypeResolution::Type(resolved) => resolved_args.push(*resolved),
+                    let ty_resolved = self.resolve_type_expr(arg);
+                    match ty_resolved {
                         TypeResolution::None => return TypeResolution::None,
                         TypeResolution::BaseClass(_) => {
                             panic!("BaseClass in type arguments are not allowed")
                         }
+                        _ => resolved_args.push(ty_resolved),
                     }
                 }
                 resolved_args
@@ -207,11 +208,7 @@ impl TypeResolver {
     fn resolve_type_expr(&self, ty_expr: &TyExpr) -> TypeResolution {
         match ty_expr {
             TyExpr::Ty(ty) => self.resolve_type(ty, None),
-            TyExpr::Int(int) => {
-                let typenum_int =
-                    syn::Ident::new(&format!("U{}", int.eval()), proc_macro2::Span::call_site());
-                TypeResolution::Type(parse_quote!(typenum::#typenum_int))
-            }
+            TyExpr::Int(int) => TypeResolution::Constant(int.eval()),
         }
     }
 
@@ -244,17 +241,25 @@ impl TypeResolver {
                 });
                 TypeResolution::BaseClass(BaseClass::StableContainer(Some(max)))
             }
-            BaseClass::Profile(name) => {
-                let name = name.clone().unwrap_or({
+            BaseClass::Profile(tuple) => {
+                let (name, max) = tuple.clone().unwrap_or({
                     match ty {
                         Ty::Simple(_) => panic!("Profile must inherit from a stable container"),
                         Ty::Complex(_, args) => match args.first() {
-                            Some(TyExpr::Ty(ty)) => ty.base_name().0.clone(),
+                            Some(TyExpr::Ty(ty)) => {
+                                let name = ty.base_name().0.clone();
+                                let class_def = self.resolve_class(ty).unwrap();
+                                if let BaseClass::StableContainer(max) = class_def.base {
+                                    (name, max.unwrap())
+                                } else {
+                                    panic!("Expected profile to inherit from a stable container");
+                                }
+                            }
                             _ => panic!("Profile must inherit from a class"),
                         },
                     }
                 });
-                TypeResolution::BaseClass(BaseClass::Profile(Some(name)))
+                TypeResolution::BaseClass(BaseClass::Profile(Some((name, max))))
             }
         })
     }
@@ -272,19 +277,41 @@ impl TypeResolver {
     fn resolve_type_definition(
         &self,
         def: &TypeDefinition,
-        args: Vec<syn::Type>,
+        args: Vec<TypeResolution>,
         alias_ident: Option<&syn::Ident>,
     ) -> TypeResolution {
         match def {
-            TypeDefinition::Boolean => TypeResolution::Type(primitive_rust_type("bool")),
-            TypeDefinition::UInt(size) => {
-                TypeResolution::Type(primitive_rust_type(&format!("u{}", size)))
+            TypeDefinition::Boolean => TypeResolution::Boolean,
+            TypeDefinition::UInt(size) => TypeResolution::UInt(*size),
+            TypeDefinition::Vector => {
+                let size = match args[1] {
+                    TypeResolution::Constant(size) => size,
+                    _ => panic!("Expected constant value for vector size"),
+                };
+                TypeResolution::Vector(Box::new(args[0].clone()), size)
             }
-            TypeDefinition::Vector => TypeResolution::Type(parse_quote!(FixedVector<#(#args),*>)),
-            TypeDefinition::List => TypeResolution::Type(parse_quote!(VariableList<#(#args),*>)),
-            TypeDefinition::Bitvector => TypeResolution::Type(parse_quote!(BitVector<#(#args),*>)),
-            TypeDefinition::Bitlist => TypeResolution::Type(parse_quote!(BitList<#(#args),*>)),
-            TypeDefinition::Optional => TypeResolution::Type(parse_quote!(Option<#(#args),*>)),
+            TypeDefinition::List => {
+                let size = match args[1] {
+                    TypeResolution::Constant(size) => size,
+                    _ => panic!("Expected constant value for list size"),
+                };
+                TypeResolution::List(Box::new(args[0].clone()), size)
+            }
+            TypeDefinition::Bitvector => {
+                let size = match args[0] {
+                    TypeResolution::Constant(size) => size,
+                    _ => panic!("Expected constant value for bitvector size"),
+                };
+                TypeResolution::Bitvector(size)
+            }
+            TypeDefinition::Bitlist => {
+                let size = match args[0] {
+                    TypeResolution::Constant(size) => size,
+                    _ => panic!("Expected constant value for bitlist size"),
+                };
+                TypeResolution::Bitlist(size)
+            }
+            TypeDefinition::Optional => TypeResolution::Optional(Box::new(args[0].clone())),
             TypeDefinition::Union => {
                 let ident = alias_ident.unwrap().clone();
                 let ident_str = ident.to_string();
@@ -295,15 +322,18 @@ impl TypeResolver {
                     .enumerate()
                     .map(|(i, ty)| {
                         let ident = syn::Ident::new(
-                            &format!("Selector{}", i),
+                            &format!("Selector{i}"),
                             proc_macro2::Span::call_site(),
                         );
-                        parse_quote!(#ident(#ty))
+                        let ty = ty.unwrap_type();
+                        parse_quote! {
+                            #ident(#ty)
+                        }
                     })
                     .collect::<Vec<_>>();
 
                 self.union_tracker.borrow_mut().insert(
-                    ident_str,
+                    ident_str.clone(),
                     quote! {
                         #[derive(Encode, Decode, TreeHash)]
                         #[ssz(enum_behaviour="union")]
@@ -314,16 +344,9 @@ impl TypeResolver {
                     },
                 );
 
-                TypeResolution::Type(Box::new(syn::Type::Path(syn::TypePath {
-                    qself: None,
-                    path: syn::Path::from(ident),
-                })))
+                TypeResolution::Union(ident_str, args)
             }
-            TypeDefinition::Bytes(size) => {
-                let typenum_int =
-                    syn::Ident::new(&format!("U{}", size), proc_macro2::Span::call_site());
-                TypeResolution::Type(parse_quote!(FixedVector<u8, typenum::#typenum_int>))
-            }
+            TypeDefinition::Bytes(size) => TypeResolution::Bytes(*size),
             TypeDefinition::CustomType(resolution) => resolution.clone(),
         }
     }
@@ -364,6 +387,7 @@ impl TypeResolver {
                 base: BaseClass::Container,
                 fields: vec![],
                 field_tokens: vec![],
+                field_index: HashMap::new(),
             },
             ClassDefinition::StableContainer => {
                 let max = match args.first() {
@@ -377,6 +401,7 @@ impl TypeResolver {
                     base: BaseClass::StableContainer(Some(max)),
                     fields: vec![],
                     field_tokens: vec![],
+                    field_index: HashMap::new(),
                 }
             }
             ClassDefinition::Profile => {
@@ -393,10 +418,16 @@ impl TypeResolver {
                     _ => panic!("Expected profile to inherit from a class"),
                 };
 
-                ClassDef {
-                    base: BaseClass::Profile(Some(name)),
-                    fields: class_def.fields,
-                    field_tokens: class_def.field_tokens,
+                if let BaseClass::StableContainer(max) = class_def.base {
+                    let max = max.unwrap();
+                    ClassDef {
+                        base: BaseClass::Profile(Some((name, max))),
+                        fields: class_def.fields,
+                        field_tokens: class_def.field_tokens,
+                        field_index: class_def.field_index,
+                    }
+                } else {
+                    panic!("Expected profile to inherit from a stable container");
                 }
             }
             ClassDefinition::Custom(class_def) => class_def.clone(),
@@ -437,19 +468,22 @@ impl TypeResolver {
                     base: BaseClass::Container,
                     fields: vec![],
                     field_tokens: vec![],
+                    field_index: HashMap::new(),
                 }),
                 BaseClass::StableContainer(Some(max)) => ClassDefinition::Custom(ClassDef {
                     base: BaseClass::StableContainer(Some(*max)),
                     fields: vec![],
                     field_tokens: vec![],
+                    field_index: HashMap::new(),
                 }),
-                BaseClass::Profile(Some(name)) => {
+                BaseClass::Profile(Some((name, max))) => {
                     let class_def = self.classes.get(name).unwrap();
                     let resolved_def = self.resolve_class_definition(class_def, &[]);
                     ClassDefinition::Custom(ClassDef {
-                        base: BaseClass::Profile(Some(name.clone())),
+                        base: BaseClass::Profile(Some((name.clone(), *max))),
                         fields: resolved_def.fields,
                         field_tokens: resolved_def.field_tokens,
+                        field_index: resolved_def.field_index,
                     })
                 }
                 _ => panic!(
@@ -479,13 +513,8 @@ impl TypeResolver {
         }
 
         // Add the class to the types map so it can be referenced by other types
-        self.types.entry(class_str).or_insert_with(|| {
-            let class_type = TypeResolution::Type(Box::new(syn::Type::Path(syn::TypePath {
-                qself: None,
-                path: syn::Path::from(class_ident.clone()),
-            })));
-
-            TypeDefinition::CustomType(class_type)
-        });
+        self.types
+            .entry(class_str.clone())
+            .or_insert_with(|| TypeDefinition::CustomType(TypeResolution::Class(class_str)));
     }
 }

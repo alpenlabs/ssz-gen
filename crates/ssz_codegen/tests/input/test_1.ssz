@@ -69,8 +69,8 @@ class Iota(Epsilon):
     s: Optional[uint8]
 
 class Kappa(Container):
-    t: Optional[Alpha]
-    u: Optional[Beta]
+    t: Alpha
+    u: Beta
     v: Bitvector[val_y]
 
 stable_class_alias = StableContainer[4]

@@ -42,15 +42,46 @@ class Alpha(Container):
 ```python
 class Foo(StableContainer[5]):
     a: Optional[uint8]
+    b: Optional[uint8]
+    c: Optional[uint8]
 
 class Bar(Foo):
-    b: Optional[uint8]
+    b: Optional[uint16]
+    d: Optional[uint8]
 ```
+
 this is equivalent to
 ```python
 class Bar(StableContainer[5]):
-    a: Optional[uint8]
-    b: Optional[uint8]
+    a: Optional[uint8] # Inherited
+    b: Optional[uint16] # Replaced
+    c: Optional[uint8] # Inherited
+    d: Optional[uint8] # New
+```
+
+Keep in mind in inheritance the relative order of all fields must be preserved. In the example above
+```python
+class Bar(Foo):
+    b: Optional[uint16]
+    d: Optional[uint8]
+    a: Optional[uint16]
+```
+
+Would not be allowed because you're overwriting the parent's `a` field but `a` is supposed to be the first field.
+```python
+class Bar(Foo):
+    a: Optional[uint16]
+    c: Optional[uint16]
+    d: Optional[uint8]
+```
+
+Would be allowed since the relative order between all the defined fields is preserved. The above would be the same as
+```python
+class Bar(StableContainer[5]):
+    a: Optional[uint16] # Replaced
+    b: Optional[uint8] # Inherited
+    c: Optional[uint16] # Replaced
+    d: Optional[uint8] # New
 ```
 
 ### Union Types
@@ -58,10 +89,27 @@ class Bar(StableContainer[5]):
 union_a = Union[uint8, uint16, uint32]
 ```
 
-In Rust unions are implemented as enums. Because of this we need to be able to assign unique identifiers to the same unions. We do this by hashing all the types within a union and naming the union `Union_{HASH}`.
-The variants within the enum are named `Selector{index}`.
+In Rust unions are implemented as enums. Because of this we need to be able to assign unique identifiers to the same unions. Because of this and in order to remove any confusion we disallow "anonymous" unions such as:
+```python
+# Union has no "name" and is referenced by a field
+class Foo(Container):
+    a: Union[uint8, uint16]
 
-Equivalent aliases being used in a union will not result in a new enum creation. `Union[byte]` and `Union[uint8]` will both be treated as the exact same union.
+# The inner union has no "name"
+alias = Union[uint8, Union[uint8, uint16]]
+```
+
+The correct way to do the above would be
+```python
+alias_union = Union[uint8, uint16]
+
+class Foo(Container):
+    a: alias_union
+
+alias = Union[uint8, alias_union]
+```
+
+The variants within the enum are named `Selector{index}`.
 
 # Example Input / Output
 Input: [tests/input/test_1.ssz](/crates/ssz_codegen/tests/input/test_1.ssz)
