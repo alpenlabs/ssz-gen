@@ -362,7 +362,7 @@ fn tree_hash_derive_struct_profile(
             });
 
             hashes.push(quote! {
-                if active_fields.get(index) {
+                if active_fields.get(#index).unwrap_or(false) {
                     hasher.write(self.#ident.tree_hash_root().as_slice())
                         .expect("tree hash derive should not apply too many leaves");
                 }
