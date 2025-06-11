@@ -2,8 +2,8 @@
 # Original source licensed under the Apache License 2.0
 
 [package]
-name = "ssz_types"
-description = "List, vector and bitfield types for SSZ"
+name = "tree_hash"
+description = "Efficient Merkle-hashing"
 license = "Apache-2.0"
 version.workspace = true
 edition.workspace = true
@@ -16,15 +16,19 @@ keywords.workspace = true
 workspace = true
 
 [dependencies]
-ethereum_serde_utils.workspace = true
+alloy-primitives.workspace = true
+ethereum_hashing.workspace = true
 ssz.workspace = true
-tree_hash.workspace = true
-serde.workspace = true
-serde_derive.workspace = true
+smallvec.workspace = true
 typenum.workspace = true
-arbitrary = { workspace = true, optional = true }
-itertools.workspace = true
 
 [dev-dependencies]
-serde_json.workspace = true
+rand.workspace = true
 tree_hash_derive.workspace = true
+ssz.workspace = true
+ssz_derive.workspace = true
+ssz_types.workspace = true
+typenum.workspace = true
+
+[features]
+arbitrary = ["alloy-primitives/arbitrary"]
