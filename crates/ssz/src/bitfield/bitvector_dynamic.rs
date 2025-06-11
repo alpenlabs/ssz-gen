@@ -10,7 +10,7 @@ use crate::{
 use core::marker::PhantomData;
 use serde::de::{Deserialize, Deserializer};
 use serde::ser::{Serialize, Serializer};
-use serde_utils::hex::{PrefixedHexVisitor, encode as hex_encode};
+use crate::serde_utils::hex::{PrefixedHexVisitor, encode as hex_encode};
 use smallvec::{SmallVec, ToSmallVec, smallvec};
 
 /// A marker struct used to declare dynamic length behaviour on a Bitfield.

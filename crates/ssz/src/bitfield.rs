@@ -7,7 +7,7 @@ use crate::{Decode, DecodeError, Encode};
 use core::marker::PhantomData;
 use serde::de::{Deserialize, Deserializer};
 use serde::ser::{Serialize, Serializer};
-use serde_utils::hex::{PrefixedHexVisitor, encode as hex_encode};
+use crate::serde_utils::hex::{PrefixedHexVisitor, encode as hex_encode};
 use smallvec::{SmallVec, ToSmallVec, smallvec};
 use typenum::Unsigned;
 pub(crate) mod bitvector_dynamic;

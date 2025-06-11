@@ -40,6 +40,7 @@
 mod bitfield;
 pub mod decode;
 pub mod encode;
+pub mod serde_utils;
 pub mod legacy;
 mod union_selector;
 
