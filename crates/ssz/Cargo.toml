@@ -3,11 +3,11 @@
 
 [package]
 name = "ssz"
-version = "0.9.0"
-edition = "2021"
 description = "SimpleSerialize (SSZ)"
 license = "Apache-2.0"
-readme = "README.md"
+version.workspace = true
+edition.workspace = true
+readme.workspace = true
 repository.workspace = true
 categories.workspace = true
 keywords.workspace = true

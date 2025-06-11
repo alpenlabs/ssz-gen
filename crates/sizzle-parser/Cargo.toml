@@ -1,9 +1,9 @@
 [package]
 name = "sizzle-parser"
-version = "0.1.0"
-edition = "2021"
 description = "Pythonic SSZ definition parser"
-readme = "README.md"
+version.workspace = true
+edition.workspace = true
+readme.workspace = true
 repository.workspace = true
 categories.workspace = true
 keywords.workspace = true

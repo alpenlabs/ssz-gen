@@ -3,11 +3,11 @@
 
 [package]
 name = "tree_hash_derive"
-version = "0.10.0"
-edition = "2021"
 description = "Procedural derive macros to accompany the tree_hash crate"
 license = "Apache-2.0"
-readme = "README.md"
+version.workspace = true
+edition.workspace = true
+readme.workspace = true
 repository.workspace = true
 categories.workspace = true
 keywords.workspace = true

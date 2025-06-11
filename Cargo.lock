@@ -1357,7 +1357,7 @@ dependencies = [
 
 [[package]]
 name = "ssz"
-version = "0.9.0"
+version = "0.1.0"
 dependencies = [
  "alloy-primitives",
  "arbitrary",
@@ -1372,7 +1372,7 @@ dependencies = [
 
 [[package]]
 name = "ssz_derive"
-version = "0.9.0"
+version = "0.1.0"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -1384,7 +1384,7 @@ dependencies = [
 
 [[package]]
 name = "ssz_types"
-version = "0.11.0"
+version = "0.1.0"
 dependencies = [
  "arbitrary",
  "ethereum_serde_utils",
@@ -1505,7 +1505,7 @@ dependencies = [
 
 [[package]]
 name = "tree_hash"
-version = "0.10.0"
+version = "0.1.0"
 dependencies = [
  "alloy-primitives",
  "ethereum_hashing",
@@ -1520,7 +1520,7 @@ dependencies = [
 
 [[package]]
 name = "tree_hash_derive"
-version = "0.10.0"
+version = "0.1.0"
 dependencies = [
  "darling",
  "proc-macro2",
