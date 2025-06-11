@@ -5,7 +5,7 @@
 
 use crate::FixedVector;
 use serde::{Deserializer, Serializer};
-use serde_utils::hex::{self, PrefixedHexVisitor};
+use ssz::serde_utils::hex::{self, PrefixedHexVisitor};
 use typenum::Unsigned;
 
 /// Serialize a `FixedVector` as a hex string.
