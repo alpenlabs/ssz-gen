@@ -16,12 +16,12 @@ pub fn encode<T: AsRef<[u8]>>(data: T) -> String {
 /// Decode `data` from a 0x-prefixed hex string.
 pub fn decode(s: &str) -> Result<Vec<u8>, String> {
     if let Some(stripped) = s.strip_prefix("0x") {
-        hex::decode(stripped).map_err(|e| format!("invalid hex: {:?}", e))
+        hex::decode(stripped).map_err(|e| format!("invalid hex: {e:?}"))
     } else {
         Err("hex must have 0x prefix".to_string())
     }
 }
-/// Serde visitor for deserializing 0x-prefixed hex strings to Vec<u8>.
+/// Serde visitor for deserializing 0x-prefixed hex strings to vector of u8.
 #[derive(Debug)]
 pub struct PrefixedHexVisitor;
 

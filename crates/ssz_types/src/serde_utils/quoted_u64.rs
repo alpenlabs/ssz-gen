@@ -151,7 +151,7 @@ macro_rules! define_mod {
 ///
 /// Provides serialization to quoted strings and deserialization from both
 /// quoted strings and raw numbers.
-pub mod quoted_u64 {
+pub mod _quoted_u64 {
     use super::*;
 
     define_mod!(u64);

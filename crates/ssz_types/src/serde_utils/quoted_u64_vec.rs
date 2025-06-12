@@ -11,6 +11,6 @@ use serde_derive::{Deserialize, Serialize};
 #[serde(transparent)]
 pub struct QuotedIntWrapper {
     /// The u64 value to be serialized as a quoted string.
-    #[serde(with = "crate::serde_utils::quoted_u64::quoted_u64")]
+    #[serde(with = "crate::serde_utils::quoted_u64::_quoted_u64")]
     pub int: u64,
 }
