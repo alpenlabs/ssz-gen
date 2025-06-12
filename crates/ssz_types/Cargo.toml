@@ -23,7 +23,7 @@ serde_derive.workspace = true
 typenum.workspace = true
 arbitrary = { workspace = true, optional = true }
 itertools.workspace = true
-hex = "0.4"
+hex.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
