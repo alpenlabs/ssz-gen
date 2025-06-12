@@ -1364,7 +1364,6 @@ name = "ssz_types"
 version = "0.1.0"
 dependencies = [
  "arbitrary",
- "hex",
  "itertools 0.13.0",
  "serde",
  "serde_derive",
