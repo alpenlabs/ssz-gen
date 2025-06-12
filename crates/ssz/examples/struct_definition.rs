@@ -6,10 +6,10 @@
 use alloy_primitives as _;
 #[cfg(feature = "arbitrary")]
 use arbitrary as _;
+use hex as _;
 use itertools as _;
 use serde as _;
 use serde_json as _;
-use hex as _;
 use smallvec as _;
 use ssz_derive as _;
 use typenum as _;
