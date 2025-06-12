@@ -67,6 +67,7 @@ macro_rules! define_mod {
         where
             T: From<$int> + Into<$int> + Copy + TryFrom<u64>,
         {
+            /// The wrapped value that can be serialized with or without quotes.
             #[serde(with = "self")]
             pub value: T,
         }
@@ -81,6 +82,7 @@ macro_rules! define_mod {
         where
             T: From<$int> + Into<$int> + Copy + TryFrom<u64>,
         {
+            /// The wrapped value that must be serialized with quotes.
             #[serde(with = "require_quotes")]
             pub value: T,
         }
@@ -96,6 +98,8 @@ macro_rules! define_mod {
         }
 
         /// Deserialize with or without quotes.
+        ///
+        /// Accepts both quoted strings and raw numbers, converting them to the target type.
         pub fn deserialize<'de, D, T>(deserializer: D) -> Result<T, D::Error>
         where
             D: Deserializer<'de>,
@@ -114,6 +118,9 @@ macro_rules! define_mod {
             pub use super::serialize;
             use super::*;
 
+            /// Deserialize requiring quotes only.
+            ///
+            /// Only accepts quoted strings, rejecting raw numbers.
             pub fn deserialize<'de, D, T>(deserializer: D) -> Result<T, D::Error>
             where
                 D: Deserializer<'de>,
@@ -140,6 +147,10 @@ macro_rules! define_mod {
     };
 }
 
+/// Serde utilities for u64 values with optional quotes.
+///
+/// Provides serialization to quoted strings and deserialization from both
+/// quoted strings and raw numbers.
 pub mod quoted_u64 {
     use super::*;
 

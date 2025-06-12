@@ -21,6 +21,7 @@ pub fn decode(s: &str) -> Result<Vec<u8>, String> {
         Err("hex must have 0x prefix".to_string())
     }
 }
+/// Serde visitor for deserializing 0x-prefixed hex strings to Vec<u8>.
 #[derive(Debug)]
 pub struct PrefixedHexVisitor;
 
