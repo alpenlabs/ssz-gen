@@ -112,6 +112,6 @@ alias = Union[uint8, alias_union]
 The variants within the enum are named `Selector{index}`.
 
 # Example Input / Output
-Input: [tests/input/test_1.ssz](/crates/ssz_codegen/tests/input/test_1.ssz)
+Input: [`tests/input/test_1.ssz`](/crates/ssz_codegen/tests/input/test_1.ssz)
 
-Output: [tests/expected_output/test_1.rs](/crates/ssz_codegen/tests/expected_output/test_1.rs)
+Output: [`tests/expected_output/test_1.rs`](/crates/ssz_codegen/tests/expected_output/test_1.rs)

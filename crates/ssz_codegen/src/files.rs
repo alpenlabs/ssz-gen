@@ -22,7 +22,7 @@ use std::path::Path;
 /// use std::collections::HashMap;
 /// let files = ssz_codegen::files::read_directory_ssz_files("./schema").unwrap();
 /// for (path, content) in files {
-///     println!("File: {}, Content: {}", path, content);
+///     println!("File: {path}, Content: {content}");
 /// }
 /// ```
 pub fn read_directory_ssz_files<P: AsRef<Path>>(
