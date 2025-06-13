@@ -41,6 +41,7 @@ mod bitfield;
 pub mod decode;
 pub mod encode;
 pub mod legacy;
+pub mod primitives;
 /// Serde utilities for SSZ types.
 pub mod serde_utils;
 mod union_selector;

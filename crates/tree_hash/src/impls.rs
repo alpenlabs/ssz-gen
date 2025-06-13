@@ -4,7 +4,7 @@
 //! Tree hash implementations for different types
 
 use super::*;
-use alloy_primitives::{Address, FixedBytes, U128, U256};
+use ssz::primitives::{Address, FixedBytes, U128, U256};
 use ssz::{Bitfield, Fixed, Variable};
 use std::sync::Arc;
 use typenum::Unsigned;
@@ -118,25 +118,6 @@ impl TreeHash for U256 {
     }
 }
 
-impl TreeHash for Address {
-    fn tree_hash_type() -> TreeHashType {
-        TreeHashType::Vector
-    }
-
-    fn tree_hash_packed_encoding(&self) -> PackedEncoding {
-        unreachable!("Vector should never be packed.")
-    }
-
-    fn tree_hash_packing_factor() -> usize {
-        unreachable!("Vector should never be packed.")
-    }
-
-    fn tree_hash_root(&self) -> Hash256 {
-        let mut result = [0; 32];
-        result[0..20].copy_from_slice(self.as_slice());
-        Hash256::from_slice(&result)
-    }
-}
 
 // This implementation covers `Hash256`/`B256` as well.
 impl<const N: usize> TreeHash for FixedBytes<N> {
@@ -377,7 +358,7 @@ mod test {
     fn fixed_bytes_48() {
         let data = [
             (
-                FixedBytes::<48>::ZERO,
+                FixedBytes::<48>::zero(),
                 "0xf5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b",
             ),
             (

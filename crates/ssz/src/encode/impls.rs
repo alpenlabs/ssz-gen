@@ -4,7 +4,7 @@
 //! SSZ encoding implementations for different types
 
 use super::*;
-use alloy_primitives::{Address, Bloom, Bytes, FixedBytes, U128, U256};
+use crate::primitives::{Address, Bloom, Bytes, FixedBytes, U128, U256};
 use core::num::NonZeroUsize;
 use smallvec::SmallVec;
 use std::collections::{BTreeMap, BTreeSet};
@@ -453,23 +453,6 @@ impl Encode for NonZeroUsize {
     }
 }
 
-impl Encode for Address {
-    fn is_ssz_fixed_len() -> bool {
-        true
-    }
-
-    fn ssz_fixed_len() -> usize {
-        20
-    }
-
-    fn ssz_bytes_len(&self) -> usize {
-        20
-    }
-
-    fn ssz_append(&self, buf: &mut Vec<u8>) {
-        buf.extend_from_slice(self.as_slice());
-    }
-}
 
 impl<const N: usize> Encode for FixedBytes<N> {
     #[inline]
@@ -498,32 +481,6 @@ impl<const N: usize> Encode for FixedBytes<N> {
     }
 }
 
-impl Encode for Bloom {
-    #[inline]
-    fn is_ssz_fixed_len() -> bool {
-        true
-    }
-
-    #[inline]
-    fn ssz_bytes_len(&self) -> usize {
-        256
-    }
-
-    #[inline]
-    fn ssz_fixed_len() -> usize {
-        256
-    }
-
-    #[inline]
-    fn ssz_append(&self, buf: &mut Vec<u8>) {
-        buf.extend_from_slice(&self.0.0);
-    }
-
-    #[inline]
-    fn as_ssz_bytes(&self) -> Vec<u8> {
-        self.0.to_vec()
-    }
-}
 
 impl Encode for Bytes {
     #[inline]

@@ -5,7 +5,7 @@
 
 use super::*;
 use crate::decode::try_from_iter::{TryCollect, TryFromIter};
-use alloy_primitives::{Address, Bloom, Bytes, FixedBytes, U128, U256};
+use crate::primitives::{Address, Bloom, Bytes, FixedBytes, U128, U256};
 use core::num::NonZeroUsize;
 use itertools::process_results;
 use smallvec::SmallVec;
@@ -309,26 +309,6 @@ impl<T: Decode> Decode for Arc<T> {
     }
 }
 
-impl Decode for Address {
-    fn is_ssz_fixed_len() -> bool {
-        true
-    }
-
-    fn ssz_fixed_len() -> usize {
-        20
-    }
-
-    fn from_ssz_bytes(bytes: &[u8]) -> Result<Self, DecodeError> {
-        let len = bytes.len();
-        let expected = <Self as Decode>::ssz_fixed_len();
-
-        if len != expected {
-            Err(DecodeError::InvalidByteLength { len, expected })
-        } else {
-            Ok(Self::from_slice(bytes))
-        }
-    }
-}
 
 impl<const N: usize> Decode for FixedBytes<N> {
     fn is_ssz_fixed_len() -> bool {
@@ -354,26 +334,6 @@ impl<const N: usize> Decode for FixedBytes<N> {
     }
 }
 
-impl Decode for Bloom {
-    fn is_ssz_fixed_len() -> bool {
-        true
-    }
-
-    fn ssz_fixed_len() -> usize {
-        256
-    }
-
-    fn from_ssz_bytes(bytes: &[u8]) -> Result<Self, DecodeError> {
-        let len = bytes.len();
-        let expected = <Self as Decode>::ssz_fixed_len();
-
-        if len != expected {
-            Err(DecodeError::InvalidByteLength { len, expected })
-        } else {
-            Ok(Self::from_slice(bytes))
-        }
-    }
-}
 
 impl Decode for U256 {
     fn is_ssz_fixed_len() -> bool {

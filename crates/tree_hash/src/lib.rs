@@ -27,7 +27,7 @@ pub const MAX_UNION_SELECTOR: u8 = 127;
 pub const SMALLVEC_SIZE: usize = 32;
 
 /// 256-bit hash
-pub type Hash256 = alloy_primitives::B256;
+pub type Hash256 = ssz::primitives::Hash256;
 
 /// Packed encoding
 pub type PackedEncoding = SmallVec<[u8; SMALLVEC_SIZE]>;
