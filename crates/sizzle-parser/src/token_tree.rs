@@ -28,6 +28,8 @@ pub enum TaggedToktr<T> {
     Comma(T),
     /// `\n` newline.
     Newline(T),
+    /// `None` keyword.
+    None(T),
 
     // Identifiers.
     /// An identifier.
@@ -59,6 +61,7 @@ impl<T> TaggedToktr<T> {
             Self::Eq(t) => t,
             Self::Comma(t) => t,
             Self::Newline(t) => t,
+            Self::None(t) => t,
             Self::Identifier(t, _) => t,
             Self::IntegerLiteral(t, _) => t,
             Self::Shl(t) => t,
@@ -202,6 +205,7 @@ pub(crate) fn parse_tokens_to_toktrs(tokens: &[SrcToken]) -> Result<Vec<SrcToktr
         let cur = &tokens[i];
 
         let tt = match cur {
+            TaggedToken::None(sp) => TaggedToktr::None(*sp),
             TaggedToken::Class(sp) => TaggedToktr::Class(*sp),
             TaggedToken::Colon(sp) => TaggedToktr::Colon(*sp),
             TaggedToken::Eq(sp) => TaggedToktr::Eq(*sp),

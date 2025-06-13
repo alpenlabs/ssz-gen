@@ -91,7 +91,7 @@ where
 }
 
 /// Partial variant of `collect`.
-pub trait TryCollect: Iterator {
+pub(crate) trait TryCollect: Iterator {
     /// Try to collect the iterator into a type that implements `TryFromIter`
     fn try_collect<C>(self) -> Result<C, C::Error>
     where

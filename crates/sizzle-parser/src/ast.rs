@@ -192,6 +192,9 @@ pub enum TyArgSpec {
 
     /// An literal integer.
     IntLiteral(u64),
+
+    /// None type for Unions
+    None,
 }
 
 #[derive(Debug, Error)]
@@ -329,7 +332,7 @@ fn parse_class(gob: &mut Gobbler<'_, SrcToktr>) -> Result<ClassDefEntry, ParseEr
             let body_data = match gob.get() {
                 Some(IndentBlock(_, d)) => d,
                 Some(t) => return Err(ParseError::UnexpectedToken(*t.tag())),
-                None => return Err(ParseError::UnexpectedEnd),
+                Option::None => return Err(ParseError::UnexpectedEnd),
             };
 
             let mut body_gob = Gobbler::new(body_data.children());
@@ -403,6 +406,11 @@ fn parse_ty_args(gob: &mut Gobbler<'_, SrcToktr>) -> Result<Vec<TyArgSpec>, Pars
 
 fn parse_ty_arg(gob: &mut Gobbler<'_, SrcToktr>) -> Result<TyArgSpec, ParseError> {
     match gob.get() {
+        Some(TaggedToktr::None(_)) => {
+            gob.gobble_one();
+            Ok(TyArgSpec::None)
+        }
+
         // An identifier could be a type or a const, we'll resolve that later.
         Some(TaggedToktr::Identifier(_, ident)) => {
             let ident = ident.clone();

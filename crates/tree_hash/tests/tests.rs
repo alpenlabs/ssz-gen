@@ -7,6 +7,7 @@ use rand as _;
 use smallvec as _;
 use ssz::BitVector;
 use ssz_derive::Encode;
+use ssz_types::{BitVector, Optional};
 use ssz_primitives::{U128, U256};
 use tree_hash::{self, BYTES_PER_CHUNK, Hash256, MerkleHasher, PackedEncoding, TreeHash};
 use tree_hash_derive::TreeHash;
@@ -174,9 +175,9 @@ fn packed_encoding_example() {
 #[tree_hash(struct_behaviour = "stable_container")]
 #[tree_hash(max_fields = "typenum::U8")]
 struct Shape {
-    side: Option<u16>,
-    color: Option<u8>,
-    radius: Option<u16>,
+    side: Optional<u16>,
+    color: Optional<u8>,
+    radius: Optional<u16>,
 }
 
 #[derive(TreeHash, Clone)]
@@ -211,9 +212,9 @@ enum ShapeEnum {
 #[test]
 fn shape_1() {
     let shape_1 = Shape {
-        side: Some(16),
-        color: Some(2),
-        radius: None,
+        side: Optional::Some(16),
+        color: Optional::Some(2),
+        radius: Optional::None,
     };
 
     let square = Square { side: 16, color: 2 };
@@ -224,9 +225,9 @@ fn shape_1() {
 #[test]
 fn shape_2() {
     let shape_2 = Shape {
-        side: None,
-        color: Some(1),
-        radius: Some(42),
+        side: Optional::None,
+        color: Optional::Some(1),
+        radius: Optional::Some(42),
     };
 
     let circle = Circle {

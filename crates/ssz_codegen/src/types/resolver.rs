@@ -158,11 +158,6 @@ impl TypeResolver {
     ///
     /// A TypeResolution representing the resolved type, or TypeResolution::None if unresolved
     pub fn resolve_type(&self, ty: &Ty, alias_ident: Option<&syn::Ident>) -> TypeResolution {
-        // We disallow Unions if they're being used "anonymously" (i.e. not assigned to an alias)
-        if alias_ident.is_none() && ty.base_name().0 == "Union" {
-            panic!("Unions cannot be used anonymously");
-        }
-
         // Check if the type is a base class (Container, StableContainer, Profile or aliases to them)
         let base_class = self.resolve_base_class(ty);
         if let Some(base_class) = base_class {
@@ -177,7 +172,7 @@ impl TypeResolver {
                 for arg in args.iter() {
                     let ty_resolved = self.resolve_type_expr(arg);
                     match ty_resolved {
-                        TypeResolution::None => return TypeResolution::None,
+                        TypeResolution::Unresolved => return TypeResolution::Unresolved,
                         TypeResolution::BaseClass(_) => {
                             panic!("BaseClass in type arguments are not allowed")
                         }
@@ -188,11 +183,20 @@ impl TypeResolver {
             }
         };
 
+        // We disallow Unions if they're being used "anonymously" (i.e. not assigned to an alias)
+        // Unless it's a Union[None, T]
+        if alias_ident.is_none()
+            && ty.base_name().0 == "Union"
+            && !(args.len() == 2 && args[0] == TypeResolution::None)
+        {
+            panic!("Unions cannot be used anonymously unless they are Union[None, T]");
+        }
+
         // Resolve the type definition using the type arguments
         let type_def = self.types.get(ty.base_name().0.as_str());
         match type_def {
             Some(def) => self.resolve_type_definition(def, args, alias_ident),
-            None => TypeResolution::None,
+            None => TypeResolution::Unresolved,
         }
     }
 
@@ -209,6 +213,7 @@ impl TypeResolver {
         match ty_expr {
             TyExpr::Ty(ty) => self.resolve_type(ty, None),
             TyExpr::Int(int) => TypeResolution::Constant(int.eval()),
+            TyExpr::None => TypeResolution::None,
         }
     }
 
@@ -314,6 +319,11 @@ impl TypeResolver {
             }
             TypeDefinition::Optional => TypeResolution::Optional(Box::new(args[0].clone())),
             TypeDefinition::Union => {
+                // Special case for Union[None, T]
+                if args.len() == 2 && args[0] == TypeResolution::None {
+                    return TypeResolution::Option(Box::new(args[1].clone()));
+                }
+
                 let ident = alias_ident.unwrap().clone();
                 let ident_str = ident.to_string();
 
@@ -326,9 +336,18 @@ impl TypeResolver {
                             &format!("Selector{i}"),
                             proc_macro2::Span::call_site(),
                         );
-                        let ty = ty.unwrap_type();
-                        parse_quote! {
-                            #ident(#ty)
+                        match ty {
+                            TypeResolution::None => {
+                                if i == 0 {
+                                    parse_quote!(#ident)
+                                } else {
+                                    panic!("None is only allowed as the first variant in a Union")
+                                }
+                            }
+                            _ => {
+                                let ty = ty.unwrap_type();
+                                parse_quote!(#ident(#ty))
+                            }
                         }
                     })
                     .collect::<Vec<_>>();

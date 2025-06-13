@@ -5,9 +5,24 @@ use typenum::Unsigned;
 #[derive(Encode, Decode, TreeHash)]
 #[ssz(enum_behaviour = "union")]
 #[tree_hash(enum_behaviour = "union")]
+pub enum alias_option_union {
+    Selector0(u8),
+    Selector1(Option<u16>),
+}
+#[derive(Encode, Decode, TreeHash)]
+#[ssz(enum_behaviour = "union")]
+#[tree_hash(enum_behaviour = "union")]
 pub enum first_union {
     Selector0(u8),
     Selector1(u16),
+}
+#[derive(Encode, Decode, TreeHash)]
+#[ssz(enum_behaviour = "union")]
+#[tree_hash(enum_behaviour = "union")]
+pub enum test_union {
+    Selector0,
+    Selector1(u8),
+    Selector2(u16),
 }
 #[derive(Encode, Decode, TreeHash)]
 #[ssz(enum_behaviour = "union")]
@@ -69,8 +84,8 @@ pub struct Beta {
 #[ssz(struct_behaviour = "stable_container", max_fields = "typenum::U42")]
 #[tree_hash(struct_behaviour = "stable_container", max_fields = "typenum::U42")]
 pub struct Gamma {
-    pub g: Option<u8>,
-    pub h: Option<VariableList<u16, typenum::U8>>,
+    pub g: Optional<u8>,
+    pub h: Optional<VariableList<u16, typenum::U8>>,
 }
 #[derive(Encode, Decode, TreeHash)]
 #[ssz(struct_behaviour = "container")]
@@ -83,17 +98,17 @@ pub struct Delta {
 #[ssz(struct_behaviour = "stable_container", max_fields = "typenum::U42")]
 #[tree_hash(struct_behaviour = "stable_container", max_fields = "typenum::U42")]
 pub struct Epsilon {
-    pub g: Option<u8>,
-    pub h: Option<VariableList<u16, typenum::U8>>,
-    pub i: Option<u8>,
-    pub j: Option<u16>,
+    pub g: Optional<u8>,
+    pub h: Optional<VariableList<u16, typenum::U8>>,
+    pub i: Optional<u8>,
+    pub j: Optional<u16>,
 }
 #[derive(Encode, Decode, TreeHash)]
 #[ssz(struct_behaviour = "stable_container", max_fields = "typenum::U128")]
 #[tree_hash(struct_behaviour = "stable_container", max_fields = "typenum::U128")]
 pub struct Zeta {
-    pub u: Option<FixedVector<u8, typenum::U16>>,
-    pub v: Option<VariableList<u8, typenum::U5>>,
+    pub u: Optional<FixedVector<u8, typenum::U16>>,
+    pub v: Optional<VariableList<u8, typenum::U5>>,
 }
 #[derive(Encode, Decode, TreeHash)]
 #[ssz(struct_behaviour = "container")]
@@ -123,12 +138,12 @@ pub struct Theta {
 #[ssz(struct_behaviour = "stable_container", max_fields = "typenum::U42")]
 #[tree_hash(struct_behaviour = "stable_container", max_fields = "typenum::U42")]
 pub struct Iota {
-    pub g: Option<u8>,
-    pub h: Option<VariableList<u16, typenum::U8>>,
-    pub i: Option<u8>,
-    pub j: Option<u16>,
-    pub r: Option<VariableList<u16, typenum::U2>>,
-    pub s: Option<u8>,
+    pub g: Optional<u8>,
+    pub h: Optional<VariableList<u16, typenum::U8>>,
+    pub i: Optional<u8>,
+    pub j: Optional<u16>,
+    pub r: Optional<VariableList<u16, typenum::U2>>,
+    pub s: Optional<u8>,
 }
 #[derive(Encode, Decode, TreeHash)]
 #[ssz(struct_behaviour = "container")]
@@ -142,8 +157,8 @@ pub struct Kappa {
 #[ssz(struct_behaviour = "stable_container", max_fields = "typenum::U4")]
 #[tree_hash(struct_behaviour = "stable_container", max_fields = "typenum::U4")]
 pub struct Lambda {
-    pub w: Option<u16>,
-    pub x: Option<u8>,
+    pub w: Optional<u16>,
+    pub x: Optional<u8>,
 }
 #[derive(Encode, Decode, TreeHash)]
 #[ssz(struct_behaviour = "container")]
@@ -160,4 +175,5 @@ pub struct Nu {
     pub zz: Mu,
     pub aaa: FixedVector<bool, typenum::U4>,
     pub bbb: BitList<typenum::U42>,
+    pub test: Option<Mu>,
 }

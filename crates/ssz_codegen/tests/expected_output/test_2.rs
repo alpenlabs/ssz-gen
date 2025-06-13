@@ -6,17 +6,17 @@ use typenum::Unsigned;
 #[ssz(struct_behaviour = "stable_container", max_fields = "typenum::U2")]
 #[tree_hash(struct_behaviour = "stable_container", max_fields = "typenum::U2")]
 pub struct Alpha {
-    pub a: Option<u8>,
-    pub b: Option<BitList<typenum::U32>>,
+    pub a: Optional<u8>,
+    pub b: Optional<BitList<typenum::U32>>,
 }
 #[derive(Encode, Decode, TreeHash)]
 #[ssz(struct_behaviour = "stable_container", max_fields = "typenum::U8")]
 #[tree_hash(struct_behaviour = "stable_container", max_fields = "typenum::U8")]
 pub struct InnerBase {
-    pub x: Option<u8>,
-    pub y: Option<VariableList<u8, typenum::U4>>,
-    pub z: Option<BitVector<typenum::U16>>,
-    pub w: Option<Alpha>,
+    pub x: Optional<u8>,
+    pub y: Optional<VariableList<u8, typenum::U4>>,
+    pub z: Optional<BitVector<typenum::U16>>,
+    pub w: Optional<Alpha>,
 }
 #[derive(Encode, Decode, TreeHash)]
 #[ssz(struct_behaviour = "profile")]
@@ -25,18 +25,18 @@ pub struct InnerProfile1 {
     #[tree_hash(stable_index = 0usize)]
     pub x: u8,
     #[tree_hash(stable_index = 1usize)]
-    pub y: Option<VariableList<u8, typenum::U4>>,
+    pub y: Optional<VariableList<u8, typenum::U4>>,
     #[tree_hash(stable_index = 2usize)]
-    pub z: Option<BitVector<typenum::U16>>,
+    pub z: Optional<BitVector<typenum::U16>>,
     #[tree_hash(stable_index = 3usize)]
-    pub w: Option<Alpha>,
+    pub w: Optional<Alpha>,
 }
 #[derive(Encode, Decode, TreeHash)]
 #[ssz(struct_behaviour = "profile")]
 #[tree_hash(struct_behaviour = "profile", max_fields = "typenum::U8")]
 pub struct InnerProfile2 {
     #[tree_hash(stable_index = 0usize)]
-    pub x: Option<u8>,
+    pub x: Optional<u8>,
     #[tree_hash(stable_index = 1usize)]
     pub y: VariableList<u8, typenum::U4>,
     #[tree_hash(stable_index = 2usize)]
@@ -49,7 +49,7 @@ pub struct AlphaProfile {
     #[tree_hash(stable_index = 0usize)]
     pub a: u8,
     #[tree_hash(stable_index = 1usize)]
-    pub b: Option<BitList<typenum::U32>>,
+    pub b: Optional<BitList<typenum::U32>>,
 }
 #[derive(Encode, Decode, TreeHash)]
 #[ssz(struct_behaviour = "profile")]
@@ -83,7 +83,7 @@ pub struct InnerProfile5 {
 #[tree_hash(struct_behaviour = "profile", max_fields = "typenum::U8")]
 pub struct ProfileProfile {
     #[tree_hash(stable_index = 0usize)]
-    pub x: Option<u8>,
+    pub x: Optional<u8>,
     #[tree_hash(stable_index = 3usize)]
     pub w: AlphaProfile,
 }
@@ -91,12 +91,12 @@ pub struct ProfileProfile {
 #[ssz(struct_behaviour = "stable_container", max_fields = "typenum::U8")]
 #[tree_hash(struct_behaviour = "stable_container", max_fields = "typenum::U8")]
 pub struct ContainerContainer {
-    pub x: Option<u16>,
-    pub y: Option<VariableList<u8, typenum::U4>>,
-    pub z: Option<BitVector<typenum::U16>>,
-    pub w: Option<Alpha>,
-    pub a: Option<u8>,
-    pub b: Option<u8>,
-    pub c: Option<u8>,
-    pub d: Option<u8>,
+    pub x: Optional<u16>,
+    pub y: Optional<VariableList<u8, typenum::U4>>,
+    pub z: Optional<BitVector<typenum::U16>>,
+    pub w: Optional<Alpha>,
+    pub a: Optional<u8>,
+    pub b: Optional<u8>,
+    pub c: Optional<u8>,
+    pub d: Optional<u8>,
 }

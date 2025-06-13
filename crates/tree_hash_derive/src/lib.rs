@@ -271,6 +271,10 @@ fn tree_hash_derive_struct_stable_container(
 
     let idents = get_hashable_fields(struct_data);
 
+    for (ty, _, _) in parse_tree_hash_fields(struct_data) {
+        ty_inner_type("Optional", ty).expect("Use Optional<T> for StableContainer");
+    }
+
     let output = quote! {
         impl #impl_generics tree_hash::TreeHash for #name #ty_generics #where_clause {
             fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -350,7 +354,7 @@ fn tree_hash_derive_struct_profile(
             index = new_index;
         }
 
-        if ty_inner_type("Option", ty).is_some() {
+        if ty_inner_type("Optional", ty).is_some() {
             is_optional = true;
         }
 
@@ -514,20 +518,43 @@ fn tree_hash_derive_enum_union(derive_input: &DeriveInput, enum_data: &DataEnum)
     let patterns: Vec<_> = enum_data
         .variants
         .iter()
-        .map(|variant| {
+        .enumerate()
+        .map(|(i, variant)| {
             let variant_name = &variant.ident;
+            let fields_len = variant.fields.len();
+            let selector_index: u8 = i
+                .try_into()
+                .expect("union selector exceeds u8::max_value, union has too many variants");
 
-            if variant.fields.len() != 1 {
+            // First variant can have no fields (Union[None, ...])
+            if fields_len != 1 && !(fields_len == 0 && i == 0) {
                 panic!("TreeHash can only be derived for enums with 1 field per variant");
             }
 
-            quote! {
-                #name::#variant_name(inner)
+            if fields_len == 0 {
+                quote! {
+                    #name::#variant_name => {
+                        let root = tree_hash::Hash256::ZERO;
+                        let selector = #selector_index;
+                        tree_hash::mix_in_selector(&root, selector)
+                            .expect("derive macro should prevent out-of-bounds selectors")
+                    }
+                }
+            } else {
+                quote! {
+                    #name::#variant_name(inner) => {
+                        let root = inner.tree_hash_root();
+                        let selector = #selector_index;
+                        tree_hash::mix_in_selector(&root, selector)
+                            .expect("derive macro should prevent out-of-bounds selectors")
+                    }
+                }
             }
         })
         .collect();
 
-    let union_selectors = compute_union_selectors(patterns.len());
+    // Panic if there's any issues with the union's variant count
+    compute_union_selectors(patterns.len());
 
     let output = quote! {
         impl #impl_generics tree_hash::TreeHash for #name #ty_generics #where_clause {
@@ -545,14 +572,7 @@ fn tree_hash_derive_enum_union(derive_input: &DeriveInput, enum_data: &DataEnum)
 
             fn tree_hash_root(&self) -> tree_hash::Hash256 {
                 match self {
-                    #(
-                        #patterns => {
-                            let root = inner.tree_hash_root();
-                            let selector = #union_selectors;
-                            tree_hash::mix_in_selector(&root, selector)
-                                .expect("derive macro should prevent out-of-bounds selectors")
-                        },
-                    )*
+                    #(#patterns,)*
                 }
             }
         }
@@ -560,25 +580,21 @@ fn tree_hash_derive_enum_union(derive_input: &DeriveInput, enum_data: &DataEnum)
     output.into()
 }
 
-fn compute_union_selectors(num_variants: usize) -> Vec<u8> {
-    let union_selectors = (0..num_variants)
-        .map(|i| {
-            i.try_into()
-                .expect("union selector exceeds u8::max_value, union has too many variants")
-        })
-        .collect::<Vec<u8>>();
+fn compute_union_selectors(num_variants: usize) {
+    // Check for 0-variant union
+    if num_variants == 0 {
+        panic!("0-variant union is not permitted");
+    }
 
-    let highest_selector = union_selectors
-        .last()
-        .copied()
-        .expect("0-variant union is not permitted");
+    // Get the highest selector (which is num_variants - 1)
+    let highest_selector: u8 = (num_variants - 1)
+        .try_into()
+        .expect("union selector exceeds u8::max_value, union has too many variants");
 
     assert!(
         highest_selector <= MAX_UNION_SELECTOR,
         "union selector {highest_selector} exceeds limit of {MAX_UNION_SELECTOR}, enum has too many variants"
     );
-
-    union_selectors
 }
 
 fn ty_inner_type<'a>(wrapper: &str, ty: &'a syn::Type) -> Option<&'a syn::Type> {

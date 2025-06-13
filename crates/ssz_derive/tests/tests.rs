@@ -11,7 +11,7 @@ use syn as _;
 use ssz::{Decode, DecodeError, Encode};
 use ssz_derive::{Decode, Encode};
 use ssz_types::{
-    BitVector,
+    BitVector, Optional,
     typenum::{self, Unsigned},
 };
 use std::fmt::Debug;
@@ -277,9 +277,9 @@ fn transparent_struct_newtype_skipped_field_reverse() {
 #[ssz(struct_behaviour = "stable_container")]
 #[ssz(max_fields = "typenum::U8")]
 struct Shape {
-    side: Option<u16>,
-    color: Option<u8>,
-    radius: Option<u16>,
+    side: Optional<u16>,
+    color: Optional<u8>,
+    radius: Optional<u16>,
 }
 
 #[derive(PartialEq, Debug, Encode, Decode)]
@@ -302,11 +302,11 @@ struct Circle {
 #[ssz(struct_behaviour = "stable_container")]
 #[ssz(max_fields = "typenum::U8")]
 struct ShapeVec {
-    side: Option<u16>,
-    color: Option<u8>,
+    side: Optional<u16>,
+    color: Optional<u8>,
     #[ssz(skip_serializing, skip_deserializing)]
     skip: Vec<u8>,
-    radius: Option<ssz_types::VariableList<u8, typenum::U4>>,
+    radius: Optional<ssz_types::VariableList<u8, typenum::U4>>,
 }
 
 #[test]
@@ -314,9 +314,9 @@ struct ShapeVec {
 /// 03420001
 fn shape_1() {
     let shape = Shape {
-        side: Some(42),
-        color: Some(1),
-        radius: None,
+        side: Optional::Some(42),
+        color: Optional::Some(1),
+        radius: Optional::None,
     };
 
     assert_encode_decode(&shape, &[3, 42, 0, 1]);
@@ -327,9 +327,9 @@ fn shape_1() {
 /// 06014200
 fn shape_2() {
     let shape = Shape {
-        side: None,
-        color: Some(1),
-        radius: Some(42),
+        side: Optional::None,
+        color: Optional::Some(1),
+        radius: Optional::Some(42),
     };
 
     assert_encode_decode(&shape, &[6, 1, 42, 0]);
@@ -363,18 +363,18 @@ fn circle() {
 #[test]
 fn shape_3() {
     let shape = ShapeVec {
-        side: None,
-        color: Some(1),
+        side: Optional::None,
+        color: Optional::Some(1),
         skip: vec![],
-        radius: Some(vec![1, 2, 3, 4].into()),
+        radius: Optional::Some(vec![1, 2, 3, 4].into()),
     };
     assert_encode_decode(&shape, &[6, 1, 5, 0, 0, 0, 1, 2, 3, 4]);
 
     let shape = ShapeVec {
-        side: None,
-        color: Some(1),
+        side: Optional::None,
+        color: Optional::Some(1),
         skip: vec![],
-        radius: None,
+        radius: Optional::None,
     };
 
     assert_encode_decode(&shape, &[2, 1]);
@@ -384,15 +384,22 @@ fn shape_3() {
 #[derive(PartialEq, Debug, Encode, Decode)]
 #[ssz(struct_behaviour = "stable_container", max_fields = "typenum::U8")]
 struct OptionalOptionU64 {
-    a: Option<Option<u8>>,
+    a: Optional<Option<u8>>,
 }
 
 #[test]
 fn optional_option_u64() {
-    assert_encode_decode(&OptionalOptionU64 { a: None }, &[0]);
-    assert_encode_decode(&OptionalOptionU64 { a: Some(None) }, &[1, 4, 0, 0, 0, 0]);
+    assert_encode_decode(&OptionalOptionU64 { a: Optional::None }, &[0]);
     assert_encode_decode(
-        &OptionalOptionU64 { a: Some(Some(2)) },
+        &OptionalOptionU64 {
+            a: Optional::Some(None),
+        },
+        &[1, 4, 0, 0, 0, 0],
+    );
+    assert_encode_decode(
+        &OptionalOptionU64 {
+            a: Optional::Some(Some(2)),
+        },
         &[1, 4, 0, 0, 0, 1, 2],
     );
 }

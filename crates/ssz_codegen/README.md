@@ -89,17 +89,26 @@ class Bar(StableContainer[5]):
 union_a = Union[uint8, uint16, uint32]
 ```
 
-In Rust unions are implemented as enums. Because of this we need to be able to assign unique identifiers to the same unions. Because of this and in order to remove any confusion we disallow "anonymous" unions such as:
+In Rust unions are implemented as enums. Because of this we need to be able to assign unique identifiers to the same unions. Because of this and in order to remove any confusion we disallow "anonymous" unions except for `Union[None, T]` which we treat as `Option<T>` in Rust.
+
+Example:
 ```python
-# Union has no "name" and is referenced by a field
+# Union has no "name" and is referenced by a field -> not allowed
 class Foo(Container):
     a: Union[uint8, uint16]
 
-# The inner union has no "name"
+# The inner union has no "name" -> not allowed
 alias = Union[uint8, Union[uint8, uint16]]
+
+# Union is of type Union[None, T] -> allowed, will use Option<u8> in rust
+class Bar(Container):
+    a: Union[None, uint8]
+
+# The inner union is of type Union[None, T] -> allowed, will use Option<u16> in rust for the inner union
+alias = Union[uint8, Union[None, uint16]]
 ```
 
-The correct way to do the above would be
+The correct way to do the wrong examples from above would be:
 ```python
 alias_union = Union[uint8, uint16]
 

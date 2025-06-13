@@ -211,26 +211,34 @@ impl<N: Unsigned + Clone> TreeHash for Bitfield<Fixed<N>> {
     }
 }
 
+// `Option<T>` represents `Union[None, T]`
 impl<T: TreeHash> TreeHash for Option<T> {
     fn tree_hash_type() -> TreeHashType {
-        T::tree_hash_type()
+        TreeHashType::Container
     }
 
     fn tree_hash_packed_encoding(&self) -> PackedEncoding {
-        match self {
-            Some(inner) => inner.tree_hash_packed_encoding(),
-            None => unreachable!(),
-        }
+        unreachable!("Enum should never be packed")
     }
 
     fn tree_hash_packing_factor() -> usize {
-        T::tree_hash_packing_factor()
+        unreachable!("Enum should never be packed")
     }
 
     fn tree_hash_root(&self) -> Hash256 {
         match self {
-            Some(inner) => inner.tree_hash_root(),
-            None => unreachable!(),
+            None => {
+                let root = Hash256::ZERO;
+                let selector = 0u8;
+                mix_in_selector(&root, selector)
+                    .expect("derive macro should prevent out-of-bounds selectors")
+            }
+            Some(inner) => {
+                let root = inner.tree_hash_root();
+                let selector = 1u8;
+                mix_in_selector(&root, selector)
+                    .expect("derive macro should prevent out-of-bounds selectors")
+            }
         }
     }
 }
