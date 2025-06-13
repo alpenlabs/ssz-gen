@@ -17,8 +17,8 @@ workspace = true
 
 [dependencies]
 ethereum_hashing.workspace = true
-ssz.workspace = true
 smallvec.workspace = true
+ssz.workspace = true
 typenum.workspace = true
 
 [dev-dependencies]
@@ -28,4 +28,3 @@ ssz.workspace = true
 ssz_derive.workspace = true
 ssz_types.workspace = true
 typenum.workspace = true
-

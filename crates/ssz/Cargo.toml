@@ -23,13 +23,13 @@ ssz_derive.workspace = true
 serde_json.workspace = true
 
 [dependencies]
-smallvec.workspace = true
-itertools.workspace = true
-serde.workspace = true
-typenum.workspace = true
 arbitrary = { workspace = true, optional = true }
 hex.workspace = true
+itertools.workspace = true
 ruint.workspace = true
+serde.workspace = true
+smallvec.workspace = true
+typenum.workspace = true
 
 [features]
 arbitrary = ["dep:arbitrary"]

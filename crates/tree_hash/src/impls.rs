@@ -4,8 +4,10 @@
 //! Tree hash implementations for different types
 
 use super::*;
-use ssz::primitives::{Address, FixedBytes, U128, U256};
-use ssz::{Bitfield, Fixed, Variable};
+use ssz::{
+    Bitfield, Fixed, Variable,
+    primitives::{FixedBytes, U128, U256},
+};
 use std::sync::Arc;
 use typenum::Unsigned;
 
@@ -117,7 +119,6 @@ impl TreeHash for U256 {
         Hash256::from(self.to_le_bytes::<{ Self::BYTES }>())
     }
 }
-
 
 // This implementation covers `Hash256`/`B256` as well.
 impl<const N: usize> TreeHash for FixedBytes<N> {
@@ -240,7 +241,6 @@ impl<T: TreeHash> TreeHash for Option<T> {
 mod test {
     use super::*;
     use ssz::{BitList, BitVector};
-    use std::str::FromStr;
     use typenum::{U8, U32};
 
     #[test]
