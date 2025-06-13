@@ -50,11 +50,9 @@ ssz_types = { path = "crates/ssz_types" }
 tree_hash = { path = "crates/tree_hash" }
 tree_hash_derive = { path = "crates/tree_hash_derive" }
 
-alloy-primitives = "1.0"
 arbitrary = { version = "1.0", features = ["derive"] }
 darling = "0.20.9"
 ethereum_hashing = "0.7.0"
-ethereum_serde_utils = "0.8.0"
 itertools = "0.13.0"
 proc-macro2 = "1.0.23"
 quote = "1.0.18"
@@ -67,3 +65,4 @@ syn = "2.0.69"
 typenum = "1.12.0"
 hex = "0.4"
 prettyplease = "0.2.33"
+ruint = { version = "1.14.0", default-features = false, features = ["alloc"] }
