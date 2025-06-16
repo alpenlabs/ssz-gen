@@ -120,6 +120,37 @@ alias = Union[uint8, alias_union]
 
 The variants within the enum are named `Selector{index}`.
 
+### Imports
+You can import definitions from other files using `import FILE as IDENT`.
+- The path to the file must be relative to the current module.
+- `..` for parent folder, `.` as the separator for folders
+- Example: 2 folders back, inside utils folder, in maths.ssz -> `import ....utils.maths as maths`
+
+`common.ssz`:
+```python
+alias_uint8 = uint8
+alias_union = Union[uint8, uint16]
+class Foo(Container):
+    a: alias_uint8
+    b: alias_union
+```
+
+`file.ssz`:
+```python
+import common as common
+
+class Bar(common.Foo):
+    c: common.union
+```
+
+this is equivalent to
+```python
+class Bar(Container):
+    a: uint8
+    b: Union[uint8, uint16]
+    c: Union[uint8, uint16]
+```
+
 # Example Input / Output
 Input: [`tests/input/test_1.ssz`](/crates/ssz_codegen/tests/input/test_1.ssz)
 
