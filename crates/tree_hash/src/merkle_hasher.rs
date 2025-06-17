@@ -381,7 +381,7 @@ impl MerkleHasher {
 
 #[cfg(test)]
 mod test {
-    use ssz::primitives::U256;
+    use ssz_primitives::U256;
 
     use super::*;
     use crate::merkleize_padded;

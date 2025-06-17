@@ -21,8 +21,10 @@ itertools.workspace = true
 serde.workspace = true
 serde_derive.workspace = true
 ssz.workspace = true
+ssz_primitives.workspace = true
 tree_hash.workspace = true
 typenum.workspace = true
+
 
 [dev-dependencies]
 serde_json.workspace = true

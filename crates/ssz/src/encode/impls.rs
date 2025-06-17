@@ -6,8 +6,65 @@
 use super::*;
 use core::num::NonZeroUsize;
 use smallvec::SmallVec;
+use ssz_primitives::{FixedBytes, U128, U256};
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
+
+// SSZ Encode implementations for primitive types from ssz_primitives
+// These leverage the existing [u8; N] implementation for consistency
+impl<const N: usize> Encode for FixedBytes<N> {
+    fn is_ssz_fixed_len() -> bool {
+        <[u8; N] as Encode>::is_ssz_fixed_len()
+    }
+
+    fn ssz_fixed_len() -> usize {
+        <[u8; N] as Encode>::ssz_fixed_len()
+    }
+
+    fn ssz_bytes_len(&self) -> usize {
+        <[u8; N] as Encode>::ssz_bytes_len(&self.0)
+    }
+
+    fn ssz_append(&self, buf: &mut Vec<u8>) {
+        <[u8; N] as Encode>::ssz_append(&self.0, buf)
+    }
+}
+
+impl Encode for U256 {
+    fn is_ssz_fixed_len() -> bool {
+        <[u8; 32] as Encode>::is_ssz_fixed_len()
+    }
+
+    fn ssz_fixed_len() -> usize {
+        <[u8; 32] as Encode>::ssz_fixed_len()
+    }
+
+    fn ssz_bytes_len(&self) -> usize {
+        <[u8; 32] as Encode>::ssz_bytes_len(&self.to_le_bytes::<32>())
+    }
+
+    fn ssz_append(&self, buf: &mut Vec<u8>) {
+        <[u8; 32] as Encode>::ssz_append(&self.to_le_bytes::<32>(), buf)
+    }
+}
+
+impl Encode for U128 {
+    fn is_ssz_fixed_len() -> bool {
+        <[u8; 16] as Encode>::is_ssz_fixed_len()
+    }
+
+    fn ssz_fixed_len() -> usize {
+        <[u8; 16] as Encode>::ssz_fixed_len()
+    }
+
+    fn ssz_bytes_len(&self) -> usize {
+        <[u8; 16] as Encode>::ssz_bytes_len(&self.to_le_bytes::<16>())
+    }
+
+    fn ssz_append(&self, buf: &mut Vec<u8>) {
+        <[u8; 16] as Encode>::ssz_append(&self.to_le_bytes::<16>(), buf)
+    }
+}
 
 macro_rules! impl_encodable_for_uint {
     ($type: ident, $bit_size: expr) => {

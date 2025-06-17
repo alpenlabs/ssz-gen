@@ -8,9 +8,58 @@ use crate::decode::try_from_iter::{TryCollect, TryFromIter};
 use core::num::NonZeroUsize;
 use itertools::process_results;
 use smallvec::SmallVec;
+use ssz_primitives::{FixedBytes, U128, U256};
 use std::collections::{BTreeMap, BTreeSet};
 use std::iter::{self, FromIterator};
 use std::sync::Arc;
+
+// SSZ Decode implementations for primitive types from ssz_primitives
+// These leverage the existing [u8; N] implementation for consistency
+
+impl<const N: usize> Decode for FixedBytes<N> {
+    fn is_ssz_fixed_len() -> bool {
+        <[u8; N] as Decode>::is_ssz_fixed_len()
+    }
+
+    fn ssz_fixed_len() -> usize {
+        <[u8; N] as Decode>::ssz_fixed_len()
+    }
+
+    fn from_ssz_bytes(bytes: &[u8]) -> Result<Self, DecodeError> {
+        // Delegate to the existing [u8; N] implementation
+        <[u8; N] as Decode>::from_ssz_bytes(bytes).map(FixedBytes::from)
+    }
+}
+
+impl Decode for U256 {
+    fn is_ssz_fixed_len() -> bool {
+        <[u8; 32] as Decode>::is_ssz_fixed_len()
+    }
+
+    fn ssz_fixed_len() -> usize {
+        <[u8; 32] as Decode>::ssz_fixed_len()
+    }
+
+    fn from_ssz_bytes(bytes: &[u8]) -> Result<Self, DecodeError> {
+        // Delegate to the existing [u8; 32] implementation and convert
+        <[u8; 32] as Decode>::from_ssz_bytes(bytes).map(|arr| U256::from_le_slice(&arr))
+    }
+}
+
+impl Decode for U128 {
+    fn is_ssz_fixed_len() -> bool {
+        <[u8; 16] as Decode>::is_ssz_fixed_len()
+    }
+
+    fn ssz_fixed_len() -> usize {
+        <[u8; 16] as Decode>::ssz_fixed_len()
+    }
+
+    fn from_ssz_bytes(bytes: &[u8]) -> Result<Self, DecodeError> {
+        // Delegate to the existing [u8; 16] implementation and convert
+        <[u8; 16] as Decode>::from_ssz_bytes(bytes).map(|arr| U128::from_le_slice(&arr))
+    }
+}
 
 macro_rules! impl_decodable_for_uint {
     ($type: ident, $bit_size: expr) => {
@@ -473,7 +522,7 @@ pub fn decode_list_of_variable_length_items<T: Decode, Container: TryFromIter<T>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ssz::primitives::Hash256;
+    use ssz_primitives::Hash256;
 
     // Note: decoding of valid bytes is generally tested "indirectly" in the `/tests` dir, by
     // encoding then decoding the element.

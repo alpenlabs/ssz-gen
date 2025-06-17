@@ -43,13 +43,12 @@
 #[macro_use]
 mod fixed_vector;
 pub mod serde_utils;
-pub mod primitives;
 mod tree_hash;
 mod variable_list;
 
 pub use fixed_vector::FixedVector;
 pub use ssz::{BitList, BitVector, Bitfield};
-pub use ssz::{FixedBytes, Hash256, U128, U256};
+pub use ssz_primitives::{FixedBytes, Hash256, U128, U256};
 pub use typenum;
 pub use variable_list::VariableList;
 

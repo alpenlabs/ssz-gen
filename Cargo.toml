@@ -6,7 +6,7 @@ members = [
     "crates/tree_hash",
     "crates/tree_hash_derive",
     "crates/ssz_types",
-    "crates/sizzle-parser",
+    "crates/sizzle-parser", "crates/ssz_primitives",
 ]
 resolver = "2"
 
@@ -49,6 +49,7 @@ ssz_derive = { path = "crates/ssz_derive" }
 ssz_types = { path = "crates/ssz_types" }
 tree_hash = { path = "crates/tree_hash" }
 tree_hash_derive = { path = "crates/tree_hash_derive" }
+ssz_primitives = { path = "crates/ssz_primitives" }
 
 arbitrary = { version = "1.0", features = ["derive"] }
 darling = "0.20.9"

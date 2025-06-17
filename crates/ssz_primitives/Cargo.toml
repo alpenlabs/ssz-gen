@@ -1,0 +1,21 @@
+# Modified in 2025 from the original version
+# Original source licensed under the Apache License 2.0
+
+[package]
+name = "ssz_primitives"
+description = "Primitive types for SSZ serialization"
+license = "Apache-2.0"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+categories.workspace = true
+keywords.workspace = true
+readme.workspace = true
+repository.workspace = true
+
+[dependencies]
+hex.workspace = true
+ruint.workspace = true
+
+[lints]
+workspace = true
