@@ -4,10 +4,8 @@
 //! Tree hash implementations for different types
 
 use super::*;
-use ssz::{
-    Bitfield, Fixed, Variable,
-    primitives::{FixedBytes, U128, U256},
-};
+use ssz::{Bitfield, Fixed, Variable};
+use ssz_types::primitives::{FixedBytes, U128, U256};
 use std::sync::Arc;
 use typenum::Unsigned;
 

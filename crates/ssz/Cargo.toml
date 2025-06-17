@@ -21,12 +21,12 @@ name = "ssz"
 [dev-dependencies]
 ssz_derive.workspace = true
 serde_json.workspace = true
+ssz_types.workspace = true
 
 [dependencies]
 arbitrary = { workspace = true, optional = true }
 hex.workspace = true
 itertools.workspace = true
-ruint.workspace = true
 serde.workspace = true
 smallvec.workspace = true
 typenum.workspace = true

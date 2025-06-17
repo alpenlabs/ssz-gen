@@ -12,7 +12,7 @@ use serde_json as _;
 use smallvec as _;
 use typenum as _;
 
-use ssz::primitives::{Address, Bloom, Bytes, Hash256, U128, U256};
+use ssz_types::primitives::{Address, Bloom, Bytes, Hash256, U128, U256};
 use ssz::{Decode, DecodeError, Encode};
 use ssz_derive::{Decode, Encode};
 use std::num::NonZeroUsize;

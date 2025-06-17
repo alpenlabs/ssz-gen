@@ -41,12 +41,10 @@ pub mod bitfield;
 pub mod decode;
 pub mod encode;
 pub mod legacy;
-pub mod primitives;
 /// Serde utilities for SSZ types.
 pub mod serde_utils;
 mod union_selector;
 
-pub use self::primitives::{FixedBytes, Hash256, U128, U256};
 pub use bitfield::bitvector_dynamic::{BitVectorDynamic, Dynamic};
 #[doc(hidden)]
 pub use bitfield::{BitList, BitVector, Bitfield, Error as BitfieldError, Fixed, Variable};
