@@ -19,6 +19,7 @@ use std::num::NonZeroUsize;
 
 mod round_trip {
     use super::*;
+    use ssz_primitives::Hash256;
     use std::collections::{BTreeMap, BTreeSet};
     use std::iter::FromIterator;
     use std::sync::Arc;
@@ -61,58 +62,41 @@ mod round_trip {
         round_trip(items);
     }
 
-    // #[test]
-    // fn address() {
-    //     let items: Vec<Address> = vec![
-    //         Address::repeat_byte(0),
-    //         Address::from([1; 20]),
-    //         Address::random(),
-    //     ];
+    #[test]
+    fn h256() {
+        let items: Vec<Hash256> = vec![
+            Hash256::repeat_byte(0),
+            Hash256::from([1; 32]),
+            Hash256::random(),
+        ];
 
-    //     round_trip(items);
-    // }
+        round_trip(items);
+    }
 
-    // #[test]
-    // fn vec_of_address() {
-    //     let items: Vec<Vec<Address>> = vec![
-    //         vec![],
-    //         vec![
-    //             Address::repeat_byte(0),
-    //             Address::from([1; 20]),
-    //             Address::random(),
-    //         ],
-    //     ];
+    #[test]
+    fn vec_of_b256() {
+        let items: Vec<Vec<Hash256>> = vec![
+            vec![],
+            vec![Hash256::zero(), Hash256::from([1; 32]), Hash256::random()],
+        ];
 
-    //     round_trip(items);
-    // }
+        round_trip(items);
+    }
 
-    // #[test]
-    // fn h256() {
-    //     let items: Vec<Hash256> = vec![Hash256::repeat_byte(0), Hash256::from([1; 32]), Hash256::random()];
+    #[test]
+    fn option_vec_b256() {
+        let items: Vec<Option<Vec<Hash256>>> = vec![
+            None,
+            Some(vec![]),
+            Some(vec![
+                Hash256::zero(),
+                Hash256::from([1; 32]),
+                Hash256::random(),
+            ]),
+        ];
 
-    //     round_trip(items);
-    // }
-
-    // #[test]
-    // fn vec_of_b256() {
-    //     let items: Vec<Vec<Hash256>> = vec![
-    //         vec![],
-    //         vec![Hash256::zero(), Hash256::from([1; 32]), Hash256::random()],
-    //     ];
-
-    //     round_trip(items);
-    // }
-
-    // #[test]
-    // fn option_vec_b256() {
-    //     let items: Vec<Option<Vec<Hash256>>> = vec![
-    //         None,
-    //         Some(vec![]),
-    //         Some(vec![Hash256::zero(), Hash256::from([1; 32]), Hash256::random()]),
-    //     ];
-
-    //     round_trip(items);
-    // }
+        round_trip(items);
+    }
 
     #[test]
     fn vec_u16() {
@@ -536,47 +520,17 @@ mod round_trip {
         round_trip(data);
     }
 
-    // #[test]
-    // fn alloy_bytes() {
-    //     let data = vec![
-    //         Bytes::new(),
-    //         Bytes::from_static(&[1, 2, 3]),
-    //         Bytes::from_static(&[0; 32]),
-    //         Bytes::from_static(&[0]),
-    //     ];
-    //     round_trip(data);
-    // }
-
     #[test]
     fn tuple_option() {
         let data = vec![(48u8, Some(0u64)), (0u8, None), (u8::MAX, Some(u64::MAX))];
         round_trip(data);
     }
-
-    // #[test]
-    // fn bloom() {
-    //     let data = vec![
-    //         Bloom::zero(),
-    //         Bloom::with_last_byte(5),
-    //         Bloom::repeat_byte(73),
-    //     ];
-    //     round_trip(data);
-    // }
-
-    // #[test]
-    // fn vec_bloom() {
-    //     let data = vec![
-    //         vec![Bloom::zero(), Bloom::zero(), Bloom::with_last_byte(5)],
-    //         vec![],
-    //         vec![Bloom::repeat_byte(73), Bloom::repeat_byte(72)],
-    //     ];
-    //     round_trip(data);
-    // }
 }
 
 /// Decode tests that are expected to fail.
 mod decode_fail {
     use super::*;
+    use ssz_primitives::Hash256;
 
     #[test]
     fn non_zero_usize() {
@@ -584,21 +538,9 @@ mod decode_fail {
         assert!(NonZeroUsize::from_ssz_bytes(&zero_bytes).is_err());
     }
 
-    // #[test]
-    // fn hash160() {
-    //     let long_bytes = Hash256::repeat_byte(0xff).as_ssz_bytes();
-    //     assert!(Address::from_ssz_bytes(&long_bytes).is_err());
-    // }
-
-    // #[test]
-    // fn hash256() {
-    //     let long_bytes = vec![0xff; 33];
-    //     assert!(Hash256::from_ssz_bytes(&long_bytes).is_err());
-    // }
-
-    // #[test]
-    // fn bloom() {
-    //     let long_bytes = vec![0xff; 257];
-    //     assert!(Bloom::from_ssz_bytes(&long_bytes).is_err());
-    // }
+    #[test]
+    fn hash256() {
+        let long_bytes = vec![0xff; 33];
+        assert!(Hash256::from_ssz_bytes(&long_bytes).is_err());
+    }
 }
