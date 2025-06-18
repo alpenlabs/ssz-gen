@@ -1,3 +1,6 @@
+// Modified in 2025 from the original version
+// Original source licensed under the Apache License 2.0
+
 //! Primitive types for SSZ serialization.
 //!
 //! This module provides primitive types that were previously imported from alloy-primitives,
