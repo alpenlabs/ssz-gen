@@ -9,6 +9,9 @@
 use ruint::Uint;
 use std::str::FromStr;
 
+#[cfg(feature = "rand")]
+use rand::RngCore;
+
 /// A 256-bit unsigned integer type.
 pub type U256 = Uint<256, 4>;
 
@@ -26,6 +29,20 @@ impl<const N: usize> FixedBytes<N> {
     /// Create a new FixedBytes filled with zeros
     pub const fn zero() -> Self {
         Self([0u8; N])
+    }
+
+    /// Create a new FixedBytes filled with random bytes
+    #[cfg(feature = "rand")]
+    pub fn random() -> Self {
+        let mut bytes = Self::zero();
+        bytes.randomize();
+        bytes
+    }
+
+    /// Fill this FixedBytes with random bytes
+    #[cfg(feature = "rand")]
+    pub fn randomize(&mut self) {
+        rand::thread_rng().fill_bytes(&mut self.0);
     }
 
     /// Create filled with a specific byte

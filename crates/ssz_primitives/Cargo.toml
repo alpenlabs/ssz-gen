@@ -15,7 +15,12 @@ repository.workspace = true
 
 [dependencies]
 hex.workspace = true
+rand = { workspace = true, optional = true }
 ruint.workspace = true
+
+[features]
+default = ["rand"]
+rand = ["dep:rand"]
 
 [lints]
 workspace = true

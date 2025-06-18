@@ -6,7 +6,8 @@ members = [
     "crates/tree_hash",
     "crates/tree_hash_derive",
     "crates/ssz_types",
-    "crates/sizzle-parser", "crates/ssz_primitives",
+    "crates/sizzle-parser",
+    "crates/ssz_primitives",
 ]
 resolver = "2"
 
@@ -15,7 +16,7 @@ version = "0.1.0"
 edition = "2024"
 authors = [
     "Trey Del Bonis <trey@alpenlabs.io>",
-    "Ali Rezai <ali.baghbidi@nethermind.io>"
+    "Ali Rezai <ali.baghbidi@nethermind.io>",
 ]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
@@ -46,24 +47,24 @@ strip = "symbols" # Strip symbols from binary
 sizzle-parser = { path = "crates/sizzle-parser" }
 ssz = { path = "crates/ssz" }
 ssz_derive = { path = "crates/ssz_derive" }
+ssz_primitives = { path = "crates/ssz_primitives" }
 ssz_types = { path = "crates/ssz_types" }
 tree_hash = { path = "crates/tree_hash" }
 tree_hash_derive = { path = "crates/tree_hash_derive" }
-ssz_primitives = { path = "crates/ssz_primitives" }
 
 arbitrary = { version = "1.0", features = ["derive"] }
 darling = "0.20.9"
 ethereum_hashing = "0.7.0"
+hex = "0.4"
 itertools = "0.13.0"
 proc-macro2 = "1.0.23"
 quote = "1.0.18"
-rand = "0.8.5"
+rand =  "0.8.5"
+ruint = { version = "1.14.0", default-features = false, features = ["alloc"] }
 serde = "1.0.0"
 serde_derive = "1.0.0"
 serde_json = "1.0.0"
 smallvec = { version = "1.6.1", features = ["const_generics"] }
 syn = "2.0.69"
 typenum = "1.12.0"
-hex = "0.4"
 prettyplease = "0.2.33"
-ruint = { version = "1.14.0", default-features = false, features = ["alloc"] }
