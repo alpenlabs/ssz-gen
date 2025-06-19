@@ -7,7 +7,7 @@ use rand as _;
 use smallvec as _;
 use ssz::BitVector;
 use ssz_derive::Encode;
-use ssz_primitives as _;
+use ssz_primitives::{U128, U256};
 use tree_hash::{self, BYTES_PER_CHUNK, Hash256, MerkleHasher, PackedEncoding, TreeHash};
 use tree_hash_derive::TreeHash;
 use typenum::Unsigned;
@@ -134,6 +134,40 @@ fn variable_union() {
         VariableUnion::B(HashVec::from(vec![2])).tree_hash_root(),
         mix_in_selector(u8_hash_concat(2, 1), 1)
     );
+}
+
+/// Test that the packed encodings for different types are equal.Add commentMore actions
+#[test]
+fn packed_encoding_example() {
+    let val = 0xfff0eee0ddd0ccc0bbb0aaa099908880_u128;
+    let canonical = U256::from(val).tree_hash_packed_encoding();
+    let encodings = [
+        (0x8880_u16.tree_hash_packed_encoding(), 0),
+        (0x9990_u16.tree_hash_packed_encoding(), 2),
+        (0xaaa0_u16.tree_hash_packed_encoding(), 4),
+        (0xbbb0_u16.tree_hash_packed_encoding(), 6),
+        (0xccc0_u16.tree_hash_packed_encoding(), 8),
+        (0xddd0_u16.tree_hash_packed_encoding(), 10),
+        (0xeee0_u16.tree_hash_packed_encoding(), 12),
+        (0xfff0_u16.tree_hash_packed_encoding(), 14),
+        (U128::from(val).tree_hash_packed_encoding(), 0),
+        (U128::from(0).tree_hash_packed_encoding(), 16),
+        (
+            Hash256::from_slice(U256::from(val).as_le_slice())
+                .tree_hash_root()
+                .0
+                .into(),
+            0,
+        ),
+        (U256::from(val).tree_hash_root().0.into(), 0),
+    ];
+    for (i, (encoding, offset)) in encodings.into_iter().enumerate() {
+        assert_eq!(
+            &encoding[..],
+            &canonical[offset..offset + encoding.len()],
+            "encoding {i} is wrong"
+        );
+    }
 }
 
 #[derive(TreeHash)]
