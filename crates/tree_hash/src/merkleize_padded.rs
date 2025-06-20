@@ -2,7 +2,7 @@
 // Original source licensed under the Apache License 2.0
 
 use super::{BYTES_PER_CHUNK, Hash256, get_zero_hash};
-use ethereum_hashing::{hash_fixed, hash32_concat};
+use crate::{hash_fixed_with_digest, hash32_concat};
 
 /// Merkleize `bytes` and return the root, optionally padding the tree out to `min_leaves` number of
 /// leaves.
@@ -82,7 +82,7 @@ pub fn merkleize_padded(bytes: &[u8], min_leaves: usize) -> Hash256 {
         // Hash two chunks, creating a parent chunk.
         let hash = match bytes.get(start..start + BYTES_PER_CHUNK * 2) {
             // All bytes are available, hash as usual.
-            Some(slice) => hash_fixed(slice),
+            Some(slice) => hash_fixed_with_digest::<sha2::Sha256>(slice),
             // Unable to get all the bytes, get a small slice and pad it out.
             None => {
                 let mut preimage = bytes
@@ -90,7 +90,7 @@ pub fn merkleize_padded(bytes: &[u8], min_leaves: usize) -> Hash256 {
                     .expect("`i` can only be larger than zero if there are bytes to read")
                     .to_vec();
                 preimage.resize(BYTES_PER_CHUNK * 2, 0);
-                hash_fixed(&preimage)
+                hash_fixed_with_digest::<sha2::Sha256>(&preimage)
             }
         };
 
@@ -139,7 +139,7 @@ pub fn merkleize_padded(bytes: &[u8], min_leaves: usize) -> Hash256 {
                 "Both children should be `BYTES_PER_CHUNK` bytes."
             );
 
-            let hash = hash32_concat(left, right);
+            let hash = hash32_concat::<sha2::Sha256>(left, right);
 
             // Store a parent node.
             chunks

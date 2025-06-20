@@ -3,12 +3,16 @@
 
 //! Tree hash tests
 
+use digest as _;
 use rand as _;
+use sha2 as _;
 use smallvec as _;
 use ssz_derive::Encode;
 use ssz_primitives::{U128, U256};
 use ssz_types::{BitVector, Optional, VariableList};
-use tree_hash::{self, BYTES_PER_CHUNK, Hash256, MerkleHasher, PackedEncoding, TreeHash};
+use tree_hash::{
+    self, BYTES_PER_CHUNK, Hash256, MerkleHasher, PackedEncoding, TreeHash, hash32_concat,
+};
 use tree_hash_derive::TreeHash;
 use typenum::Unsigned;
 
@@ -37,7 +41,8 @@ impl tree_hash::TreeHash for HashVec {
     }
 
     fn tree_hash_root(&self) -> Hash256 {
-        let mut hasher = MerkleHasher::with_leaves(self.vec.len().div_ceil(BYTES_PER_CHUNK));
+        let mut hasher =
+            MerkleHasher::<sha2::Sha256>::with_leaves(self.vec.len().div_ceil(BYTES_PER_CHUNK));
 
         for item in &self.vec {
             hasher.write(&item.tree_hash_packed_encoding()).unwrap()
@@ -53,7 +58,7 @@ fn mix_in_selector(a: Hash256, selector: u8) -> Hash256 {
     let mut b = [0; 32];
     b[0] = selector;
 
-    Hash256::from_slice(&ethereum_hashing::hash32_concat(a.as_slice(), &b))
+    Hash256::from_slice(&hash32_concat::<sha2::Sha256>(a.as_slice(), &b))
 }
 
 fn u8_hash_concat(v1: u8, v2: u8) -> Hash256 {
@@ -63,7 +68,7 @@ fn u8_hash_concat(v1: u8, v2: u8) -> Hash256 {
     a[0] = v1;
     b[0] = v2;
 
-    Hash256::from_slice(&ethereum_hashing::hash32_concat(&a, &b))
+    Hash256::from_slice(&hash32_concat::<sha2::Sha256>(&a, &b))
 }
 
 fn u8_hash(x: u8) -> Hash256 {

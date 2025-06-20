@@ -161,7 +161,7 @@ pub fn bitfield_bytes_tree_hash_root<N: Unsigned>(bytes: &[u8]) -> Hash256 {
     let byte_size = N::to_usize().div_ceil(8);
     let leaf_count = byte_size.div_ceil(BYTES_PER_CHUNK);
 
-    let mut hasher = MerkleHasher::with_leaves(leaf_count);
+    let mut hasher = MerkleHasher::<sha2::Sha256>::with_leaves(leaf_count);
 
     hasher
         .write(bytes)

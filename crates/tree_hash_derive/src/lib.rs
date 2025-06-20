@@ -247,7 +247,7 @@ fn tree_hash_derive_struct_container(item: &DeriveInput, struct_data: &DataStruc
             }
 
             fn tree_hash_root(&self) -> tree_hash::Hash256 {
-                let mut hasher = tree_hash::MerkleHasher::with_leaves(#num_leaves);
+                let mut hasher = tree_hash::Sha256MerkleHasher::with_leaves(#num_leaves);
 
                 #(
                     hasher.write(self.#idents.tree_hash_root().as_slice())
@@ -303,7 +303,7 @@ fn tree_hash_derive_struct_stable_container(
                 )*
 
                 // Hash according to `max_fields` regardless of the actual number of fields on the struct.
-                let mut hasher = tree_hash::MerkleHasher::with_leaves(#max_fields::to_usize());
+                let mut hasher = tree_hash::Sha256MerkleHasher::with_leaves(#max_fields::to_usize());
 
                 #(
                     if self.#idents.is_some() {
@@ -424,7 +424,7 @@ fn tree_hash_derive_struct_profile(
                 )*
 
                 // Hash according to `max_fields` regardless of the actual number of fields on the struct.
-                let mut hasher = tree_hash::MerkleHasher::with_leaves(#max_fields::to_usize());
+                let mut hasher = tree_hash::Sha256MerkleHasher::with_leaves(#max_fields::to_usize());
 
                 #(
                     #hashes
