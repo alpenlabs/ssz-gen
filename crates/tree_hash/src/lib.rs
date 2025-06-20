@@ -15,8 +15,11 @@ pub use merkle_hasher::{Error, MerkleHasher};
 pub use merkleize_padded::merkleize_padded;
 pub use merkleize_standard::merkleize_standard;
 
-use ethereum_hashing::{ZERO_HASHES, ZERO_HASHES_MAX_INDEX, hash_fixed};
+use digest::Digest;
+use sha2 as _;
+
 use smallvec::SmallVec;
+use std::sync::LazyLock;
 
 /// Number of bytes in a chunk
 pub const BYTES_PER_CHUNK: usize = 32;
@@ -28,12 +31,56 @@ pub const MERKLE_HASH_CHUNK: usize = 2 * BYTES_PER_CHUNK;
 pub const MAX_UNION_SELECTOR: u8 = 127;
 /// Size of a smallvec
 pub const SMALLVEC_SIZE: usize = 32;
+/// Maximum index for zero hashes
+pub const ZERO_HASHES_MAX_INDEX: usize = 48;
+/// Hash length
+pub const HASH_LEN: usize = 32;
 
 /// 256-bit hash
 pub type Hash256 = ssz_primitives::Hash256;
 
 /// Packed encoding
 pub type PackedEncoding = SmallVec<[u8; SMALLVEC_SIZE]>;
+
+/// Default MerkleHasher using SHA256
+pub type Sha256MerkleHasher = MerkleHasher<sha2::Sha256>;
+
+/// Static zero hashes
+pub static ZERO_HASHES: LazyLock<Vec<[u8; HASH_LEN]>> = LazyLock::new(|| {
+    let mut hashes = vec![[0; HASH_LEN]; ZERO_HASHES_MAX_INDEX + 1];
+
+    for i in 0..ZERO_HASHES_MAX_INDEX {
+        let result = hash32_concat::<sha2::Sha256>(&hashes[i], &hashes[i]);
+        hashes[i + 1].copy_from_slice(&result);
+    }
+
+    hashes
+});
+
+/// Generic hash32_concat function using Digest trait
+pub fn hash32_concat<D: Digest + Default>(left: &[u8], right: &[u8]) -> Vec<u8> {
+    let mut hasher = D::default();
+    hasher.update(left);
+    hasher.update(right);
+    hasher.finalize().to_vec()
+}
+
+/// Generic hash function using Digest trait
+pub fn hash<D: Digest + Default>(data: &[u8]) -> Vec<u8> {
+    let mut hasher = D::default();
+    hasher.update(data);
+    hasher.finalize().to_vec()
+}
+
+/// Generic hash_fixed function using Digest trait - returns fixed-size array (no allocation!)
+pub fn hash_fixed_with_digest<D: Digest + Default>(data: &[u8]) -> [u8; 32] {
+    let mut hasher = D::default();
+    hasher.update(data);
+    let result = hasher.finalize();
+    let mut output = [0u8; 32];
+    output.copy_from_slice(&result);
+    output
+}
 
 /// Convenience method for `MerkleHasher` which also provides some fast-paths for small trees.
 ///
@@ -55,10 +102,10 @@ pub fn merkle_root(bytes: &[u8], minimum_leaf_count: usize) -> Hash256 {
         let mut leaves = [0; HASHSIZE * 2];
         leaves[0..bytes.len()].copy_from_slice(bytes);
 
-        Hash256::from_slice(&hash_fixed(&leaves))
+        Hash256::from_slice(&hash_fixed_with_digest::<sha2::Sha256>(&leaves))
     } else {
         // If there are 3 or more leaves, use `MerkleHasher`.
-        let mut hasher = MerkleHasher::with_leaves(leaves);
+        let mut hasher = MerkleHasher::<sha2::Sha256>::with_leaves(leaves);
         hasher
             .write(bytes)
             .expect("the number of leaves is adequate for the number of bytes");
@@ -72,12 +119,18 @@ pub fn merkle_root(bytes: &[u8], minimum_leaf_count: usize) -> Hash256 {
 ///
 /// Used in `TreeHash` for inserting the length of a list above it's root.
 pub fn mix_in_length(root: &Hash256, length: usize) -> Hash256 {
+    mix_in_length_with_hasher::<sha2::Sha256>(root, length)
+}
+
+/// Generic version of mix_in_length that allows specifying the hasher.
+pub fn mix_in_length_with_hasher<D: Digest + Default>(root: &Hash256, length: usize) -> Hash256 {
     let usize_len = std::mem::size_of::<usize>();
 
     let mut length_bytes = [0; BYTES_PER_CHUNK];
     length_bytes[0..usize_len].copy_from_slice(&length.to_le_bytes());
 
-    Hash256::from_slice(&ethereum_hashing::hash32_concat(root.as_slice(), &length_bytes)[..])
+    let result = hash32_concat::<D>(root.as_slice(), &length_bytes);
+    Hash256::from_slice(&result[..])
 }
 
 /// Returns `Some(root)` created by hashing `root` and `selector`, if `selector <=
@@ -94,6 +147,14 @@ pub fn mix_in_length(root: &Hash256, length: usize) -> Hash256 {
 ///
 /// <https://github.com/ethereum/consensus-specs/blob/v1.1.0-beta.3/ssz/simple-serialize.md#union>
 pub fn mix_in_selector(root: &Hash256, selector: u8) -> Option<Hash256> {
+    mix_in_selector_with_hasher::<sha2::Sha256>(root, selector)
+}
+
+/// Generic version of mix_in_selector that allows specifying the hasher.
+pub fn mix_in_selector_with_hasher<D: Digest + Default>(
+    root: &Hash256,
+    selector: u8,
+) -> Option<Hash256> {
     if selector > MAX_UNION_SELECTOR {
         return None;
     }
@@ -101,16 +162,19 @@ pub fn mix_in_selector(root: &Hash256, selector: u8) -> Option<Hash256> {
     let mut chunk = [0; BYTES_PER_CHUNK];
     chunk[0] = selector;
 
-    let root = ethereum_hashing::hash32_concat(root.as_slice(), &chunk);
+    let root = hash32_concat::<D>(root.as_slice(), &chunk);
     Some(Hash256::from_slice(&root))
 }
 
 /// Returns `root` created by hashing `root` and `aux`.
 pub fn mix_in_aux(root: &Hash256, aux: &Hash256) -> Hash256 {
-    Hash256::from_slice(&ethereum_hashing::hash32_concat(
-        root.as_slice(),
-        aux.as_slice(),
-    ))
+    mix_in_aux_with_hasher::<sha2::Sha256>(root, aux)
+}
+
+/// Generic version of mix_in_aux that allows specifying the hasher.
+pub fn mix_in_aux_with_hasher<D: Digest + Default>(root: &Hash256, aux: &Hash256) -> Hash256 {
+    let result = hash32_concat::<D>(root.as_slice(), aux.as_slice());
+    Hash256::from_slice(&result)
 }
 
 /// Returns a cached padding node for a given height.
@@ -235,7 +299,7 @@ mod test {
             let mut preimage = vec![42; BYTES_PER_CHUNK];
             preimage.append(&mut vec![42]);
             preimage.append(&mut vec![0; BYTES_PER_CHUNK - 1]);
-            ethereum_hashing::hash(&preimage)
+            hash::<sha2::Sha256>(&preimage)
         };
 
         assert_eq!(
