@@ -9,15 +9,15 @@ use ssz_primitives::{FixedBytes, U128, U256};
 use std::sync::Arc;
 use typenum::Unsigned;
 
-fn int_to_hash256(int: u64) -> Hash256 {
+fn int_to_hasher_output<H: TreeHashDigest>(int: u64) -> H::Output {
     let mut bytes = [0; HASHSIZE];
     bytes[0..8].copy_from_slice(&int.to_le_bytes());
-    Hash256::from_slice(&bytes)
+    H::from_bytes(&bytes)
 }
 
 macro_rules! impl_for_bitsize {
     ($type: ident, $bit_size: expr) => {
-        impl TreeHash for $type {
+        impl<H: TreeHashDigest> TreeHash<H> for $type {
             fn tree_hash_type() -> TreeHashType {
                 TreeHashType::Basic
             }
@@ -31,8 +31,8 @@ macro_rules! impl_for_bitsize {
             }
 
             #[allow(clippy::cast_lossless)] // Lint does not apply to all uses of this macro.
-            fn tree_hash_root(&self) -> Hash256 {
-                int_to_hash256(*self as u64)
+            fn tree_hash_root(&self) -> H::Output {
+                int_to_hasher_output::<H>(*self as u64)
             }
         }
     };
@@ -44,25 +44,25 @@ impl_for_bitsize!(u32, 32);
 impl_for_bitsize!(u64, 64);
 impl_for_bitsize!(usize, 64);
 
-impl TreeHash for bool {
+impl<H: TreeHashDigest> TreeHash<H> for bool {
     fn tree_hash_type() -> TreeHashType {
         TreeHashType::Basic
     }
 
     fn tree_hash_packed_encoding(&self) -> PackedEncoding {
-        (*self as u8).tree_hash_packed_encoding()
+        <u8 as TreeHash<H>>::tree_hash_packed_encoding(&(*self as u8))
     }
 
     fn tree_hash_packing_factor() -> usize {
-        u8::tree_hash_packing_factor()
+        <u8 as TreeHash<H>>::tree_hash_packing_factor()
     }
 
-    fn tree_hash_root(&self) -> Hash256 {
-        int_to_hash256(*self as u64)
+    fn tree_hash_root(&self) -> H::Output {
+        int_to_hasher_output::<H>(*self as u64)
     }
 }
 
-impl<const N: usize> TreeHash for [u8; N] {
+impl<const N: usize, H: TreeHashDigest> TreeHash<H> for [u8; N] {
     fn tree_hash_type() -> TreeHashType {
         TreeHashType::Vector
     }
@@ -75,14 +75,14 @@ impl<const N: usize> TreeHash for [u8; N] {
         unreachable!("Vector should never be packed.")
     }
 
-    fn tree_hash_root(&self) -> Hash256 {
+    fn tree_hash_root(&self) -> H::Output {
         let values_per_chunk = BYTES_PER_CHUNK;
         let minimum_chunk_count = N.div_ceil(values_per_chunk);
-        merkle_root(self, minimum_chunk_count)
+        merkle_root_with_hasher::<H>(self, minimum_chunk_count)
     }
 }
 
-impl TreeHash for U128 {
+impl<H: TreeHashDigest> TreeHash<H> for U128 {
     fn tree_hash_type() -> TreeHashType {
         TreeHashType::Basic
     }
@@ -95,12 +95,12 @@ impl TreeHash for U128 {
         2
     }
 
-    fn tree_hash_root(&self) -> Hash256 {
-        Hash256::right_padding_from(&self.to_le_bytes::<{ Self::BYTES }>())
+    fn tree_hash_root(&self) -> H::Output {
+        H::from_bytes(&self.to_le_bytes::<{ Self::BYTES }>())
     }
 }
 
-impl TreeHash for U256 {
+impl<H: TreeHashDigest> TreeHash<H> for U256 {
     fn tree_hash_type() -> TreeHashType {
         TreeHashType::Basic
     }
@@ -113,13 +113,13 @@ impl TreeHash for U256 {
         1
     }
 
-    fn tree_hash_root(&self) -> Hash256 {
-        Hash256::from(self.to_le_bytes::<{ Self::BYTES }>())
+    fn tree_hash_root(&self) -> H::Output {
+        H::from_bytes(&self.to_le_bytes::<{ Self::BYTES }>())
     }
 }
 
 // This implementation covers `Hash256`/`B256` as well.
-impl<const N: usize> TreeHash for FixedBytes<N> {
+impl<const N: usize, H: TreeHashDigest> TreeHash<H> for FixedBytes<N> {
     fn tree_hash_type() -> TreeHashType {
         TreeHashType::Vector
     }
@@ -132,12 +132,18 @@ impl<const N: usize> TreeHash for FixedBytes<N> {
         unreachable!("Vector should never be packed.")
     }
 
-    fn tree_hash_root(&self) -> Hash256 {
-        self.0.tree_hash_root()
+    fn tree_hash_root(&self) -> H::Output {
+        if N <= 32 {
+            H::from_bytes(&self.0)
+        } else {
+            let values_per_chunk = BYTES_PER_CHUNK;
+            let minimum_chunk_count = N.div_ceil(values_per_chunk);
+            merkle_root_with_hasher::<H>(&self.0, minimum_chunk_count)
+        }
     }
 }
 
-impl<T: TreeHash> TreeHash for Arc<T> {
+impl<T: TreeHash<H>, H: TreeHashDigest> TreeHash<H> for Arc<T> {
     fn tree_hash_type() -> TreeHashType {
         T::tree_hash_type()
     }
@@ -150,29 +156,27 @@ impl<T: TreeHash> TreeHash for Arc<T> {
         T::tree_hash_packing_factor()
     }
 
-    fn tree_hash_root(&self) -> Hash256 {
+    fn tree_hash_root(&self) -> H::Output {
         self.as_ref().tree_hash_root()
     }
 }
 
 /// A helper function providing common functionality for finding the Merkle root of some bytes that
 /// represent a bitfield.
-pub fn bitfield_bytes_tree_hash_root<N: Unsigned>(bytes: &[u8]) -> Hash256 {
+pub fn bitfield_bytes_tree_hash_root<N: Unsigned, H: TreeHashDigest>(bytes: &[u8]) -> H::Output {
     let byte_size = N::to_usize().div_ceil(8);
     let leaf_count = byte_size.div_ceil(BYTES_PER_CHUNK);
 
-    let mut hasher = MerkleHasher::<sha2::Sha256>::with_leaves(leaf_count);
-
+    let mut hasher = MerkleHasher::<H>::with_leaves(leaf_count);
     hasher
         .write(bytes)
         .expect("bitfield should not exceed tree hash leaf limit");
-
     hasher
         .finish()
         .expect("bitfield tree hash buffer should not exceed leaf limit")
 }
 
-impl<N: Unsigned + Clone> TreeHash for Bitfield<Variable<N>> {
+impl<N: Unsigned + Clone, H: TreeHashDigest> TreeHash<H> for Bitfield<Variable<N>> {
     fn tree_hash_type() -> TreeHashType {
         TreeHashType::List
     }
@@ -185,15 +189,16 @@ impl<N: Unsigned + Clone> TreeHash for Bitfield<Variable<N>> {
         unreachable!("List should never be packed.")
     }
 
-    fn tree_hash_root(&self) -> Hash256 {
+    fn tree_hash_root(&self) -> H::Output {
         // Note: we use `as_slice` because it does _not_ have the length-delimiting bit set (or
         // present).
-        let root = bitfield_bytes_tree_hash_root::<N>(self.as_slice());
-        mix_in_length(&root, self.len())
+        let root = bitfield_bytes_tree_hash_root::<N, H>(self.as_slice());
+        let root_with_length = mix_in_length_with_hasher::<H>(&root, self.len());
+        root_with_length
     }
 }
 
-impl<N: Unsigned + Clone> TreeHash for Bitfield<Fixed<N>> {
+impl<N: Unsigned + Clone, H: TreeHashDigest> TreeHash<H> for Bitfield<Fixed<N>> {
     fn tree_hash_type() -> TreeHashType {
         TreeHashType::Vector
     }
@@ -206,13 +211,13 @@ impl<N: Unsigned + Clone> TreeHash for Bitfield<Fixed<N>> {
         unreachable!("Vector should never be packed.")
     }
 
-    fn tree_hash_root(&self) -> Hash256 {
-        bitfield_bytes_tree_hash_root::<N>(self.as_slice())
+    fn tree_hash_root(&self) -> H::Output {
+        bitfield_bytes_tree_hash_root::<N, H>(self.as_slice())
     }
 }
 
 // `Option<T>` represents `Union[None, T]`
-impl<T: TreeHash> TreeHash for Option<T> {
+impl<T: TreeHash<H>, H: TreeHashDigest> TreeHash<H> for Option<T> {
     fn tree_hash_type() -> TreeHashType {
         TreeHashType::Container
     }
@@ -225,7 +230,7 @@ impl<T: TreeHash> TreeHash for Option<T> {
         unreachable!("Enum should never be packed")
     }
 
-    fn tree_hash_root(&self) -> Hash256 {
+    fn tree_hash_root(&self) -> H::Output {
         match self {
             None => {
                 let root = Hash256::ZERO;
@@ -256,29 +261,38 @@ mod test {
 
         let false_bytes: Vec<u8> = vec![0; 32];
 
-        assert_eq!(true.tree_hash_root().as_slice(), true_bytes.as_slice());
-        assert_eq!(false.tree_hash_root().as_slice(), false_bytes.as_slice());
+        assert_eq!(
+            <bool as TreeHash<Sha256Hasher>>::tree_hash_root(&true).as_slice(),
+            true_bytes.as_slice()
+        );
+        assert_eq!(
+            <bool as TreeHash<Sha256Hasher>>::tree_hash_root(&false).as_slice(),
+            false_bytes.as_slice()
+        );
     }
 
     #[test]
     fn arc() {
         let one = U128::from(1);
         let one_arc = Arc::new(one);
-        assert_eq!(one_arc.tree_hash_root(), one.tree_hash_root());
+        assert_eq!(
+            <Arc<U128> as TreeHash<Sha256Hasher>>::tree_hash_root(&one_arc),
+            <U128 as TreeHash<Sha256Hasher>>::tree_hash_root(&one)
+        );
     }
 
     #[test]
     fn int_to_bytes() {
-        assert_eq!(int_to_hash256(0).as_slice(), &[0; 32]);
+        assert_eq!(int_to_hasher_output::<Sha256Hasher>(0).as_slice(), &[0; 32]);
         assert_eq!(
-            int_to_hash256(1).as_slice(),
+            int_to_hasher_output::<Sha256Hasher>(1).as_slice(),
             &[
                 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0
             ]
         );
         assert_eq!(
-            int_to_hash256(u64::MAX).as_slice(),
+            int_to_hasher_output::<Sha256Hasher>(u64::MAX).as_slice(),
             &[
                 255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -289,13 +303,17 @@ mod test {
     #[test]
     fn bitvector() {
         let empty_bitvector = BitVector::<U8>::new();
-        assert_eq!(empty_bitvector.tree_hash_root(), Hash256::ZERO);
+        assert_eq!(
+            <BitVector<U8> as TreeHash<Sha256Hasher>>::tree_hash_root(&empty_bitvector),
+            Hash256::ZERO
+        );
 
         let small_bitvector_bytes = vec![0xff_u8, 0xee, 0xdd, 0xcc];
         let small_bitvector =
             BitVector::<U32>::from_bytes(small_bitvector_bytes.clone().into()).unwrap();
         assert_eq!(
-            small_bitvector.tree_hash_root().as_slice()[..4],
+            <BitVector<U32> as TreeHash<Sha256Hasher>>::tree_hash_root(&small_bitvector).as_slice()
+                [..4],
             small_bitvector_bytes
         );
     }
@@ -304,7 +322,7 @@ mod test {
     fn bitlist() {
         let empty_bitlist = BitList::<U8>::with_capacity(8).unwrap();
         assert_eq!(
-            empty_bitlist.tree_hash_root(),
+            <BitList<U8> as TreeHash<Sha256Hasher>>::tree_hash_root(&empty_bitlist),
             "0x5ac78d953211aa822c3ae6e9b0058e42394dd32e5992f29f9c12da3681985130"
                 .parse()
                 .unwrap()
@@ -313,7 +331,7 @@ mod test {
         let mut small_bitlist = BitList::<U32>::with_capacity(4).unwrap();
         small_bitlist.set(1, true).unwrap();
         assert_eq!(
-            small_bitlist.tree_hash_root(),
+            <BitList<U32> as TreeHash<Sha256Hasher>>::tree_hash_root(&small_bitlist),
             "0x7eb03d394d83a389980b79897207be3a6512d964cb08978bb7f3cfc0db8cfb8a"
                 .parse()
                 .unwrap()
@@ -329,7 +347,10 @@ mod test {
             [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff],
         ];
         for bytes in data {
-            assert_eq!(bytes.tree_hash_root(), Hash256::right_padding_from(&bytes));
+            assert_eq!(
+                <[u8; 7] as TreeHash<Sha256Hasher>>::tree_hash_root(&bytes),
+                Hash256::right_padding_from(&bytes)
+            );
         }
     }
 
@@ -342,7 +363,10 @@ mod test {
             Hash256::left_padding_from(&[10, 9, 8, 7, 6]),
         ];
         for bytes in data {
-            assert_eq!(bytes.tree_hash_root(), bytes);
+            assert_eq!(
+                <FixedBytes<32> as TreeHash<Sha256Hasher>>::tree_hash_root(&bytes),
+                bytes
+            );
         }
     }
 
@@ -359,7 +383,10 @@ mod test {
             ),
         ];
         for (bytes, expected) in data {
-            assert_eq!(bytes.tree_hash_root(), expected.parse().unwrap());
+            assert_eq!(
+                <FixedBytes<48> as TreeHash<Sha256Hasher>>::tree_hash_root(&bytes),
+                expected.parse().unwrap()
+            );
         }
     }
 
@@ -367,12 +394,12 @@ mod test {
     #[test]
     #[should_panic]
     fn fixed_bytes_no_packed_encoding() {
-        Hash256::ZERO.tree_hash_packed_encoding();
+        <FixedBytes<32> as TreeHash<Sha256Hasher>>::tree_hash_packed_encoding(&Hash256::ZERO);
     }
 
     #[test]
     #[should_panic]
     fn fixed_bytes_no_packing_factor() {
-        Hash256::tree_hash_packing_factor();
+        <FixedBytes<32> as TreeHash<Sha256Hasher>>::tree_hash_packing_factor();
     }
 }
