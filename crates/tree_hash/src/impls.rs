@@ -193,8 +193,7 @@ impl<N: Unsigned + Clone, H: TreeHashDigest> TreeHash<H> for Bitfield<Variable<N
         // Note: we use `as_slice` because it does _not_ have the length-delimiting bit set (or
         // present).
         let root = bitfield_bytes_tree_hash_root::<N, H>(self.as_slice());
-        let root_with_length = mix_in_length_with_hasher::<H>(&root, self.len());
-        root_with_length
+        mix_in_length_with_hasher::<H>(&root, self.len())
     }
 }
 
