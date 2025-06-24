@@ -16,7 +16,6 @@ keywords.workspace = true
 workspace = true
 
 [dependencies]
-ethereum_serde_utils.workspace = true
 ssz.workspace = true
 tree_hash.workspace = true
 serde.workspace = true

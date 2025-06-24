@@ -41,6 +41,8 @@ mod bitfield;
 pub mod decode;
 pub mod encode;
 pub mod legacy;
+/// Serde utilities for SSZ types.
+pub mod serde_utils;
 mod union_selector;
 
 pub use bitfield::bitvector_dynamic::{BitVectorDynamic, Dynamic};

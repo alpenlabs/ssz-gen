@@ -7,10 +7,10 @@
 //!
 //! Quotes can be optional during decoding. If the length of the `Vec` is greater than `N`, deserialization fails.
 
+use crate::serde_utils::quoted_u64_vec::QuotedIntWrapper;
 use itertools::process_results;
 use serde::ser::SerializeSeq;
 use serde::{Deserializer, Serializer, de::Error};
-use serde_utils::quoted_u64_vec::QuotedIntWrapper;
 use ssz::TryFromIter;
 use std::iter;
 use std::marker::PhantomData;

@@ -270,9 +270,6 @@ name = "bytes"
 version = "1.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d71b6127be86fdcfddb610f7182ac57211d4b18a3e9c82eb2d17662f2227ad6a"
-dependencies = [
- "serde",
-]
 
 [[package]]
 name = "cc"
@@ -541,19 +538,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ethereum_serde_utils"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3dc1355dbb41fbbd34ec28d4fb2a57d9a70c67ac3c19f6a5ca4d4a176b9e997a"
-dependencies = [
- "alloy-primitives",
- "hex",
- "serde",
- "serde_derive",
- "serde_json",
-]
-
-[[package]]
 name = "fastrand"
 version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -673,7 +657,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5971ac85611da7067dbfcabef3c70ebb5606018acd9e2a3903a0da507521e0d5"
 dependencies = [
  "foldhash",
- "serde",
 ]
 
 [[package]]
@@ -681,9 +664,6 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
-dependencies = [
- "serde",
-]
 
 [[package]]
 name = "hmac"
@@ -729,7 +709,6 @@ dependencies = [
  "arbitrary",
  "equivalent",
  "hashbrown",
- "serde",
 ]
 
 [[package]]
@@ -1023,7 +1002,6 @@ checksum = "9fbfd9d094a40bf3ae768db9361049ace4c0e04a4fd6b359518bd7b73a73dd97"
 dependencies = [
  "rand_chacha 0.9.0",
  "rand_core 0.9.3",
- "serde",
 ]
 
 [[package]]
@@ -1062,7 +1040,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99d9a13982dcf210057a8a78572b2217b667c3beacbf3a0d8b454f6f82837d38"
 dependencies = [
  "getrandom 0.3.3",
- "serde",
 ]
 
 [[package]]
@@ -1361,7 +1338,7 @@ version = "0.1.0"
 dependencies = [
  "alloy-primitives",
  "arbitrary",
- "ethereum_serde_utils",
+ "hex",
  "itertools 0.13.0",
  "serde",
  "serde_json",
@@ -1387,7 +1364,6 @@ name = "ssz_types"
 version = "0.1.0"
 dependencies = [
  "arbitrary",
- "ethereum_serde_utils",
  "itertools 0.13.0",
  "serde",
  "serde_derive",
