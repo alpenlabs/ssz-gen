@@ -1,8 +1,8 @@
 // Modified in 2025 from the original version
 // Original source licensed under the Apache License 2.0
 
-use super::{BYTES_PER_CHUNK, Hash256, get_zero_hash};
-use crate::{hash_fixed_with_digest, hash32_concat};
+use super::BYTES_PER_CHUNK;
+use crate::{TreeHashDigest, hash_fixed_with_digest, hash32_concat};
 
 /// Merkleize `bytes` and return the root, optionally padding the tree out to `min_leaves` number of
 /// leaves.
@@ -35,12 +35,15 @@ use crate::{hash_fixed_with_digest, hash32_concat};
 ///
 /// _Note: there are some minor memory overheads, including a handful of usizes and a list of
 /// `MAX_TREE_DEPTH` hashes as `lazy_static` constants._
-pub fn merkleize_padded(bytes: &[u8], min_leaves: usize) -> Hash256 {
+pub fn merkleize_padded_with_hasher<H: TreeHashDigest>(
+    bytes: &[u8],
+    min_leaves: usize,
+) -> H::Output {
     // If the bytes are just one chunk or less, pad to one chunk and return without hashing.
     if bytes.len() <= BYTES_PER_CHUNK && min_leaves <= 1 {
         let mut o = bytes.to_vec();
         o.resize(BYTES_PER_CHUNK, 0);
-        return Hash256::from_slice(&o);
+        return H::from_bytes(&o);
     }
 
     assert!(
@@ -125,7 +128,7 @@ pub fn merkleize_padded(bytes: &[u8], min_leaves: usize) -> Hash256 {
         for i in 0..parent_nodes {
             let (left, right) = match (chunks.get(i * 2), chunks.get(i * 2 + 1)) {
                 (Ok(left), Ok(right)) => (left, right),
-                (Ok(left), Err(_)) => (left, get_zero_hash(height)),
+                (Ok(left), Err(_)) => (left, H::get_zero_hash_slice(height)),
                 // Deriving `parent_nodes` from `chunks.len()` has ensured that we never encounter the
                 // scenario where we expect two nodes but there are none.
                 (Err(_), Err(_)) => unreachable!("Parent must have one child"),
@@ -158,7 +161,7 @@ pub fn merkleize_padded(bytes: &[u8], min_leaves: usize) -> Hash256 {
 
     assert_eq!(root.len(), BYTES_PER_CHUNK, "Only one chunk should remain");
 
-    Hash256::from_slice(&root)
+    H::from_bytes(&root)
 }
 
 /// A helper struct for storing words of `BYTES_PER_CHUNK` size in a flat byte array.
@@ -221,10 +224,12 @@ fn next_even_number(n: usize) -> usize {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::Hash256;
+    use crate::Sha256Hasher;
     use crate::ZERO_HASHES_MAX_INDEX;
 
     fn reference_root(bytes: &[u8]) -> Hash256 {
-        crate::merkleize_standard(bytes)
+        crate::merkleize_standard_with_hasher::<Sha256Hasher>(bytes)
     }
 
     macro_rules! common_tests {
@@ -283,8 +288,8 @@ mod test {
                 let input = vec![0; 10 * BYTES_PER_CHUNK];
                 let min_nodes = 2usize.pow(ZERO_HASHES_MAX_INDEX as u32);
                 assert_eq!(
-                    merkleize_padded(&input, min_nodes).as_slice(),
-                    get_zero_hash(ZERO_HASHES_MAX_INDEX)
+                    merkleize_padded_with_hasher::<Sha256Hasher>(&input, min_nodes).as_slice(),
+                    Sha256Hasher::get_zero_hash_slice(ZERO_HASHES_MAX_INDEX)
                 );
             }
         };
@@ -325,7 +330,7 @@ mod test {
 
         assert_eq!(
             reference_root(&reference_input),
-            merkleize_padded(input, min_nodes),
+            merkleize_padded_with_hasher::<Sha256Hasher>(input, min_nodes),
             "input.len(): {:?}",
             input.len()
         );

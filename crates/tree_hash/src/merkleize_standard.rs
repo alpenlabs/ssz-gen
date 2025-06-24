@@ -18,21 +18,21 @@ use crate::hash;
 ///  - Duplicates the input `bytes`.
 ///  - Stores all internal nodes, even if they are padding.
 ///  - Does not free up unused memory during operation.
-pub fn merkleize_standard(bytes: &[u8]) -> Hash256 {
+pub fn merkleize_standard_with_hasher<H: TreeHashDigest>(bytes: &[u8]) -> H::Output {
     // If the bytes are just one chunk (or less than one chunk) just return them.
-    if bytes.len() <= HASHSIZE {
+    if bytes.len() <= H::HASH_SIZE {
         let mut o = bytes.to_vec();
-        o.resize(HASHSIZE, 0);
-        return Hash256::from_slice(&o[0..HASHSIZE]);
+        o.resize(H::HASH_SIZE, 0);
+        return H::from_bytes(&o[0..H::HASH_SIZE]);
     }
 
-    let leaves = num_sanitized_leaves(bytes.len());
+    let leaves = num_sanitized_leaves_with_hasher::<H>(bytes.len());
     let nodes = num_nodes(leaves);
     let internal_nodes = nodes - leaves;
 
-    let num_bytes = std::cmp::max(internal_nodes, 1) * HASHSIZE + bytes.len();
+    let num_bytes = std::cmp::max(internal_nodes, 1) * H::HASH_SIZE + bytes.len();
 
-    let mut o: Vec<u8> = vec![0; internal_nodes * HASHSIZE];
+    let mut o: Vec<u8> = vec![0; internal_nodes * H::HASH_SIZE];
 
     o.append(&mut bytes.to_vec());
 
@@ -40,13 +40,13 @@ pub fn merkleize_standard(bytes: &[u8]) -> Hash256 {
 
     let empty_chunk_hash = hash::<sha2::Sha256>(&[0; MERKLE_HASH_CHUNK]);
 
-    let mut i = nodes * HASHSIZE;
-    let mut j = internal_nodes * HASHSIZE;
+    let mut i = nodes * H::HASH_SIZE;
+    let mut j = internal_nodes * H::HASH_SIZE;
 
     while i >= MERKLE_HASH_CHUNK {
         i -= MERKLE_HASH_CHUNK;
 
-        j -= HASHSIZE;
+        j -= H::HASH_SIZE;
         let hash = match o.get(i..i + MERKLE_HASH_CHUNK) {
             // All bytes are available, hash as usual.
             Some(slice) => hash::<sha2::Sha256>(slice),
@@ -65,14 +65,14 @@ pub fn merkleize_standard(bytes: &[u8]) -> Hash256 {
             }
         };
 
-        o[j..j + HASHSIZE].copy_from_slice(&hash);
+        o[j..j + H::HASH_SIZE].copy_from_slice(&hash);
     }
 
-    Hash256::from_slice(&o[0..HASHSIZE])
+    H::from_bytes(&o[0..H::HASH_SIZE])
 }
 
-fn num_sanitized_leaves(num_bytes: usize) -> usize {
-    let leaves = num_bytes.div_ceil(HASHSIZE);
+fn num_sanitized_leaves_with_hasher<H: TreeHashDigest>(num_bytes: usize) -> usize {
+    let leaves = num_bytes.div_ceil(H::HASH_SIZE);
     leaves.next_power_of_two()
 }
 

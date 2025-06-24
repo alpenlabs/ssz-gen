@@ -10,7 +10,7 @@ use std::sync::Arc;
 use typenum::Unsigned;
 
 fn int_to_hasher_output<H: TreeHashDigest>(int: u64) -> H::Output {
-    let mut bytes = [0; HASHSIZE];
+    let mut bytes = vec![0; H::HASH_SIZE];
     bytes[0..8].copy_from_slice(&int.to_le_bytes());
     H::from_bytes(&bytes)
 }
@@ -27,7 +27,7 @@ macro_rules! impl_for_bitsize {
             }
 
             fn tree_hash_packing_factor() -> usize {
-                HASHSIZE / ($bit_size / 8)
+                H::HASH_SIZE / ($bit_size / 8)
             }
 
             #[allow(clippy::cast_lossless)] // Lint does not apply to all uses of this macro.

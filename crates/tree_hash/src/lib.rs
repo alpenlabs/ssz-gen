@@ -11,20 +11,19 @@ mod merkle_hasher;
 mod merkleize_padded;
 mod merkleize_standard;
 
+use std::sync::LazyLock;
+
 pub use merkle_hasher::{Error, MerkleHasher};
-pub use merkleize_padded::merkleize_padded;
-pub use merkleize_standard::merkleize_standard;
+pub use merkleize_padded::merkleize_padded_with_hasher;
+pub use merkleize_standard::merkleize_standard_with_hasher;
 
 use digest::Digest;
 use sha2 as _;
 
 use smallvec::SmallVec;
-use std::sync::LazyLock;
 
 /// Number of bytes in a chunk
 pub const BYTES_PER_CHUNK: usize = 32;
-/// Size of a hash
-pub const HASHSIZE: usize = 32;
 /// Size of a merkle hash chunk
 pub const MERKLE_HASH_CHUNK: usize = 2 * BYTES_PER_CHUNK;
 /// Maximum union selector
@@ -33,8 +32,6 @@ pub const MAX_UNION_SELECTOR: u8 = 127;
 pub const SMALLVEC_SIZE: usize = 32;
 /// Maximum index for zero hashes
 pub const ZERO_HASHES_MAX_INDEX: usize = 48;
-/// Hash length
-pub const HASH_LEN: usize = 32;
 
 /// 256-bit hash
 pub type Hash256 = ssz_primitives::Hash256;
@@ -45,10 +42,30 @@ pub type PackedEncoding = SmallVec<[u8; SMALLVEC_SIZE]>;
 /// Default MerkleHasher using SHA256
 pub type Sha256MerkleHasher = MerkleHasher<Sha256Hasher>;
 
+/// Zero hashes for SHA256
+pub static ZERO_HASHES_SHA256: LazyLock<Vec<Hash256>> = LazyLock::new(|| {
+    let mut hashes = vec![Hash256::zero(); ZERO_HASHES_MAX_INDEX + 1];
+    for i in 0..ZERO_HASHES_MAX_INDEX {
+        hashes[i + 1] = Hash256::from_slice(&hash32_concat::<sha2::Sha256>(
+            hashes[i].as_ref(),
+            hashes[i].as_ref(),
+        ));
+    }
+    hashes
+});
+
 /// Trait for tree hash digests with incremental hashing support
 pub trait TreeHashDigest {
     /// Output type
     type Output: AsRef<[u8]> + Clone;
+
+    /// Size of the hash
+    const HASH_SIZE: usize;
+    /// Length of the hash
+    const HASH_LEN: usize;
+
+    /// Associated zero hashes function
+    fn zero_hashes() -> &'static LazyLock<Vec<Self::Output>>;
 
     /// Hash function
     fn hash(data: &[u8]) -> Self::Output;
@@ -58,6 +75,8 @@ pub trait TreeHashDigest {
     fn hash32_concat(left: &[u8], right: &[u8]) -> Self::Output;
     /// Get zero hash at a specific depth
     fn get_zero_hash(depth: usize) -> Self::Output;
+    /// Get zero hash at a specific depth as a slice
+    fn get_zero_hash_slice(depth: usize) -> &'static [u8];
     /// Create output from raw bytes (without hashing)
     fn from_bytes(bytes: &[u8]) -> Self::Output;
 
@@ -78,6 +97,12 @@ pub struct Sha256Hasher {
 /// SHA256 hasher implementation
 impl TreeHashDigest for Sha256Hasher {
     type Output = Hash256;
+    const HASH_SIZE: usize = 32;
+    const HASH_LEN: usize = 32;
+
+    fn zero_hashes() -> &'static LazyLock<Vec<Hash256>> {
+        &ZERO_HASHES_SHA256
+    }
 
     fn hash(data: &[u8]) -> Self::Output {
         Hash256::from_slice(&hash::<sha2::Sha256>(data))
@@ -92,12 +117,16 @@ impl TreeHashDigest for Sha256Hasher {
     }
 
     fn get_zero_hash(depth: usize) -> Self::Output {
-        Hash256::from_slice(&ZERO_HASHES[depth])
+        Self::zero_hashes()[depth]
+    }
+
+    fn get_zero_hash_slice(depth: usize) -> &'static [u8] {
+        Self::zero_hashes()[depth].as_ref()
     }
 
     fn from_bytes(bytes: &[u8]) -> Self::Output {
-        let mut padded = [0u8; 32];
-        let len = std::cmp::min(bytes.len(), 32);
+        let mut padded = [0u8; Self::HASH_SIZE];
+        let len = std::cmp::min(bytes.len(), Self::HASH_SIZE);
         padded[..len].copy_from_slice(&bytes[..len]);
         Hash256::from_slice(&padded)
     }
@@ -121,11 +150,12 @@ impl TreeHashDigest for Sha256Hasher {
 }
 
 /// Generate zero hashes for a specific hasher up to the maximum depth
-pub fn get_zero_hashes<H: TreeHashDigest>() -> Vec<H::Output> {
+pub fn get_zero_hashes<H: TreeHashDigest>(hash_len: usize) -> Vec<H::Output> {
     let mut hashes = Vec::with_capacity(ZERO_HASHES_MAX_INDEX + 1);
+    let zero_bytes = vec![0u8; hash_len];
 
     // First hash is all zeros
-    hashes.push(H::from_bytes(&[0u8; HASH_LEN]));
+    hashes.push(H::from_bytes(&zero_bytes));
 
     // Each subsequent hash is hash(previous || previous)
     for i in 0..ZERO_HASHES_MAX_INDEX {
@@ -136,31 +166,6 @@ pub fn get_zero_hashes<H: TreeHashDigest>() -> Vec<H::Output> {
 
     hashes
 }
-
-/// Get a single zero hash at a specific depth for any hasher
-pub fn get_zero_hash_at_depth<H: TreeHashDigest>(depth: usize) -> H::Output {
-    if depth == 0 {
-        return H::from_bytes(&[0u8; HASH_LEN]);
-    }
-
-    let mut current = H::from_bytes(&[0u8; HASH_LEN]);
-    for _ in 0..depth {
-        current = H::hash32_concat(current.as_ref(), current.as_ref());
-    }
-    current
-}
-
-/// Static zero hashes for SHA256 (for backward compatibility)
-pub static ZERO_HASHES: LazyLock<Vec<[u8; HASH_LEN]>> = LazyLock::new(|| {
-    let mut hashes = vec![[0; HASH_LEN]; ZERO_HASHES_MAX_INDEX + 1];
-
-    for i in 0..ZERO_HASHES_MAX_INDEX {
-        let result = hash32_concat::<sha2::Sha256>(&hashes[i], &hashes[i]);
-        hashes[i + 1].copy_from_slice(&result);
-    }
-
-    hashes
-});
 
 /// Generic hash32_concat function using Digest trait
 pub fn hash32_concat<D: Digest + Default>(left: &[u8], right: &[u8]) -> Vec<u8> {
@@ -188,26 +193,20 @@ pub fn hash_fixed_with_digest<D: Digest + Default>(data: &[u8]) -> [u8; 32] {
 }
 
 /// Convenience method for `MerkleHasher` which also provides some fast-paths for small trees.
-/// Uses SHA256 as the default hasher.
 ///
 /// `minimum_leaf_count` will only be used if it is greater than or equal to the minimum number of leaves that can be created from `bytes`.
-pub fn merkle_root(bytes: &[u8], minimum_leaf_count: usize) -> Hash256 {
-    merkle_root_with_hasher::<Sha256Hasher>(bytes, minimum_leaf_count)
-}
-
-/// Generic version of merkle_root that allows specifying the hasher.
 pub fn merkle_root_with_hasher<H: TreeHashDigest>(
     bytes: &[u8],
     minimum_leaf_count: usize,
 ) -> H::Output {
-    let leaves = std::cmp::max(bytes.len().div_ceil(HASHSIZE), minimum_leaf_count);
+    let leaves = std::cmp::max(bytes.len().div_ceil(H::HASH_SIZE), minimum_leaf_count);
 
     if leaves == 0 {
         H::get_zero_hash(0)
     } else if leaves == 1 {
         H::from_bytes(bytes)
     } else if leaves == 2 {
-        let mut leaves_data = [0; HASHSIZE * 2];
+        let mut leaves_data = vec![0; H::HASH_SIZE * 2];
         leaves_data[0..bytes.len()].copy_from_slice(bytes);
         H::hash_fixed(&leaves_data)
     } else {
@@ -223,14 +222,8 @@ pub fn merkle_root_with_hasher<H: TreeHashDigest>(
 }
 
 /// Returns the node created by hashing `root` and `length`.
-/// Uses SHA256 as the default hasher.
 ///
 /// Used in `TreeHash` for inserting the length of a list above it's root.
-pub fn mix_in_length(root: &Hash256, length: usize) -> Hash256 {
-    mix_in_length_with_hasher::<Sha256Hasher>(root, length)
-}
-
-/// Generic version of mix_in_length that allows specifying the hasher.
 pub fn mix_in_length_with_hasher<H: TreeHashDigest>(root: &H::Output, length: usize) -> H::Output {
     let usize_len = std::mem::size_of::<usize>();
 
@@ -242,23 +235,17 @@ pub fn mix_in_length_with_hasher<H: TreeHashDigest>(root: &H::Output, length: us
 
 /// Returns `Some(root)` created by hashing `root` and `selector`, if `selector <=
 /// MAX_UNION_SELECTOR`. Otherwise, returns `None`.
-/// Uses SHA256 as the default hasher.
 ///
 /// Used in `TreeHash` for the "union" type.
 ///
 /// ## Specification
 ///
 /// ```ignore,text
-/// mix_in_selector: Given a Merkle root root and a type selector selector ("uint256" little-endian
+/// mix_in_selector_with_hasher: Given a Merkle root root and a type selector selector ("uint256" little-endian
 /// serialization) return hash(root + selector).
 /// ```
 ///
 /// <https://github.com/ethereum/consensus-specs/blob/v1.1.0-beta.3/ssz/simple-serialize.md#union>
-pub fn mix_in_selector(root: &Hash256, selector: u8) -> Option<Hash256> {
-    mix_in_selector_with_hasher::<Sha256Hasher>(root, selector)
-}
-
-/// Generic version of mix_in_selector that allows specifying the hasher.
 pub fn mix_in_selector_with_hasher<H: TreeHashDigest>(
     root: &H::Output,
     selector: u8,
@@ -274,18 +261,8 @@ pub fn mix_in_selector_with_hasher<H: TreeHashDigest>(
 }
 
 /// Returns `root` created by hashing `root` and `aux`.
-pub fn mix_in_aux(root: &Hash256, aux: &Hash256) -> Hash256 {
-    let result = hash32_concat::<sha2::Sha256>(root.as_slice(), aux.as_slice());
-    Hash256::from_slice(&result)
-}
-
-/// Returns a cached padding node for a given height.
-fn get_zero_hash(height: usize) -> &'static [u8] {
-    if height <= ZERO_HASHES_MAX_INDEX {
-        &ZERO_HASHES[height]
-    } else {
-        panic!("Tree exceeds MAX_TREE_DEPTH of {ZERO_HASHES_MAX_INDEX}")
-    }
+pub fn mix_in_aux_with_hasher<H: TreeHashDigest>(root: &H::Output, aux: &H::Output) -> H::Output {
+    H::hash32_concat(root.as_ref(), aux.as_ref())
 }
 
 /// Type of the tree hash.
@@ -404,7 +381,21 @@ mod test {
             hash::<sha2::Sha256>(&preimage)
         };
 
-        let result = mix_in_length(&Hash256::from_slice(&[42; BYTES_PER_CHUNK]), 42);
+        let result = mix_in_length_with_hasher::<Sha256Hasher>(
+            &Hash256::from_slice(&[42; BYTES_PER_CHUNK]),
+            42,
+        );
         assert_eq!(result.as_ref(), &hash[..]);
+    }
+
+    #[test]
+    fn zero_hashes() {
+        let zero_hashes = Sha256Hasher::zero_hashes();
+        assert_eq!(zero_hashes.len(), ZERO_HASHES_MAX_INDEX + 1);
+        assert_eq!(zero_hashes[0], Hash256::zero());
+        assert_eq!(
+            zero_hashes[1],
+            Sha256Hasher::hash32_concat(&[0; 32], &[0; 32])
+        );
     }
 }

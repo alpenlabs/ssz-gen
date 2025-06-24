@@ -53,7 +53,7 @@ impl tree_hash::TreeHash<tree_hash::Sha256Hasher> for HashVec {
 
         let root = hasher.finish().unwrap();
 
-        tree_hash::mix_in_length(&root, self.vec.len())
+        tree_hash::mix_in_length_with_hasher::<tree_hash::Sha256Hasher>(&root, self.vec.len())
     }
 }
 

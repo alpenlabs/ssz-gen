@@ -1,7 +1,7 @@
 // Modified in 2025 from the original version
 // Original source licensed under the Apache License 2.0
 
-use crate::{HASH_LEN, HASHSIZE, TreeHashDigest, get_zero_hash};
+use crate::TreeHashDigest;
 use smallvec::{SmallVec, smallvec};
 use std::mem;
 
@@ -20,12 +20,12 @@ pub enum Error {
 /// Helper struct to store either a hash digest or a slice.
 ///
 /// Should be used as a left or right value for some node.
-enum Preimage<'a> {
-    Digest([u8; HASH_LEN]),
+enum Preimage<'a, H: TreeHashDigest> {
+    Digest(H::Output),
     Slice(&'a [u8]),
 }
 
-impl Preimage<'_> {
+impl<'a, H: TreeHashDigest> Preimage<'a, H> {
     /// Returns a 32-byte slice.
     fn as_bytes(&self) -> &[u8] {
         match self {
@@ -46,7 +46,7 @@ struct HalfNode<H: TreeHashDigest> {
 
 impl<H: TreeHashDigest> HalfNode<H> {
     /// Create a new half-node from the given `left` value.
-    fn new(id: usize, left: Preimage<'_>) -> Self {
+    fn new(id: usize, left: Preimage<'_, H>) -> Self {
         let mut context = H::new_context();
         context.update(left.as_bytes());
 
@@ -55,7 +55,7 @@ impl<H: TreeHashDigest> HalfNode<H> {
 
     /// Complete the half-node by providing a `right` value. Returns a digest of the left and right
     /// nodes.
-    fn finish(mut self, right: Preimage<'_>) -> H::Output {
+    fn finish(mut self, right: Preimage<'_, H>) -> H::Output {
         self.context.update(right.as_bytes());
         self.context.finalize()
     }
@@ -213,19 +213,19 @@ impl<H: TreeHashDigest> MerkleHasher<H> {
     pub fn write(&mut self, bytes: &[u8]) -> Result<(), Error> {
         let mut ptr = 0;
         while ptr <= bytes.len() {
-            let slice = &bytes[ptr..std::cmp::min(bytes.len(), ptr + HASHSIZE)];
+            let slice = &bytes[ptr..std::cmp::min(bytes.len(), ptr + H::HASH_SIZE)];
 
-            if self.buffer.is_empty() && slice.len() == HASHSIZE {
+            if self.buffer.is_empty() && slice.len() == H::HASH_SIZE {
                 self.process_leaf(slice)?;
-                ptr += HASHSIZE
-            } else if self.buffer.len() + slice.len() < HASHSIZE {
+                ptr += H::HASH_SIZE
+            } else if self.buffer.len() + slice.len() < H::HASH_SIZE {
                 self.buffer.extend_from_slice(slice);
-                ptr += HASHSIZE
+                ptr += H::HASH_SIZE
             } else {
                 let buf_len = self.buffer.len();
-                let required = HASHSIZE - buf_len;
+                let required = H::HASH_SIZE - buf_len;
 
-                let mut leaf = [0; HASHSIZE];
+                let mut leaf = vec![0; H::HASH_SIZE];
                 leaf[..buf_len].copy_from_slice(&self.buffer);
                 leaf[buf_len..].copy_from_slice(&slice[0..required]);
 
@@ -247,7 +247,7 @@ impl<H: TreeHashDigest> MerkleHasher<H> {
     /// defined by the initialization `depth`. E.g., a tree of `depth == 2` can only accept 2
     /// leaves. A tree of `depth == 14` can only accept 8,192 leaves.
     fn process_leaf(&mut self, leaf: &[u8]) -> Result<(), Error> {
-        assert_eq!(leaf.len(), HASHSIZE, "a leaf must be 32 bytes");
+        assert_eq!(leaf.len(), H::HASH_SIZE, "a leaf must be 32 bytes");
 
         let max_leaves = 1 << (self.depth + 1);
 
@@ -278,7 +278,7 @@ impl<H: TreeHashDigest> MerkleHasher<H> {
     /// the maximum permissible number of leaves defined by the initialization `depth`.
     pub fn finish(mut self) -> Result<H::Output, Error> {
         if !self.buffer.is_empty() {
-            let mut leaf = [0; HASHSIZE];
+            let mut leaf = vec![0; H::HASH_SIZE];
             leaf[..self.buffer.len()].copy_from_slice(&self.buffer);
             self.process_leaf(&leaf)?
         }
@@ -310,7 +310,7 @@ impl<H: TreeHashDigest> MerkleHasher<H> {
     /// is a leaf node it will be the value of that leaf).
     ///
     /// In this scenario, the only option is to push a new half-node.
-    fn process_left_node(&mut self, id: usize, preimage: Preimage<'_>) {
+    fn process_left_node(&mut self, id: usize, preimage: Preimage<'_, H>) {
         self.half_nodes
             .push(HalfNode::new(get_parent(id), preimage))
     }
@@ -332,7 +332,7 @@ impl<H: TreeHashDigest> MerkleHasher<H> {
     ///        / \ / \
     ///       4  5 6  7 <-- supplied right node
     /// ```
-    fn process_right_node(&mut self, id: usize, mut preimage: Preimage<'_>) {
+    fn process_right_node(&mut self, id: usize, mut preimage: Preimage<'_, H>) {
         let mut parent = get_parent(id);
 
         loop {
@@ -345,9 +345,9 @@ impl<H: TreeHashDigest> MerkleHasher<H> {
                         .finish(preimage);
 
                     // Convert the result to bytes for the next iteration
-                    let mut result_bytes = [0u8; HASH_LEN];
+                    let mut result_bytes = vec![0u8; H::HASH_LEN];
                     result_bytes.copy_from_slice(result.as_ref());
-                    preimage = Preimage::Digest(result_bytes);
+                    preimage = Preimage::Digest(H::from_bytes(&result_bytes));
 
                     if parent == 1 {
                         self.root = Some(result);
@@ -370,8 +370,8 @@ impl<H: TreeHashDigest> MerkleHasher<H> {
     /// leaves are all zeros.  E.g., in a tree of depth 2, the `zero_hash` of a node at depth 1
     /// will be `[0; 32]`.  However, the `zero_hash` for a node at depth 0 will be
     /// `hash(concat([0; 32], [0; 32])))`.
-    fn zero_hash(&self, id: usize) -> Preimage<'static> {
-        Preimage::Slice(get_zero_hash(self.depth - (get_depth(id) + 1)))
+    fn zero_hash(&self, id: usize) -> Preimage<'static, H> {
+        Preimage::Slice(H::get_zero_hash_slice(self.depth - (get_depth(id) + 1)))
     }
 }
 
@@ -380,7 +380,7 @@ mod test {
     use ssz_primitives::U256;
 
     use super::*;
-    use crate::{Sha256Hasher, merkleize_padded};
+    use crate::{Sha256Hasher, merkleize_padded_with_hasher};
     use ssz_primitives::Hash256;
 
     /// This test is just to ensure that the stack size of the `HalfNode` remains the same. We choose
@@ -401,7 +401,8 @@ mod test {
             .copied()
             .collect::<Vec<_>>();
 
-        let reference_root = merkleize_padded(&reference_bytes, 1 << (depth - 1));
+        let reference_root =
+            merkleize_padded_with_hasher::<Sha256Hasher>(&reference_bytes, 1 << (depth - 1));
 
         let merklizer_root_32_bytes = {
             let mut m = MerkleHasher::<Sha256Hasher>::with_depth(depth);
