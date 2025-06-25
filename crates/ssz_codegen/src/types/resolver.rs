@@ -239,6 +239,7 @@ impl TypeResolver {
                         },
                     }
                 });
+                assert!(max > 0, "Stable container must have a max field count > 0");
                 TypeResolution::BaseClass(BaseClass::StableContainer(Some(max)))
             }
             BaseClass::Profile(tuple) => {
