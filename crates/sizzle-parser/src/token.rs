@@ -24,6 +24,10 @@ pub(crate) type SrcToken = TaggedToken<SrcPos>;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TaggedToken<T> {
     // Keywords and structural elements.
+    /// `import` keyword.
+    Import(T),
+    /// `as` keyword.
+    As(T),
     /// `class` keyword.
     Class(T),
     /// `:` keyword.
@@ -32,6 +36,8 @@ pub enum TaggedToken<T> {
     Eq(T),
     /// `,` keyword.
     Comma(T),
+    /// `.` keyword.
+    Dot(T),
     /// `\n` newline.
     Newline(T),
     /// `null` keyword.
@@ -68,10 +74,13 @@ impl<T> TaggedToken<T> {
     /// Returns the tag on the token.
     pub fn tag(&self) -> &T {
         match self {
+            Self::Import(t) => t,
+            Self::As(t) => t,
             Self::Class(t) => t,
             Self::Colon(t) => t,
             Self::Eq(t) => t,
             Self::Comma(t) => t,
+            Self::Dot(t) => t,
             Self::Newline(t) => t,
             Self::Identifier(t, _) => t,
             Self::IntegerLiteral(t, _) => t,
@@ -90,10 +99,13 @@ impl<T> TaggedToken<T> {
     /// Converts the token to a untagged token.
     pub fn to_untagged(&self) -> Token {
         match self {
+            Self::Import(_) => Token::Import(()),
+            Self::As(_) => Token::As(()),
             Self::Class(_) => Token::Class(()),
             Self::Colon(_) => Token::Colon(()),
             Self::Eq(_) => Token::Eq(()),
             Self::Comma(_) => Token::Comma(()),
+            Self::Dot(_) => Token::Dot(()),
             Self::Newline(_) => Token::Newline(()),
             Self::Identifier(_, ident) => Token::Identifier((), ident.clone()),
             Self::IntegerLiteral(_, v) => Token::IntegerLiteral((), *v),
@@ -306,6 +318,7 @@ pub(crate) fn parse_char_array_to_tokens(s: &[char]) -> Result<Vec<SrcToken>, To
             ':' => builder.push_token(SrcToken::Colon(sp)),
             '=' => builder.push_token(SrcToken::Eq(sp)),
             ',' => builder.push_token(SrcToken::Comma(sp)),
+            '.' => builder.push_token(SrcToken::Dot(sp)),
             '*' => builder.push_token(SrcToken::Mul(sp)),
             '[' => builder.push_token(SrcToken::OpenBracket(sp)),
             ']' => builder.push_token(SrcToken::CloseBracket(sp)),
@@ -364,6 +377,8 @@ pub(crate) fn parse_char_array_to_tokens(s: &[char]) -> Result<Vec<SrcToken>, To
 
 fn try_parse_keyword(s: &str, sp: SrcPos) -> Option<SrcToken> {
     Some(match s {
+        "import" => SrcToken::Import(sp),
+        "as" => SrcToken::As(sp),
         "class" => SrcToken::Class(sp),
         "null" => SrcToken::Null(sp),
         _ => return None,

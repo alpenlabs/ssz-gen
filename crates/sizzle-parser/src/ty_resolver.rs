@@ -2,18 +2,24 @@
 //!
 //! Does the weird bookkeeping to figure out if schema types are well-formed.
 
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 
 use thiserror::Error;
 
 use crate::{
-    Identifier,
+    Identifier, SszSchema,
     ast::{TyArgSpec, TyExprSpec},
     tysys::{ConstValue, Ty, TyExpr},
 };
 
 #[derive(Debug, Error)]
 pub enum ResolverError {
+    #[error("unknown import '{0:?}'")]
+    UnknownImport(PathBuf),
+
+    #[error("unknown import item '{0:?}' in '{1:?}'")]
+    UnknownImportItem(PathBuf, Identifier),
+
     #[error("unknown type '{0:?}'")]
     UnknownType(Identifier),
 
@@ -38,12 +44,12 @@ pub enum ResolverError {
 
 /// Describes information for a concrete type.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) struct TypeData {
+pub struct TypeData {
     // TODO
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) struct TypeCtorData {
+pub struct TypeCtorData {
     /// The signature.
     sig: CtorSig,
 
@@ -91,7 +97,7 @@ pub enum CtorArg {
 
 /// Describes something an identifier can point to.
 #[derive(Clone, Debug)]
-pub(crate) enum IdentTarget {
+pub enum IdentTarget {
     Const(ConstValue),
     Ty(TypeData),
     TyCtor(TypeCtorData),
@@ -106,7 +112,9 @@ pub(crate) enum AliasRef {
 }
 
 #[derive(Clone)]
-pub(crate) struct TypeResolver {
+pub(crate) struct TypeResolver<'a> {
+    schemas: &'a HashMap<PathBuf, SszSchema>,
+
     // TODO some way to express types that can be inherited from and types that can only be used as a member
     /// Constants in the module scope.
     idents: HashMap<Identifier, IdentTarget>,
@@ -115,9 +123,10 @@ pub(crate) struct TypeResolver {
     aliases: HashMap<Identifier, AliasRef>,
 }
 
-impl TypeResolver {
-    pub(crate) fn new() -> Self {
+impl<'a> TypeResolver<'a> {
+    pub(crate) fn new(schemas: &'a HashMap<PathBuf, SszSchema>) -> Self {
         Self {
+            schemas,
             idents: HashMap::new(),
             aliases: HashMap::new(),
         }
@@ -311,7 +320,15 @@ impl TypeResolver {
                                 ));
                             }
                             (CtorArg::Ty, TyArgSpec::Ident(arg_ident)) => {
-                                self.resolve_ident_with_args(arg_ident, None)?
+                                let expr = self.resolve_ident_with_args(arg_ident, None)?;
+                                match expr {
+                                    TyExpr::Ty(_) => expr,
+                                    _ => {
+                                        return Err(ResolverError::MismatchedArgKind(
+                                            ident.clone(),
+                                        ));
+                                    }
+                                }
                             }
                             (CtorArg::Ty, TyArgSpec::Complex(complex)) => {
                                 match self.resolve_ident_with_args(
@@ -335,13 +352,77 @@ impl TypeResolver {
                                 ));
                             }
                             (CtorArg::Int, TyArgSpec::Ident(arg_ident)) => {
-                                self.resolve_ident_with_args(arg_ident, None)?
+                                let expr = self.resolve_ident_with_args(arg_ident, None)?;
+                                match expr {
+                                    TyExpr::Int(v) => TyExpr::Int(v),
+                                    _ => {
+                                        return Err(ResolverError::MismatchedArgKind(
+                                            ident.clone(),
+                                        ));
+                                    }
+                                }
                             }
                             (CtorArg::Int, TyArgSpec::Complex(_)) => {
                                 return Err(ResolverError::MismatchedArgKind(ident.clone()));
                             }
                             (CtorArg::Int, TyArgSpec::IntLiteral(v)) => {
                                 TyExpr::Int(ConstValue::Int(*v))
+                            }
+                            (CtorArg::Ty, TyArgSpec::Imported(imported)) => {
+                                let Some(schema) = self.schemas.get(imported.module_path()) else {
+                                    return Err(ResolverError::UnknownImport(
+                                        imported.module_path().clone(),
+                                    ));
+                                };
+
+                                let Some(ident_target) = schema.get_ident(imported.base_name())
+                                else {
+                                    return Err(ResolverError::UnknownImportItem(
+                                        imported.module_path().clone(),
+                                        imported.base_name().clone(),
+                                    ));
+                                };
+
+                                match ident_target {
+                                    IdentTarget::Ty(_) => TyExpr::Ty(Ty::Imported(
+                                        imported.module_path().clone(),
+                                        imported.base_name().clone(),
+                                        imported.full_name(),
+                                    )),
+                                    _ => {
+                                        return Err(ResolverError::MismatchedArgKind(
+                                            ident.clone(),
+                                        ));
+                                    }
+                                }
+                            }
+                            (CtorArg::Int, TyArgSpec::Imported(imported)) => {
+                                let Some(schema) = self.schemas.get(imported.module_path()) else {
+                                    return Err(ResolverError::UnknownImport(
+                                        imported.module_path().clone(),
+                                    ));
+                                };
+
+                                let Some(ident_target) = schema.get_ident(imported.base_name())
+                                else {
+                                    return Err(ResolverError::UnknownImportItem(
+                                        imported.module_path().clone(),
+                                        imported.base_name().clone(),
+                                    ));
+                                };
+
+                                match ident_target {
+                                    IdentTarget::Const(_) => TyExpr::Ty(Ty::Imported(
+                                        imported.module_path().clone(),
+                                        imported.base_name().clone(),
+                                        imported.full_name(),
+                                    )),
+                                    _ => {
+                                        return Err(ResolverError::MismatchedArgKind(
+                                            ident.clone(),
+                                        ));
+                                    }
+                                }
                             }
                         };
 
@@ -372,6 +453,34 @@ impl TypeResolver {
                             TyArgSpec::IntLiteral(_) => {
                                 return Err(ResolverError::MismatchedArgKind(ident.clone()));
                             }
+                            TyArgSpec::Imported(imported) => {
+                                let Some(schema) = self.schemas.get(imported.module_path()) else {
+                                    return Err(ResolverError::UnknownImport(
+                                        imported.module_path().clone(),
+                                    ));
+                                };
+
+                                let Some(ident_target) = schema.get_ident(imported.base_name())
+                                else {
+                                    return Err(ResolverError::UnknownImportItem(
+                                        imported.module_path().clone(),
+                                        imported.base_name().clone(),
+                                    ));
+                                };
+
+                                match ident_target {
+                                    IdentTarget::Ty(_) => TyExpr::Ty(Ty::Imported(
+                                        imported.module_path().clone(),
+                                        imported.base_name().clone(),
+                                        imported.full_name(),
+                                    )),
+                                    _ => {
+                                        return Err(ResolverError::MismatchedArgKind(
+                                            ident.clone(),
+                                        ));
+                                    }
+                                }
+                            }
                         };
 
                         args.push(arg);
@@ -396,6 +505,24 @@ impl TypeResolver {
             TyExprSpec::Complex(complex) => {
                 self.resolve_ident_with_args(complex.base_name(), Some(complex.args()))?
             }
+            TyExprSpec::Imported(imported) => {
+                let Some(schema) = self.schemas.get(imported.module_path()) else {
+                    return Err(ResolverError::UnknownImport(imported.module_path().clone()));
+                };
+
+                if !schema.has_ident(imported.base_name()) {
+                    return Err(ResolverError::UnknownImportItem(
+                        imported.module_path().clone(),
+                        imported.base_name().clone(),
+                    ));
+                }
+
+                TyExpr::Ty(Ty::Imported(
+                    imported.module_path().clone(),
+                    imported.base_name().clone(),
+                    imported.full_name(),
+                ))
+            }
         };
 
         // And then just make sure it's a const.
@@ -410,8 +537,10 @@ impl TypeResolver {
 
 #[cfg(test)]
 mod tests {
+    use std::{collections::HashMap, path::PathBuf};
+
     use crate::{
-        Identifier,
+        Identifier, SszSchema,
         ast::{ComplexTySpec, TyArgSpec, TyExprSpec},
         builtins,
         tysys::ConstValue,
@@ -423,15 +552,16 @@ mod tests {
         Identifier::try_from(s.to_owned()).expect("test: make ident")
     }
 
-    fn make_resolver() -> TypeResolver {
-        let mut resolv = TypeResolver::new();
+    fn make_resolver<'a>(map: &'a HashMap<PathBuf, SszSchema>) -> TypeResolver<'a> {
+        let mut resolv = TypeResolver::new(map);
         builtins::populate_builtin_types(&mut resolv);
         resolv
     }
 
     #[test]
     fn test_resolver_simple() {
-        let resolv = make_resolver();
+        let map = HashMap::new();
+        let resolv = make_resolver(&map);
 
         let spec = TyExprSpec::Simple(make_ident("Container"));
 
@@ -444,7 +574,8 @@ mod tests {
 
     #[test]
     fn test_resolver_list_simple() {
-        let resolv = make_resolver();
+        let map = HashMap::new();
+        let resolv = make_resolver(&map);
 
         let arg1 = TyArgSpec::Ident(make_ident("byte"));
         let arg2 = TyArgSpec::IntLiteral(32);
@@ -459,7 +590,8 @@ mod tests {
 
     #[test]
     fn test_resolver_list_const() {
-        let mut resolv = make_resolver();
+        let map = HashMap::new();
+        let mut resolv = make_resolver(&map);
 
         let const_name = make_ident("FOOBAR");
         resolv
@@ -479,7 +611,8 @@ mod tests {
 
     #[test]
     fn test_resolver_stablecontainer() {
-        let mut resolv = make_resolver();
+        let map = HashMap::new();
+        let mut resolv = make_resolver(&map);
 
         let const_name = make_ident("FOOBAR");
         resolv
@@ -501,7 +634,8 @@ mod tests {
 
     #[test]
     fn test_resolver_list_user() {
-        let mut resolv = make_resolver();
+        let map = HashMap::new();
+        let mut resolv = make_resolver(&map);
 
         let const_name = make_ident("FOOBAR");
         resolv

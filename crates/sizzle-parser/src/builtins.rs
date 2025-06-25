@@ -7,7 +7,7 @@ use crate::{
 };
 
 /// Populates a type resolver with the builtin types.
-pub(crate) fn populate_builtin_types(resolv: &mut TypeResolver) {
+pub(crate) fn populate_builtin_types<'a>(resolv: &mut TypeResolver<'a>) {
     // Basic types.
     insert_ty(resolv, "boolean");
     for i in [8, 16, 32, 64, 128, 256] {
@@ -57,24 +57,24 @@ fn make_ident(s: &str) -> Identifier {
     Identifier::try_from(s).expect("builtins: parse ident")
 }
 
-fn insert_ty(resolv: &mut TypeResolver, name: &str) {
+fn insert_ty<'a>(resolv: &mut TypeResolver<'a>, name: &str) {
     resolv
         .insert_type(make_ident(name), TypeData {})
         .expect("builtins: decl builtin type");
 }
 
-fn insert_ty_ctor(resolv: &mut TypeResolver, name: &str, sig: CtorSig) {
+fn insert_ty_ctor<'a>(resolv: &mut TypeResolver<'a>, name: &str, sig: CtorSig) {
     resolv
         .insert_type_ctor(make_ident(name), sig)
         .expect("builtins: decl builtin type ctor");
 }
 
-fn insert_alias(resolv: &mut TypeResolver, name: &str, ty: Ty) {
+fn insert_alias<'a>(resolv: &mut TypeResolver<'a>, name: &str, ty: Ty) {
     resolv
         .decl_type_alias(make_ident(name), ty)
         .expect("builtins: decl builtin type alias");
 }
 
-fn insert_alias_simple(resolv: &mut TypeResolver, name: &str, target: &str) {
+fn insert_alias_simple<'a>(resolv: &mut TypeResolver<'a>, name: &str, target: &str) {
     insert_alias(resolv, name, Ty::Simple(make_ident(target)))
 }

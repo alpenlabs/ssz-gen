@@ -1,6 +1,9 @@
 //! Schema definitions.
 
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+};
 
 use thiserror::Error;
 
@@ -8,12 +11,21 @@ use crate::{
     Identifier,
     ast::{AssignExpr, ClassDefEntry, Module, ModuleEntry},
     builtins,
-    ty_resolver::{ResolverError, TypeResolver},
+    ty_resolver::{IdentTarget, ResolverError, TypeData, TypeResolver},
     tysys::{ConstValue, Ty, TyExpr},
 };
 
 #[derive(Debug, Error)]
 pub enum SchemaError {
+    #[error("unknown import '{0:?}'")]
+    UnknownImport(PathBuf),
+
+    #[error("unknown import item '{0:?}' in '{1:?}'")]
+    UnknownImportItem(PathBuf, Identifier),
+
+    #[error("unsupported import '{0:?}' in '{1:?}'")]
+    UnsupportedImport(PathBuf, Identifier),
+
     #[error("duplicate field name '{0:?}'")]
     DuplicateFieldName(Identifier),
 
@@ -30,6 +42,8 @@ pub enum SchemaError {
 /// High level SSZ schema.
 #[derive(Clone, Debug)]
 pub struct SszSchema {
+    idents: HashMap<Identifier, IdentTarget>,
+
     constants: Vec<ConstDef>,
     classes: Vec<ClassDef>,
     aliases: Vec<AliasDef>,
@@ -49,6 +63,16 @@ impl SszSchema {
     /// All aliases in the schema.
     pub fn aliases(&self) -> &[AliasDef] {
         &self.aliases
+    }
+
+    /// Check if the schema has an ident.
+    pub fn has_ident(&self, ident: &Identifier) -> bool {
+        self.idents.contains_key(ident)
+    }
+
+    /// Get an ident.
+    pub fn get_ident(&self, ident: &Identifier) -> Option<&IdentTarget> {
+        self.idents.get(ident)
     }
 }
 
@@ -132,35 +156,85 @@ impl AliasDef {
 }
 
 /// Converts a AST module to a full schema.
-pub(crate) fn conv_module_to_schema(m: &Module) -> Result<SszSchema, SchemaError> {
-    let mut resolver = TypeResolver::new();
+pub(crate) fn conv_module_to_schema(
+    m: &Module,
+    schema_map: &HashMap<PathBuf, SszSchema>,
+) -> Result<SszSchema, SchemaError> {
+    let mut resolver = TypeResolver::new(schema_map);
     builtins::populate_builtin_types(&mut resolver);
 
     // Do a first pass to prepare the type resolver and abort if there's any obvious duplicates.
-    let mut item_names = HashSet::new();
+    let mut idents = HashMap::new();
     let mut constants = Vec::new();
     let mut class_defs = Vec::new();
     let mut aliases = Vec::new();
     for d in m.entries() {
         let name = d.name();
-        if item_names.contains(name) {
+        if idents.contains_key(name) {
             return Err(SchemaError::DuplicateItemName(name.clone()));
         }
 
-        item_names.insert(name);
-
         match d {
             ModuleEntry::Assignment(def) => match def.value() {
+                AssignExpr::Imported(imported) => {
+                    let path = imported.module_path();
+                    let Some(schema) = schema_map.get(path) else {
+                        return Err(SchemaError::UnknownImport(path.clone()));
+                    };
+
+                    let Some(ident_target) = schema.get_ident(imported.base_name()) else {
+                        return Err(SchemaError::UnknownImportItem(
+                            path.clone(),
+                            imported.base_name().clone(),
+                        ));
+                    };
+
+                    match ident_target {
+                        IdentTarget::Ty(_) => {
+                            resolver.decl_user_type(name.clone())?;
+                        }
+                        IdentTarget::Const(const_value) => {
+                            resolver.decl_const(name.clone(), const_value.clone())?;
+                        }
+                        _ => {
+                            return Err(SchemaError::UnsupportedImport(
+                                path.clone(),
+                                imported.base_name().clone(),
+                            ));
+                        }
+                    }
+
+                    idents.insert(name.clone(), ident_target.clone());
+                    aliases.push(AliasDef {
+                        name: name.clone(),
+                        ty: Ty::Imported(
+                            path.clone(),
+                            imported.base_name().clone(),
+                            imported.full_name(),
+                        ),
+                    });
+                }
+
                 // This is pretty straightforward, we just look up the identifier in-place.
                 AssignExpr::Name(ident) => match resolver.resolve_ident_with_args(ident, None)? {
                     TyExpr::Ty(ty) => {
                         resolver.decl_user_type(name.clone())?;
+
+                        idents.insert(name.clone(), IdentTarget::Ty(TypeData {}));
                         aliases.push(AliasDef {
                             name: name.clone(),
                             ty,
                         })
                     }
-                    TyExpr::Int(v) => resolver.decl_const(name.clone(), v)?,
+                    TyExpr::Int(v) => {
+                        resolver.decl_const(name.clone(), v.clone())?;
+
+                        idents.insert(name.clone(), IdentTarget::Const(v.clone()));
+                        constants.push(ConstDef {
+                            name: name.clone(),
+                            value: v,
+                        })
+                    }
                     TyExpr::None => panic!("schema: assignment to None"),
                 },
 
@@ -181,6 +255,7 @@ pub(crate) fn conv_module_to_schema(m: &Module) -> Result<SszSchema, SchemaError
                     // We expose the type into the resolver as a unit type.
                     resolver.decl_user_type(name.clone())?;
 
+                    idents.insert(name.clone(), IdentTarget::Ty(TypeData {}));
                     aliases.push(AliasDef {
                         name: name.clone(),
                         ty,
@@ -190,6 +265,7 @@ pub(crate) fn conv_module_to_schema(m: &Module) -> Result<SszSchema, SchemaError
                 // Values are trivia.
                 AssignExpr::Value(val) => {
                     resolver.decl_const(name.clone(), val.clone())?;
+                    idents.insert(name.clone(), IdentTarget::Const(val.clone()));
                     constants.push(ConstDef {
                         name: name.clone(),
                         value: val.clone(),
@@ -198,6 +274,7 @@ pub(crate) fn conv_module_to_schema(m: &Module) -> Result<SszSchema, SchemaError
             },
             ModuleEntry::Class(def) => {
                 resolver.decl_user_type(name.clone())?;
+                idents.insert(name.clone(), IdentTarget::Ty(TypeData {}));
                 class_defs.push(def);
             }
         }
@@ -220,6 +297,7 @@ pub(crate) fn conv_module_to_schema(m: &Module) -> Result<SszSchema, SchemaError
 
     // Create a the final schema.
     let schema = SszSchema {
+        idents,
         classes,
         constants,
         aliases,
@@ -228,7 +306,10 @@ pub(crate) fn conv_module_to_schema(m: &Module) -> Result<SszSchema, SchemaError
     Ok(schema)
 }
 
-fn conv_classdef(def: &ClassDefEntry, resolv: &TypeResolver) -> Result<ClassDef, SchemaError> {
+fn conv_classdef<'a>(
+    def: &ClassDefEntry,
+    resolv: &'a TypeResolver<'a>,
+) -> Result<ClassDef, SchemaError> {
     let mut field_names = HashSet::new();
     let mut fields = Vec::new();
 
