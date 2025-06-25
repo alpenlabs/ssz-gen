@@ -95,9 +95,6 @@ impl TypeResolver {
             .insert("bit".to_string(), TypeDefinition::Boolean);
         resolver
             .types
-            .insert("null".to_string(), TypeDefinition::Boolean);
-        resolver
-            .types
             .insert("byte".to_string(), TypeDefinition::UInt(8));
         resolver
             .types

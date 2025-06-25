@@ -89,8 +89,8 @@ class Nu(Container):
     zz: alias_mu
     aaa: Vector[bit, 4]
     bbb: bit_alias
-    test: Union[None, alias_mu]
+    test: Union[null, alias_mu]
 
-alias_option_union = Union[uint8, Union[None, uint16]]
+alias_option_union = Union[uint8, Union[null, uint16]]
 
-test_union = Union[None, uint8, uint16]
+test_union = Union[null, uint8, uint16]

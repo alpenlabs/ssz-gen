@@ -51,9 +51,6 @@ pub(crate) fn populate_builtin_types(resolv: &mut TypeResolver) {
         let complex = Ty::Complex(vector_ident.clone(), vec![byte_te, len_te]);
         insert_alias(resolv, &format!("Bytes{i}"), complex);
     }
-
-    // FIXME this is wrong, but works, handle it at a higher level
-    insert_alias_simple(resolv, "null", "boolean");
 }
 
 fn make_ident(s: &str) -> Identifier {

@@ -406,7 +406,7 @@ fn parse_ty_args(gob: &mut Gobbler<'_, SrcToktr>) -> Result<Vec<TyArgSpec>, Pars
 
 fn parse_ty_arg(gob: &mut Gobbler<'_, SrcToktr>) -> Result<TyArgSpec, ParseError> {
     match gob.get() {
-        Some(TaggedToktr::None(_)) => {
+        Some(TaggedToktr::Null(_)) => {
             gob.gobble_one();
             Ok(TyArgSpec::None)
         }
