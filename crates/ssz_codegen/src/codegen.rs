@@ -1,12 +1,12 @@
 //! Code generation module for converting SSZ schemas into Rust code.
 
 use crate::types::{
-    BaseClass, ClassDef, ClassDefinition, ClassFieldDef, TypeResolution, resolver::TypeResolver,
+    BaseClass, ClassDef, ClassDefinition, ClassFieldDef, TypeResolutionEnum, resolver::TypeResolver,
 };
 use proc_macro2::TokenStream;
 use quote::quote;
-use sizzle_parser::{AliasDef as ParserAliasDef, ClassDef as ParserClassDef, SszSchema};
-use std::collections::HashMap;
+use sizzle_parser::{AliasDef as ParserAliasDef, ClassDef as ParserClassDef, SszSchema, tysys::Ty};
+use std::{cell::RefCell, collections::HashMap, path::PathBuf};
 use syn::parse_quote;
 
 /// Represents either an alias or class definition from the SSZ schema.
@@ -62,7 +62,11 @@ impl<'a> CircleBufferCodegen<'a> {
     /// # Returns
     ///
     /// `true` if processing was successful, `false` if dependencies are not yet resolved.
-    fn process_alias(&mut self, alias: &ParserAliasDef, type_resolver: &mut TypeResolver) -> bool {
+    fn process_alias(
+        &mut self,
+        alias: &ParserAliasDef,
+        type_resolver: &mut TypeResolver<'_>,
+    ) -> bool {
         let ident = syn::Ident::new(&alias.name().0, proc_macro2::Span::call_site());
 
         let type_def = type_resolver.resolve_type_and_add(alias.ty(), &ident);
@@ -76,10 +80,17 @@ impl<'a> CircleBufferCodegen<'a> {
                 .borrow()
                 .contains_key(&ident.to_string())
         {
-            let type_def = type_def.unwrap_type();
-            self.tokens.push(quote! {
-                pub type #ident = #type_def;
-            });
+            let ty = type_def.unwrap_type();
+
+            if type_def.is_constant() {
+                self.tokens.push(quote! {
+                    pub const #ident: u64 = #ty;
+                });
+            } else {
+                self.tokens.push(quote! {
+                    pub type #ident = #ty;
+                });
+            }
         }
 
         true
@@ -95,9 +106,18 @@ impl<'a> CircleBufferCodegen<'a> {
     /// # Returns
     ///
     /// `true` if processing was successful, `false` if dependencies are not yet resolved.
-    fn process_class(&mut self, class: &ParserClassDef, type_resolver: &mut TypeResolver) -> bool {
+    fn process_class(
+        &mut self,
+        class: &ParserClassDef,
+        type_resolver: &mut TypeResolver<'_>,
+    ) -> bool {
         let ident = syn::Ident::new(&class.name().0, proc_macro2::Span::call_site());
+
         let parent_ty = class.parent_ty();
+        let parent_path = match parent_ty {
+            Ty::Imported(path, _, _) => Some(path),
+            _ => None,
+        };
         let parent_class = type_resolver.resolve_class(parent_ty);
         if parent_class.is_none() {
             return false;
@@ -108,9 +128,12 @@ impl<'a> CircleBufferCodegen<'a> {
             BaseClass::Container | BaseClass::StableContainer(_) => {
                 self.process_simple_inheritance(&mut parent_class_def, class, type_resolver)
             }
-            BaseClass::Profile(_) => {
-                self.process_profile_inheritance(&mut parent_class_def, class, type_resolver)
-            }
+            BaseClass::Profile(_) => self.process_profile_inheritance(
+                &mut parent_class_def,
+                class,
+                type_resolver,
+                parent_path,
+            ),
         };
 
         if success {
@@ -134,7 +157,7 @@ impl<'a> CircleBufferCodegen<'a> {
     /// # Returns
     ///
     /// A vector of TokenStreams containing the generated Rust code for each item
-    fn process(mut self, type_resolver: &mut TypeResolver) -> Vec<TokenStream> {
+    fn process(mut self, type_resolver: &mut TypeResolver<'_>) -> Vec<TokenStream> {
         let vec_len = self.items.len();
         if vec_len == 0 {
             return self.tokens;
@@ -188,7 +211,7 @@ impl<'a> CircleBufferCodegen<'a> {
         &mut self,
         parent_class_def: &mut ClassDef,
         class: &ParserClassDef,
-        type_resolver: &mut TypeResolver,
+        type_resolver: &mut TypeResolver<'_>,
     ) -> bool {
         // Get capacity of parent class
         let capacity = match parent_class_def.base {
@@ -219,6 +242,7 @@ impl<'a> CircleBufferCodegen<'a> {
 
             // Resolve the field type
             let field_ident = syn::Ident::new(&field.name().0, proc_macro2::Span::call_site());
+
             let field_ty = field.ty();
             let field_type = type_resolver.resolve_type(field_ty, None);
             if field_type.is_unresolved() {
@@ -228,12 +252,12 @@ impl<'a> CircleBufferCodegen<'a> {
             // Make sure the field is compatible with the parent class
             match parent_class_def.base {
                 BaseClass::Container => {
-                    if matches!(field_type, TypeResolution::Optional(_)) {
+                    if matches!(field_type.resolution, TypeResolutionEnum::Optional(_)) {
                         panic!("Optional fields are not allowed in Container classes");
                     }
                 }
                 BaseClass::StableContainer(_) => {
-                    if !matches!(field_type, TypeResolution::Optional(_)) {
+                    if !matches!(field_type.resolution, TypeResolutionEnum::Optional(_)) {
                         panic!("All fields in StableContainer classes must be optional");
                     }
                 }
@@ -275,7 +299,8 @@ impl<'a> CircleBufferCodegen<'a> {
         &mut self,
         parent_class_def: &mut ClassDef,
         class: &ParserClassDef,
-        type_resolver: &mut TypeResolver,
+        type_resolver: &mut TypeResolver<'_>,
+        parent_path: Option<&PathBuf>,
     ) -> bool {
         // Get the original stable container's definition
         // Needed in case we're inheriting from a profile class into a new profile class
@@ -284,7 +309,15 @@ impl<'a> CircleBufferCodegen<'a> {
             _ => panic!("Expected profile to inherit from a stable container"),
         };
 
-        let stable_container_def = type_resolver.classes.get(stable_contaienr_name);
+        // If it's imported, we need to get the original stable container's definition from another module
+        let resolvers = type_resolver.resolvers.borrow();
+        let stable_container_def = if let Some(parent_path) = parent_path {
+            let resolver = resolvers.get(parent_path).unwrap();
+            resolver.classes.get(stable_contaienr_name)
+        } else {
+            type_resolver.classes.get(stable_contaienr_name)
+        };
+
         if stable_container_def.is_none() {
             panic!("Expected stable container parent of profile class to be defined");
         }
@@ -365,54 +398,164 @@ impl<'a> CircleBufferCodegen<'a> {
     }
 }
 
-/// Converts an SSZ schema into a Rust code token stream
+/// Represents a node in the module hierarchy
+#[derive(Debug)]
+struct ModuleNode {
+    /// Full path to this module
+    path: String,
+    /// Child modules
+    children: Vec<ModuleNode>,
+}
+
+/// Recursively generates the module structure for a node and its children
+fn generate_module_code(
+    node: &ModuleNode,
+    module_tokens: &HashMap<&PathBuf, TokenStream>,
+) -> TokenStream {
+    let path = PathBuf::from(&node.path);
+    let module_name = path.file_name().unwrap().to_string_lossy();
+    let module_ident = syn::Ident::new(&module_name, proc_macro2::Span::call_site());
+
+    // Get the code for this module if it exists
+    let module_code = module_tokens.get(&path).cloned();
+
+    // Generate code for all children
+    let child_modules: Vec<TokenStream> = node
+        .children
+        .iter()
+        .map(|child| generate_module_code(child, module_tokens))
+        .collect();
+
+    // Combine the module's own code with its children's modules
+    quote! {
+        pub mod #module_ident {
+            #module_code
+
+            #(#child_modules)*
+        }
+    }
+}
+
+fn module_tokens_to_rust_code(schema_map: &HashMap<&PathBuf, TokenStream>) -> TokenStream {
+    let mut root_nodes = Vec::new();
+
+    // Sort paths to ensure consistent ordering
+    let mut paths: Vec<_> = schema_map.keys().collect();
+    paths.sort();
+
+    for path in paths {
+        let path_str = path.to_string_lossy().to_string();
+
+        // Split path into components
+        let components: Vec<&str> = path_str.split('/').collect();
+
+        // Build the hierarchy
+        let mut current_path = String::new();
+        let mut current_nodes: &mut Vec<ModuleNode> = &mut root_nodes;
+
+        for (i, component) in components.iter().enumerate() {
+            if i > 0 {
+                current_path.push(std::path::MAIN_SEPARATOR);
+            }
+            current_path.push_str(component);
+
+            // Find or create the node at this level
+            let node_index = current_nodes.iter().position(|n| n.path == current_path);
+            let node = if let Some(idx) = node_index {
+                &mut current_nodes[idx]
+            } else {
+                let new_node = ModuleNode {
+                    path: current_path.clone(),
+                    children: Vec::new(),
+                };
+                current_nodes.push(new_node);
+                current_nodes.last_mut().unwrap()
+            };
+
+            // Move to children for next iteration
+            current_nodes = &mut node.children;
+        }
+    }
+
+    // Generate the final code by recursively processing each root node
+    let module_code: Vec<TokenStream> = root_nodes
+        .iter()
+        .map(|node| generate_module_code(node, schema_map))
+        .collect();
+
+    quote! {
+        #(#module_code)*
+    }
+}
+
+/// Converts mapping of module path => SSZ schemas into a Rust code token stream
 ///
 /// # Arguments
 ///
-/// * `schema` - The SSZ schema to convert
+/// * `schema_map` - The mapping of module path => SSZ schema to convert
 ///
 /// # Returns
 ///
 /// A TokenStream containing the generated Rust code
-pub fn schema_to_rust_code(schema: &SszSchema) -> TokenStream {
-    // Constants
+pub fn schema_map_to_rust_code(
+    parsing_order: &[PathBuf],
+    schema_map: &HashMap<PathBuf, SszSchema>,
+) -> TokenStream {
+    let mut module_tokens = HashMap::new();
+    let resolvers = RefCell::new(HashMap::new());
 
-    // Sizzle parser automatically handles constants in alias and class definitions so no need to keep track of them
-    // We just collect them here and add them to the top of the file
-    let constants = schema.constants().iter().map(|constant| {
-        let ident = syn::Ident::new(&constant.name().0, proc_macro2::Span::call_site());
-        let value = constant.value().eval();
+    for path in parsing_order {
+        let schema = schema_map.get(path).unwrap();
+        let mut type_resolver = TypeResolver::new_with_builtins(&resolvers);
 
-        quote! {
-            pub const #ident: u64 = #value;
-        }
-    });
+        // Constants
+        let constants = schema
+            .constants()
+            .iter()
+            .map(|constant| {
+                let ident = syn::Ident::new(&constant.name().0, proc_macro2::Span::call_site());
+                let value = constant.value().eval();
+                type_resolver.add_constant(&ident, value);
 
-    // Aliases and Classes can reference each other so we need to process them together
-    let mut type_resolver = TypeResolver::default();
-    let codegen = CircleBufferCodegen::new(schema.aliases(), schema.classes());
-    let tokens = codegen.process(&mut type_resolver);
+                quote! {
+                    pub const #ident: u64 = #value;
+                }
+            })
+            .collect::<Vec<_>>();
 
-    let union_tracker = type_resolver.union_tracker.borrow();
-    let mut unions: Vec<_> = union_tracker.iter().collect();
-    // Sort unions by key to ensure deterministic output
-    unions.sort_by_key(|(key, _)| *key);
-    let unions = unions.into_iter().map(|(_, ty)| {
-        quote! {
-            #ty
-        }
-    });
+        // Aliases and Classes can reference each other so we need to process them together
+        let codegen = CircleBufferCodegen::new(schema.aliases(), schema.classes());
+        let tokens = codegen.process(&mut type_resolver);
 
-    quote! {
-        use ssz_types::*;
-        use ssz_derive::{Encode, Decode};
-        use tree_hash_derive::TreeHash;
-        use typenum::Unsigned;
+        let union_tracker = type_resolver.union_tracker.borrow();
+        let mut unions: Vec<_> = union_tracker.iter().collect();
+        // Sort unions by key to ensure deterministic output
+        unions.sort_by_key(|(key, _)| *key);
+        let unions = unions.into_iter().map(|(_, ty)| {
+            quote! {
+                #ty
+            }
+        });
 
-        #(#unions)*
+        module_tokens.insert(
+            path,
+            quote! {
+                use ssz_types::*;
+                use ssz_derive::{Encode, Decode};
+                use tree_hash_derive::TreeHash;
+                use typenum::Unsigned;
 
-        #(#constants)*
+                #(#unions)*
 
-        #(#tokens)*
+                #(#constants)*
+
+                #(#tokens)*
+            },
+        );
+
+        drop(union_tracker);
+        resolvers.borrow_mut().insert(path.clone(), type_resolver);
     }
+
+    module_tokens_to_rust_code(&module_tokens)
 }

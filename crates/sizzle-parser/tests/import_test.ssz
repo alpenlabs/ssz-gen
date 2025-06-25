@@ -1,0 +1,4 @@
+a = StableContainer[10]
+b = uint8
+c = Union[uint8, uint16]
+d = 12
