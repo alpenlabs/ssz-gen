@@ -1,7 +1,7 @@
 //! Code generation module for converting SSZ schemas into Rust code.
 
 use crate::types::{
-    BaseClass, ClassDef, ClassDefinition, ClassFieldDef, TypeResolutionEnum, resolver::TypeResolver,
+    BaseClass, ClassDef, ClassDefinition, ClassFieldDef, TypeResolutionKind, resolver::TypeResolver,
 };
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -252,12 +252,12 @@ impl<'a> CircleBufferCodegen<'a> {
             // Make sure the field is compatible with the parent class
             match parent_class_def.base {
                 BaseClass::Container => {
-                    if matches!(field_type.resolution, TypeResolutionEnum::Optional(_)) {
+                    if matches!(field_type.resolution, TypeResolutionKind::Optional(_)) {
                         panic!("Optional fields are not allowed in Container classes");
                     }
                 }
                 BaseClass::StableContainer(_) => {
-                    if !matches!(field_type.resolution, TypeResolutionEnum::Optional(_)) {
+                    if !matches!(field_type.resolution, TypeResolutionKind::Optional(_)) {
                         panic!("All fields in StableContainer classes must be optional");
                     }
                 }
