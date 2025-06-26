@@ -117,3 +117,69 @@ fn test_union_edge_cases() {
         .expect("Failed to read actual output");
     assert_eq!(expected_output, actual_output);
 }
+
+#[test]
+#[should_panic(expected = "CyclicTypedefs")]
+fn test_circular_dep() {
+    build_ssz_files(
+        &["test_circular_dep.ssz"],
+        "tests/input",
+        "tests/output/test_circular_dep.rs",
+    )
+    .expect("This should panic due to circular dependency");
+}
+
+#[test]
+#[should_panic(expected = "UnknownImportItem")]
+fn test_unknown_import_item() {
+    build_ssz_files(
+        &["test_unknown_import_item.ssz"],
+        "tests/input",
+        "tests/output/test_unknown_import_item.rs",
+    )
+    .expect("This should panic due to unknown import item");
+}
+
+#[test]
+#[should_panic(expected = "DuplicateFieldName")]
+fn test_duplicate_field_name() {
+    build_ssz_files(
+        &["test_duplicate_field_name.ssz"],
+        "tests/input",
+        "tests/output/test_duplicate_field_name.rs",
+    )
+    .expect("This should panic due to duplicate field name");
+}
+
+#[test]
+#[should_panic(expected = "DuplicateItemName")]
+fn test_duplicate_item_name() {
+    build_ssz_files(
+        &["test_duplicate_item_name.ssz"],
+        "tests/input",
+        "tests/output/test_duplicate_item_name.rs",
+    )
+    .expect("This should panic due to duplicate item name");
+}
+
+#[test]
+#[should_panic(expected = "Optional fields are not allowed in Container classes")]
+fn test_optional_field_container() {
+    build_ssz_files(
+        &["test_optional_field_container.ssz"],
+        "tests/input",
+        "tests/output/test_optional_field_container.rs",
+    )
+    .expect("This should panic due to invalid inheritance");
+}
+
+#[test]
+#[should_panic(expected = "All fields in StableContainer classes must be optional")]
+fn test_stable_container_without_optional() {
+    build_ssz_files(
+        &["test_stable_container_without_optional.ssz"],
+        "tests/input",
+        "tests/output/test_stable_container_without_optional.rs",
+    )
+    .expect("This should panic due to invalid inheritance");
+}
