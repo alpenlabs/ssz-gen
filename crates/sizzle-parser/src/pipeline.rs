@@ -9,7 +9,7 @@ use crate::{
     schema::{self, SchemaError},
     token::{self, TokenError},
     token_tree::{self, ToktrError},
-    ty_resolver::ResolverError,
+    ty_resolver::{CrossModuleTypeMap, ResolverError},
 };
 
 /// Represents an error from any of the phases of parsing a raw schema.
@@ -54,10 +54,12 @@ pub fn parse_str_schema(
     }
 
     let mut schema_map = HashMap::new();
+    let mut cross_module_types = CrossModuleTypeMap::new();
     let mut parsing_order = Vec::new();
     while let Some((path, module)) = module_manager.pop_module() {
-        let schema = schema::conv_module_to_schema(&module, &schema_map)?;
+        let (schema, idents) = schema::conv_module_to_schema(&module, &cross_module_types)?;
         parsing_order.push(path.clone());
+        cross_module_types.insert(path.clone(), idents);
         schema_map.insert(path, schema);
     }
 
