@@ -749,7 +749,12 @@ fn parse_import<P: AsRef<Path>>(
                 }
             }
 
-            import_map.insert(import_alias, path.clone());
+            if import_map
+                .insert(import_alias.clone(), path.clone())
+                .is_some()
+            {
+                panic!("import: duplicate import alias: {import_alias:?}");
+            }
             let add_module_result = module_manager.add_module(&path);
             if !add_module_result {
                 return Ok(());
