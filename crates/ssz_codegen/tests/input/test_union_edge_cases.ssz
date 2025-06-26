@@ -1,0 +1,26 @@
+SimpleUnion = Union[uint8, uint16]
+AnotherSimple = Union[boolean, uint32]
+
+NestedUnion = Union[SimpleUnion, AnotherSimple, uint64]
+
+ComplexUnion = Union[List[uint8, 10], Vector[uint16, 5], SimpleUnion, Bitvector[32]]
+
+OptionalSimple = Union[None, uint8]
+OptionalComplex = Union[None, List[uint16, 8]]
+OptionalUnion = Union[None, SimpleUnion]
+
+MixedOptional = Union[None, uint8, uint16]
+
+class UnionEdgeCases(Container):
+    simple: SimpleUnion
+    nested: NestedUnion
+    complex: ComplexUnion
+    opt_simple: OptionalSimple
+    opt_complex: OptionalComplex  
+    opt_union: OptionalUnion
+
+class AllUnions(Container):
+    union1: SimpleUnion
+    union2: NestedUnion
+    union3: OptionalSimple 
+

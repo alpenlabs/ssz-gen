@@ -1,0 +1,19 @@
+A = uint8
+B = A
+C = B
+D = List[C, 10]
+E = Vector[D, 5]
+
+SIZE_1 = 10
+SIZE_2 = SIZE_1  
+SIZE_3 = SIZE_2
+
+F = List[A, SIZE_3]
+G = Vector[F, SIZE_1]
+
+class NestedAliasContainer(Container):
+    field1: D
+    field2: E
+    field3: F
+    field4: G
+

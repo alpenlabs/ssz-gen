@@ -53,3 +53,67 @@ fn test_imports() {
         fs::read_to_string("tests/output/test_import.rs").expect("Failed to read actual output");
     assert_eq!(expected_output, actual_output);
 }
+
+#[test]
+fn test_large_unions() {
+    build_ssz_files(
+        &["test_large_unions.ssz"],
+        "tests/input",
+        "tests/output/test_large_unions.rs",
+    )
+    .expect("Failed to generate SSZ types");
+
+    let expected_output = fs::read_to_string("tests/expected_output/test_large_unions.rs")
+        .expect("Failed to read expected output");
+    let actual_output = fs::read_to_string("tests/output/test_large_unions.rs")
+        .expect("Failed to read actual output");
+    assert_eq!(expected_output, actual_output);
+}
+
+#[test]
+fn test_nested_aliases() {
+    build_ssz_files(
+        &["test_nested_aliases.ssz"],
+        "tests/input",
+        "tests/output/test_nested_aliases.rs",
+    )
+    .expect("Failed to generate SSZ types");
+
+    let expected_output = fs::read_to_string("tests/expected_output/test_nested_aliases.rs")
+        .expect("Failed to read expected output");
+    let actual_output = fs::read_to_string("tests/output/test_nested_aliases.rs")
+        .expect("Failed to read actual output");
+    assert_eq!(expected_output, actual_output);
+}
+
+#[test]
+fn test_bitfields() {
+    build_ssz_files(
+        &["test_bitfields.ssz"],
+        "tests/input",
+        "tests/output/test_bitfields.rs",
+    )
+    .expect("Failed to generate SSZ types");
+
+    let expected_output = fs::read_to_string("tests/expected_output/test_bitfields.rs")
+        .expect("Failed to read expected output");
+    let actual_output =
+        fs::read_to_string("tests/output/test_bitfields.rs").expect("Failed to read actual output");
+    assert_eq!(expected_output, actual_output);
+}
+
+#[test]
+fn test_union_edge_cases() {
+    build_ssz_files(
+        &["test_union_edge_cases.ssz"],
+        "tests/input",
+        "tests/output/test_union_edge_cases.rs",
+    )
+    .expect("Failed to generate SSZ types");
+
+    let expected_output = fs::read_to_string("tests/expected_output/test_union_edge_cases.rs")
+        .expect("Failed to read expected output");
+    let actual_output = fs::read_to_string("tests/output/test_union_edge_cases.rs")
+        .expect("Failed to read actual output");
+    assert_eq!(expected_output, actual_output);
+}

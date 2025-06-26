@@ -1,0 +1,20 @@
+SMALL_SIZE = 1
+MEDIUM_SIZE = 64
+LARGE_SIZE = 256
+POWER_OF_TWO = 128
+
+TinyBitlist = Bitlist[SMALL_SIZE]
+StandardBitlist = Bitlist[MEDIUM_SIZE] 
+LargeBitlist = Bitlist[LARGE_SIZE]
+
+TinyBitvector = Bitvector[SMALL_SIZE]
+StandardBitvector = Bitvector[MEDIUM_SIZE]
+LargeBitvector = Bitvector[POWER_OF_TWO]
+
+class BitfieldContainer(Container):
+    tiny_list: TinyBitlist
+    std_list: StandardBitlist
+    large_list: LargeBitlist
+    tiny_vec: TinyBitvector
+    std_vec: StandardBitvector
+    large_vec: LargeBitvector
