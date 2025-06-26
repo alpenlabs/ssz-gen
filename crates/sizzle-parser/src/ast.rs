@@ -873,9 +873,9 @@ class Foo(StableContainer[16]):
         let s = r"
 import import_test as test
 
-a = test.a
+A = test.A
 
-class Foo(test.a):
+class Foo(test.A):
     b: uint8
 
 ";

@@ -150,21 +150,21 @@ class MagicFoo(MagicStable):
         const SCHEMA: &str = r"
 import import_test as test
 
-a = test.a
-b = test.b
-c = test.c
+TestA = test.A
+TestB = test.B
+TestC = test.C
 
-val_a = 12
-val_b = val_a
-double_alias = test.d
+VAL_A = 12
+VAL_B = VAL_A
+TEST_CONST = test.D
 
-class Header(test.a):
-    a: Union[None, test.b]
-    b: test.b
-    c: test.c
+class Header(test.A):
+    a: Union[null, test.B]
+    b: test.B
+    c: test.C
     d: uint8
 
-f = List[test.a, double_alias]
+f = List[test.A, TEST_CONST]
 ";
 
         let files = HashMap::from([(

@@ -2,4 +2,4 @@ import test_common as common
 
 class profile_inehritance(common.alias_profile):
     a: uint8
-    b: Optional[Union[None, uint8]]
+    b: Optional[Union[null, uint8]]

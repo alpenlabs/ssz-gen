@@ -1,4 +1,4 @@
-a = StableContainer[10]
-b = uint8
-c = Union[uint8, uint16]
-d = 12
+A = StableContainer[10]
+B = uint8
+C = Union[uint8, uint16]
+D = 12

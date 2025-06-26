@@ -72,8 +72,6 @@ pub enum TypeResolutionEnum {
     Union(String, Vec<TypeResolution>),
     /// Fixed-length byte array
     Bytes(usize),
-    /// Imported type
-    Imported(Box<syn::Type>, Box<TypeResolution>),
 }
 
 impl TypeResolution {
