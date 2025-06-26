@@ -22,4 +22,4 @@ alias_uint8 = common.alias_uint8
 alias_alias_uint8 = common.alias_alias_uint8
 
 alias_union = common.alias_union
-alias_union_union = Union[None, common.alias_uint8, common.alias_union]
+alias_union_union = Union[null, common.alias_uint8, common.alias_union]

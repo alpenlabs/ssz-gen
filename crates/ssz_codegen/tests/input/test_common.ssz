@@ -13,5 +13,5 @@ alias_profile = Profile[stable_container]
 alias_uint8 = uint8
 alias_alias_uint8 = alias_uint8
 
-alias_union = Union[None, uint8]
+alias_union = Union[null, uint8]
 alias_union_union = Union[uint8, alias_union]
