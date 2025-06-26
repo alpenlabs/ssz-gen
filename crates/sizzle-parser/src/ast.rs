@@ -738,6 +738,12 @@ fn parse_import<P: AsRef<Path>>(
                         path_gob.gobble_exact(3);
                         break;
                     }
+                    [Identifier(_, name)] => {
+                        path = path.join(&name.0);
+                        import_alias = name.clone();
+                        path_gob.gobble_one();
+                        break;
+                    }
                     [t, ..] => return Err(ParseError::UnexpectedToken(*t.tag())),
                     _ => return Err(ParseError::UnexpectedEnd),
                 }

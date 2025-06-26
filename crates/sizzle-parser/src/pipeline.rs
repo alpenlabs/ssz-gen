@@ -147,7 +147,7 @@ class MagicFoo(MagicStable):
 
     #[test]
     fn test_pipeline_imports() {
-        const SCHEMA: &str = r"
+        const SCHEMA_AS: &str = r"
 import import_test as test
 
 TestA = test.A
@@ -166,6 +166,34 @@ class Header(test.A):
 
 f = List[test.A, TEST_CONST]
 ";
+
+        const SCHEMA: &str = r"
+import import_test
+
+TestA = import_test.A
+TestB = import_test.B
+TestC = import_test.C
+
+VAL_A = 12
+VAL_B = VAL_A
+TEST_CONST = import_test.D
+
+class Header(import_test.A):
+    a: Union[null, import_test.B]
+    b: import_test.B
+    c: import_test.C
+    d: uint8
+
+f = List[import_test.A, TEST_CONST]
+";
+
+        let files = HashMap::from([(
+            Path::new("tests/non_existent").to_path_buf(),
+            SCHEMA_AS.to_string(),
+        )]);
+        let schema = parse_str_schema(&files).expect("test: parse schema");
+
+        eprintln!("{schema:#?}");
 
         let files = HashMap::from([(
             Path::new("tests/non_existent").to_path_buf(),
