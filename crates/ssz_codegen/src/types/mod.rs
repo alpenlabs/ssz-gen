@@ -30,7 +30,7 @@ pub struct TypeResolution {
     /// The type we want to use in our generated rust code
     pub ty: Option<syn::Type>,
     /// What SSZ primitive type this type resolves to
-    pub resolution: TypeResolutionEnum,
+    pub resolution: TypeResolutionKind,
 }
 
 impl PartialEq for TypeResolution {
@@ -41,7 +41,7 @@ impl PartialEq for TypeResolution {
 
 /// Represents the resolution status of a type reference
 #[derive(Clone, Debug, PartialEq)]
-pub enum TypeResolutionEnum {
+pub enum TypeResolutionKind {
     /// Type has not been resolved yet
     Unresolved,
     /// Type resolves to None
@@ -81,7 +81,7 @@ impl TypeResolution {
     ///
     /// `true` if the resolution is `Unresolved`, `false` otherwise
     pub fn is_unresolved(&self) -> bool {
-        matches!(self.resolution, TypeResolutionEnum::Unresolved)
+        matches!(self.resolution, TypeResolutionKind::Unresolved)
     }
 
     /// Returns true if the resolution is not `Unresolved`
@@ -99,7 +99,7 @@ impl TypeResolution {
     ///
     /// `true` if the resolution is a BaseClass, `false` otherwise
     pub fn is_base_class(&self) -> bool {
-        matches!(self.resolution, TypeResolutionEnum::BaseClass(_))
+        matches!(self.resolution, TypeResolutionKind::BaseClass(_))
     }
 
     /// Returns true if the resolution is a Type
@@ -117,7 +117,7 @@ impl TypeResolution {
     ///
     /// `true` if the resolution is a constant, `false` otherwise
     pub fn is_constant(&self) -> bool {
-        matches!(self.resolution, TypeResolutionEnum::Constant(_))
+        matches!(self.resolution, TypeResolutionKind::Constant(_))
     }
 
     /// Unwraps any of the type variants into a syn::Type, panics if not a type variant
@@ -139,43 +139,43 @@ impl TypeResolution {
         }
 
         match &self.resolution {
-            TypeResolutionEnum::Class(class) => {
+            TypeResolutionKind::Class(class) => {
                 let class = syn::Ident::new(class, proc_macro2::Span::call_site());
                 parse_quote!(#class)
             }
-            TypeResolutionEnum::Boolean => primitive_rust_type("bool"),
-            TypeResolutionEnum::UInt(size) => primitive_rust_type(&format!("u{size}")),
-            TypeResolutionEnum::Vector(ty, size) => {
+            TypeResolutionKind::Boolean => primitive_rust_type("bool"),
+            TypeResolutionKind::UInt(size) => primitive_rust_type(&format!("u{size}")),
+            TypeResolutionKind::Vector(ty, size) => {
                 let ty = ty.unwrap_type();
                 let constant = syn::Ident::new(&format!("U{size}"), proc_macro2::Span::call_site());
                 parse_quote!(FixedVector<#ty, typenum::#constant>)
             }
-            TypeResolutionEnum::List(ty, size) => {
+            TypeResolutionKind::List(ty, size) => {
                 let ty = ty.unwrap_type();
                 let constant = syn::Ident::new(&format!("U{size}"), proc_macro2::Span::call_site());
                 parse_quote!(VariableList<#ty, typenum::#constant>)
             }
-            TypeResolutionEnum::Bitvector(size) => {
+            TypeResolutionKind::Bitvector(size) => {
                 let constant = syn::Ident::new(&format!("U{size}"), proc_macro2::Span::call_site());
                 parse_quote!(BitVector<typenum::#constant>)
             }
-            TypeResolutionEnum::Bitlist(size) => {
+            TypeResolutionKind::Bitlist(size) => {
                 let constant = syn::Ident::new(&format!("U{size}"), proc_macro2::Span::call_site());
                 parse_quote!(BitList<typenum::#constant>)
             }
-            TypeResolutionEnum::Optional(ty) => {
+            TypeResolutionKind::Optional(ty) => {
                 let ty = ty.unwrap_type();
                 parse_quote!(Optional<#ty>)
             }
-            TypeResolutionEnum::Option(ty) => {
+            TypeResolutionKind::Option(ty) => {
                 let ty = ty.unwrap_type();
                 parse_quote!(Option<#ty>)
             }
-            TypeResolutionEnum::Union(ident, _) => {
+            TypeResolutionKind::Union(ident, _) => {
                 let ident = syn::Ident::new(ident, proc_macro2::Span::call_site());
                 parse_quote!(#ident)
             }
-            TypeResolutionEnum::Bytes(size) => {
+            TypeResolutionKind::Bytes(size) => {
                 let typenum_int =
                     syn::Ident::new(&format!("U{size}"), proc_macro2::Span::call_site());
                 parse_quote!(FixedVector<u8, typenum::#typenum_int>)
@@ -195,7 +195,7 @@ impl TypeResolution {
     /// Panics if the resolution is not a BaseClass
     pub fn unwrap_base_class(self) -> BaseClass {
         match self.resolution {
-            TypeResolutionEnum::BaseClass(base_class) => base_class,
+            TypeResolutionKind::BaseClass(base_class) => base_class,
             _ => panic!("Expected type resolution to be a base class"),
         }
     }
@@ -220,30 +220,30 @@ impl TypeResolution {
 
         match (&self.resolution, &other.resolution) {
             // Fields MAY be required in Profile[B] by unwrapping them from Optional
-            (TypeResolutionEnum::Optional(original_inner_ty), _) => {
+            (TypeResolutionKind::Optional(original_inner_ty), _) => {
                 original_inner_ty.check_field_compatibility_for_profile(other, resolver)
             }
 
             // Bitlist[N] / Bitvector[N] field types are compatible if they share the same capacity N
-            (TypeResolutionEnum::Bitvector(original_cap), TypeResolutionEnum::Bitlist(new_cap))
-            | (TypeResolutionEnum::Bitlist(original_cap), TypeResolutionEnum::Bitvector(new_cap)) => {
+            (TypeResolutionKind::Bitvector(original_cap), TypeResolutionKind::Bitlist(new_cap))
+            | (TypeResolutionKind::Bitlist(original_cap), TypeResolutionKind::Bitvector(new_cap)) => {
                 original_cap == new_cap
             }
 
             // List[T, N] / Vector[T, N] field types are compatible if T is compatible and if they also share the same capacity N
             (
-                TypeResolutionEnum::List(original_ty, original_cap),
-                TypeResolutionEnum::Vector(new_ty, new_cap),
+                TypeResolutionKind::List(original_ty, original_cap),
+                TypeResolutionKind::Vector(new_ty, new_cap),
             )
             | (
-                TypeResolutionEnum::Vector(original_ty, original_cap),
-                TypeResolutionEnum::List(new_ty, new_cap),
+                TypeResolutionKind::Vector(original_ty, original_cap),
+                TypeResolutionKind::List(new_ty, new_cap),
             ) => {
                 original_ty.check_field_compatibility_for_profile(new_ty, resolver)
                     && *original_cap == *new_cap
             }
 
-            (TypeResolutionEnum::Class(original_class), TypeResolutionEnum::Class(new_class)) => {
+            (TypeResolutionKind::Class(original_class), TypeResolutionKind::Class(new_class)) => {
                 // Get class definitions
                 let original_class_def = match resolver.classes.get(original_class).unwrap() {
                     ClassDefinition::Custom(class_def) => class_def,

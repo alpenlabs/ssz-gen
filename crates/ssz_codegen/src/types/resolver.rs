@@ -7,7 +7,7 @@
 //! - Track and generate union types
 //! - Manage custom type definitions
 
-use crate::types::TypeResolutionEnum;
+use crate::types::TypeResolutionKind;
 
 use super::{BaseClass, ClassDef, ClassDefinition, TypeDefinition, TypeResolution};
 use proc_macro2::TokenStream;
@@ -177,13 +177,13 @@ impl<'a> TypeResolver<'a> {
                 for arg in args.iter() {
                     let ty_resolved = self.resolve_type_expr(arg);
                     match ty_resolved.resolution {
-                        TypeResolutionEnum::Unresolved => {
+                        TypeResolutionKind::Unresolved => {
                             return TypeResolution {
                                 ty: None,
-                                resolution: TypeResolutionEnum::Unresolved,
+                                resolution: TypeResolutionKind::Unresolved,
                             };
                         }
-                        TypeResolutionEnum::BaseClass(_) => {
+                        TypeResolutionKind::BaseClass(_) => {
                             panic!("BaseClass in type arguments are not allowed")
                         }
                         _ => resolved_args.push(ty_resolved),
@@ -197,7 +197,7 @@ impl<'a> TypeResolver<'a> {
         // Unless it's a Union[None, T]
         if alias_ident.is_none()
             && ty.base_name().0 == "Union"
-            && !(args.len() == 2 && args[0].resolution == TypeResolutionEnum::None)
+            && !(args.len() == 2 && args[0].resolution == TypeResolutionKind::None)
         {
             panic!("Unions cannot be used anonymously unless they are Union[None, T]");
         }
@@ -208,7 +208,7 @@ impl<'a> TypeResolver<'a> {
             Some(def) => self.resolve_type_definition(def, args, alias_ident),
             None => TypeResolution {
                 ty: None,
-                resolution: TypeResolutionEnum::Unresolved,
+                resolution: TypeResolutionKind::Unresolved,
             },
         }
     }
@@ -227,11 +227,11 @@ impl<'a> TypeResolver<'a> {
             TyExpr::Ty(ty) => self.resolve_type(ty, None),
             TyExpr::Int(int) => TypeResolution {
                 ty: None,
-                resolution: TypeResolutionEnum::Constant(int.eval()),
+                resolution: TypeResolutionKind::Constant(int.eval()),
             },
             TyExpr::None => TypeResolution {
                 ty: None,
-                resolution: TypeResolutionEnum::None,
+                resolution: TypeResolutionKind::None,
             },
         }
     }
@@ -250,7 +250,7 @@ impl<'a> TypeResolver<'a> {
         base_class.map(|base_class| match base_class {
             BaseClass::Container => TypeResolution {
                 ty: None,
-                resolution: TypeResolutionEnum::BaseClass(BaseClass::Container),
+                resolution: TypeResolutionKind::BaseClass(BaseClass::Container),
             },
             BaseClass::StableContainer(max) => {
                 let max = max.unwrap_or_else(|| match ty {
@@ -267,7 +267,7 @@ impl<'a> TypeResolver<'a> {
                 assert!(max > 0, "Stable container must have a max field count > 0");
                 TypeResolution {
                     ty: None,
-                    resolution: TypeResolutionEnum::BaseClass(BaseClass::StableContainer(Some(
+                    resolution: TypeResolutionKind::BaseClass(BaseClass::StableContainer(Some(
                         max,
                     ))),
                 }
@@ -286,7 +286,7 @@ impl<'a> TypeResolver<'a> {
                                 if class_def.is_none() {
                                     return TypeResolution {
                                         ty: None,
-                                        resolution: TypeResolutionEnum::Unresolved,
+                                        resolution: TypeResolutionKind::Unresolved,
                                     };
                                 }
                                 let class_def = class_def.unwrap();
@@ -302,7 +302,7 @@ impl<'a> TypeResolver<'a> {
                 };
                 TypeResolution {
                     ty: None,
-                    resolution: TypeResolutionEnum::BaseClass(BaseClass::Profile(Some((
+                    resolution: TypeResolutionKind::BaseClass(BaseClass::Profile(Some((
                         name, max,
                     )))),
                 }
@@ -329,41 +329,41 @@ impl<'a> TypeResolver<'a> {
         let mut resolved_ty = None;
         let resolution =
             match def {
-                TypeDefinition::Boolean => TypeResolutionEnum::Boolean,
-                TypeDefinition::UInt(size) => TypeResolutionEnum::UInt(*size),
+                TypeDefinition::Boolean => TypeResolutionKind::Boolean,
+                TypeDefinition::UInt(size) => TypeResolutionKind::UInt(*size),
                 TypeDefinition::Vector => {
                     let size = match args[1].resolution {
-                        TypeResolutionEnum::Constant(size) => size,
+                        TypeResolutionKind::Constant(size) => size,
                         _ => panic!("Expected constant value for vector size"),
                     };
-                    TypeResolutionEnum::Vector(Box::new(args[0].clone()), size)
+                    TypeResolutionKind::Vector(Box::new(args[0].clone()), size)
                 }
                 TypeDefinition::List => {
                     let size = match args[1].resolution {
-                        TypeResolutionEnum::Constant(size) => size,
+                        TypeResolutionKind::Constant(size) => size,
                         _ => panic!("Expected constant value for list size"),
                     };
-                    TypeResolutionEnum::List(Box::new(args[0].clone()), size)
+                    TypeResolutionKind::List(Box::new(args[0].clone()), size)
                 }
                 TypeDefinition::Bitvector => {
                     let size = match args[0].resolution {
-                        TypeResolutionEnum::Constant(size) => size,
+                        TypeResolutionKind::Constant(size) => size,
                         _ => panic!("Expected constant value for bitvector size"),
                     };
-                    TypeResolutionEnum::Bitvector(size)
+                    TypeResolutionKind::Bitvector(size)
                 }
                 TypeDefinition::Bitlist => {
                     let size = match args[0].resolution {
-                        TypeResolutionEnum::Constant(size) => size,
+                        TypeResolutionKind::Constant(size) => size,
                         _ => panic!("Expected constant value for bitlist size"),
                     };
-                    TypeResolutionEnum::Bitlist(size)
+                    TypeResolutionKind::Bitlist(size)
                 }
-                TypeDefinition::Optional => TypeResolutionEnum::Optional(Box::new(args[0].clone())),
+                TypeDefinition::Optional => TypeResolutionKind::Optional(Box::new(args[0].clone())),
                 TypeDefinition::Union => {
                     // Special case for Union[None, T]
-                    if args.len() == 2 && args[0].resolution == TypeResolutionEnum::None {
-                        TypeResolutionEnum::Option(Box::new(args[1].clone()))
+                    if args.len() == 2 && args[0].resolution == TypeResolutionKind::None {
+                        TypeResolutionKind::Option(Box::new(args[1].clone()))
                     } else {
                         let ident = alias_ident.unwrap().clone();
                         let ident_str = ident.to_string();
@@ -378,7 +378,7 @@ impl<'a> TypeResolver<'a> {
                             proc_macro2::Span::call_site(),
                         );
                         match ty.resolution {
-                            TypeResolutionEnum::None => {
+                            TypeResolutionKind::None => {
                                 if i == 0 {
                                     parse_quote!(#ident)
                                 } else {
@@ -405,10 +405,10 @@ impl<'a> TypeResolver<'a> {
                             },
                         );
 
-                        TypeResolutionEnum::Union(ident_str, args)
+                        TypeResolutionKind::Union(ident_str, args)
                     }
                 }
-                TypeDefinition::Bytes(size) => TypeResolutionEnum::Bytes(*size),
+                TypeDefinition::Bytes(size) => TypeResolutionKind::Bytes(*size),
                 TypeDefinition::CustomType(res) => {
                     resolved_ty = res.ty.clone();
                     res.resolution.clone()
@@ -613,7 +613,7 @@ impl<'a> TypeResolver<'a> {
                         proc_macro2::Span::call_site(),
                     )),
                 })),
-                resolution: TypeResolutionEnum::Class(class_str),
+                resolution: TypeResolutionKind::Class(class_str),
             }))
         });
     }
@@ -633,7 +633,7 @@ impl<'a> TypeResolver<'a> {
                     qself: None,
                     path: syn::Path::from(constant.clone()),
                 })),
-                resolution: TypeResolutionEnum::Constant(value),
+                resolution: TypeResolutionKind::Constant(value),
             })),
         );
     }
