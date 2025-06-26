@@ -7,7 +7,7 @@ use std::{collections::HashMap, path::PathBuf};
 use thiserror::Error;
 
 use crate::{
-    Identifier, SszSchema,
+    Identifier,
     ast::{TyArgSpec, TyExprSpec},
     tysys::{ConstValue, Ty, TyExpr},
 };
@@ -44,12 +44,12 @@ pub enum ResolverError {
 
 /// Describes information for a concrete type.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct TypeData {
+pub(crate) struct TypeData {
     // TODO
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct TypeCtorData {
+pub(crate) struct TypeCtorData {
     /// The signature.
     sig: CtorSig,
 
@@ -97,7 +97,7 @@ pub enum CtorArg {
 
 /// Describes something an identifier can point to.
 #[derive(Clone, Debug)]
-pub enum IdentTarget {
+pub(crate) enum IdentTarget {
     Const(ConstValue),
     Ty(TypeData),
     TyCtor(TypeCtorData),
@@ -111,9 +111,12 @@ pub(crate) enum AliasRef {
     Direct(Ty),
 }
 
+pub(crate) type CrossModuleTypeMap<'a> = HashMap<PathBuf, HashMap<Identifier, IdentTarget>>;
+
 #[derive(Clone)]
 pub(crate) struct TypeResolver<'a> {
-    schemas: &'a HashMap<PathBuf, SszSchema>,
+    /// Map of module paths to their respective resolvers.
+    cross_module_types: &'a CrossModuleTypeMap<'a>,
 
     // TODO some way to express types that can be inherited from and types that can only be used as a member
     /// Constants in the module scope.
@@ -124,9 +127,9 @@ pub(crate) struct TypeResolver<'a> {
 }
 
 impl<'a> TypeResolver<'a> {
-    pub(crate) fn new(schemas: &'a HashMap<PathBuf, SszSchema>) -> Self {
+    pub(crate) fn new(cross_module_types: &'a CrossModuleTypeMap<'a>) -> Self {
         Self {
-            schemas,
+            cross_module_types,
             idents: HashMap::new(),
             aliases: HashMap::new(),
         }
@@ -369,13 +372,15 @@ impl<'a> TypeResolver<'a> {
                                 TyExpr::Int(ConstValue::Int(*v))
                             }
                             (CtorArg::Ty, TyArgSpec::Imported(imported)) => {
-                                let Some(schema) = self.schemas.get(imported.module_path()) else {
+                                let Some(ident_targets) =
+                                    self.cross_module_types.get(imported.module_path())
+                                else {
                                     return Err(ResolverError::UnknownImport(
                                         imported.module_path().clone(),
                                     ));
                                 };
 
-                                let Some(ident_target) = schema.get_ident(imported.base_name())
+                                let Some(ident_target) = ident_targets.get(imported.base_name())
                                 else {
                                     return Err(ResolverError::UnknownImportItem(
                                         imported.module_path().clone(),
@@ -397,13 +402,15 @@ impl<'a> TypeResolver<'a> {
                                 }
                             }
                             (CtorArg::Int, TyArgSpec::Imported(imported)) => {
-                                let Some(schema) = self.schemas.get(imported.module_path()) else {
+                                let Some(ident_targets) =
+                                    self.cross_module_types.get(imported.module_path())
+                                else {
                                     return Err(ResolverError::UnknownImport(
                                         imported.module_path().clone(),
                                     ));
                                 };
 
-                                let Some(ident_target) = schema.get_ident(imported.base_name())
+                                let Some(ident_target) = ident_targets.get(imported.base_name())
                                 else {
                                     return Err(ResolverError::UnknownImportItem(
                                         imported.module_path().clone(),
@@ -454,13 +461,15 @@ impl<'a> TypeResolver<'a> {
                                 return Err(ResolverError::MismatchedArgKind(ident.clone()));
                             }
                             TyArgSpec::Imported(imported) => {
-                                let Some(schema) = self.schemas.get(imported.module_path()) else {
+                                let Some(ident_targets) =
+                                    self.cross_module_types.get(imported.module_path())
+                                else {
                                     return Err(ResolverError::UnknownImport(
                                         imported.module_path().clone(),
                                     ));
                                 };
 
-                                let Some(ident_target) = schema.get_ident(imported.base_name())
+                                let Some(ident_target) = ident_targets.get(imported.base_name())
                                 else {
                                     return Err(ResolverError::UnknownImportItem(
                                         imported.module_path().clone(),
@@ -506,11 +515,12 @@ impl<'a> TypeResolver<'a> {
                 self.resolve_ident_with_args(complex.base_name(), Some(complex.args()))?
             }
             TyExprSpec::Imported(imported) => {
-                let Some(schema) = self.schemas.get(imported.module_path()) else {
+                let Some(ident_targets) = self.cross_module_types.get(imported.module_path())
+                else {
                     return Err(ResolverError::UnknownImport(imported.module_path().clone()));
                 };
 
-                if !schema.has_ident(imported.base_name()) {
+                if !ident_targets.contains_key(imported.base_name()) {
                     return Err(ResolverError::UnknownImportItem(
                         imported.module_path().clone(),
                         imported.base_name().clone(),
@@ -537,31 +547,31 @@ impl<'a> TypeResolver<'a> {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, path::PathBuf};
+    use std::collections::HashMap;
 
     use crate::{
-        Identifier, SszSchema,
+        Identifier,
         ast::{ComplexTySpec, TyArgSpec, TyExprSpec},
         builtins,
         tysys::ConstValue,
     };
 
-    use super::TypeResolver;
+    use super::{CrossModuleTypeMap, TypeResolver};
 
     fn make_ident(s: &str) -> Identifier {
         Identifier::try_from(s.to_owned()).expect("test: make ident")
     }
 
-    fn make_resolver<'a>(map: &'a HashMap<PathBuf, SszSchema>) -> TypeResolver<'a> {
-        let mut resolv = TypeResolver::new(map);
+    fn make_resolver<'a>(cross_module_types: &'a CrossModuleTypeMap<'a>) -> TypeResolver<'a> {
+        let mut resolv = TypeResolver::new(cross_module_types);
         builtins::populate_builtin_types(&mut resolv);
         resolv
     }
 
     #[test]
     fn test_resolver_simple() {
-        let map = HashMap::new();
-        let resolv = make_resolver(&map);
+        let cross_module_types = HashMap::new();
+        let resolv = make_resolver(&cross_module_types);
 
         let spec = TyExprSpec::Simple(make_ident("Container"));
 
@@ -574,8 +584,8 @@ mod tests {
 
     #[test]
     fn test_resolver_list_simple() {
-        let map = HashMap::new();
-        let resolv = make_resolver(&map);
+        let cross_module_types = HashMap::new();
+        let resolv = make_resolver(&cross_module_types);
 
         let arg1 = TyArgSpec::Ident(make_ident("byte"));
         let arg2 = TyArgSpec::IntLiteral(32);
@@ -590,8 +600,8 @@ mod tests {
 
     #[test]
     fn test_resolver_list_const() {
-        let map = HashMap::new();
-        let mut resolv = make_resolver(&map);
+        let cross_module_types = HashMap::new();
+        let mut resolv = make_resolver(&cross_module_types);
 
         let const_name = make_ident("FOOBAR");
         resolv
@@ -611,8 +621,8 @@ mod tests {
 
     #[test]
     fn test_resolver_stablecontainer() {
-        let map = HashMap::new();
-        let mut resolv = make_resolver(&map);
+        let cross_module_types = HashMap::new();
+        let mut resolv = make_resolver(&cross_module_types);
 
         let const_name = make_ident("FOOBAR");
         resolv
@@ -634,8 +644,8 @@ mod tests {
 
     #[test]
     fn test_resolver_list_user() {
-        let map = HashMap::new();
-        let mut resolv = make_resolver(&map);
+        let cross_module_types = HashMap::new();
+        let mut resolv = make_resolver(&cross_module_types);
 
         let const_name = make_ident("FOOBAR");
         resolv

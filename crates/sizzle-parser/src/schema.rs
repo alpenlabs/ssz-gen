@@ -11,7 +11,7 @@ use crate::{
     Identifier,
     ast::{AssignExpr, ClassDefEntry, Module, ModuleEntry},
     builtins,
-    ty_resolver::{IdentTarget, ResolverError, TypeData, TypeResolver},
+    ty_resolver::{CrossModuleTypeMap, IdentTarget, ResolverError, TypeData, TypeResolver},
     tysys::{ConstValue, Ty, TyExpr},
 };
 
@@ -42,8 +42,6 @@ pub enum SchemaError {
 /// High level SSZ schema.
 #[derive(Clone, Debug)]
 pub struct SszSchema {
-    idents: HashMap<Identifier, IdentTarget>,
-
     constants: Vec<ConstDef>,
     classes: Vec<ClassDef>,
     aliases: Vec<AliasDef>,
@@ -63,16 +61,6 @@ impl SszSchema {
     /// All aliases in the schema.
     pub fn aliases(&self) -> &[AliasDef] {
         &self.aliases
-    }
-
-    /// Check if the schema has an ident.
-    pub fn has_ident(&self, ident: &Identifier) -> bool {
-        self.idents.contains_key(ident)
-    }
-
-    /// Get an ident.
-    pub fn get_ident(&self, ident: &Identifier) -> Option<&IdentTarget> {
-        self.idents.get(ident)
     }
 }
 
@@ -156,11 +144,11 @@ impl AliasDef {
 }
 
 /// Converts a AST module to a full schema.
-pub(crate) fn conv_module_to_schema(
+pub(crate) fn conv_module_to_schema<'a>(
     m: &Module,
-    schema_map: &HashMap<PathBuf, SszSchema>,
-) -> Result<SszSchema, SchemaError> {
-    let mut resolver = TypeResolver::new(schema_map);
+    cross_module_types: &'a CrossModuleTypeMap<'a>,
+) -> Result<(SszSchema, HashMap<Identifier, IdentTarget>), SchemaError> {
+    let mut resolver = TypeResolver::new(cross_module_types);
     builtins::populate_builtin_types(&mut resolver);
 
     // Do a first pass to prepare the type resolver and abort if there's any obvious duplicates.
@@ -178,11 +166,11 @@ pub(crate) fn conv_module_to_schema(
             ModuleEntry::Assignment(def) => match def.value() {
                 AssignExpr::Imported(imported) => {
                     let path = imported.module_path();
-                    let Some(schema) = schema_map.get(path) else {
+                    let Some(ident_targets) = cross_module_types.get(path) else {
                         return Err(SchemaError::UnknownImport(path.clone()));
                     };
 
-                    let Some(ident_target) = schema.get_ident(imported.base_name()) else {
+                    let Some(ident_target) = ident_targets.get(imported.base_name()) else {
                         return Err(SchemaError::UnknownImportItem(
                             path.clone(),
                             imported.base_name().clone(),
@@ -297,13 +285,12 @@ pub(crate) fn conv_module_to_schema(
 
     // Create a the final schema.
     let schema = SszSchema {
-        idents,
         classes,
         constants,
         aliases,
     };
 
-    Ok(schema)
+    Ok((schema, idents))
 }
 
 fn conv_classdef<'a>(
