@@ -183,3 +183,47 @@ fn test_stable_container_without_optional() {
     )
     .expect("This should panic due to stable container without optional");
 }
+
+#[test]
+#[should_panic(expected = "None is only allowed as the first variant in a Union")]
+fn test_union_null_position() {
+    build_ssz_files(
+        &["test_union_null_position.ssz"],
+        "tests/input",
+        "tests/output/test_union_null_position.rs",
+    )
+    .expect("This should panic due to none not being first in union");
+}
+
+#[test]
+#[should_panic(expected = "Unions cannot be used anonymously unless they are Union[None, T]")]
+fn test_anon_union() {
+    build_ssz_files(
+        &["test_anon_union.ssz"],
+        "tests/input",
+        "tests/output/test_anon_union.rs",
+    )
+    .expect("This should panic due to anonymous union");
+}
+
+#[test]
+#[should_panic(expected = "Profile classes cannot add new fields to their parent classes")]
+fn test_profile_new_fields() {
+    build_ssz_files(
+        &["test_profile_new_fields.ssz"],
+        "tests/input",
+        "tests/output/test_profile_new_fields.rs",
+    )
+    .expect("This should panic due to new fields in profile");
+}
+
+#[test]
+#[should_panic(expected = "Inheritance field order violation")]
+fn test_profile_field_order() {
+    build_ssz_files(
+        &["test_profile_field_order.ssz"],
+        "tests/input",
+        "tests/output/test_profile_field_order.rs",
+    )
+    .expect("This should panic due to field order in profile");
+}

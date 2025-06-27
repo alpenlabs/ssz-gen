@@ -1,0 +1,1 @@
+BadUnion = Union[uint8, null, uint16]
