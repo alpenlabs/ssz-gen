@@ -325,22 +325,6 @@ mod test {
         }
     }
 
-    // #[test]
-    // fn address() {
-    //     let data = [
-    //         Address::ZERO,
-    //         Address::repeat_byte(0xff),
-    //         Address::right_padding_from(&[0, 1, 2, 3, 4, 5]),
-    //         Address::left_padding_from(&[10, 9, 8, 7, 6]),
-    //     ];
-    //     for address in data {
-    //         assert_eq!(
-    //             address.tree_hash_root(),
-    //             Hash256::right_padding_from(address.as_slice())
-    //         );
-    //     }
-    // }
-
     #[test]
     fn fixed_bytes_32() {
         let data = [
@@ -383,16 +367,4 @@ mod test {
     fn fixed_bytes_no_packing_factor() {
         Hash256::tree_hash_packing_factor();
     }
-
-    // #[test]
-    // #[should_panic]
-    // fn address_no_packed_encoding() {
-    //     Address::ZERO.tree_hash_packed_encoding();
-    // }
-
-    // #[test]
-    // #[should_panic]
-    // fn address_no_packing_factor() {
-    //     Address::tree_hash_packing_factor();
-    // }
 }
