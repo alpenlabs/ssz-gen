@@ -170,7 +170,7 @@ fn test_optional_field_container() {
         "tests/input",
         "tests/output/test_optional_field_container.rs",
     )
-    .expect("This should panic due to invalid inheritance");
+    .expect("This should panic due to optional field in container");
 }
 
 #[test]
@@ -181,5 +181,5 @@ fn test_stable_container_without_optional() {
         "tests/input",
         "tests/output/test_stable_container_without_optional.rs",
     )
-    .expect("This should panic due to invalid inheritance");
+    .expect("This should panic due to stable container without optional");
 }
