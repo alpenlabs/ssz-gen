@@ -136,7 +136,7 @@ fn variable_union() {
     );
 }
 
-/// Test that the packed encodings for different types are equal.Add commentMore actions
+/// Test that the packed encodings for different types are equal.
 #[test]
 fn packed_encoding_example() {
     let val = 0xfff0eee0ddd0ccc0bbb0aaa099908880_u128;
