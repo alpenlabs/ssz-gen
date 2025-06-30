@@ -23,7 +23,40 @@ These libraries have been modified to add StableContainer support and other enha
 
 ## Usage
 
-There is currently no clean way to use the library as it is in very early stages, however there is a test in `ssz_codegen` that reads all the `.ssz` files in [`crates/ssz_codegen/tests/input`](crates/ssz_codegen/tests/input) and generates rust code for them in [`crates/ssz_codegen/tests/output`](crates/ssz_codegen/tests/output)
+### 1. Create a `build.rs` file in your crate root:
+
+```rust
+use ssz_codegen::build_ssz_files;
+use std::path::Path;
+
+fn main() {
+    let out_dir = std::env::var("OUT_DIR").unwrap();
+    let output_path = Path::new(&out_dir).join("generated_ssz.rs");
+    
+    build_ssz_files(
+        &["schema.ssz"],           // Entry point SSZ files
+        "specs/",                  // Base directory containing SSZ files
+        output_path.to_str().unwrap(),
+    )
+    .expect("Failed to generate SSZ types");
+}
+```
+
+### 2. Include the generated code in your `lib.rs`:
+
+```rust
+use ssz_types::*;
+use ssz::{Decode, Encode};
+use tree_hash::TreeHash;
+
+include!(concat!(env!("OUT_DIR"), "/generated_ssz.rs"));
+
+// Your SSZ types are now available
+pub fn example() {
+    let data = crate::specs::schema::MyContainer { /* ... */ };
+    // Use SSZ encoding/decoding, tree hashing, etc.
+}
+```
 
 ## Contributing
 
