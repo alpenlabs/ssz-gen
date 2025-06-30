@@ -309,6 +309,9 @@ fn tree_hash_derive_struct_stable_container(
                     if self.#idents.is_some() {
                         hasher.write(self.#idents.tree_hash_root().as_slice())
                             .expect("tree hash derive should not apply too many leaves");
+                    } else {
+                        hasher.write(tree_hash::Hash256::ZERO.as_slice())
+                            .expect("tree hash derive should not apply too many leaves");
                     }
                 )*
 
@@ -351,6 +354,16 @@ fn tree_hash_derive_struct_profile(
         };
 
         if let Some(new_index) = field_opt.stable_index {
+            if new_index > index {
+                // If we're skipping fields, we need to add zero hash for the skipped fields.
+                for _ in index..new_index {
+                    hashes.push(quote! {
+                        hasher.write(tree_hash::Hash256::ZERO.as_slice())
+                            .expect("tree hash derive should not apply too many leaves");
+                    });
+                }
+            }
+
             index = new_index;
         }
 
@@ -368,6 +381,9 @@ fn tree_hash_derive_struct_profile(
             hashes.push(quote! {
                 if active_fields.get(#index).unwrap_or(false) {
                     hasher.write(self.#ident.tree_hash_root().as_slice())
+                        .expect("tree hash derive should not apply too many leaves");
+                } else {
+                    hasher.write(tree_hash::Hash256::ZERO.as_slice())
                         .expect("tree hash derive should not apply too many leaves");
                 }
             });
