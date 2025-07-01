@@ -554,7 +554,7 @@ pub fn decode_list_of_variable_length_items<T: Decode, Container: TryFromIter<T>
     let first_offset = read_offset(bytes)?;
     sanitize_offset(first_offset, None, bytes.len(), Some(first_offset))?;
 
-    if first_offset % BYTES_PER_LENGTH_OFFSET != 0 || first_offset < BYTES_PER_LENGTH_OFFSET {
+    if !first_offset.is_multiple_of(BYTES_PER_LENGTH_OFFSET) || first_offset < BYTES_PER_LENGTH_OFFSET {
         return Err(DecodeError::InvalidListFixedBytesLen(first_offset));
     }
 
