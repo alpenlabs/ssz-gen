@@ -158,7 +158,7 @@ impl TokenSeqBuilder {
             Some(i @ Indent::Spaces(n)) => {
                 if is_all_spaces(indent) {
                     let found_spaces = indent.len();
-                    if found_spaces % n as usize == 0 {
+                    if found_spaces.is_multiple_of(n as usize) {
                         let ind_cnt = found_spaces / n as usize;
                         Ok(ind_cnt)
                     } else {
