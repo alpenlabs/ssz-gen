@@ -864,8 +864,8 @@ mod bitvector {
         assert_round_trip(b);
 
         let mut b = BitVector8::new();
-        for j in 0..8 {
-            if j % 2 == 0 {
+        for j in 0usize..8 {
+            if j.is_multiple_of(2) {
                 b.set(j, true).unwrap();
             }
         }
@@ -878,8 +878,8 @@ mod bitvector {
         assert_round_trip(b);
 
         let mut b = BitVector16::new();
-        for j in 0..16 {
-            if j % 2 == 0 {
+        for j in 0usize..16 {
+            if j.is_multiple_of(2) {
                 b.set(j, true).unwrap();
             }
         }
@@ -1036,8 +1036,8 @@ mod bitlist {
 
         for i in 0..8 {
             let mut b = BitList8::with_capacity(i).unwrap();
-            for j in 0..i {
-                if j % 2 == 0 {
+            for j in 0usize..i {
+                if j.is_multiple_of(2) {
                     b.set(j, true).unwrap();
                 }
             }
@@ -1052,8 +1052,8 @@ mod bitlist {
 
         for i in 0..16 {
             let mut b = BitList16::with_capacity(i).unwrap();
-            for j in 0..i {
-                if j % 2 == 0 {
+            for j in 0usize..i {
+                if j.is_multiple_of(2) {
                     b.set(j, true).unwrap();
                 }
             }

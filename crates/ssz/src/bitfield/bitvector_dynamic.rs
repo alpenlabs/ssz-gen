@@ -430,8 +430,8 @@ mod roundtrip_tests {
     fn bitdyn_ssz_round_trip() -> Result<(), Error> {
         // length = 8, set even bits
         let mut b = BitVectorDynamic::new(8)?;
-        for j in 0..8 {
-            if j % 2 == 0 {
+        for j in 0usize..8 {
+            if j.is_multiple_of(2) {
                 b.set(j, true)?;
             }
         }
@@ -469,8 +469,8 @@ mod roundtrip_tests {
 
         // Test alternating pattern (32 bits)
         let mut alternating = BitVectorDynamic::new(32)?;
-        for i in 0..32 {
-            alternating.set(i, i % 2 == 0)?;
+        for i in 0usize..32 {
+            alternating.set(i, i.is_multiple_of(2))?;
         }
         assert_round_trip_bitdyn(alternating)?;
 
