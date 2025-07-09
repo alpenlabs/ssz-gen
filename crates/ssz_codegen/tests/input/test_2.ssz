@@ -1,0 +1,50 @@
+BaseContainer = StableContainer[8]
+
+class Alpha(StableContainer[2]):
+    a: Optional[uint8]
+    b: Optional[Bitlist[32]]
+
+class InnerBase(BaseContainer):
+    x: Optional[uint8]
+    y: Optional[List[byte, 4]]
+    z: Optional[Bitvector[16]]
+    w: Optional[Alpha]
+
+class InnerProfile1(Profile[InnerBase]):
+    x: uint8
+    y: Optional[List[uint8, 4]]
+    z: Optional[Bitvector[16]]
+    w: Optional[Alpha]
+
+class InnerProfile2(Profile[InnerBase]):
+    x: Optional[byte]
+    y: List[byte, 4]
+    z: Bitvector[16]
+
+class AlphaProfile(Profile[Alpha]):
+    a: uint8
+    b: Optional[Bitlist[32]]
+
+class InnerProfile3(Profile[InnerBase]):
+    w: AlphaProfile
+
+class InnerProfile4(Profile[InnerBase]):
+    y: List[uint8, 4]
+    z: Bitvector[16]
+
+class InnerProfile5(Profile[InnerBase]):
+    x: uint8
+    z: Bitvector[16]
+    w: Alpha
+
+
+class ProfileProfile(InnerProfile5):
+    x: Optional[uint8]
+    w: AlphaProfile
+
+class ContainerContainer(InnerBase):
+    x: Optional[uint16]
+    a: Optional[uint8]
+    b: Optional[uint8]
+    c: Optional[uint8]
+    d: Optional[uint8]

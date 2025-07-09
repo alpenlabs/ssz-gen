@@ -7,9 +7,9 @@
 
 A Rust codegen tool that generates Rust code from pythonic SSZ (Simple Serialize) definitions. This project parses Python-style SSZ schema definitions using [`sizzle-parser`](https://codeberg.org/treyd/sizzle-parser/) and generates equivalent Rust implementations utilizing modified versions of libraries from [`sigp`](https://github.com/sigp):
 
-- `ethereum_ssz` (ssz and ssz_derive): For SSZ encoding / decoding
+- `ethereum_ssz` (`ssz` and `ssz_derive`): For SSZ encoding / decoding
 - `ssz_types`: For SSZ types such as List, Vector, Bitfield, etc
-- `tree_hash` (tree_hash and tree_hash_derive): For merklelization
+- `tree_hash` (`tree_hash` and `tree_hash_derive`): For merklelization
 
 These libraries have been modified to add StableContainer support and other enhancements.
 
