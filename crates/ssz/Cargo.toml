@@ -30,7 +30,6 @@ itertools.workspace = true
 serde.workspace = true
 smallvec.workspace = true
 ssz_primitives.workspace = true
-typenum.workspace = true
 
 [features]
 arbitrary = ["dep:arbitrary"]

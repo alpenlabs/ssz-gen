@@ -6,22 +6,22 @@
 use crate::FixedVector;
 use serde::{Deserializer, Serializer};
 use ssz::serde_utils::hex::{self, PrefixedHexVisitor};
-use typenum::Unsigned;
 
 /// Serialize a `FixedVector` as a hex string.
-pub fn serialize<S, U>(bytes: &FixedVector<u8, U>, serializer: S) -> Result<S::Ok, S::Error>
+pub fn serialize<S, const U: usize>(
+    bytes: &FixedVector<u8, U>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
-    U: Unsigned,
 {
     serializer.serialize_str(&hex::encode(&bytes[..]))
 }
 
 /// Deserialize a `FixedVector` from a hex string.
-pub fn deserialize<'de, D, U>(deserializer: D) -> Result<FixedVector<u8, U>, D::Error>
+pub fn deserialize<'de, D, const U: usize>(deserializer: D) -> Result<FixedVector<u8, U>, D::Error>
 where
     D: Deserializer<'de>,
-    U: Unsigned,
 {
     let vec = deserializer.deserialize_string(PrefixedHexVisitor)?;
     FixedVector::new(vec)

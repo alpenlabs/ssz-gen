@@ -10,7 +10,6 @@ use itertools as _;
 use serde as _;
 use serde_json as _;
 use smallvec as _;
-use typenum as _;
 
 use ssz::{Decode, DecodeError, Encode};
 use ssz_derive::{Decode, Encode};

@@ -12,7 +12,6 @@ use serde_json as _;
 use smallvec as _;
 use ssz_derive as _;
 use ssz_primitives as _;
-use typenum as _;
 
 use ssz::{Decode, DecodeError, Encode, SszDecoderBuilder, SszEncoder};
 

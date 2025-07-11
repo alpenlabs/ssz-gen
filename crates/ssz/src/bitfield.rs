@@ -9,7 +9,7 @@ use core::marker::PhantomData;
 use serde::de::{Deserialize, Deserializer};
 use serde::ser::{Serialize, Serializer};
 use smallvec::{SmallVec, ToSmallVec, smallvec};
-use typenum::Unsigned;
+
 pub(crate) mod bitvector_dynamic;
 
 /// Returned when an item encounters an error.
@@ -49,28 +49,24 @@ pub trait BitfieldBehaviour: Clone {}
 ///
 /// See the [`Bitfield`](struct.Bitfield.html) docs for usage.
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Variable<N> {
-    _phantom: PhantomData<N>,
-}
+pub struct Variable<const N: usize>;
 
 /// A marker struct used to declare SSZ `Fixed` behaviour on a `Bitfield`.
 ///
 /// See the [`Bitfield`](struct.Bitfield.html) docs for usage.
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Fixed<N> {
-    _phantom: PhantomData<N>,
-}
+pub struct Fixed<const N: usize>;
 
-impl<N: Unsigned + Clone> BitfieldBehaviour for Variable<N> {}
-impl<N: Unsigned + Clone> BitfieldBehaviour for Fixed<N> {}
+impl<const N: usize> BitfieldBehaviour for Variable<N> {}
+impl<const N: usize> BitfieldBehaviour for Fixed<N> {}
 
 /// A heap-allocated, ordered, variable-length collection of `bool` values, limited to `N` bits.
-pub type BitList<N> = Bitfield<Variable<N>>;
+pub type BitList<const N: usize> = Bitfield<Variable<N>>;
 
 /// A heap-allocated, ordered, fixed-length collection of `bool` values, with `N` bits.
 ///
 /// See [Bitfield](struct.Bitfield.html) documentation.
-pub type BitVector<N> = Bitfield<Fixed<N>>;
+pub type BitVector<const N: usize> = Bitfield<Fixed<N>>;
 
 /// A heap-allocated, ordered, fixed-length, collection of `bool` values. Use of
 /// [`BitList`](type.BitList.html) or [`BitVector`](type.BitVector.html) type aliases is preferred
@@ -92,12 +88,11 @@ pub type BitVector<N> = Bitfield<Fixed<N>>;
 ///
 /// ```
 /// use ssz::{BitVector, BitList};
-/// use typenum;
 ///
 /// // `BitList` has a type-level maximum length. The length of the list is specified at runtime
 /// // and it must be less than or equal to `N`. After instantiation, `BitList` cannot grow or
 /// // shrink.
-/// type BitList8 = BitList<typenum::U8>;
+/// type BitList8 = BitList<8>;
 ///
 /// // Creating a `BitList` with a larger-than-`N` capacity returns `None`.
 /// assert!(BitList8::with_capacity(9).is_err());
@@ -108,7 +103,7 @@ pub type BitVector<N> = Bitfield<Fixed<N>>;
 ///
 /// // `BitVector` has a type-level fixed length. Unlike `BitList`, it cannot be instantiated with a custom length
 /// // or grow/shrink.
-/// type BitVector8 = BitVector<typenum::U8>;
+/// type BitVector8 = BitVector<8>;
 ///
 /// let mut bitvector = BitVector8::new();
 /// assert_eq!(bitvector.len(), 8); // `BitVector` length is fixed at the type-level.
@@ -129,7 +124,7 @@ pub struct Bitfield<T> {
     _phantom: PhantomData<T>,
 }
 
-impl<N: Unsigned + Clone> Bitfield<Variable<N>> {
+impl<const N: usize> Bitfield<Variable<N>> {
     /// Instantiate with capacity for `num_bits` boolean values. The length cannot be grown or
     /// shrunk after instantiation.
     ///
@@ -137,7 +132,7 @@ impl<N: Unsigned + Clone> Bitfield<Variable<N>> {
     ///
     /// Returns `Err` if `num_bits > N`.
     pub fn with_capacity(num_bits: usize) -> Result<Self, Error> {
-        if num_bits <= N::to_usize() {
+        if num_bits <= N {
             Ok(Self {
                 bytes: smallvec![0; bytes_for_bit_len(num_bits)],
                 len: num_bits,
@@ -153,7 +148,7 @@ impl<N: Unsigned + Clone> Bitfield<Variable<N>> {
 
     /// Equal to `N` regardless of the value supplied to `with_capacity`.
     pub fn max_len() -> usize {
-        N::to_usize()
+        N
     }
 
     /// Consumes `self`, returning a serialized representation.
@@ -165,9 +160,8 @@ impl<N: Unsigned + Clone> Bitfield<Variable<N>> {
     /// ```
     /// use ssz::BitList;
     /// use smallvec::SmallVec;
-    /// use typenum;
     ///
-    /// type BitList8 = BitList<typenum::U8>;
+    /// type BitList8 = BitList<8>;
     ///
     /// let b = BitList8::with_capacity(4).unwrap();
     ///
@@ -269,25 +263,22 @@ impl<N: Unsigned + Clone> Bitfield<Variable<N>> {
     }
 
     /// Returns a new BitList of length M, with the same bits set as `self`.
-    pub fn resize<M: Unsigned + Clone>(&self) -> Result<Bitfield<Variable<M>>, Error> {
-        if N::to_usize() > M::to_usize() {
+    pub fn resize<const M: usize>(&self) -> Result<Bitfield<Variable<M>>, Error> {
+        if N > M {
             return Err(Error::InvalidByteCount {
-                given: M::to_usize(),
-                expected: N::to_usize() + 1,
+                given: M,
+                expected: N + 1,
             });
         }
-
-        let mut resized = Bitfield::<Variable<M>>::with_capacity(M::to_usize())?;
-
+        let mut resized = Bitfield::<Variable<M>>::with_capacity(M)?;
         for (i, bit) in self.iter().enumerate() {
             resized.set(i, bit)?;
         }
-
         Ok(resized)
     }
 }
 
-impl<N: Unsigned + Clone> Bitfield<Fixed<N>> {
+impl<const N: usize> Bitfield<Fixed<N>> {
     /// Instantiate a new `Bitfield` with a fixed-length of `N` bits.
     ///
     /// All bits are initialized to `false`.
@@ -301,7 +292,7 @@ impl<N: Unsigned + Clone> Bitfield<Fixed<N>> {
 
     /// Returns `N`, the number of bits in `Self`.
     pub fn capacity() -> usize {
-        N::to_usize()
+        N
     }
 
     /// Consumes `self`, returning a serialized representation.
@@ -312,9 +303,8 @@ impl<N: Unsigned + Clone> Bitfield<Fixed<N>> {
     /// ```
     /// use ssz::BitVector;
     /// use smallvec::SmallVec;
-    /// use typenum;
     ///
-    /// type BitVector4 = BitVector<typenum::U4>;
+    /// type BitVector4 = BitVector<4>;
     ///
     /// assert_eq!(BitVector4::new().into_bytes(), SmallVec::from_buf([0b0000_0000]));
     /// ```
@@ -362,7 +352,7 @@ impl<N: Unsigned + Clone> Bitfield<Fixed<N>> {
     }
 }
 
-impl<N: Unsigned + Clone> std::fmt::Display for Bitfield<Fixed<N>> {
+impl<const N: usize> std::fmt::Display for Bitfield<Fixed<N>> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut field: String = "".to_string();
         for i in self.iter() {
@@ -372,7 +362,7 @@ impl<N: Unsigned + Clone> std::fmt::Display for Bitfield<Fixed<N>> {
     }
 }
 
-impl<N: Unsigned + Clone> Default for Bitfield<Fixed<N>> {
+impl<const N: usize> Default for Bitfield<Fixed<N>> {
     fn default() -> Self {
         Self::new()
     }
@@ -592,7 +582,7 @@ impl<T: BitfieldBehaviour> Iterator for BitIter<'_, T> {
     }
 }
 
-impl<N: Unsigned + Clone> Encode for Bitfield<Variable<N>> {
+impl<const N: usize> Encode for Bitfield<Variable<N>> {
     fn is_ssz_fixed_len() -> bool {
         false
     }
@@ -608,7 +598,7 @@ impl<N: Unsigned + Clone> Encode for Bitfield<Variable<N>> {
     }
 }
 
-impl<N: Unsigned + Clone> Decode for Bitfield<Variable<N>> {
+impl<const N: usize> Decode for Bitfield<Variable<N>> {
     fn is_ssz_fixed_len() -> bool {
         false
     }
@@ -619,7 +609,7 @@ impl<N: Unsigned + Clone> Decode for Bitfield<Variable<N>> {
     }
 }
 
-impl<N: Unsigned + Clone> Encode for Bitfield<Fixed<N>> {
+impl<const N: usize> Encode for Bitfield<Fixed<N>> {
     fn is_ssz_fixed_len() -> bool {
         true
     }
@@ -629,7 +619,7 @@ impl<N: Unsigned + Clone> Encode for Bitfield<Fixed<N>> {
     }
 
     fn ssz_fixed_len() -> usize {
-        bytes_for_bit_len(N::to_usize())
+        bytes_for_bit_len(N)
     }
 
     fn ssz_append(&self, buf: &mut Vec<u8>) {
@@ -637,13 +627,13 @@ impl<N: Unsigned + Clone> Encode for Bitfield<Fixed<N>> {
     }
 }
 
-impl<N: Unsigned + Clone> Decode for Bitfield<Fixed<N>> {
+impl<const N: usize> Decode for Bitfield<Fixed<N>> {
     fn is_ssz_fixed_len() -> bool {
         true
     }
 
     fn ssz_fixed_len() -> usize {
-        bytes_for_bit_len(N::to_usize())
+        bytes_for_bit_len(N)
     }
 
     fn from_ssz_bytes(bytes: &[u8]) -> Result<Self, DecodeError> {
@@ -652,7 +642,7 @@ impl<N: Unsigned + Clone> Decode for Bitfield<Fixed<N>> {
     }
 }
 
-impl<N: Unsigned + Clone> Serialize for Bitfield<Variable<N>> {
+impl<const N: usize> Serialize for Bitfield<Variable<N>> {
     /// Serde serialization is compliant with the Ethereum YAML test format.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -662,7 +652,7 @@ impl<N: Unsigned + Clone> Serialize for Bitfield<Variable<N>> {
     }
 }
 
-impl<'de, N: Unsigned + Clone> Deserialize<'de> for Bitfield<Variable<N>> {
+impl<'de, const N: usize> Deserialize<'de> for Bitfield<Variable<N>> {
     /// Serde serialization is compliant with the Ethereum YAML test format.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -674,7 +664,7 @@ impl<'de, N: Unsigned + Clone> Deserialize<'de> for Bitfield<Variable<N>> {
     }
 }
 
-impl<N: Unsigned + Clone> Serialize for Bitfield<Fixed<N>> {
+impl<const N: usize> Serialize for Bitfield<Fixed<N>> {
     /// Serde serialization is compliant with the Ethereum YAML test format.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -684,7 +674,7 @@ impl<N: Unsigned + Clone> Serialize for Bitfield<Fixed<N>> {
     }
 }
 
-impl<'de, N: Unsigned + Clone> Deserialize<'de> for Bitfield<Fixed<N>> {
+impl<'de, const N: usize> Deserialize<'de> for Bitfield<Fixed<N>> {
     /// Serde serialization is compliant with the Ethereum YAML test format.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -697,9 +687,9 @@ impl<'de, N: Unsigned + Clone> Deserialize<'de> for Bitfield<Fixed<N>> {
 }
 
 #[cfg(feature = "arbitrary")]
-impl<N: 'static + Unsigned> arbitrary::Arbitrary<'_> for Bitfield<Fixed<N>> {
+impl<const N: usize> arbitrary::Arbitrary<'_> for Bitfield<Fixed<N>> {
     fn arbitrary(u: &mut arbitrary::Unstructured<'_>) -> arbitrary::Result<Self> {
-        let size = N::to_usize();
+        let size = N;
         let mut vec = smallvec![0u8; size];
         u.fill_buffer(&mut vec)?;
         Self::from_bytes(vec).map_err(|_| arbitrary::Error::IncorrectFormat)
@@ -707,9 +697,9 @@ impl<N: 'static + Unsigned> arbitrary::Arbitrary<'_> for Bitfield<Fixed<N>> {
 }
 
 #[cfg(feature = "arbitrary")]
-impl<N: 'static + Unsigned> arbitrary::Arbitrary<'_> for Bitfield<Variable<N>> {
+impl<const N: usize> arbitrary::Arbitrary<'_> for Bitfield<Variable<N>> {
     fn arbitrary(u: &mut arbitrary::Unstructured<'_>) -> arbitrary::Result<Self> {
-        let max_size = N::to_usize();
+        let max_size = N;
         let rand = usize::arbitrary(u)?;
         let size = std::cmp::min(rand, max_size);
         let mut vec = smallvec![0u8; size];
@@ -723,12 +713,12 @@ mod bitvector {
     use super::*;
     use crate::BitVector;
 
-    pub(crate) type BitVector0 = BitVector<typenum::U0>;
-    pub(crate) type BitVector1 = BitVector<typenum::U1>;
-    pub(crate) type BitVector4 = BitVector<typenum::U4>;
-    pub(crate) type BitVector8 = BitVector<typenum::U8>;
-    pub(crate) type BitVector16 = BitVector<typenum::U16>;
-    pub(crate) type BitVector64 = BitVector<typenum::U64>;
+    pub(crate) type BitVector0 = BitVector<0>;
+    pub(crate) type BitVector1 = BitVector<1>;
+    pub(crate) type BitVector4 = BitVector<4>;
+    pub(crate) type BitVector8 = BitVector<8>;
+    pub(crate) type BitVector16 = BitVector<16>;
+    pub(crate) type BitVector64 = BitVector<64>;
 
     #[test]
     fn ssz_encode() {
@@ -928,11 +918,11 @@ mod bitlist {
     use super::*;
     use crate::BitList;
 
-    pub(crate) type BitList0 = BitList<typenum::U0>;
-    pub(crate) type BitList1 = BitList<typenum::U1>;
-    pub(crate) type BitList8 = BitList<typenum::U8>;
-    pub(crate) type BitList16 = BitList<typenum::U16>;
-    pub(crate) type BitList1024 = BitList<typenum::U1024>;
+    pub(crate) type BitList0 = BitList<0>;
+    pub(crate) type BitList1 = BitList<1>;
+    pub(crate) type BitList8 = BitList<8>;
+    pub(crate) type BitList16 = BitList<16>;
+    pub(crate) type BitList1024 = BitList<1024>;
 
     #[test]
     fn ssz_encode() {
@@ -1444,13 +1434,13 @@ mod bitlist {
         assert_eq!(bit_list.num_set_bits(), 1);
         assert_eq!(bit_list.highest_set_bit().unwrap(), 0);
 
-        let resized_bit_list = bit_list.resize::<typenum::U1024>().unwrap();
+        let resized_bit_list = bit_list.resize::<1024>().unwrap();
         assert_eq!(resized_bit_list.len(), 1024);
         assert_eq!(resized_bit_list.num_set_bits(), 1);
         assert_eq!(resized_bit_list.highest_set_bit().unwrap(), 0);
 
         // Can't extend a BitList to a smaller BitList
-        resized_bit_list.resize::<typenum::U16>().unwrap_err();
+        resized_bit_list.resize::<16>().unwrap_err();
     }
 
     #[test]

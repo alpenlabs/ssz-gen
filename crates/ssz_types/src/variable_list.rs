@@ -5,11 +5,9 @@ use crate::Error;
 use crate::tree_hash::vec_tree_hash_root;
 use serde::Deserialize;
 use serde_derive::Serialize;
-use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut, Index, IndexMut};
 use std::slice::SliceIndex;
 use tree_hash::Hash256;
-use typenum::Unsigned;
 
 /// Emulates a SSZ `List`.
 ///
@@ -19,26 +17,25 @@ use typenum::Unsigned;
 /// This struct is backed by a Rust `Vec` but constrained such that it must be instantiated with a
 /// fixed number of elements and you may not add or remove elements, only modify.
 ///
-/// The length of this struct is fixed at the type-level using
-/// [typenum](https://crates.io/crates/typenum).
+/// The length of this struct is fixed at the type-level
 ///
 /// ## Example
 ///
 /// ```
-/// use ssz_types::{VariableList, typenum};
+/// use ssz_types::VariableList;
 ///
 /// let base: Vec<u64> = vec![1, 2, 3, 4];
 ///
 /// // Create a `VariableList` from a `Vec` that has the expected length.
-/// let exact: VariableList<_, typenum::U4> = VariableList::from(base.clone());
+/// let exact: VariableList<_, 4> = VariableList::from(base.clone());
 /// assert_eq!(&exact[..], &[1, 2, 3, 4]);
 ///
 /// // Create a `VariableList` from a `Vec` that is too long and the `Vec` is truncated.
-/// let short: VariableList<_, typenum::U3> = VariableList::from(base.clone());
+/// let short: VariableList<_, 3> = VariableList::from(base.clone());
 /// assert_eq!(&short[..], &[1, 2, 3]);
 ///
 /// // Create a `VariableList` from a `Vec` that is shorter than the maximum.
-/// let mut long: VariableList<_, typenum::U5> = VariableList::from(base);
+/// let mut long: VariableList<_, 5> = VariableList::from(base);
 /// assert_eq!(&long[..], &[1, 2, 3, 4]);
 ///
 /// // Push a value to if it does not exceed the maximum
@@ -50,19 +47,18 @@ use typenum::Unsigned;
 /// ```
 #[derive(Debug, Clone, Serialize)]
 #[serde(transparent)]
-pub struct VariableList<T, N> {
+pub struct VariableList<T, const N: usize> {
     vec: Vec<T>,
-    _phantom: PhantomData<N>,
 }
 
 // Implement comparison functions even if N doesn't implement PartialEq
-impl<T: PartialEq, N> PartialEq for VariableList<T, N> {
+impl<T: PartialEq, const N: usize> PartialEq for VariableList<T, N> {
     fn eq(&self, other: &Self) -> bool {
         self.vec == other.vec
     }
 }
-impl<T: Eq, N> Eq for VariableList<T, N> {}
-impl<T: std::hash::Hash, N> std::hash::Hash for VariableList<T, N> {
+impl<T: Eq, const N: usize> Eq for VariableList<T, N> {}
+impl<T: std::hash::Hash, const N: usize> std::hash::Hash for VariableList<T, N> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.vec.hash(state);
     }
@@ -76,15 +72,12 @@ impl<T: std::hash::Hash, N> std::hash::Hash for VariableList<T, N> {
 /// allocation around the 1MiB to 10MiB mark.
 const MAX_ELEMENTS_TO_PRE_ALLOCATE: usize = 128 * (1 << 10);
 
-impl<T, N: Unsigned> VariableList<T, N> {
+impl<T, const N: usize> VariableList<T, N> {
     /// Returns `Some` if the given `vec` equals the fixed length of `Self`. Otherwise returns
     /// `None`.
     pub fn new(vec: Vec<T>) -> Result<Self, Error> {
-        if vec.len() <= N::to_usize() {
-            Ok(Self {
-                vec,
-                _phantom: PhantomData,
-            })
+        if vec.len() <= N {
+            Ok(Self { vec })
         } else {
             Err(Error::OutOfBounds {
                 i: vec.len(),
@@ -95,10 +88,7 @@ impl<T, N: Unsigned> VariableList<T, N> {
 
     /// Create an empty list.
     pub fn empty() -> Self {
-        Self {
-            vec: vec![],
-            _phantom: PhantomData,
-        }
+        Self { vec: vec![] }
     }
 
     /// Returns the number of values presently in `self`.
@@ -113,7 +103,7 @@ impl<T, N: Unsigned> VariableList<T, N> {
 
     /// Returns the type-level maximum length.
     pub fn max_len() -> usize {
-        N::to_usize()
+        N
     }
 
     /// Appends `value` to the back of `self`.
@@ -132,33 +122,29 @@ impl<T, N: Unsigned> VariableList<T, N> {
     }
 }
 
-impl<T, N: Unsigned> From<Vec<T>> for VariableList<T, N> {
+impl<T, const N: usize> From<Vec<T>> for VariableList<T, N> {
     fn from(mut vec: Vec<T>) -> Self {
-        vec.truncate(N::to_usize());
+        vec.truncate(N);
 
-        Self {
-            vec,
-            _phantom: PhantomData,
-        }
+        Self { vec }
     }
 }
 
-impl<T, N: Unsigned> From<VariableList<T, N>> for Vec<T> {
+impl<T, const N: usize> From<VariableList<T, N>> for Vec<T> {
     fn from(list: VariableList<T, N>) -> Vec<T> {
         list.vec
     }
 }
 
-impl<T, N: Unsigned> Default for VariableList<T, N> {
+impl<T, const N: usize> Default for VariableList<T, N> {
     fn default() -> Self {
         Self {
             vec: Vec::default(),
-            _phantom: PhantomData,
         }
     }
 }
 
-impl<T, N: Unsigned, I: SliceIndex<[T]>> Index<I> for VariableList<T, N> {
+impl<T, const N: usize, I: SliceIndex<[T]>> Index<I> for VariableList<T, N> {
     type Output = I::Output;
 
     #[inline]
@@ -167,14 +153,14 @@ impl<T, N: Unsigned, I: SliceIndex<[T]>> Index<I> for VariableList<T, N> {
     }
 }
 
-impl<T, N: Unsigned, I: SliceIndex<[T]>> IndexMut<I> for VariableList<T, N> {
+impl<T, const N: usize, I: SliceIndex<[T]>> IndexMut<I> for VariableList<T, N> {
     #[inline]
     fn index_mut(&mut self, index: I) -> &mut Self::Output {
         IndexMut::index_mut(&mut self.vec, index)
     }
 }
 
-impl<T, N: Unsigned> Deref for VariableList<T, N> {
+impl<T, const N: usize> Deref for VariableList<T, N> {
     type Target = [T];
 
     fn deref(&self) -> &[T] {
@@ -182,13 +168,13 @@ impl<T, N: Unsigned> Deref for VariableList<T, N> {
     }
 }
 
-impl<T, N: Unsigned> DerefMut for VariableList<T, N> {
+impl<T, const N: usize> DerefMut for VariableList<T, N> {
     fn deref_mut(&mut self) -> &mut [T] {
         &mut self.vec[..]
     }
 }
 
-impl<'a, T, N: Unsigned> IntoIterator for &'a VariableList<T, N> {
+impl<'a, T, const N: usize> IntoIterator for &'a VariableList<T, N> {
     type Item = &'a T;
     type IntoIter = std::slice::Iter<'a, T>;
 
@@ -197,7 +183,7 @@ impl<'a, T, N: Unsigned> IntoIterator for &'a VariableList<T, N> {
     }
 }
 
-impl<T, N: Unsigned> IntoIterator for VariableList<T, N> {
+impl<T, const N: usize> IntoIterator for VariableList<T, N> {
     type Item = T;
     type IntoIter = std::vec::IntoIter<T>;
 
@@ -206,7 +192,7 @@ impl<T, N: Unsigned> IntoIterator for VariableList<T, N> {
     }
 }
 
-impl<T, N: Unsigned> tree_hash::TreeHash for VariableList<T, N>
+impl<T, const N: usize> tree_hash::TreeHash for VariableList<T, N>
 where
     T: tree_hash::TreeHash,
 {
@@ -229,7 +215,7 @@ where
     }
 }
 
-impl<T, N: Unsigned> ssz::Encode for VariableList<T, N>
+impl<T, const N: usize> ssz::Encode for VariableList<T, N>
 where
     T: ssz::Encode,
 {
@@ -250,14 +236,14 @@ where
     }
 }
 
-impl<T, N: Unsigned> ssz::TryFromIter<T> for VariableList<T, N> {
+impl<T, const N: usize> ssz::TryFromIter<T> for VariableList<T, N> {
     type Error = Error;
 
     fn try_from_iter<I>(value: I) -> Result<Self, Self::Error>
     where
         I: IntoIterator<Item = T>,
     {
-        let n = N::to_usize();
+        let n = N;
         let clamped_n = std::cmp::min(MAX_ELEMENTS_TO_PRE_ALLOCATE, n);
         let iter = value.into_iter();
 
@@ -273,17 +259,16 @@ impl<T, N: Unsigned> ssz::TryFromIter<T> for VariableList<T, N> {
     }
 }
 
-impl<T, N> ssz::Decode for VariableList<T, N>
+impl<T, const N: usize> ssz::Decode for VariableList<T, N>
 where
     T: ssz::Decode,
-    N: Unsigned,
 {
     fn is_ssz_fixed_len() -> bool {
         false
     }
 
     fn from_ssz_bytes(bytes: &[u8]) -> Result<Self, ssz::DecodeError> {
-        let max_len = N::to_usize();
+        let max_len = N;
 
         if bytes.is_empty() {
             Ok(vec![].into())
@@ -313,37 +298,33 @@ where
     }
 }
 
-impl<'de, T, N> Deserialize<'de> for VariableList<T, N>
+impl<'de, T, const N: usize> Deserialize<'de> for VariableList<T, N>
 where
     T: Deserialize<'de>,
-    N: Unsigned,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
         let vec = Vec::<T>::deserialize(deserializer)?;
-        if vec.len() <= N::to_usize() {
-            Ok(VariableList {
-                vec,
-                _phantom: PhantomData,
-            })
+        if vec.len() <= N {
+            Ok(VariableList { vec })
         } else {
             Err(serde::de::Error::custom(format!(
                 "VariableList length {} exceeds maximum length {}",
                 vec.len(),
-                N::to_usize()
+                N
             )))
         }
     }
 }
 
 #[cfg(feature = "arbitrary")]
-impl<'a, T: arbitrary::Arbitrary<'a>, N: 'static + Unsigned> arbitrary::Arbitrary<'a>
+impl<'a, T: arbitrary::Arbitrary<'a>, const N: usize> arbitrary::Arbitrary<'a>
     for VariableList<T, N>
 {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
-        let max_size = N::to_usize();
+        let max_size = N;
         let rand = usize::arbitrary(u)?;
         let size = std::cmp::min(rand, max_size);
         let mut vec: Vec<T> = Vec::with_capacity(size);
@@ -361,20 +342,19 @@ mod test {
     use std::collections::HashSet;
     use tree_hash::{TreeHash, merkle_root_with_hasher};
     use tree_hash_derive::TreeHash;
-    use typenum::*;
 
     #[test]
     fn new() {
         let vec = vec![42; 5];
-        let fixed: Result<VariableList<u64, U4>, _> = VariableList::new(vec);
+        let fixed: Result<VariableList<u64, 4>, _> = VariableList::new(vec);
         assert!(fixed.is_err());
 
         let vec = vec![42; 3];
-        let fixed: Result<VariableList<u64, U4>, _> = VariableList::new(vec);
+        let fixed: Result<VariableList<u64, 4>, _> = VariableList::new(vec);
         assert!(fixed.is_ok());
 
         let vec = vec![42; 4];
-        let fixed: Result<VariableList<u64, U4>, _> = VariableList::new(vec);
+        let fixed: Result<VariableList<u64, 4>, _> = VariableList::new(vec);
         assert!(fixed.is_ok());
     }
 
@@ -382,7 +362,7 @@ mod test {
     fn indexing() {
         let vec = vec![1, 2];
 
-        let mut fixed: VariableList<u64, U8192> = vec.clone().into();
+        let mut fixed: VariableList<u64, 8192> = vec.clone().into();
 
         assert_eq!(fixed[0], 1);
         assert_eq!(&fixed[0..1], &vec[0..1]);
@@ -395,23 +375,23 @@ mod test {
     #[test]
     fn length() {
         let vec = vec![42; 5];
-        let fixed: VariableList<u64, U4> = VariableList::from(vec.clone());
+        let fixed: VariableList<u64, 4> = VariableList::from(vec.clone());
         assert_eq!(&fixed[..], &vec[0..4]);
 
         let vec = vec![42; 3];
-        let fixed: VariableList<u64, U4> = VariableList::from(vec.clone());
+        let fixed: VariableList<u64, 4> = VariableList::from(vec.clone());
         assert_eq!(&fixed[0..3], &vec[..]);
         assert_eq!(&fixed[..], &vec![42, 42, 42][..]);
 
         let vec = vec![];
-        let fixed: VariableList<u64, U4> = VariableList::from(vec);
+        let fixed: VariableList<u64, 4> = VariableList::from(vec);
         assert_eq!(&fixed[..], &[] as &[u64]);
     }
 
     #[test]
     fn deref() {
         let vec = vec![0, 2, 4, 6];
-        let fixed: VariableList<u64, U4> = VariableList::from(vec);
+        let fixed: VariableList<u64, 4> = VariableList::from(vec);
 
         assert_eq!(fixed.first(), Some(&0));
         assert_eq!(fixed.get(3), Some(&6));
@@ -420,9 +400,9 @@ mod test {
 
     #[test]
     fn encode() {
-        let vec: VariableList<u16, U2> = vec![0; 2].into();
+        let vec: VariableList<u16, 2> = vec![0; 2].into();
         assert_eq!(vec.as_ssz_bytes(), vec![0, 0, 0, 0]);
-        assert_eq!(<VariableList<u16, U2> as Encode>::ssz_fixed_len(), 4);
+        assert_eq!(<VariableList<u16, 2> as Encode>::ssz_fixed_len(), 4);
     }
 
     fn round_trip<T: Encode + Decode + std::fmt::Debug + PartialEq>(item: T) {
@@ -433,8 +413,8 @@ mod test {
 
     #[test]
     fn u16_len_8() {
-        round_trip::<VariableList<u16, U8>>(vec![42; 8].into());
-        round_trip::<VariableList<u16, U8>>(vec![0; 8].into());
+        round_trip::<VariableList<u16, 8>>(vec![42; 8].into());
+        round_trip::<VariableList<u16, 8>>(vec![0; 8].into());
     }
 
     fn root_with_length(bytes: &[u8], len: usize) -> Hash256 {
@@ -444,31 +424,31 @@ mod test {
 
     #[test]
     fn tree_hash_u8() {
-        let fixed: VariableList<u8, U0> = VariableList::from(vec![]);
+        let fixed: VariableList<u8, 0> = VariableList::from(vec![]);
         assert_eq!(fixed.tree_hash_root(), root_with_length(&[0; 8], 0));
 
         for i in 0..=1 {
-            let fixed: VariableList<u8, U1> = VariableList::from(vec![0; i]);
+            let fixed: VariableList<u8, 1> = VariableList::from(vec![0; i]);
             assert_eq!(fixed.tree_hash_root(), root_with_length(&vec![0; i], i));
         }
 
         for i in 0..=8 {
-            let fixed: VariableList<u8, U8> = VariableList::from(vec![0; i]);
+            let fixed: VariableList<u8, 8> = VariableList::from(vec![0; i]);
             assert_eq!(fixed.tree_hash_root(), root_with_length(&vec![0; i], i));
         }
 
         for i in 0..=13 {
-            let fixed: VariableList<u8, U13> = VariableList::from(vec![0; i]);
+            let fixed: VariableList<u8, 13> = VariableList::from(vec![0; i]);
             assert_eq!(fixed.tree_hash_root(), root_with_length(&vec![0; i], i));
         }
 
         for i in 0..=16 {
-            let fixed: VariableList<u8, U16> = VariableList::from(vec![0; i]);
+            let fixed: VariableList<u8, 16> = VariableList::from(vec![0; i]);
             assert_eq!(fixed.tree_hash_root(), root_with_length(&vec![0; i], i));
         }
 
         let source: Vec<u8> = (0..16).collect();
-        let fixed: VariableList<u8, U16> = VariableList::from(source.clone());
+        let fixed: VariableList<u8, 16> = VariableList::from(source.clone());
         assert_eq!(fixed.tree_hash_root(), root_with_length(&source, 16));
     }
 
@@ -498,14 +478,14 @@ mod test {
     fn tree_hash_composite() {
         let a = A { a: 0, b: 1 };
 
-        let fixed: VariableList<A, U0> = VariableList::from(vec![]);
+        let fixed: VariableList<A, 0> = VariableList::from(vec![]);
         assert_eq!(
             fixed.tree_hash_root(),
             padded_root_with_length(&[0; 32], 0, 0),
         );
 
         for i in 0..=1 {
-            let fixed: VariableList<A, U1> = VariableList::from(vec![a; i]);
+            let fixed: VariableList<A, 1> = VariableList::from(vec![a; i]);
             assert_eq!(
                 fixed.tree_hash_root(),
                 padded_root_with_length(&repeat(a.tree_hash_root().as_slice(), i), i, 1),
@@ -514,7 +494,7 @@ mod test {
         }
 
         for i in 0..=8 {
-            let fixed: VariableList<A, U8> = VariableList::from(vec![a; i]);
+            let fixed: VariableList<A, 8> = VariableList::from(vec![a; i]);
             assert_eq!(
                 fixed.tree_hash_root(),
                 padded_root_with_length(&repeat(a.tree_hash_root().as_slice(), i), i, 8),
@@ -523,7 +503,7 @@ mod test {
         }
 
         for i in 0..=13 {
-            let fixed: VariableList<A, U13> = VariableList::from(vec![a; i]);
+            let fixed: VariableList<A, 13> = VariableList::from(vec![a; i]);
             assert_eq!(
                 fixed.tree_hash_root(),
                 padded_root_with_length(&repeat(a.tree_hash_root().as_slice(), i), i, 13),
@@ -532,7 +512,7 @@ mod test {
         }
 
         for i in 0..=16 {
-            let fixed: VariableList<A, U16> = VariableList::from(vec![a; i]);
+            let fixed: VariableList<A, 16> = VariableList::from(vec![a; i]);
             assert_eq!(
                 fixed.tree_hash_root(),
                 padded_root_with_length(&repeat(a.tree_hash_root().as_slice(), i), i, 16),
@@ -544,7 +524,7 @@ mod test {
     #[test]
     fn large_list_pre_allocation() {
         use std::iter;
-        use typenum::U1099511627776;
+        type List = VariableList<u64, 1099511627776>;
 
         // Iterator that hints the upper bound on its length as `hint`.
         struct WonkyIterator<I> {
@@ -568,12 +548,9 @@ mod test {
         }
 
         // Very large list type that would not fit in memory.
-        type N = U1099511627776;
-        type List = VariableList<u64, N>;
-
         let iter = iter::repeat_n(1, 5);
         let wonky_iter = WonkyIterator {
-            hint: N::to_usize() / 2,
+            hint: 1099511627776 / 2,
             iter: iter.clone(),
         };
 
@@ -586,8 +563,8 @@ mod test {
 
     #[test]
     fn std_hash() {
-        let x: VariableList<u32, U16> = VariableList::from(vec![3; 16]);
-        let y: VariableList<u32, U16> = VariableList::from(vec![4; 16]);
+        let x: VariableList<u32, 16> = VariableList::from(vec![3; 16]);
+        let y: VariableList<u32, 16> = VariableList::from(vec![4; 16]);
         let mut hashset = HashSet::new();
 
         for value in [x.clone(), y.clone()] {
@@ -600,17 +577,16 @@ mod test {
 
     #[test]
     fn serde_invalid_length() {
-        use typenum::U4;
         let json = serde_json::json!([1, 2, 3, 4, 5]);
-        let result: Result<VariableList<u64, U4>, _> = serde_json::from_value(json);
+        let result: Result<VariableList<u64, 4>, _> = serde_json::from_value(json);
         assert!(result.is_err());
 
         let json = serde_json::json!([1, 2, 3]);
-        let result: Result<VariableList<u64, U4>, _> = serde_json::from_value(json);
+        let result: Result<VariableList<u64, 4>, _> = serde_json::from_value(json);
         assert!(result.is_ok());
 
         let json = serde_json::json!([1, 2, 3, 4]);
-        let result: Result<VariableList<u64, U4>, _> = serde_json::from_value(json);
+        let result: Result<VariableList<u64, 4>, _> = serde_json::from_value(json);
         assert!(result.is_ok());
     }
 }
