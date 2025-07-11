@@ -65,7 +65,7 @@ pub trait TreeHashDigest {
     const HASH_LEN: usize;
 
     /// Associated zero hashes function
-    fn zero_hashes() -> &'static LazyLock<Vec<Self::Output>>;
+    fn zero_hashes() -> &'static [Self::Output];
 
     /// Hash function
     fn hash(data: &[u8]) -> Self::Output;
@@ -100,7 +100,7 @@ impl TreeHashDigest for Sha256Hasher {
     const HASH_SIZE: usize = 32;
     const HASH_LEN: usize = 32;
 
-    fn zero_hashes() -> &'static LazyLock<Vec<Hash256>> {
+    fn zero_hashes() -> &'static [Self::Output] {
         &ZERO_HASHES_SHA256
     }
 
