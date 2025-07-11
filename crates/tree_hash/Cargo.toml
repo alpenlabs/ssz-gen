@@ -16,10 +16,10 @@ keywords.workspace = true
 workspace = true
 
 [dependencies]
-alloy-primitives.workspace = true
 ethereum_hashing.workspace = true
-ssz.workspace = true
 smallvec.workspace = true
+ssz.workspace = true
+ssz_primitives.workspace = true
 typenum.workspace = true
 
 [dev-dependencies]
@@ -27,8 +27,4 @@ rand.workspace = true
 tree_hash_derive.workspace = true
 ssz.workspace = true
 ssz_derive.workspace = true
-ssz_types.workspace = true
 typenum.workspace = true
-
-[features]
-arbitrary = ["alloy-primitives/arbitrary"]

@@ -3,11 +3,11 @@
 
 //! Tree hash tests
 
-use alloy_primitives::{Address, U128, U160, U256};
 use rand as _;
 use smallvec as _;
+use ssz::BitVector;
 use ssz_derive::Encode;
-use ssz_types::BitVector;
+use ssz_primitives::{U128, U256};
 use tree_hash::{self, BYTES_PER_CHUNK, Hash256, MerkleHasher, PackedEncoding, TreeHash};
 use tree_hash_derive::TreeHash;
 use typenum::Unsigned;
@@ -160,13 +160,6 @@ fn packed_encoding_example() {
             0,
         ),
         (U256::from(val).tree_hash_root().0.into(), 0),
-        (
-            Address::from(U160::from(val).to_le_bytes::<20>())
-                .tree_hash_root()
-                .0
-                .into(),
-            0,
-        ),
     ];
     for (i, (encoding, offset)) in encodings.into_iter().enumerate() {
         assert_eq!(

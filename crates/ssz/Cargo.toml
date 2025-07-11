@@ -19,18 +19,18 @@ workspace = true
 name = "ssz"
 
 [dev-dependencies]
-alloy-primitives = { workspace = true, features = ["getrandom"] }
 ssz_derive.workspace = true
 serde_json.workspace = true
+ssz_primitives = { workspace = true, features = ["rand"] }
 
 [dependencies]
-alloy-primitives.workspace = true
-smallvec.workspace = true
-itertools.workspace = true
-serde.workspace = true
-typenum.workspace = true
 arbitrary = { workspace = true, optional = true }
 hex.workspace = true
+itertools.workspace = true
+serde.workspace = true
+smallvec.workspace = true
+ssz_primitives.workspace = true
+typenum.workspace = true
 
 [features]
-arbitrary = ["dep:arbitrary", "alloy-primitives/arbitrary"]
+arbitrary = ["dep:arbitrary"]

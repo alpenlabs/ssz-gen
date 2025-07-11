@@ -37,7 +37,7 @@
 //!
 //! See `examples/` for manual implementations of the `Encode` and `Decode` traits.
 
-mod bitfield;
+pub mod bitfield;
 pub mod decode;
 pub mod encode;
 pub mod legacy;

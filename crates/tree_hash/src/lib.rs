@@ -27,7 +27,7 @@ pub const MAX_UNION_SELECTOR: u8 = 127;
 pub const SMALLVEC_SIZE: usize = 32;
 
 /// 256-bit hash
-pub type Hash256 = alloy_primitives::B256;
+pub type Hash256 = ssz_primitives::Hash256;
 
 /// Packed encoding
 pub type PackedEncoding = SmallVec<[u8; SMALLVEC_SIZE]>;
@@ -223,7 +223,7 @@ macro_rules! tree_hash_ssz_encoding_as_list {
 mod test {
     use super::*;
     use ssz_derive as _;
-    use ssz_types as _;
+    use ssz_primitives as _;
     use tree_hash_derive as _;
 
     #[test]
