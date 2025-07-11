@@ -5,22 +5,22 @@
 use crate::VariableList;
 use serde::{Deserializer, Serializer};
 use ssz::serde_utils::hex::{self, PrefixedHexVisitor};
-use typenum::Unsigned;
 
 /// Serialize a `VariableList<u8, N>` as a 0x-prefixed hex string.
-pub fn serialize<S, N>(bytes: &VariableList<u8, N>, serializer: S) -> Result<S::Ok, S::Error>
+pub fn serialize<S, const N: usize>(
+    bytes: &VariableList<u8, N>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
-    N: Unsigned,
 {
     serializer.serialize_str(&hex::encode(&**bytes))
 }
 
 /// Deserialize a `VariableList<u8, N>` from a 0x-prefixed hex string.
-pub fn deserialize<'de, D, N>(deserializer: D) -> Result<VariableList<u8, N>, D::Error>
+pub fn deserialize<'de, D, const N: usize>(deserializer: D) -> Result<VariableList<u8, N>, D::Error>
 where
     D: Deserializer<'de>,
-    N: Unsigned,
 {
     let bytes = deserializer.deserialize_str(PrefixedHexVisitor)?;
     VariableList::new(bytes)

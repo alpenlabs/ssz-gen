@@ -4,16 +4,12 @@
 //! SSZ derive tests
 
 use darling as _;
-use proc_macro2 as _;
 use quote as _;
 use syn as _;
 
 use ssz::{Decode, DecodeError, Encode};
 use ssz_derive::{Decode, Encode};
-use ssz_types::{
-    BitVector, Optional, VariableList,
-    typenum::{self, Unsigned},
-};
+use ssz_types::{BitVector, Optional, VariableList};
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
@@ -275,7 +271,7 @@ fn transparent_struct_newtype_skipped_field_reverse() {
 // Shape tests from EIP.
 #[derive(PartialEq, Debug, Encode, Decode)]
 #[ssz(struct_behaviour = "stable_container")]
-#[ssz(max_fields = "typenum::U4")]
+#[ssz(max_fields = 4)]
 struct Shape1 {
     side: Optional<u16>,
     color: Optional<u8>,
@@ -284,7 +280,7 @@ struct Shape1 {
 
 #[derive(PartialEq, Debug, Encode, Decode)]
 #[ssz(struct_behaviour = "stable_container")]
-#[ssz(max_fields = "typenum::U8")]
+#[ssz(max_fields = 8)]
 struct Shape2 {
     side: Optional<u16>,
     color: Optional<u8>,
@@ -293,10 +289,10 @@ struct Shape2 {
 
 #[derive(PartialEq, Debug, Encode, Decode)]
 #[ssz(struct_behaviour = "stable_container")]
-#[ssz(max_fields = "typenum::U8")]
+#[ssz(max_fields = 8)]
 struct Shape3 {
     side: Optional<u16>,
-    colors: Optional<VariableList<u8, typenum::U4>>,
+    colors: Optional<VariableList<u8, 4>>,
     radius: Optional<u16>,
 }
 
@@ -454,7 +450,7 @@ fn circle() {
 
 // Test for Optional[T] and Union[None, T] together
 #[derive(PartialEq, Debug, Encode, Decode)]
-#[ssz(struct_behaviour = "stable_container", max_fields = "typenum::U8")]
+#[ssz(struct_behaviour = "stable_container", max_fields = 8)]
 struct OptionalOptionU64 {
     a: Optional<Option<u8>>,
 }

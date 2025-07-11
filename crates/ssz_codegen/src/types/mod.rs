@@ -147,21 +147,21 @@ impl TypeResolution {
             TypeResolutionKind::UInt(size) => primitive_rust_type(&format!("u{size}")),
             TypeResolutionKind::Vector(ty, size) => {
                 let ty = ty.unwrap_type();
-                let constant = syn::Ident::new(&format!("U{size}"), proc_macro2::Span::call_site());
-                parse_quote!(FixedVector<#ty, typenum::#constant>)
+                let size = *size as usize;
+                parse_quote!(FixedVector<#ty, #size>)
             }
             TypeResolutionKind::List(ty, size) => {
                 let ty = ty.unwrap_type();
-                let constant = syn::Ident::new(&format!("U{size}"), proc_macro2::Span::call_site());
-                parse_quote!(VariableList<#ty, typenum::#constant>)
+                let size = *size as usize;
+                parse_quote!(VariableList<#ty, #size>)
             }
             TypeResolutionKind::Bitvector(size) => {
-                let constant = syn::Ident::new(&format!("U{size}"), proc_macro2::Span::call_site());
-                parse_quote!(BitVector<typenum::#constant>)
+                let size = *size as usize;
+                parse_quote!(BitVector<#size>)
             }
             TypeResolutionKind::Bitlist(size) => {
-                let constant = syn::Ident::new(&format!("U{size}"), proc_macro2::Span::call_site());
-                parse_quote!(BitList<typenum::#constant>)
+                let size = *size as usize;
+                parse_quote!(BitList<#size>)
             }
             TypeResolutionKind::Optional(ty) => {
                 let ty = ty.unwrap_type();
@@ -176,9 +176,7 @@ impl TypeResolution {
                 parse_quote!(#ident)
             }
             TypeResolutionKind::Bytes(size) => {
-                let typenum_int =
-                    syn::Ident::new(&format!("U{size}"), proc_macro2::Span::call_site());
-                parse_quote!(FixedVector<u8, typenum::#typenum_int>)
+                parse_quote!(FixedVector<u8, #size>)
             }
             _ => panic!("Expected type resolution to be a type"),
         }
@@ -496,7 +494,7 @@ impl ClassDef {
                 }
             }
             BaseClass::StableContainer(Some(max)) => {
-                let max = format!("typenum::U{max}");
+                let max = max as usize;
                 quote! {
                     #[derive(Encode, Decode, TreeHash)]
                     #[ssz(struct_behaviour="stable_container", max_fields=#max)]
@@ -507,7 +505,7 @@ impl ClassDef {
                 }
             }
             BaseClass::Profile(Some((_, max))) => {
-                let max = format!("typenum::U{max}");
+                let max = max as usize;
                 let index = self
                     .fields
                     .iter()

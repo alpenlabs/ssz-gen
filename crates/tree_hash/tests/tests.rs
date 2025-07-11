@@ -10,7 +10,6 @@ use ssz_primitives::{U128, U256};
 use ssz_types::{BitVector, Optional, VariableList};
 use tree_hash::{self, BYTES_PER_CHUNK, Hash256, MerkleHasher, PackedEncoding, TreeHash};
 use tree_hash_derive::TreeHash;
-use typenum::Unsigned;
 
 #[derive(Encode)]
 struct HashVec {
@@ -172,7 +171,7 @@ fn packed_encoding_example() {
 
 #[derive(TreeHash)]
 #[tree_hash(struct_behaviour = "stable_container")]
-#[tree_hash(max_fields = "typenum::U4")]
+#[tree_hash(max_fields = 4)]
 struct Shape1 {
     side: Optional<u16>,
     color: Optional<u8>,
@@ -181,7 +180,7 @@ struct Shape1 {
 
 #[derive(TreeHash)]
 #[tree_hash(struct_behaviour = "stable_container")]
-#[tree_hash(max_fields = "typenum::U8")]
+#[tree_hash(max_fields = 8)]
 struct Shape2 {
     side: Optional<u16>,
     color: Optional<u8>,
@@ -190,16 +189,16 @@ struct Shape2 {
 
 #[derive(TreeHash)]
 #[tree_hash(struct_behaviour = "stable_container")]
-#[tree_hash(max_fields = "typenum::U8")]
+#[tree_hash(max_fields = 8)]
 struct Shape3 {
     side: Optional<u16>,
-    colors: Optional<VariableList<u8, typenum::U4>>,
+    colors: Optional<VariableList<u8, 4>>,
     radius: Optional<u16>,
 }
 
 #[derive(TreeHash, Clone)]
 #[tree_hash(struct_behaviour = "profile")]
-#[tree_hash(max_fields = "typenum::U4")]
+#[tree_hash(max_fields = 4)]
 struct Square {
     // We always start with a stable_index of 0.
     side: u16,
@@ -208,7 +207,7 @@ struct Square {
 
 #[derive(TreeHash, Clone)]
 #[tree_hash(struct_behaviour = "profile")]
-#[tree_hash(max_fields = "typenum::U4")]
+#[tree_hash(max_fields = 4)]
 struct Circle {
     #[tree_hash(stable_index = 1)]
     color: u8,

@@ -13,32 +13,31 @@ pub use crate::serde_utils::quoted_u64_var_list::serialize;
 mod test {
     use crate::FixedVector;
     use serde_derive::{Deserialize, Serialize};
-    use typenum::U4;
 
     #[derive(Debug, Serialize, Deserialize)]
     struct Obj {
         #[serde(with = "crate::serde_utils::quoted_u64_fixed_vec")]
-        values: FixedVector<u64, U4>,
+        values: FixedVector<u64, 4>,
     }
 
     #[test]
     fn quoted_list_success() {
         let obj: Obj = serde_json::from_str(r#"{ "values": ["1", "2", "3", "4"] }"#).unwrap();
-        let expected: FixedVector<u64, U4> = FixedVector::from(vec![1, 2, 3, 4]);
+        let expected: FixedVector<u64, 4> = FixedVector::from(vec![1, 2, 3, 4]);
         assert_eq!(obj.values, expected);
     }
 
     #[test]
     fn unquoted_list_success() {
         let obj: Obj = serde_json::from_str(r#"{ "values": [1, 2, 3, 4] }"#).unwrap();
-        let expected: FixedVector<u64, U4> = FixedVector::from(vec![1, 2, 3, 4]);
+        let expected: FixedVector<u64, 4> = FixedVector::from(vec![1, 2, 3, 4]);
         assert_eq!(obj.values, expected);
     }
 
     #[test]
     fn mixed_list_success() {
         let obj: Obj = serde_json::from_str(r#"{ "values": ["1", 2, "3", "4"] }"#).unwrap();
-        let expected: FixedVector<u64, U4> = FixedVector::from(vec![1, 2, 3, 4]);
+        let expected: FixedVector<u64, 4> = FixedVector::from(vec![1, 2, 3, 4]);
         assert_eq!(obj.values, expected);
     }
 

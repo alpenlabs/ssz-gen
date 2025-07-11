@@ -20,15 +20,15 @@
 //! use ssz_types::*;
 //!
 //! pub struct Example {
-//!     bit_vector: BitVector<typenum::U8>,
-//!     bit_list: BitList<typenum::U8>,
-//!     variable_list: VariableList<u64, typenum::U8>,
-//!     fixed_vector: FixedVector<u64, typenum::U8>,
+//!     bit_vector: BitVector<8>,
+//!     bit_list: BitList<8>,
+//!     variable_list: VariableList<u64, 8>,
+//!     fixed_vector: FixedVector<u64, 8>,
 //! }
 //!
 //! let mut example = Example {
-//!     bit_vector: Bitfield::<length::Fixed<typenum::U8>>::new(),
-//!     bit_list: Bitfield::<length::Variable<typenum::U8>>::with_capacity(4).unwrap(),
+//!     bit_vector: Bitfield::<length::Fixed<8>>::new(),
+//!     bit_list: Bitfield::<length::Variable<8>>::with_capacity(4).unwrap(),
 //!     variable_list: <_>::from(vec![0, 1]),
 //!     fixed_vector: <_>::from(vec![2, 3]),
 //! };
@@ -51,7 +51,6 @@ pub use fixed_vector::FixedVector;
 pub use optional::Optional;
 pub use ssz::{BitList, BitVector, Bitfield};
 pub use ssz_primitives::{FixedBytes, Hash256, U128, U256};
-pub use typenum;
 pub use variable_list::VariableList;
 
 pub mod length {

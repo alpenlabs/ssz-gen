@@ -7,7 +7,6 @@ use super::*;
 use ssz::{Bitfield, Fixed, Variable};
 use ssz_primitives::{FixedBytes, U128, U256};
 use std::sync::Arc;
-use typenum::Unsigned;
 
 fn int_to_hash256(int: u64) -> Hash256 {
     let mut bytes = [0; HASHSIZE];
@@ -157,8 +156,8 @@ impl<T: TreeHash> TreeHash for Arc<T> {
 
 /// A helper function providing common functionality for finding the Merkle root of some bytes that
 /// represent a bitfield.
-pub fn bitfield_bytes_tree_hash_root<N: Unsigned>(bytes: &[u8]) -> Hash256 {
-    let byte_size = N::to_usize().div_ceil(8);
+pub fn bitfield_bytes_tree_hash_root<const N: usize>(bytes: &[u8]) -> Hash256 {
+    let byte_size = N.div_ceil(8);
     let leaf_count = byte_size.div_ceil(BYTES_PER_CHUNK);
 
     let mut hasher = MerkleHasher::with_leaves(leaf_count);
@@ -172,7 +171,7 @@ pub fn bitfield_bytes_tree_hash_root<N: Unsigned>(bytes: &[u8]) -> Hash256 {
         .expect("bitfield tree hash buffer should not exceed leaf limit")
 }
 
-impl<N: Unsigned + Clone> TreeHash for Bitfield<Variable<N>> {
+impl<const N: usize> TreeHash for Bitfield<Variable<N>> {
     fn tree_hash_type() -> TreeHashType {
         TreeHashType::List
     }
@@ -193,7 +192,7 @@ impl<N: Unsigned + Clone> TreeHash for Bitfield<Variable<N>> {
     }
 }
 
-impl<N: Unsigned + Clone> TreeHash for Bitfield<Fixed<N>> {
+impl<const N: usize> TreeHash for Bitfield<Fixed<N>> {
     fn tree_hash_type() -> TreeHashType {
         TreeHashType::Vector
     }
@@ -247,7 +246,6 @@ impl<T: TreeHash> TreeHash for Option<T> {
 mod test {
     use super::*;
     use ssz::{BitList, BitVector};
-    use typenum::{U8, U32};
 
     #[test]
     fn bool() {
@@ -288,12 +286,12 @@ mod test {
 
     #[test]
     fn bitvector() {
-        let empty_bitvector = BitVector::<U8>::new();
+        let empty_bitvector = BitVector::<8>::new();
         assert_eq!(empty_bitvector.tree_hash_root(), Hash256::ZERO);
 
         let small_bitvector_bytes = vec![0xff_u8, 0xee, 0xdd, 0xcc];
         let small_bitvector =
-            BitVector::<U32>::from_bytes(small_bitvector_bytes.clone().into()).unwrap();
+            BitVector::<32>::from_bytes(small_bitvector_bytes.clone().into()).unwrap();
         assert_eq!(
             small_bitvector.tree_hash_root().as_slice()[..4],
             small_bitvector_bytes
@@ -302,7 +300,7 @@ mod test {
 
     #[test]
     fn bitlist() {
-        let empty_bitlist = BitList::<U8>::with_capacity(8).unwrap();
+        let empty_bitlist = BitList::<8>::with_capacity(8).unwrap();
         assert_eq!(
             empty_bitlist.tree_hash_root(),
             "0x5ac78d953211aa822c3ae6e9b0058e42394dd32e5992f29f9c12da3681985130"
@@ -310,7 +308,7 @@ mod test {
                 .unwrap()
         );
 
-        let mut small_bitlist = BitList::<U32>::with_capacity(4).unwrap();
+        let mut small_bitlist = BitList::<32>::with_capacity(4).unwrap();
         small_bitlist.set(1, true).unwrap();
         assert_eq!(
             small_bitlist.tree_hash_root(),

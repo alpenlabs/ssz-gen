@@ -72,32 +72,31 @@ where
 mod test {
     use crate::VariableList;
     use serde_derive::{Deserialize, Serialize};
-    use typenum::U4;
 
     #[derive(Debug, Serialize, Deserialize)]
     struct Obj {
         #[serde(with = "crate::serde_utils::quoted_u64_var_list")]
-        values: VariableList<u64, U4>,
+        values: VariableList<u64, 4>,
     }
 
     #[test]
     fn quoted_list_success() {
         let obj: Obj = serde_json::from_str(r#"{ "values": ["1", "2", "3", "4"] }"#).unwrap();
-        let expected: VariableList<u64, U4> = VariableList::from(vec![1, 2, 3, 4]);
+        let expected: VariableList<u64, 4> = VariableList::from(vec![1, 2, 3, 4]);
         assert_eq!(obj.values, expected);
     }
 
     #[test]
     fn unquoted_list_success() {
         let obj: Obj = serde_json::from_str(r#"{ "values": [1, 2, 3, 4] }"#).unwrap();
-        let expected: VariableList<u64, U4> = VariableList::from(vec![1, 2, 3, 4]);
+        let expected: VariableList<u64, 4> = VariableList::from(vec![1, 2, 3, 4]);
         assert_eq!(obj.values, expected);
     }
 
     #[test]
     fn mixed_list_success() {
         let obj: Obj = serde_json::from_str(r#"{ "values": ["1", 2, "3", "4"] }"#).unwrap();
-        let expected: VariableList<u64, U4> = VariableList::from(vec![1, 2, 3, 4]);
+        let expected: VariableList<u64, 4> = VariableList::from(vec![1, 2, 3, 4]);
         assert_eq!(obj.values, expected);
     }
 
@@ -110,7 +109,7 @@ mod test {
     #[test]
     fn short_list_success() {
         let obj: Obj = serde_json::from_str(r#"{ "values": [1, 2] }"#).unwrap();
-        let expected: VariableList<u64, U4> = VariableList::from(vec![1, 2]);
+        let expected: VariableList<u64, 4> = VariableList::from(vec![1, 2]);
         assert_eq!(obj.values, expected);
     }
 

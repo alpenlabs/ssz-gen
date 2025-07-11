@@ -10,7 +10,6 @@ use ssz_types as _;
 use syn as _;
 use tree_hash as _;
 use tree_hash_derive as _;
-use typenum as _;
 
 use ssz_codegen::build_ssz_files;
 use std::fs;
