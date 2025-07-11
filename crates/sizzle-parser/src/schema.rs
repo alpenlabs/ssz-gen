@@ -1,9 +1,6 @@
 //! Schema definitions.
 
-use std::{
-    collections::{HashMap, HashSet},
-    path::PathBuf,
-};
+use std::collections::{HashMap, HashSet};
 
 use thiserror::Error;
 
@@ -18,13 +15,13 @@ use crate::{
 #[derive(Debug, Error)]
 pub enum SchemaError {
     #[error("unknown import '{0:?}'")]
-    UnknownImport(PathBuf),
+    UnknownImport(Identifier),
 
     #[error("unknown import item '{0:?}' in '{1:?}'")]
-    UnknownImportItem(PathBuf, Identifier),
+    UnknownImportItem(Identifier, Identifier),
 
     #[error("unsupported import '{0:?}' in '{1:?}'")]
-    UnsupportedImport(PathBuf, Identifier),
+    UnsupportedImport(Identifier, Identifier),
 
     #[error("duplicate field name '{0:?}'")]
     DuplicateFieldName(Identifier),
@@ -167,12 +164,12 @@ pub(crate) fn conv_module_to_schema<'a>(
                 AssignExpr::Imported(imported) => {
                     let path = imported.module_path();
                     let Some(ident_targets) = cross_module_types.get(path) else {
-                        return Err(SchemaError::UnknownImport(path.clone()));
+                        return Err(SchemaError::UnknownImport(imported.module_name().clone()));
                     };
 
                     let Some(ident_target) = ident_targets.get(imported.base_name()) else {
                         return Err(SchemaError::UnknownImportItem(
-                            path.clone(),
+                            imported.module_name().clone(),
                             imported.base_name().clone(),
                         ));
                     };
@@ -186,7 +183,7 @@ pub(crate) fn conv_module_to_schema<'a>(
                         }
                         _ => {
                             return Err(SchemaError::UnsupportedImport(
-                                path.clone(),
+                                imported.module_name().clone(),
                                 imported.base_name().clone(),
                             ));
                         }
