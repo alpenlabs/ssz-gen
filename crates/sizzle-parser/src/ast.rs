@@ -179,19 +179,32 @@ impl TyExprSpec {
 #[derive(Clone, Debug)]
 pub struct ImportedTySpec {
     module_path: PathBuf,
+    module_name: Identifier,
     base_name: Identifier,
 }
 
 impl ImportedTySpec {
     pub fn new(module_path: PathBuf, base_name: Identifier) -> Self {
+        let module_name = module_path
+            .to_str()
+            .unwrap()
+            .split(std::path::MAIN_SEPARATOR_STR)
+            .last()
+            .unwrap()
+            .to_string();
         Self {
             module_path,
+            module_name: Identifier(module_name),
             base_name,
         }
     }
 
     pub fn module_path(&self) -> &PathBuf {
         &self.module_path
+    }
+
+    pub fn module_name(&self) -> &Identifier {
+        &self.module_name
     }
 
     pub fn base_name(&self) -> &Identifier {

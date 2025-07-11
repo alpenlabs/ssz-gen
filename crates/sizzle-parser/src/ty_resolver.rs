@@ -15,10 +15,10 @@ use crate::{
 #[derive(Debug, Error)]
 pub enum ResolverError {
     #[error("unknown import '{0:?}'")]
-    UnknownImport(PathBuf),
+    UnknownImport(Identifier),
 
     #[error("unknown import item '{0:?}' in '{1:?}'")]
-    UnknownImportItem(PathBuf, Identifier),
+    UnknownImportItem(Identifier, Identifier),
 
     #[error("unknown type '{0:?}'")]
     UnknownType(Identifier),
@@ -376,14 +376,14 @@ impl<'a> TypeResolver<'a> {
                                     self.cross_module_types.get(imported.module_path())
                                 else {
                                     return Err(ResolverError::UnknownImport(
-                                        imported.module_path().clone(),
+                                        imported.module_name().clone(),
                                     ));
                                 };
 
                                 let Some(ident_target) = ident_targets.get(imported.base_name())
                                 else {
                                     return Err(ResolverError::UnknownImportItem(
-                                        imported.module_path().clone(),
+                                        imported.module_name().clone(),
                                         imported.base_name().clone(),
                                     ));
                                 };
@@ -406,14 +406,14 @@ impl<'a> TypeResolver<'a> {
                                     self.cross_module_types.get(imported.module_path())
                                 else {
                                     return Err(ResolverError::UnknownImport(
-                                        imported.module_path().clone(),
+                                        imported.module_name().clone(),
                                     ));
                                 };
 
                                 let Some(ident_target) = ident_targets.get(imported.base_name())
                                 else {
                                     return Err(ResolverError::UnknownImportItem(
-                                        imported.module_path().clone(),
+                                        imported.module_name().clone(),
                                         imported.base_name().clone(),
                                     ));
                                 };
@@ -465,14 +465,14 @@ impl<'a> TypeResolver<'a> {
                                     self.cross_module_types.get(imported.module_path())
                                 else {
                                     return Err(ResolverError::UnknownImport(
-                                        imported.module_path().clone(),
+                                        imported.module_name().clone(),
                                     ));
                                 };
 
                                 let Some(ident_target) = ident_targets.get(imported.base_name())
                                 else {
                                     return Err(ResolverError::UnknownImportItem(
-                                        imported.module_path().clone(),
+                                        imported.module_name().clone(),
                                         imported.base_name().clone(),
                                     ));
                                 };
@@ -517,12 +517,12 @@ impl<'a> TypeResolver<'a> {
             TyExprSpec::Imported(imported) => {
                 let Some(ident_targets) = self.cross_module_types.get(imported.module_path())
                 else {
-                    return Err(ResolverError::UnknownImport(imported.module_path().clone()));
+                    return Err(ResolverError::UnknownImport(imported.module_name().clone()));
                 };
 
                 if !ident_targets.contains_key(imported.base_name()) {
                     return Err(ResolverError::UnknownImportItem(
-                        imported.module_path().clone(),
+                        imported.module_name().clone(),
                         imported.base_name().clone(),
                     ));
                 }
