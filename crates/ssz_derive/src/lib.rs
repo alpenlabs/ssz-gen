@@ -508,20 +508,11 @@ fn ssz_encode_derive_stable_container(
                 )
             });
         } else {
-            let inner_ty = ty_inner_type("Option", ty).unwrap();
-            field_is_ssz_fixed_len
-                .push(quote! { ssz::encode::impls::optional::is_ssz_fixed_len::<#inner_ty>() });
-            field_fixed_len
-                .push(quote! { ssz::encode::impls::optional::ssz_fixed_len::<#inner_ty>() });
-            field_ssz_bytes_len.push(
-                quote! { ssz::encode::impls::optional::ssz_bytes_len::<#inner_ty>(&self.#ident) },
-            );
-            field_encoder_append.push(quote! {
-                encoder.append_parameterized(
-                    ssz::encode::impls::optional::is_ssz_fixed_len::<#inner_ty>(),
-                    |buf| ssz::encode::impls::optional::ssz_append::<#inner_ty>(&self.#ident, buf)
-                )
-            });
+            let _ = ty_inner_type("Optional", ty).expect("Use Optional<T> for StableContainer");
+            field_is_ssz_fixed_len.push(quote! { <#ty as ssz::Encode>::is_ssz_fixed_len() });
+            field_fixed_len.push(quote! { <#ty as ssz::Encode>::ssz_fixed_len() });
+            field_ssz_bytes_len.push(quote! { self.#ident.ssz_bytes_len() });
+            field_encoder_append.push(quote! { encoder.append(&self.#ident) });
         }
     }
 
@@ -959,20 +950,28 @@ fn ssz_encode_derive_enum_tag(derive_input: &DeriveInput, enum_data: &DataEnum) 
     let patterns: Vec<_> = enum_data
         .variants
         .iter()
-        .map(|variant| {
+        .enumerate()
+        .map(|(i, variant)| {
             let variant_name = &variant.ident;
+            let selector_index: u8 = i
+                .try_into()
+                .expect("union selector exceeds u8::max_value, union has too many variants");
 
             if !variant.fields.is_empty() {
                 panic!("ssz::Encode tag behaviour can only be derived for enums with no fields");
             }
 
             quote! {
-                #name::#variant_name
+                #name::#variant_name => {
+                    let union_selector = #selector_index;
+                    debug_assert!(union_selector <= ssz::MAX_UNION_SELECTOR);
+                    buf.push(union_selector);
+                }
             }
         })
         .collect();
 
-    let union_selectors = compute_union_selectors(patterns.len());
+    let _ = compute_union_selectors(patterns.len());
 
     let output = quote! {
         impl #impl_generics ssz::Encode for #name #ty_generics #where_clause {
@@ -990,13 +989,7 @@ fn ssz_encode_derive_enum_tag(derive_input: &DeriveInput, enum_data: &DataEnum) 
 
             fn ssz_append(&self, buf: &mut Vec<u8>) {
                 match self {
-                    #(
-                        #patterns => {
-                            let union_selector: u8 = #union_selectors;
-                            debug_assert!(union_selector <= ssz::MAX_UNION_SELECTOR);
-                            buf.push(union_selector);
-                        },
-                    )*
+                    #(#patterns,)*
                 }
             }
         }
@@ -1017,24 +1010,57 @@ fn ssz_encode_derive_enum_union(derive_input: &DeriveInput, enum_data: &DataEnum
     let name = &derive_input.ident;
     let (impl_generics, ty_generics, where_clause) = &derive_input.generics.split_for_impl();
 
-    let patterns: Vec<_> = enum_data
+    let (bytes_len_patterns, append_patterns): (Vec<_>, Vec<_>) = enum_data
         .variants
         .iter()
-        .map(|variant| {
+        .enumerate()
+        .map(|(i, variant)| {
             let variant_name = &variant.ident;
+            let fields_len = variant.fields.len();
+            let selector_index: u8 = i
+                .try_into()
+                .expect("union selector exceeds u8::max_value, union has too many variants");
 
-            if variant.fields.len() != 1 {
+            // First variant can have no fields (Union[None, ...])
+            if fields_len != 1 && !(fields_len == 0 && i == 0) {
                 panic!("ssz::Encode can only be derived for enums with 1 field per variant");
             }
 
-            let pattern = quote! {
-                #name::#variant_name(inner)
-            };
-            pattern
+            if fields_len == 0 {
+                (
+                    quote! {
+                        #name::#variant_name => 1
+                    },
+                    quote! {
+                        #name::#variant_name => {
+                            let union_selector = #selector_index;
+                            debug_assert!(union_selector <= ssz::MAX_UNION_SELECTOR);
+                            buf.push(union_selector);
+                        }
+                    },
+                )
+            } else {
+                (
+                    quote! {
+                        #name::#variant_name(inner) => inner
+                            .ssz_bytes_len()
+                            .checked_add(1)
+                            .expect("encoded length must be less than usize::max_value")
+                    },
+                    quote! {
+                        #name::#variant_name(inner) => {
+                            let union_selector = #selector_index;
+                            debug_assert!(union_selector <= ssz::MAX_UNION_SELECTOR);
+                            buf.push(union_selector);
+                            inner.ssz_append(buf)
+                        }
+                    },
+                )
+            }
         })
-        .collect();
+        .unzip();
 
-    let union_selectors = compute_union_selectors(patterns.len());
+    let _ = compute_union_selectors(bytes_len_patterns.len());
 
     let output = quote! {
         impl #impl_generics ssz::Encode for #name #ty_generics #where_clause {
@@ -1044,25 +1070,13 @@ fn ssz_encode_derive_enum_union(derive_input: &DeriveInput, enum_data: &DataEnum
 
             fn ssz_bytes_len(&self) -> usize {
                 match self {
-                    #(
-                        #patterns => inner
-                            .ssz_bytes_len()
-                            .checked_add(1)
-                            .expect("encoded length must be less than usize::max_value"),
-                    )*
+                    #(#bytes_len_patterns),*
                 }
             }
 
             fn ssz_append(&self, buf: &mut Vec<u8>) {
                 match self {
-                    #(
-                        #patterns => {
-                            let union_selector: u8 = #union_selectors;
-                            debug_assert!(union_selector <= ssz::MAX_UNION_SELECTOR);
-                            buf.push(union_selector);
-                            inner.ssz_append(buf)
-                        },
-                    )*
+                    #(#append_patterns),*
                 }
             }
         }
@@ -1393,24 +1407,22 @@ fn ssz_decode_derive_stable_container(
                 let #ident = decoder.decode_next_with(|slice| #module::from_ssz_bytes(slice))?;
             });
         } else {
-            let inner_ty = ty_inner_type("Option", ty).unwrap();
+            let _ = ty_inner_type("Optional", ty).expect("Use Optional<T> for StableContainer");
 
-            is_ssz_fixed_len =
-                quote! { ssz::decode::impls::optional::is_ssz_fixed_len::<#inner_ty>() };
-            ssz_fixed_len = quote! { ssz::decode::impls::optional::ssz_fixed_len::<#inner_ty>() };
-            from_ssz_bytes =
-                quote! { ssz::decode::impls::optional::from_ssz_bytes::<#inner_ty>(slice) };
+            is_ssz_fixed_len = quote! { <#ty as ssz::Decode>::is_ssz_fixed_len() };
+            ssz_fixed_len = quote! { <#ty as ssz::Decode>::ssz_fixed_len() };
+            from_ssz_bytes = quote! { <#ty as ssz::Decode>::from_ssz_bytes(slice) };
 
             register_types.push(quote! {
                 if bitvector.get(#working_index).unwrap() {
-                    builder.register_type_parameterized(#is_ssz_fixed_len, #ssz_fixed_len)?;
+                    builder.register_type::<#ty>()?;
                 }
             });
             decodes.push(quote! {
                 let #ident = if bitvector.get(#working_index).unwrap() {
-                    decoder.decode_next_with(|slice| ssz::decode::impls::optional::from_ssz_bytes(slice))?
+                    decoder.decode_next()?
                 } else {
-                    None
+                    Optional::None
                 };
             });
         }
@@ -1430,7 +1442,7 @@ fn ssz_decode_derive_stable_container(
                     })?;
                 #from_ssz_bytes?
             } else {
-                None
+                Optional::None
             };
         });
         is_fixed_lens.push(is_ssz_fixed_len);
@@ -1553,7 +1565,7 @@ fn ssz_decode_derive_profile_container(
         }
 
         // Check if field is optional.
-        let inner_ty = ty_inner_type("Option", ty);
+        let inner_ty = ty_inner_type("Optional", ty);
         if inner_ty.is_some() {
             optional_field_names.push(ident);
             is_optional = true;
@@ -1575,23 +1587,6 @@ fn ssz_decode_derive_profile_container(
             decodes.push(quote! {
                 let #ident = decoder.decode_next_with(|slice| #module::from_ssz_bytes(slice))?;
             });
-        } else if is_optional {
-            is_ssz_fixed_len =
-                quote! { ssz::decode::impls::optional::is_ssz_fixed_len::<#inner_ty>() };
-            ssz_fixed_len = quote! { ssz::decode::impls::optional::ssz_fixed_len::<#inner_ty>() };
-            from_ssz_bytes =
-                quote! { ssz::decode::impls::optional::from_ssz_bytes::<#inner_ty>(slice) };
-
-            register_types.push(quote! {
-                builder.register_type_parameterized(#is_ssz_fixed_len, #ssz_fixed_len)?;
-            });
-            decodes.push(quote! {
-                    let #ident = if bitvector.get(#working_optional_index).unwrap() {
-                        decoder.decode_next_with(|slice| ssz::decode::impls::optional::from_ssz_bytes::<#inner_ty>(slice))?
-                    } else {
-                        <_>::default()
-                    };
-                });
         } else {
             is_ssz_fixed_len = quote! { <#ty as ssz::Decode>::is_ssz_fixed_len() };
             ssz_fixed_len = quote! { <#ty as ssz::Decode>::ssz_fixed_len() };
@@ -1600,9 +1595,19 @@ fn ssz_decode_derive_profile_container(
             register_types.push(quote! {
                 builder.register_type::<#ty>()?;
             });
-            decodes.push(quote! {
-                let #ident = decoder.decode_next()?;
-            });
+            if is_optional {
+                decodes.push(quote! {
+                    let #ident = if bitvector.get(#working_optional_index).unwrap() {
+                        decoder.decode_next()?
+                    } else {
+                        <_>::default()
+                    };
+                });
+            } else {
+                decodes.push(quote! {
+                    let #ident = decoder.decode_next()?;
+                });
+            }
         }
 
         // If the field is optional, we need to check the bitvector before decoding.
@@ -1792,26 +1797,46 @@ fn ssz_decode_derive_enum_union(derive_input: &DeriveInput, enum_data: &DataEnum
     let name = &derive_input.ident;
     let (impl_generics, ty_generics, where_clause) = &derive_input.generics.split_for_impl();
 
+    // Skip the first None variant if it exists.
+    let start_index = if enum_data.variants[0].fields.is_empty() {
+        1
+    } else {
+        0
+    };
+
     let (constructors, var_types): (Vec<_>, Vec<_>) = enum_data
         .variants
         .iter()
+        .skip(start_index)
         .map(|variant| {
             let variant_name = &variant.ident;
-
-            if variant.fields.len() != 1 {
+            let fields_len = variant.fields.len();
+            if fields_len != 1 {
                 panic!("ssz::Decode can only be derived for enums with 1 field per variant");
             }
 
             let constructor = quote! {
                 #name::#variant_name
             };
-
             let ty = &(&variant.fields).into_iter().next().unwrap().ty;
+
             (constructor, ty)
         })
         .unzip();
 
-    let union_selectors = compute_union_selectors(constructors.len());
+    let mut union_selectors = compute_union_selectors(constructors.len());
+    if start_index == 1 {
+        union_selectors.remove(0);
+    }
+
+    let none_constructor = if start_index == 1 {
+        let variant_name = &enum_data.variants[0].ident;
+        quote! {
+            0 => Ok(#name::#variant_name),
+        }
+    } else {
+        quote! {}
+    };
 
     let output = quote! {
         impl #impl_generics ssz::Decode for #name #ty_generics #where_clause {
@@ -1827,6 +1852,7 @@ fn ssz_decode_derive_enum_union(derive_input: &DeriveInput, enum_data: &DataEnum
                 let (selector, body) = ssz::split_union_bytes(bytes)?;
 
                 match selector.into() {
+                    #none_constructor
                     #(
                         #union_selectors => {
                             <#var_types as ssz::Decode>::from_ssz_bytes(body).map(#constructors)

@@ -28,6 +28,8 @@ pub fn primitive_rust_type(base_name: &str) -> syn::Type {
 #[derive(Clone, Debug, PartialEq)]
 pub enum TypeResolution {
     /// Type has not been resolved yet
+    Unresolved,
+    /// Type resolves to None
     None,
     /// Constant value
     Constant(u64),
@@ -49,6 +51,8 @@ pub enum TypeResolution {
     Bitlist(u64),
     /// Optional type (can be None) for use in stable containers only
     Optional(Box<TypeResolution>),
+    /// Special for Union[None, T]
+    Option(Box<TypeResolution>),
     /// Union type
     Union(String, Vec<TypeResolution>),
     /// Fixed-length byte array
@@ -56,22 +60,22 @@ pub enum TypeResolution {
 }
 
 impl TypeResolution {
-    /// Returns true if the resolution is None
+    /// Returns true if the resolution is `Unresolved`
     ///
     /// # Returns
     ///
-    /// `true` if the resolution is None, `false` otherwise
-    pub fn is_none(&self) -> bool {
-        matches!(self, TypeResolution::None)
+    /// `true` if the resolution is `Unresolved`, `false` otherwise
+    pub fn is_unresolved(&self) -> bool {
+        matches!(self, TypeResolution::Unresolved)
     }
 
-    /// Returns true if the resolution is not None
+    /// Returns true if the resolution is not `Unresolved`
     ///
     /// # Returns
     ///
-    /// `true` if the resolution is not None, `false` otherwise
-    pub fn is_some(&self) -> bool {
-        !self.is_none()
+    /// `true` if the resolution is not `Unresolved`, `false` otherwise
+    pub fn is_resolved(&self) -> bool {
+        !self.is_unresolved()
     }
 
     /// Returns true if the resolution is a BaseClass
@@ -89,7 +93,7 @@ impl TypeResolution {
     ///
     /// `true` if the resolution is a Type, `false` otherwise
     pub fn is_type(&self) -> bool {
-        !self.is_base_class() && !self.is_none()
+        !self.is_base_class() && !self.is_unresolved()
     }
 
     /// Unwraps any of the type variants, panics if not a type variant
@@ -132,6 +136,10 @@ impl TypeResolution {
                 parse_quote!(BitList<typenum::#constant>)
             }
             TypeResolution::Optional(ty) => {
+                let ty = ty.unwrap_type();
+                parse_quote!(Optional<#ty>)
+            }
+            TypeResolution::Option(ty) => {
                 let ty = ty.unwrap_type();
                 parse_quote!(Option<#ty>)
             }

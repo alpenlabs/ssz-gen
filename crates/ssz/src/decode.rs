@@ -9,8 +9,8 @@ use std::cmp::Ordering;
 
 type SmallVec8<T> = SmallVec<[T; 8]>;
 
-pub mod impls;
-pub mod try_from_iter;
+pub(crate) mod impls;
+pub(crate) mod try_from_iter;
 
 /// Returned when SSZ decoding fails.
 #[derive(Debug, PartialEq, Clone)]
@@ -90,7 +90,7 @@ pub enum DecodeError {
 /// The checks here are derived from this document:
 ///
 /// <https://notes.ethereum.org/ruKvDXl6QOW3gnqVYb8ezA?view>
-pub fn sanitize_offset(
+pub(crate) fn sanitize_offset(
     offset: usize,
     previous_offset: Option<usize>,
     num_bytes: usize,
@@ -139,7 +139,7 @@ pub trait Decode: Sized {
 
 /// An offset into the SSZ bytes.
 #[derive(Copy, Clone, Debug)]
-pub struct Offset {
+pub(crate) struct Offset {
     /// The position of the offset
     position: usize,
     /// The offset

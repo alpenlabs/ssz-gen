@@ -3,6 +3,9 @@
 
 //! Tree hash implementation
 
+#[cfg(test)]
+use ssz_types as _;
+
 pub mod impls;
 mod merkle_hasher;
 mod merkleize_padded;

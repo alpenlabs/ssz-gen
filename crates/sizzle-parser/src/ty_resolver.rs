@@ -303,6 +303,13 @@ impl TypeResolver {
                     // Go through each arg and make sure it matches the description.
                     for (sig_arg, spec_arg) in sig_args.iter().zip(spec_args.iter()) {
                         let arg: TyExpr = match (sig_arg, spec_arg) {
+                            (CtorArg::Ty, TyArgSpec::None) | (CtorArg::Int, TyArgSpec::None) => {
+                                return Err(ResolverError::MismatchedArg(
+                                    ident.clone(),
+                                    sig_arg.clone(),
+                                    spec_arg.clone(),
+                                ));
+                            }
                             (CtorArg::Ty, TyArgSpec::Ident(arg_ident)) => {
                                 self.resolve_ident_with_args(arg_ident, None)?
                             }
@@ -314,6 +321,9 @@ impl TypeResolver {
                                     a @ TyExpr::Ty(_) => a,
                                     TyExpr::Int(_) => {
                                         panic!("tyresolv: complex type resolved as const")
+                                    }
+                                    TyExpr::None => {
+                                        panic!("tyresolv: complex type resolved as none")
                                     }
                                 }
                             }
@@ -347,6 +357,7 @@ impl TypeResolver {
 
                     for spec_arg in spec_args {
                         let arg: TyExpr = match spec_arg {
+                            TyArgSpec::None => TyExpr::None,
                             TyArgSpec::Ident(arg_ident) => {
                                 self.resolve_ident_with_args(arg_ident, None)?
                             }
@@ -354,6 +365,7 @@ impl TypeResolver {
                                 complex.base_name(),
                                 Some(complex.args()),
                             )? {
+                                TyExpr::None => TyExpr::None,
                                 a @ TyExpr::Ty(_) => a,
                                 TyExpr::Int(_) => panic!("tyresolv: complex type resolved to int"),
                             },
@@ -389,7 +401,9 @@ impl TypeResolver {
         // And then just make sure it's a const.
         match expr {
             TyExpr::Ty(ty) => Ok(ty),
-            TyExpr::Int(_) => Err(ResolverError::MismatchedArgKind(spec.base_name().clone())),
+            TyExpr::Int(_) | TyExpr::None => {
+                Err(ResolverError::MismatchedArgKind(spec.base_name().clone()))
+            }
         }
     }
 }

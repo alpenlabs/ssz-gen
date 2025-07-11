@@ -161,6 +161,7 @@ pub(crate) fn conv_module_to_schema(m: &Module) -> Result<SszSchema, SchemaError
                         })
                     }
                     TyExpr::Int(v) => resolver.decl_const(name.clone(), v)?,
+                    TyExpr::None => panic!("schema: assignment to None"),
                 },
 
                 // Complex types we can also handle.
@@ -171,6 +172,9 @@ pub(crate) fn conv_module_to_schema(m: &Module) -> Result<SszSchema, SchemaError
                         TyExpr::Ty(ty) => ty,
                         TyExpr::Int(_) => {
                             panic!("schema: resolver generated int for complex tyspec")
+                        }
+                        TyExpr::None => {
+                            panic!("schema: resolver generated None for complex tyspec")
                         }
                     };
 

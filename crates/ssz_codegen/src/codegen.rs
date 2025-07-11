@@ -66,7 +66,7 @@ impl<'a> CircleBufferCodegen<'a> {
         let ident = syn::Ident::new(&alias.name().0, proc_macro2::Span::call_site());
 
         let type_def = type_resolver.resolve_type_and_add(alias.ty(), &ident);
-        if type_def.is_none() {
+        if type_def.is_unresolved() {
             return false;
         }
 
@@ -221,7 +221,7 @@ impl<'a> CircleBufferCodegen<'a> {
             let field_ident = syn::Ident::new(&field.name().0, proc_macro2::Span::call_site());
             let field_ty = field.ty();
             let field_type = type_resolver.resolve_type(field_ty, None);
-            if field_type.is_none() {
+            if field_type.is_unresolved() {
                 return false;
             }
 
@@ -327,7 +327,7 @@ impl<'a> CircleBufferCodegen<'a> {
             let field_ident = syn::Ident::new(&field.name().0, proc_macro2::Span::call_site());
             let field_ty = field.ty();
             let field_type = type_resolver.resolve_type(field_ty, None);
-            if field_type.is_none() {
+            if field_type.is_unresolved() {
                 return false;
             }
 

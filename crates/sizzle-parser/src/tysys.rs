@@ -7,6 +7,11 @@ use crate::Identifier;
 /// type-related expressions.
 #[derive(Clone, Debug)]
 pub enum TyExpr {
+    /// None.
+    ///
+    /// This is a special type only for use in Union types.
+    None,
+
     /// A type.
     Ty(Ty),
 
@@ -33,7 +38,7 @@ impl TyExpr {
         // FIXME I couldn't figure out how to make this no-alloc.
         let idents = match self {
             TyExpr::Ty(t) => t.iter_idents().collect::<Vec<_>>(),
-            TyExpr::Int(_) => Vec::new(),
+            TyExpr::Int(_) | TyExpr::None => Vec::new(),
         };
 
         idents.into_iter()

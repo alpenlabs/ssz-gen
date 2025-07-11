@@ -265,46 +265,7 @@ impl_encode_for_tuples! {
     }
 }
 
-pub mod optional {
-    //! For ease of use despite using `Option<T>` to represent Union[None, T] in all other contexts
-    //! Inside StableContainer and Profile we want to use it to represent `Optional[T]`
-    //! This module implements all the necessary "alternative" logic to treat `Option<T>` as `Optional[T]`
-    //! Keep in mind `Option<Option<T>>` will be treated as `Optional[Union[None, T]]` if inside a struct
-
-    use super::*;
-
-    /// Check if the type is fixed length
-    pub fn is_ssz_fixed_len<T: Encode>() -> bool {
-        T::is_ssz_fixed_len()
-    }
-
-    /// Get the fixed length of the type
-    pub fn ssz_fixed_len<T: Encode>() -> usize {
-        T::ssz_fixed_len()
-    }
-
-    /// Encode the type into the buffer
-    pub fn ssz_append<T: Encode>(item: &Option<T>, buf: &mut Vec<u8>) {
-        match item {
-            None => {}
-            Some(_) => {
-                if let Some(inner) = item.as_ref() {
-                    inner.ssz_append(buf);
-                }
-            }
-        }
-    }
-
-    /// Get the encoded length of the type
-    pub fn ssz_bytes_len<T: Encode>(item: &Option<T>) -> usize {
-        match item {
-            None => 0,
-            Some(inner) => inner.ssz_bytes_len(),
-        }
-    }
-}
-
-// Option<T> represents Union[None, T]
+// `Option<T>` represents `Union[None, T]`
 impl<T: Encode> Encode for Option<T> {
     fn is_ssz_fixed_len() -> bool {
         false
@@ -371,7 +332,7 @@ impl<T: Encode> Encode for &T {
 }
 
 /// Compute the encoded length of a vector-like sequence of `T`.
-pub fn sequence_ssz_bytes_len<I, T>(iter: I) -> usize
+fn sequence_ssz_bytes_len<I, T>(iter: I) -> usize
 where
     I: Iterator<Item = T> + ExactSizeIterator,
     T: Encode,
@@ -388,7 +349,7 @@ where
 }
 
 /// Encode a vector-like sequence of `T`.
-pub fn sequence_ssz_append<I, T>(iter: I, buf: &mut Vec<u8>)
+fn sequence_ssz_append<I, T>(iter: I, buf: &mut Vec<u8>)
 where
     I: Iterator<Item = T> + ExactSizeIterator,
     T: Encode,

@@ -34,6 +34,8 @@ pub enum TaggedToken<T> {
     Comma(T),
     /// `\n` newline.
     Newline(T),
+    /// `null` keyword.
+    Null(T),
 
     // Identifiers.
     /// An identifier.
@@ -81,6 +83,7 @@ impl<T> TaggedToken<T> {
             Self::CloseParen(t) => t,
             Self::Indent(t) => t,
             Self::Deindent(t) => t,
+            Self::Null(t) => t,
         }
     }
 
@@ -102,6 +105,7 @@ impl<T> TaggedToken<T> {
             Self::CloseParen(_) => Token::CloseParen(()),
             Self::Indent(_) => Token::Indent(()),
             Self::Deindent(_) => Token::Deindent(()),
+            Self::Null(_) => Token::Null(()),
         }
     }
 }
@@ -361,6 +365,7 @@ pub(crate) fn parse_char_array_to_tokens(s: &[char]) -> Result<Vec<SrcToken>, To
 fn try_parse_keyword(s: &str, sp: SrcPos) -> Option<SrcToken> {
     Some(match s {
         "class" => SrcToken::Class(sp),
+        "null" => SrcToken::Null(sp),
         _ => return None,
     })
 }

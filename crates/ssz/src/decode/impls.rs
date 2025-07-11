@@ -300,35 +300,7 @@ impl Decode for NonZeroUsize {
     }
 }
 
-pub mod optional {
-    //! For ease of use despite using `Option<T>` to represent `Union[None, T]` in all other contexts
-    //! Inside StableContainer and Profile we want to use it to represent `Optional[T]`
-    //! This module implements all the necessary "alternative" logic to treat `Option<T>` as `Optional[T]`
-    //! Keep in mind `Option<Option<T>>` will be treated as `Optional[Union[None, T]]` if inside a struct
-
-    use super::*;
-
-    /// Check if the type is fixed length
-    pub fn is_ssz_fixed_len<T: Decode>() -> bool {
-        T::is_ssz_fixed_len()
-    }
-
-    /// Get the fixed length of the type
-    pub fn ssz_fixed_len<T: Decode>() -> usize {
-        T::ssz_fixed_len()
-    }
-
-    /// Decode the type from bytes
-    pub fn from_ssz_bytes<T: Decode>(bytes: &[u8]) -> Result<Option<T>, DecodeError> {
-        if bytes.is_empty() {
-            Ok(None)
-        } else {
-            T::from_ssz_bytes(bytes).map(Some)
-        }
-    }
-}
-
-// Option<T> represents Union[None, T]
+// `Option<T>` represents `Union[None, T]`
 impl<T: Decode> Decode for Option<T> {
     fn is_ssz_fixed_len() -> bool {
         false

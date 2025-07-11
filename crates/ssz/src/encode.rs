@@ -5,7 +5,7 @@
 
 use super::*;
 
-pub mod impls;
+mod impls;
 
 /// Provides SSZ encoding (serialization) via the `as_ssz_bytes(&self)` method.
 ///
