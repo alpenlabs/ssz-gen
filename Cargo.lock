@@ -555,6 +555,7 @@ dependencies = [
  "ssz",
  "ssz_derive",
  "ssz_primitives",
+ "ssz_types",
  "tree_hash_derive",
  "typenum",
 ]

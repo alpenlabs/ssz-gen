@@ -5,10 +5,9 @@
 
 use rand as _;
 use smallvec as _;
-use ssz::BitVector;
 use ssz_derive::Encode;
-use ssz_types::{BitVector, Optional, VariableList};
 use ssz_primitives::{U128, U256};
+use ssz_types::{BitVector, Optional, VariableList};
 use tree_hash::{self, BYTES_PER_CHUNK, Hash256, MerkleHasher, PackedEncoding, TreeHash};
 use tree_hash_derive::TreeHash;
 use typenum::Unsigned;
