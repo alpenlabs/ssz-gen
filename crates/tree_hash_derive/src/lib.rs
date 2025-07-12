@@ -333,7 +333,7 @@ fn tree_hash_derive_struct_stable_container(
                         hasher.write(<_ as tree_hash::TreeHash<#hasher_type>>::tree_hash_root(&self.#idents).as_ref())
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
-                        hasher.write(tree_hash::Hash256::ZERO.as_slice())
+                        hasher.write(#hasher_type::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                 )*
@@ -383,7 +383,7 @@ fn tree_hash_derive_struct_profile(
                 // If we're skipping fields, we need to add zero hash for the skipped fields.
                 for _ in index..new_index {
                     hashes.push(quote! {
-                        hasher.write(tree_hash::Hash256::ZERO.as_slice())
+                        hasher.write(#hasher_type::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     });
                 }
@@ -408,7 +408,7 @@ fn tree_hash_derive_struct_profile(
                     hasher.write(<_ as tree_hash::TreeHash<#hasher_type>>::tree_hash_root(&self.#ident).as_ref())
                         .expect("tree hash derive should not apply too many leaves");
                 } else {
-                    hasher.write(tree_hash::Hash256::ZERO.as_slice())
+                    hasher.write(#hasher_type::get_zero_hash_slice(0))
                         .expect("tree hash derive should not apply too many leaves");
                 }
             });

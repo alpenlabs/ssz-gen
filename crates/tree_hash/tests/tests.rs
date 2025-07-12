@@ -11,7 +11,8 @@ use ssz_derive::Encode;
 use ssz_primitives::{U128, U256};
 use ssz_types::{BitVector, Optional, VariableList};
 use tree_hash::{
-    self, BYTES_PER_CHUNK, Hash256, MerkleHasher, PackedEncoding, TreeHash, hash32_concat,
+    self, BYTES_PER_CHUNK, Hash256, MerkleHasher, PackedEncoding, TreeHash, TreeHashDigest,
+    hash32_concat,
 };
 use tree_hash_derive::TreeHash;
 use typenum::Unsigned;

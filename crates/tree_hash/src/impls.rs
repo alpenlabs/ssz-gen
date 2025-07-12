@@ -232,15 +232,15 @@ impl<T: TreeHash<H>, H: TreeHashDigest> TreeHash<H> for Option<T> {
     fn tree_hash_root(&self) -> H::Output {
         match self {
             None => {
-                let root = Hash256::ZERO;
+                let root = H::get_zero_hash(0);
                 let selector = 0u8;
-                mix_in_selector(&root, selector)
+                mix_in_selector_with_hasher::<H>(&root, selector)
                     .expect("derive macro should prevent out-of-bounds selectors")
             }
             Some(inner) => {
                 let root = inner.tree_hash_root();
                 let selector = 1u8;
-                mix_in_selector(&root, selector)
+                mix_in_selector_with_hasher::<H>(&root, selector)
                     .expect("derive macro should prevent out-of-bounds selectors")
             }
         }
