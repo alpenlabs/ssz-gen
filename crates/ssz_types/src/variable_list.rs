@@ -225,7 +225,7 @@ where
     fn tree_hash_root(&self) -> Hash256 {
         let root = vec_tree_hash_root::<T, N>(&self.vec);
 
-        tree_hash::mix_in_length(&root, self.len())
+        tree_hash::mix_in_length_with_hasher::<tree_hash::Sha256Hasher>(&root, self.len())
     }
 }
 
@@ -359,7 +359,7 @@ mod test {
     use super::*;
     use ssz::*;
     use std::collections::HashSet;
-    use tree_hash::{TreeHash, merkle_root};
+    use tree_hash::{TreeHash, merkle_root_with_hasher};
     use tree_hash_derive::TreeHash;
     use typenum::*;
 
@@ -438,8 +438,8 @@ mod test {
     }
 
     fn root_with_length(bytes: &[u8], len: usize) -> Hash256 {
-        let root = merkle_root(bytes, 0);
-        tree_hash::mix_in_length(&root, len)
+        let root = merkle_root_with_hasher::<tree_hash::Sha256Hasher>(bytes, 0);
+        tree_hash::mix_in_length_with_hasher::<tree_hash::Sha256Hasher>(&root, len)
     }
 
     #[test]
@@ -490,8 +490,8 @@ mod test {
     }
 
     fn padded_root_with_length(bytes: &[u8], len: usize, min_nodes: usize) -> Hash256 {
-        let root = merkle_root(bytes, min_nodes);
-        tree_hash::mix_in_length(&root, len)
+        let root = merkle_root_with_hasher::<tree_hash::Sha256Hasher>(bytes, min_nodes);
+        tree_hash::mix_in_length_with_hasher::<tree_hash::Sha256Hasher>(&root, len)
     }
 
     #[test]

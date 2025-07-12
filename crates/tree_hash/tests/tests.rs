@@ -3,12 +3,17 @@
 
 //! Tree hash tests
 
+use digest as _;
 use rand as _;
+use sha2 as _;
 use smallvec as _;
 use ssz_derive::Encode;
 use ssz_primitives::{U128, U256};
 use ssz_types::{BitVector, Optional, VariableList};
-use tree_hash::{self, BYTES_PER_CHUNK, Hash256, MerkleHasher, PackedEncoding, TreeHash};
+use tree_hash::{
+    self, BYTES_PER_CHUNK, Hash256, MerkleHasher, PackedEncoding, TreeHash, TreeHashDigest,
+    hash32_concat,
+};
 use tree_hash_derive::TreeHash;
 use typenum::Unsigned;
 
@@ -23,7 +28,7 @@ impl From<Vec<u8>> for HashVec {
     }
 }
 
-impl tree_hash::TreeHash for HashVec {
+impl tree_hash::TreeHash<tree_hash::Sha256Hasher> for HashVec {
     fn tree_hash_type() -> tree_hash::TreeHashType {
         tree_hash::TreeHashType::List
     }
@@ -36,16 +41,20 @@ impl tree_hash::TreeHash for HashVec {
         unreachable!("List should never be packed.")
     }
 
-    fn tree_hash_root(&self) -> Hash256 {
-        let mut hasher = MerkleHasher::with_leaves(self.vec.len().div_ceil(BYTES_PER_CHUNK));
+    fn tree_hash_root(&self) -> <tree_hash::Sha256Hasher as tree_hash::TreeHashDigest>::Output {
+        let mut hasher = MerkleHasher::<tree_hash::Sha256Hasher>::with_leaves(
+            self.vec.len().div_ceil(BYTES_PER_CHUNK),
+        );
 
         for item in &self.vec {
-            hasher.write(&item.tree_hash_packed_encoding()).unwrap()
+            hasher
+                .write(&<u8 as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_packed_encoding(item))
+                .unwrap()
         }
 
         let root = hasher.finish().unwrap();
 
-        tree_hash::mix_in_length(&root, self.vec.len())
+        tree_hash::mix_in_length_with_hasher::<tree_hash::Sha256Hasher>(&root, self.vec.len())
     }
 }
 
@@ -53,7 +62,7 @@ fn mix_in_selector(a: Hash256, selector: u8) -> Hash256 {
     let mut b = [0; 32];
     b[0] = selector;
 
-    Hash256::from_slice(&ethereum_hashing::hash32_concat(a.as_slice(), &b))
+    Hash256::from_slice(&hash32_concat::<sha2::Sha256>(a.as_slice(), &b))
 }
 
 fn u8_hash_concat(v1: u8, v2: u8) -> Hash256 {
@@ -63,7 +72,7 @@ fn u8_hash_concat(v1: u8, v2: u8) -> Hash256 {
     a[0] = v1;
     b[0] = v2;
 
-    Hash256::from_slice(&ethereum_hashing::hash32_concat(&a, &b))
+    Hash256::from_slice(&hash32_concat::<sha2::Sha256>(&a, &b))
 }
 
 fn u8_hash(x: u8) -> Hash256 {
@@ -140,26 +149,65 @@ fn variable_union() {
 #[test]
 fn packed_encoding_example() {
     let val = 0xfff0eee0ddd0ccc0bbb0aaa099908880_u128;
-    let canonical = U256::from(val).tree_hash_packed_encoding();
+    let canonical =
+        <U256 as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_packed_encoding(&U256::from(val));
     let encodings = [
-        (0x8880_u16.tree_hash_packed_encoding(), 0),
-        (0x9990_u16.tree_hash_packed_encoding(), 2),
-        (0xaaa0_u16.tree_hash_packed_encoding(), 4),
-        (0xbbb0_u16.tree_hash_packed_encoding(), 6),
-        (0xccc0_u16.tree_hash_packed_encoding(), 8),
-        (0xddd0_u16.tree_hash_packed_encoding(), 10),
-        (0xeee0_u16.tree_hash_packed_encoding(), 12),
-        (0xfff0_u16.tree_hash_packed_encoding(), 14),
-        (U128::from(val).tree_hash_packed_encoding(), 0),
-        (U128::from(0).tree_hash_packed_encoding(), 16),
         (
-            Hash256::from_slice(U256::from(val).as_le_slice())
-                .tree_hash_root()
+            <u16 as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_packed_encoding(&0x8880_u16),
+            0,
+        ),
+        (
+            <u16 as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_packed_encoding(&0x9990_u16),
+            2,
+        ),
+        (
+            <u16 as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_packed_encoding(&0xaaa0_u16),
+            4,
+        ),
+        (
+            <u16 as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_packed_encoding(&0xbbb0_u16),
+            6,
+        ),
+        (
+            <u16 as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_packed_encoding(&0xccc0_u16),
+            8,
+        ),
+        (
+            <u16 as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_packed_encoding(&0xddd0_u16),
+            10,
+        ),
+        (
+            <u16 as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_packed_encoding(&0xeee0_u16),
+            12,
+        ),
+        (
+            <u16 as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_packed_encoding(&0xfff0_u16),
+            14,
+        ),
+        (
+            <U128 as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_packed_encoding(&U128::from(
+                val,
+            )),
+            0,
+        ),
+        (
+            <U128 as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_packed_encoding(&U128::from(0)),
+            16,
+        ),
+        (
+            <Hash256 as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&Hash256::from_slice(
+                U256::from(val).as_le_slice(),
+            ))
+            .0
+            .into(),
+            0,
+        ),
+        (
+            <U256 as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&U256::from(val))
                 .0
                 .into(),
             0,
         ),
-        (U256::from(val).tree_hash_root().0.into(), 0),
     ];
     for (i, (encoding, offset)) in encodings.into_iter().enumerate() {
         assert_eq!(

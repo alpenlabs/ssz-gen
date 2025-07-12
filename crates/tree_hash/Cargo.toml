@@ -16,7 +16,8 @@ keywords.workspace = true
 workspace = true
 
 [dependencies]
-ethereum_hashing.workspace = true
+digest.workspace = true
+sha2.workspace = true
 smallvec.workspace = true
 ssz.workspace = true
 ssz_primitives.workspace = true

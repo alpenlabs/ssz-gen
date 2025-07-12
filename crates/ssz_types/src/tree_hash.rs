@@ -1,7 +1,7 @@
 // Modified in 2025 from the original version
 // Original source licensed under the Apache License 2.0
 
-use tree_hash::{Hash256, MerkleHasher, TreeHash, TreeHashType};
+use tree_hash::{Hash256, Sha256MerkleHasher, TreeHash, TreeHashType};
 use typenum::Unsigned;
 
 /// A helper function providing common functionality between the `TreeHash` implementations for
@@ -13,8 +13,9 @@ where
 {
     match T::tree_hash_type() {
         TreeHashType::Basic => {
-            let mut hasher =
-                MerkleHasher::with_leaves(N::to_usize().div_ceil(T::tree_hash_packing_factor()));
+            let mut hasher = Sha256MerkleHasher::with_leaves(
+                N::to_usize().div_ceil(T::tree_hash_packing_factor()),
+            );
 
             for item in vec {
                 hasher
@@ -30,7 +31,7 @@ where
         | TreeHashType::StableContainer
         | TreeHashType::List
         | TreeHashType::Vector => {
-            let mut hasher = MerkleHasher::with_leaves(N::to_usize());
+            let mut hasher = Sha256MerkleHasher::with_leaves(N::to_usize());
 
             for item in vec {
                 hasher
