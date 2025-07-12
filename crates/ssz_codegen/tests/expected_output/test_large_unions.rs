@@ -3,8 +3,8 @@ pub mod tests {
         pub mod test_large_unions {
             use ssz_types::*;
             use ssz_derive::{Encode, Decode};
+            use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
-            use typenum::Unsigned;
             #[derive(Encode, Decode, TreeHash)]
             #[ssz(enum_behaviour = "union")]
             #[tree_hash(enum_behaviour = "union")]
@@ -21,9 +21,9 @@ pub mod tests {
             #[tree_hash(enum_behaviour = "union")]
             pub enum MixedUnion {
                 Selector0(u8),
-                Selector1(VariableList<u8, typenum::U5>),
-                Selector2(FixedVector<u16, typenum::U3>),
-                Selector3(BitVector<typenum::U8>),
+                Selector1(VariableList<u8, 5usize>),
+                Selector2(FixedVector<u16, 3usize>),
+                Selector3(BitVector<8usize>),
             }
             #[derive(Encode, Decode, TreeHash)]
             #[ssz(enum_behaviour = "union")]

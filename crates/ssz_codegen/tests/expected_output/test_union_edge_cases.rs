@@ -3,8 +3,8 @@ pub mod tests {
         pub mod test_union_edge_cases {
             use ssz_types::*;
             use ssz_derive::{Encode, Decode};
+            use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
-            use typenum::Unsigned;
             #[derive(Encode, Decode, TreeHash)]
             #[ssz(enum_behaviour = "union")]
             #[tree_hash(enum_behaviour = "union")]
@@ -16,10 +16,10 @@ pub mod tests {
             #[ssz(enum_behaviour = "union")]
             #[tree_hash(enum_behaviour = "union")]
             pub enum ComplexUnion {
-                Selector0(VariableList<u8, typenum::U10>),
-                Selector1(FixedVector<u16, typenum::U5>),
+                Selector0(VariableList<u8, 10usize>),
+                Selector1(FixedVector<u16, 5usize>),
                 Selector2(SimpleUnion),
-                Selector3(BitVector<typenum::U32>),
+                Selector3(BitVector<32usize>),
             }
             #[derive(Encode, Decode, TreeHash)]
             #[ssz(enum_behaviour = "union")]
@@ -45,7 +45,7 @@ pub mod tests {
                 Selector1(u16),
             }
             pub type OptionalSimple = Option<u8>;
-            pub type OptionalComplex = Option<VariableList<u16, typenum::U8>>;
+            pub type OptionalComplex = Option<VariableList<u16, 8usize>>;
             pub type OptionalUnion = Option<SimpleUnion>;
             #[derive(Encode, Decode, TreeHash)]
             #[ssz(struct_behaviour = "container")]

@@ -3,18 +3,18 @@ pub mod tests {
         pub mod test_bitfields {
             use ssz_types::*;
             use ssz_derive::{Encode, Decode};
+            use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
-            use typenum::Unsigned;
             pub const SMALL_SIZE: u64 = 1u64;
             pub const MEDIUM_SIZE: u64 = 64u64;
             pub const LARGE_SIZE: u64 = 256u64;
             pub const POWER_OF_TWO: u64 = 128u64;
-            pub type TinyBitlist = BitList<typenum::U1>;
-            pub type StandardBitlist = BitList<typenum::U64>;
-            pub type LargeBitlist = BitList<typenum::U256>;
-            pub type TinyBitvector = BitVector<typenum::U1>;
-            pub type StandardBitvector = BitVector<typenum::U64>;
-            pub type LargeBitvector = BitVector<typenum::U128>;
+            pub type TinyBitlist = BitList<1usize>;
+            pub type StandardBitlist = BitList<64usize>;
+            pub type LargeBitlist = BitList<256usize>;
+            pub type TinyBitvector = BitVector<1usize>;
+            pub type StandardBitvector = BitVector<64usize>;
+            pub type LargeBitvector = BitVector<128usize>;
             #[derive(Encode, Decode, TreeHash)]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
