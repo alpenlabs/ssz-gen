@@ -3,6 +3,7 @@ pub mod tests {
         pub mod test_common {
             use ssz_types::*;
             use ssz_derive::{Encode, Decode};
+            use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             #[derive(Encode, Decode, TreeHash)]
             #[ssz(enum_behaviour = "union")]
@@ -26,6 +27,7 @@ pub mod tests {
         pub mod test_import_1 {
             use ssz_types::*;
             use ssz_derive::{Encode, Decode};
+            use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             #[derive(Encode, Decode, TreeHash)]
             #[ssz(enum_behaviour = "union")]
@@ -60,6 +62,7 @@ pub mod tests {
         pub mod test_import_2 {
             use ssz_types::*;
             use ssz_derive::{Encode, Decode};
+            use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             #[derive(Encode, Decode, TreeHash)]
             #[ssz(struct_behaviour = "profile")]

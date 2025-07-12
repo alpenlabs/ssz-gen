@@ -192,7 +192,12 @@ pub fn tree_hash_derive(input: TokenStream) -> TokenStream {
                 }
                 Some(StructBehaviour::StableContainer) => {
                     if let Some(max_fields_value) = opts.max_fields {
-                        tree_hash_derive_struct_stable_container(&item, s, max_fields_value, &hasher_type)
+                        tree_hash_derive_struct_stable_container(
+                            &item,
+                            s,
+                            max_fields_value,
+                            &hasher_type,
+                        )
                     } else {
                         panic!("stable_container requires \"max_fields\"")
                     }

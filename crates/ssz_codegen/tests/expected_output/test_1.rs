@@ -3,6 +3,7 @@ pub mod tests {
         pub mod test_1 {
             use ssz_types::*;
             use ssz_derive::{Encode, Decode};
+            use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             #[derive(Encode, Decode, TreeHash)]
             #[ssz(enum_behaviour = "union")]

@@ -542,6 +542,7 @@ pub fn schema_map_to_rust_code(
             quote! {
                 use ssz_types::*;
                 use ssz_derive::{Encode, Decode};
+                use tree_hash::TreeHashDigest;
                 use tree_hash_derive::TreeHash;
 
                 #(#unions)*

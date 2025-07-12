@@ -7,7 +7,7 @@ use serde::Deserialize;
 use serde_derive::Serialize;
 use std::ops::{Deref, DerefMut, Index, IndexMut};
 use std::slice::SliceIndex;
-use tree_hash::Hash256;
+
 /// Emulates a SSZ `Vector` (distinct from a Rust `Vec`).
 ///
 /// An ordered, heap-allocated, fixed-length, homogeneous collection of `T`, with `N` values.
@@ -175,9 +175,9 @@ impl<T, const N: usize> IntoIterator for FixedVector<T, N> {
     }
 }
 
-impl<T, const N: usize> tree_hash::TreeHash for FixedVector<T, N>
+impl<T, const N: usize, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for FixedVector<T, N>
 where
-    T: tree_hash::TreeHash,
+    T: tree_hash::TreeHash<H>,
 {
     fn tree_hash_type() -> tree_hash::TreeHashType {
         tree_hash::TreeHashType::Vector
@@ -191,8 +191,8 @@ where
         unreachable!("Vector should never be packed.")
     }
 
-    fn tree_hash_root(&self) -> Hash256 {
-        vec_tree_hash_root::<T, N>(&self.vec)
+    fn tree_hash_root(&self) -> H::Output {
+        vec_tree_hash_root::<T, N, H>(&self.vec)
     }
 }
 
@@ -456,32 +456,32 @@ mod test {
     fn tree_hash_u8() {
         let fixed: FixedVector<u8, 0> = FixedVector::from(vec![]);
         assert_eq!(
-            fixed.tree_hash_root(),
+            <FixedVector<u8, 0> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
             merkle_root_with_hasher::<tree_hash::Sha256Hasher>(&[0; 8], 0)
         );
 
         let fixed: FixedVector<u8, 1> = FixedVector::from(vec![0; 1]);
         assert_eq!(
-            fixed.tree_hash_root(),
+            <FixedVector<u8, 1> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
             merkle_root_with_hasher::<tree_hash::Sha256Hasher>(&[0; 8], 0)
         );
 
         let fixed: FixedVector<u8, 8> = FixedVector::from(vec![0; 8]);
         assert_eq!(
-            fixed.tree_hash_root(),
+            <FixedVector<u8, 8> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
             merkle_root_with_hasher::<tree_hash::Sha256Hasher>(&[0; 8], 0)
         );
 
         let fixed: FixedVector<u8, 16> = FixedVector::from(vec![42; 16]);
         assert_eq!(
-            fixed.tree_hash_root(),
+            <FixedVector<u8, 16> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
             merkle_root_with_hasher::<tree_hash::Sha256Hasher>(&[42; 16], 0)
         );
 
         let source: Vec<u8> = (0..16).collect();
         let fixed: FixedVector<u8, 16> = FixedVector::from(source.clone());
         assert_eq!(
-            fixed.tree_hash_root(),
+            <FixedVector<u8, 16> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
             merkle_root_with_hasher::<tree_hash::Sha256Hasher>(&source, 0)
         );
     }
@@ -509,19 +509,19 @@ mod test {
 
         let fixed: FixedVector<A, 0> = FixedVector::from(vec![]);
         assert_eq!(
-            fixed.tree_hash_root(),
+            <FixedVector<A, 0> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
             merkle_root_with_hasher::<tree_hash::Sha256Hasher>(&[0; 32], 0)
         );
 
         let fixed: FixedVector<A, 1> = FixedVector::from(vec![a]);
         assert_eq!(
-            fixed.tree_hash_root(),
+            <FixedVector<A, 1> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
             merkle_root_with_hasher::<tree_hash::Sha256Hasher>(a.tree_hash_root().as_slice(), 0)
         );
 
         let fixed: FixedVector<A, 8> = FixedVector::from(vec![a; 8]);
         assert_eq!(
-            fixed.tree_hash_root(),
+            <FixedVector<A, 8> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
             merkle_root_with_hasher::<tree_hash::Sha256Hasher>(
                 &repeat(a.tree_hash_root().as_slice(), 8),
                 0
@@ -530,7 +530,7 @@ mod test {
 
         let fixed: FixedVector<A, 13> = FixedVector::from(vec![a; 13]);
         assert_eq!(
-            fixed.tree_hash_root(),
+            <FixedVector<A, 13> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
             merkle_root_with_hasher::<tree_hash::Sha256Hasher>(
                 &repeat(a.tree_hash_root().as_slice(), 13),
                 0
@@ -539,7 +539,7 @@ mod test {
 
         let fixed: FixedVector<A, 16> = FixedVector::from(vec![a; 16]);
         assert_eq!(
-            fixed.tree_hash_root(),
+            <FixedVector<A, 16> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
             merkle_root_with_hasher::<tree_hash::Sha256Hasher>(
                 &repeat(a.tree_hash_root().as_slice(), 16),
                 0

@@ -162,7 +162,7 @@ impl<T: TreeHash<H>, H: TreeHashDigest> TreeHash<H> for Arc<T> {
 
 /// A helper function providing common functionality for finding the Merkle root of some bytes that
 /// represent a bitfield.
-pub fn bitfield_bytes_tree_hash_root<const N: usize, H: TreeHashDigest>(bytes: &[u8]) -> Hash256 {
+pub fn bitfield_bytes_tree_hash_root<const N: usize, H: TreeHashDigest>(bytes: &[u8]) -> H::Output {
     let byte_size = N.div_ceil(8);
     let leaf_count = byte_size.div_ceil(BYTES_PER_CHUNK);
 
@@ -175,7 +175,7 @@ pub fn bitfield_bytes_tree_hash_root<const N: usize, H: TreeHashDigest>(bytes: &
         .expect("bitfield tree hash buffer should not exceed leaf limit")
 }
 
-impl<N: Unsigned + Clone> TreeHash for Bitfield<Variable<N>> {
+impl<const N: usize, H: TreeHashDigest> TreeHash<H> for Bitfield<Variable<N>> {
     fn tree_hash_type() -> TreeHashType {
         TreeHashType::List
     }
@@ -196,7 +196,7 @@ impl<N: Unsigned + Clone> TreeHash for Bitfield<Variable<N>> {
     }
 }
 
-impl<const N: usize, H: TreeHashDigest> TreeHash for Bitfield<Fixed<N>> {
+impl<const N: usize, H: TreeHashDigest> TreeHash<H> for Bitfield<Fixed<N>> {
     fn tree_hash_type() -> TreeHashType {
         TreeHashType::Vector
     }
@@ -309,7 +309,7 @@ mod test {
         let small_bitvector =
             BitVector::<32>::from_bytes(small_bitvector_bytes.clone().into()).unwrap();
         assert_eq!(
-            <BitVector<U32> as TreeHash<Sha256Hasher>>::tree_hash_root(&small_bitvector).as_slice()
+            <BitVector<32> as TreeHash<Sha256Hasher>>::tree_hash_root(&small_bitvector).as_slice()
                 [..4],
             small_bitvector_bytes
         );
@@ -319,7 +319,7 @@ mod test {
     fn bitlist() {
         let empty_bitlist = BitList::<8>::with_capacity(8).unwrap();
         assert_eq!(
-            <BitList<U8> as TreeHash<Sha256Hasher>>::tree_hash_root(&empty_bitlist),
+            <BitList<8> as TreeHash<Sha256Hasher>>::tree_hash_root(&empty_bitlist),
             "0x5ac78d953211aa822c3ae6e9b0058e42394dd32e5992f29f9c12da3681985130"
                 .parse()
                 .unwrap()
@@ -328,7 +328,7 @@ mod test {
         let mut small_bitlist = BitList::<32>::with_capacity(4).unwrap();
         small_bitlist.set(1, true).unwrap();
         assert_eq!(
-            <BitList<U32> as TreeHash<Sha256Hasher>>::tree_hash_root(&small_bitlist),
+            <BitList<32> as TreeHash<Sha256Hasher>>::tree_hash_root(&small_bitlist),
             "0x7eb03d394d83a389980b79897207be3a6512d964cb08978bb7f3cfc0db8cfb8a"
                 .parse()
                 .unwrap()
