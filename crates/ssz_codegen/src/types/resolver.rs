@@ -433,7 +433,9 @@ impl<'a> TypeResolver<'a> {
     pub fn resolve_class(&self, ty: &Ty) -> Option<ClassDef> {
         if let Ty::Imported(path, name, _) = ty {
             let resolvers = self.resolvers.borrow();
-            let resolver = resolvers.get(path).expect("Cannot get class definitions from external crates");
+            let resolver = resolvers
+                .get(path)
+                .expect("Cannot get class definitions from external crates");
             return resolver.resolve_class(&Ty::Simple(name.clone()));
         }
 
@@ -645,12 +647,12 @@ impl<'a> TypeResolver<'a> {
         if !resolvers.contains_key(path) {
             // Convert path to rust module path
             let mut path_segments = syn::punctuated::Punctuated::new();
-            path_segments.extend(path.to_str().unwrap().split(std::path::MAIN_SEPARATOR).map(|s| {
-                syn::PathSegment {
+            path_segments.extend(path.to_str().unwrap().split(std::path::MAIN_SEPARATOR).map(
+                |s| syn::PathSegment {
                     ident: syn::Ident::new(s, proc_macro2::Span::call_site()),
                     arguments: syn::PathArguments::None,
-                }
-            }));
+                },
+            ));
             // Add the name of the imported type
             path_segments.push(syn::PathSegment {
                 ident: syn::Ident::new(&name.0, proc_macro2::Span::call_site()),
@@ -668,7 +670,7 @@ impl<'a> TypeResolver<'a> {
             return TypeResolution {
                 ty,
                 resolution: TypeResolutionKind::External,
-            }
+            };
         }
         let resolver = resolvers.get(path).unwrap();
         let name_str = &name.0;

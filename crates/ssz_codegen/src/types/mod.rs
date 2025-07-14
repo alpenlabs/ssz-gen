@@ -218,7 +218,9 @@ impl TypeResolution {
             return true;
         }
 
-        if self.resolution == TypeResolutionKind::External || other.resolution == TypeResolutionKind::External {
+        if self.resolution == TypeResolutionKind::External
+            || other.resolution == TypeResolutionKind::External
+        {
             return true;
         }
 
