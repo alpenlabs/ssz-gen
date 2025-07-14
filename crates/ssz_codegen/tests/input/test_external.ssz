@@ -8,5 +8,5 @@ class ExternalContainer(Container):
     field_a: external_ssz.A
     field_b: external_b.B
 
-external_union_a = Union[null, external_ssz.A, external_b.B]
-external_union_b = Union[null, TestA, TestB]
+ExternalUnionA = Union[null, external_ssz.A, external_b.B]
+ExternalUnionB = Union[null, TestA, TestB]

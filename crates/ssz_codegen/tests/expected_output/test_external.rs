@@ -8,7 +8,7 @@ pub mod tests {
             #[derive(Encode, Decode, TreeHash)]
             #[ssz(enum_behaviour = "union")]
             #[tree_hash(enum_behaviour = "union")]
-            pub enum external_union_a {
+            pub enum ExternalUnionA {
                 Selector0,
                 Selector1(external_ssz::A),
                 Selector2(external_ssz::module_a::module_b::B),
@@ -16,7 +16,7 @@ pub mod tests {
             #[derive(Encode, Decode, TreeHash)]
             #[ssz(enum_behaviour = "union")]
             #[tree_hash(enum_behaviour = "union")]
-            pub enum external_union_b {
+            pub enum ExternalUnionB {
                 Selector0,
                 Selector1(TestA),
                 Selector2(TestB),

@@ -1,25 +1,25 @@
 import test_common as common
 
-constant_value = 5
-constant_value_2 = constant_value
-constant_value_imported = common.constant_value
+CONSTANT_VALUE = 5
+CONSTANT_VALUE_2 = CONSTANT_VALUE
+CONSTANT_VALUE_IMPORTED = common.CONSTANT_VALUE
 
-alias_list_imported_length = List[common.alias_uint8, common.constant_value]
-alias_list_imported_constant = List[common.alias_uint8, constant_value_imported]
+AliasListImportedLength = List[common.AliasUint8, common.CONSTANT_VALUE]
+AliasListImportedConstant = List[common.AliasUint8, CONSTANT_VALUE_IMPORTED]
 
-alias_container = common.alias_container
-alias_stable_container = common.alias_stable_container
-alias_stable_container_with_constant = common.alias_stable_container_with_constant
+AliasContainer = common.AliasContainer
+AliasStableContainer = common.AliasStableContainer
+AliasStableContainerWithConstant = common.AliasStableContainerWithConstant
 
-class stable_container(common.alias_stable_container_with_constant):
-    a: Optional[common.alias_uint8]
+class StableContainerClass(common.AliasStableContainerWithConstant):
+    a: Optional[common.AliasUint8]
 
-alias_class_stable_container = common.stable_container
+AliasClassStableContainer = common.StableContainerClass
 
-alias_profile = common.alias_profile
+AliasProfile = common.AliasProfile
 
-alias_uint8 = common.alias_uint8
-alias_alias_uint8 = common.alias_alias_uint8
+AliasUint8 = common.AliasUint8
+AliasAliasUint8 = common.AliasAliasUint8
 
-alias_union = common.alias_union
-alias_union_union = Union[null, common.alias_uint8, common.alias_union]
+AliasUnion = common.AliasUnion
+AliasUnionUnion = Union[null, common.AliasUint8, common.AliasUnion]

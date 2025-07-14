@@ -1,17 +1,17 @@
-constant_value = 5
+CONSTANT_VALUE = 5
 
-alias_container = Container
-alias_stable_container = StableContainer[10]
-alias_stable_container_with_constant = StableContainer[constant_value]
+AliasContainer = Container
+AliasStableContainer = StableContainer[10]
+AliasStableContainerWithConstant = StableContainer[CONSTANT_VALUE]
 
-class stable_container(alias_stable_container_with_constant):
+class StableContainerClass(AliasStableContainerWithConstant):
     a: Optional[uint8]
-    b: Optional[alias_union]
+    b: Optional[AliasUnion]
 
-alias_profile = Profile[stable_container]
+AliasProfile = Profile[StableContainerClass]
 
-alias_uint8 = uint8
-alias_alias_uint8 = alias_uint8
+AliasUint8 = uint8
+AliasAliasUint8 = AliasUint8
 
-alias_union = Union[null, uint8]
-alias_union_union = Union[uint8, alias_union]
+AliasUnion = Union[null, uint8]
+AliasUnionUnion = Union[uint8, AliasUnion]
