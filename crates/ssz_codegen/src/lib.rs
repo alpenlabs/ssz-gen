@@ -29,6 +29,7 @@ pub mod types;
 ///
 /// * `entry_points` - Paths to the entrypoint SSZ definition files
 /// * `base_dir` - Path to the base directory of the SSZ definition files
+/// * `crates` - A slice of strings representing the external crates you want to import in your ssz schema
 /// * `output_dir` - Path where the generated Rust code files will be written
 ///
 /// # Example
@@ -41,6 +42,7 @@ pub mod types;
 ///     build_ssz_files(
 ///         &["test_1.ssz", "test_2.ssz"],
 ///         "specs/",
+///         &["ssz_defs_1", "ssz_defs_2"],
 ///         out_dir.to_str().unwrap(),
 ///     )
 ///     .expect("Failed to generate SSZ types");
@@ -49,11 +51,12 @@ pub mod types;
 pub fn build_ssz_files(
     entry_points: &[&str],
     base_dir: &str,
+    crates: &[&str],
     output_file_path: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let files = files::read_entrypoint_ssz(entry_points, base_dir)?;
     println!("cargo:rerun-if-changed={base_dir}");
-    let (parsing_order, schema_map) = parse_str_schema(&files)?;
+    let (parsing_order, schema_map) = parse_str_schema(&files, crates)?;
     let rust_code = codegen::schema_map_to_rust_code(&parsing_order, &schema_map);
     let pretty_rust_code = prettyplease::unparse(&syn::parse_str(&rust_code.to_string())?);
     let output_path = Path::new(output_file_path);

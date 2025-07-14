@@ -9,7 +9,7 @@ use crate::{
     schema::{self, SchemaError},
     token::{self, TokenError},
     token_tree::{self, ToktrError},
-    ty_resolver::{CrossModuleTypeMap, ResolverError},
+    ty_resolver::{CrossModuleTypeMap, ModuleTypeMap, ResolverError},
 };
 
 /// Represents an error from any of the phases of parsing a raw schema.
@@ -39,8 +39,9 @@ pub enum SszError {
 /// High-level parse function.
 pub fn parse_str_schema(
     files: &HashMap<PathBuf, String>,
+    external_modules: &[&str],
 ) -> Result<(Vec<PathBuf>, HashMap<PathBuf, SszSchema>), SszError> {
-    let mut module_manager = ModuleManager::new();
+    let mut module_manager = ModuleManager::new(external_modules);
 
     for (path, content) in files {
         let chars = content.chars().collect::<Vec<_>>();
@@ -57,9 +58,13 @@ pub fn parse_str_schema(
     let mut cross_module_types = CrossModuleTypeMap::new();
     let mut parsing_order = Vec::new();
     while let Some((path, module)) = module_manager.pop_module() {
+        if module.is_external() {
+            cross_module_types.insert(path.clone(), ModuleTypeMap::External);
+            continue;
+        }
         let (schema, idents) = schema::conv_module_to_schema(&module, &cross_module_types)?;
         parsing_order.push(path.clone());
-        cross_module_types.insert(path.clone(), idents);
+        cross_module_types.insert(path.clone(), ModuleTypeMap::Internal(idents));
         schema_map.insert(path, schema);
     }
 
@@ -85,7 +90,7 @@ class Point2d(Container):
 ";
 
         let files = HashMap::from([(Path::new("").to_path_buf(), SCHEMA.to_string())]);
-        let schema = parse_str_schema(&files).expect("test: parse schema");
+        let schema = parse_str_schema(&files, &[]).expect("test: parse schema");
 
         eprintln!("{schema:#?}");
     }
@@ -107,7 +112,7 @@ class DepositRequest(Container):
 ";
 
         let files = HashMap::from([(Path::new("").to_path_buf(), SCHEMA.to_string())]);
-        let schema = parse_str_schema(&files).expect("test: parse schema");
+        let schema = parse_str_schema(&files, &[]).expect("test: parse schema");
 
         eprintln!("{schema:#?}");
     }
@@ -125,7 +130,7 @@ class Header(Container):
 ";
 
         let files = HashMap::from([(Path::new("").to_path_buf(), SCHEMA.to_string())]);
-        let schema = parse_str_schema(&files).expect("test: parse schema");
+        let schema = parse_str_schema(&files, &[]).expect("test: parse schema");
 
         eprintln!("{schema:#?}");
     }
@@ -142,7 +147,7 @@ class MagicFoo(MagicStable):
 ";
 
         let files = HashMap::from([(Path::new("").to_path_buf(), SCHEMA.to_string())]);
-        let schema = parse_str_schema(&files).expect("test: parse schema");
+        let schema = parse_str_schema(&files, &[]).expect("test: parse schema");
 
         eprintln!("{schema:#?}");
     }
@@ -151,10 +156,12 @@ class MagicFoo(MagicStable):
     fn test_pipeline_imports() {
         const SCHEMA_AS: &str = r"
 import import_test as test
+import ssz_external as external
 
 TestA = test.A
 TestB = test.B
 TestC = test.C
+TestD = external.D
 
 VAL_A = 12
 VAL_B = VAL_A
@@ -171,10 +178,12 @@ f = List[test.A, TEST_CONST]
 
         const SCHEMA: &str = r"
 import import_test
+import ssz_external.module_a
 
 TestA = import_test.A
 TestB = import_test.B
 TestC = import_test.C
+TestD = module_a.D
 
 VAL_A = 12
 VAL_B = VAL_A
@@ -193,7 +202,7 @@ f = List[import_test.A, TEST_CONST]
             Path::new("tests/non_existent").to_path_buf(),
             SCHEMA_AS.to_string(),
         )]);
-        let schema = parse_str_schema(&files).expect("test: parse schema");
+        let schema = parse_str_schema(&files, &["ssz_external"]).expect("test: parse schema");
 
         eprintln!("{schema:#?}");
 
@@ -201,7 +210,7 @@ f = List[import_test.A, TEST_CONST]
             Path::new("tests/non_existent").to_path_buf(),
             SCHEMA.to_string(),
         )]);
-        let schema = parse_str_schema(&files).expect("test: parse schema");
+        let schema = parse_str_schema(&files, &["ssz_external"]).expect("test: parse schema");
 
         eprintln!("{schema:#?}");
     }

@@ -111,7 +111,33 @@ pub(crate) enum AliasRef {
     Direct(Ty),
 }
 
-pub(crate) type CrossModuleTypeMap<'a> = HashMap<PathBuf, HashMap<Identifier, IdentTarget>>;
+/// Describes the type of a module.
+pub(crate) enum ModuleTypeMap {
+    External,
+    Internal(HashMap<Identifier, IdentTarget>),
+}
+
+impl ModuleTypeMap {
+    pub(crate) fn is_external(&self) -> bool {
+        matches!(self, Self::External)
+    }
+
+    pub(crate) fn get(&self, ident: &Identifier) -> Option<&IdentTarget> {
+        match self {
+            Self::External => None,
+            Self::Internal(idents) => idents.get(ident),
+        }
+    }
+
+    pub(crate) fn contains_key(&self, ident: &Identifier) -> bool {
+        match self {
+            Self::External => false,
+            Self::Internal(idents) => idents.contains_key(ident),
+        }
+    }
+}
+
+pub(crate) type CrossModuleTypeMap<'a> = HashMap<PathBuf, ModuleTypeMap>;
 
 #[derive(Clone)]
 pub(crate) struct TypeResolver<'a> {
@@ -380,24 +406,35 @@ impl<'a> TypeResolver<'a> {
                                     ));
                                 };
 
-                                let Some(ident_target) = ident_targets.get(imported.base_name())
-                                else {
-                                    return Err(ResolverError::UnknownImportItem(
-                                        imported.module_name().clone(),
-                                        imported.base_name().clone(),
-                                    ));
-                                };
-
-                                match ident_target {
-                                    IdentTarget::Ty(_) => TyExpr::Ty(Ty::Imported(
+                                // If external just skip and pretend it works.
+                                if ident_targets.is_external() {
+                                    TyExpr::Ty(Ty::Imported(
                                         imported.module_path().clone(),
                                         imported.base_name().clone(),
                                         imported.full_name(),
-                                    )),
-                                    _ => {
-                                        return Err(ResolverError::MismatchedArgKind(
-                                            ident.clone(),
+                                    ))
+                                } else {
+                                    // Otherwise, we need to make sure it's a valid identifier.
+                                    let Some(ident_target) =
+                                        ident_targets.get(imported.base_name())
+                                    else {
+                                        return Err(ResolverError::UnknownImportItem(
+                                            imported.module_name().clone(),
+                                            imported.base_name().clone(),
                                         ));
+                                    };
+
+                                    match ident_target {
+                                        IdentTarget::Ty(_) => TyExpr::Ty(Ty::Imported(
+                                            imported.module_path().clone(),
+                                            imported.base_name().clone(),
+                                            imported.full_name(),
+                                        )),
+                                        _ => {
+                                            return Err(ResolverError::MismatchedArgKind(
+                                                ident.clone(),
+                                            ));
+                                        }
                                     }
                                 }
                             }
@@ -410,24 +447,35 @@ impl<'a> TypeResolver<'a> {
                                     ));
                                 };
 
-                                let Some(ident_target) = ident_targets.get(imported.base_name())
-                                else {
-                                    return Err(ResolverError::UnknownImportItem(
-                                        imported.module_name().clone(),
-                                        imported.base_name().clone(),
-                                    ));
-                                };
-
-                                match ident_target {
-                                    IdentTarget::Const(_) => TyExpr::Ty(Ty::Imported(
+                                // If external just skip and pretend it works.
+                                if ident_targets.is_external() {
+                                    TyExpr::Ty(Ty::Imported(
                                         imported.module_path().clone(),
                                         imported.base_name().clone(),
                                         imported.full_name(),
-                                    )),
-                                    _ => {
-                                        return Err(ResolverError::MismatchedArgKind(
-                                            ident.clone(),
+                                    ))
+                                } else {
+                                    // Otherwise, we need to make sure it's a valid identifier.
+                                    let Some(ident_target) =
+                                        ident_targets.get(imported.base_name())
+                                    else {
+                                        return Err(ResolverError::UnknownImportItem(
+                                            imported.module_name().clone(),
+                                            imported.base_name().clone(),
                                         ));
+                                    };
+
+                                    match ident_target {
+                                        IdentTarget::Const(_) => TyExpr::Ty(Ty::Imported(
+                                            imported.module_path().clone(),
+                                            imported.base_name().clone(),
+                                            imported.full_name(),
+                                        )),
+                                        _ => {
+                                            return Err(ResolverError::MismatchedArgKind(
+                                                ident.clone(),
+                                            ));
+                                        }
                                     }
                                 }
                             }
@@ -469,24 +517,35 @@ impl<'a> TypeResolver<'a> {
                                     ));
                                 };
 
-                                let Some(ident_target) = ident_targets.get(imported.base_name())
-                                else {
-                                    return Err(ResolverError::UnknownImportItem(
-                                        imported.module_name().clone(),
-                                        imported.base_name().clone(),
-                                    ));
-                                };
-
-                                match ident_target {
-                                    IdentTarget::Ty(_) => TyExpr::Ty(Ty::Imported(
+                                // If external just skip and pretend it works.
+                                if ident_targets.is_external() {
+                                    TyExpr::Ty(Ty::Imported(
                                         imported.module_path().clone(),
                                         imported.base_name().clone(),
                                         imported.full_name(),
-                                    )),
-                                    _ => {
-                                        return Err(ResolverError::MismatchedArgKind(
-                                            ident.clone(),
+                                    ))
+                                } else {
+                                    // Otherwise, we need to make sure it's a valid identifier.
+                                    let Some(ident_target) =
+                                        ident_targets.get(imported.base_name())
+                                    else {
+                                        return Err(ResolverError::UnknownImportItem(
+                                            imported.module_name().clone(),
+                                            imported.base_name().clone(),
                                         ));
+                                    };
+
+                                    match ident_target {
+                                        IdentTarget::Ty(_) => TyExpr::Ty(Ty::Imported(
+                                            imported.module_path().clone(),
+                                            imported.base_name().clone(),
+                                            imported.full_name(),
+                                        )),
+                                        _ => {
+                                            return Err(ResolverError::MismatchedArgKind(
+                                                ident.clone(),
+                                            ));
+                                        }
                                     }
                                 }
                             }
@@ -520,6 +579,16 @@ impl<'a> TypeResolver<'a> {
                     return Err(ResolverError::UnknownImport(imported.module_name().clone()));
                 };
 
+                // If external just skip and pretend it works.
+                if ident_targets.is_external() {
+                    return Ok(Ty::Imported(
+                        imported.module_path().clone(),
+                        imported.base_name().clone(),
+                        imported.full_name(),
+                    ));
+                }
+
+                // Otherwise, we need to make sure it's a valid identifier.
                 if !ident_targets.contains_key(imported.base_name()) {
                     return Err(ResolverError::UnknownImportItem(
                         imported.module_name().clone(),

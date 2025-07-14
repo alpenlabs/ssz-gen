@@ -72,6 +72,8 @@ pub enum TypeResolutionKind {
     Union(String, Vec<TypeResolution>),
     /// Fixed-length byte array
     Bytes(usize),
+    /// External type always assumed valid no matter the context
+    External,
 }
 
 impl TypeResolution {
@@ -213,6 +215,10 @@ impl TypeResolution {
         resolver: &TypeResolver<'_>,
     ) -> bool {
         if self.resolution == other.resolution {
+            return true;
+        }
+
+        if self.resolution == TypeResolutionKind::External || other.resolution == TypeResolutionKind::External {
             return true;
         }
 

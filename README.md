@@ -36,6 +36,7 @@ fn main() {
     build_ssz_files(
         &["schema.ssz"],           // Entry point SSZ files
         "specs/",                  // Base directory containing SSZ files
+        &["external_ssz_crate"],   // External crates you would like to import and use in your SSZ schemas
         output_path.to_str().unwrap(),
     )
     .expect("Failed to generate SSZ types");

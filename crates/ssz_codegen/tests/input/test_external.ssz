@@ -1,0 +1,12 @@
+import external_ssz
+import external_ssz.module_a.module_b as external_b
+
+TestA = external_ssz.A
+TestB = external_b.B
+
+class ExternalContainer(Container):
+    field_a: external_ssz.A
+    field_b: external_b.B
+
+external_union_a = Union[null, external_ssz.A, external_b.B]
+external_union_b = Union[null, TestA, TestB]

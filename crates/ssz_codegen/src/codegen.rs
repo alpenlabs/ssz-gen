@@ -257,7 +257,9 @@ impl<'a> CircleBufferCodegen<'a> {
                     }
                 }
                 BaseClass::StableContainer(_) => {
-                    if !matches!(field_type.resolution, TypeResolutionKind::Optional(_)) {
+                    if !matches!(field_type.resolution, TypeResolutionKind::Optional(_))
+                        && !matches!(field_type.resolution, TypeResolutionKind::External)
+                    {
                         panic!("All fields in StableContainer classes must be optional");
                     }
                 }

@@ -16,8 +16,13 @@ use std::fs;
 
 #[test]
 fn test_basic_codegen() {
-    build_ssz_files(&["test_1.ssz"], "tests/input", "tests/output/test_1.rs")
-        .expect("Failed to generate SSZ types");
+    build_ssz_files(
+        &["test_1.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_1.rs",
+    )
+    .expect("Failed to generate SSZ types");
 
     let expected_output = fs::read_to_string("tests/expected_output/test_1.rs")
         .expect("Failed to read expected output");
@@ -28,8 +33,13 @@ fn test_basic_codegen() {
 
 #[test]
 fn test_profile() {
-    build_ssz_files(&["test_2.ssz"], "tests/input", "tests/output/test_2.rs")
-        .expect("Failed to generate SSZ types");
+    build_ssz_files(
+        &["test_2.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_2.rs",
+    )
+    .expect("Failed to generate SSZ types");
 
     let expected_output = fs::read_to_string("tests/expected_output/test_2.rs")
         .expect("Failed to read expected output");
@@ -43,6 +53,7 @@ fn test_imports() {
     build_ssz_files(
         &["test_import_1.ssz", "test_import_2.ssz"],
         "tests/input",
+        &[],
         "tests/output/test_import.rs",
     )
     .expect("Failed to generate SSZ types");
@@ -59,6 +70,7 @@ fn test_large_unions() {
     build_ssz_files(
         &["test_large_unions.ssz"],
         "tests/input",
+        &[],
         "tests/output/test_large_unions.rs",
     )
     .expect("Failed to generate SSZ types");
@@ -75,6 +87,7 @@ fn test_nested_aliases() {
     build_ssz_files(
         &["test_nested_aliases.ssz"],
         "tests/input",
+        &[],
         "tests/output/test_nested_aliases.rs",
     )
     .expect("Failed to generate SSZ types");
@@ -91,6 +104,7 @@ fn test_bitfields() {
     build_ssz_files(
         &["test_bitfields.ssz"],
         "tests/input",
+        &[],
         "tests/output/test_bitfields.rs",
     )
     .expect("Failed to generate SSZ types");
@@ -107,6 +121,7 @@ fn test_union_edge_cases() {
     build_ssz_files(
         &["test_union_edge_cases.ssz"],
         "tests/input",
+        &[],
         "tests/output/test_union_edge_cases.rs",
     )
     .expect("Failed to generate SSZ types");
@@ -119,11 +134,29 @@ fn test_union_edge_cases() {
 }
 
 #[test]
+fn test_external_import() {
+    build_ssz_files(
+        &["test_external.ssz"],
+        "tests/input",
+        &["external_ssz"],
+        "tests/output/test_external.rs",
+    )
+    .expect("Failed to generate SSZ types");
+
+    let expected_output = fs::read_to_string("tests/expected_output/test_external.rs")
+        .expect("Failed to read expected output");
+    let actual_output =
+        fs::read_to_string("tests/output/test_external.rs").expect("Failed to read actual output");
+    assert_eq!(expected_output, actual_output);
+}
+
+#[test]
 #[should_panic(expected = "CyclicTypedefs")]
 fn test_circular_dep() {
     build_ssz_files(
         &["test_circular_dep.ssz"],
         "tests/input",
+        &[],
         "tests/output/test_circular_dep.rs",
     )
     .expect("This should panic due to circular dependency");
@@ -135,6 +168,7 @@ fn test_unknown_import_item() {
     build_ssz_files(
         &["test_unknown_import_item.ssz"],
         "tests/input",
+        &[],
         "tests/output/test_unknown_import_item.rs",
     )
     .expect("This should panic due to unknown import item");
@@ -146,6 +180,7 @@ fn test_duplicate_field_name() {
     build_ssz_files(
         &["test_duplicate_field_name.ssz"],
         "tests/input",
+        &[],
         "tests/output/test_duplicate_field_name.rs",
     )
     .expect("This should panic due to duplicate field name");
@@ -157,6 +192,7 @@ fn test_duplicate_item_name() {
     build_ssz_files(
         &["test_duplicate_item_name.ssz"],
         "tests/input",
+        &[],
         "tests/output/test_duplicate_item_name.rs",
     )
     .expect("This should panic due to duplicate item name");
@@ -168,6 +204,7 @@ fn test_optional_field_container() {
     build_ssz_files(
         &["test_optional_field_container.ssz"],
         "tests/input",
+        &[],
         "tests/output/test_optional_field_container.rs",
     )
     .expect("This should panic due to optional field in container");
@@ -179,6 +216,7 @@ fn test_stable_container_without_optional() {
     build_ssz_files(
         &["test_stable_container_without_optional.ssz"],
         "tests/input",
+        &[],
         "tests/output/test_stable_container_without_optional.rs",
     )
     .expect("This should panic due to stable container without optional");
@@ -190,6 +228,7 @@ fn test_union_null_position() {
     build_ssz_files(
         &["test_union_null_position.ssz"],
         "tests/input",
+        &[],
         "tests/output/test_union_null_position.rs",
     )
     .expect("This should panic due to none not being first in union");
@@ -201,6 +240,7 @@ fn test_anon_union() {
     build_ssz_files(
         &["test_anon_union.ssz"],
         "tests/input",
+        &[],
         "tests/output/test_anon_union.rs",
     )
     .expect("This should panic due to anonymous union");
@@ -212,6 +252,7 @@ fn test_profile_new_fields() {
     build_ssz_files(
         &["test_profile_new_fields.ssz"],
         "tests/input",
+        &[],
         "tests/output/test_profile_new_fields.rs",
     )
     .expect("This should panic due to new fields in profile");
@@ -223,6 +264,7 @@ fn test_profile_field_order() {
     build_ssz_files(
         &["test_profile_field_order.ssz"],
         "tests/input",
+        &[],
         "tests/output/test_profile_field_order.rs",
     )
     .expect("This should panic due to field order in profile");

@@ -19,17 +19,36 @@ pub(crate) type Modules = HashMap<PathBuf, Module>;
 
 /// A module file containing a list of definitions.
 #[derive(Clone, Debug)]
-pub(crate) struct Module {
-    entries: Vec<ModuleEntry>,
+pub(crate) enum Module {
+    External,
+    Internal(Vec<ModuleEntry>),
 }
 
 impl Module {
-    pub(crate) fn new(entry: Vec<ModuleEntry>) -> Self {
-        Self { entries: entry }
+    pub(crate) fn new_external() -> Self {
+        Self::External
+    }
+
+    pub(crate) fn new_internal(entry: Vec<ModuleEntry>) -> Self {
+        Self::Internal(entry)
+    }
+
+    pub(crate) fn is_external(&self) -> bool {
+        matches!(self, Self::External)
     }
 
     pub(crate) fn entries(&self) -> &[ModuleEntry] {
-        &self.entries
+        match self {
+            Self::External => &[],
+            Self::Internal(entries) => entries,
+        }
+    }
+
+    pub(crate) fn mut_entries(&mut self) -> &mut Vec<ModuleEntry> {
+        match self {
+            Self::External => panic!("external module has no entries"),
+            Self::Internal(entries) => entries,
+        }
     }
 }
 
@@ -290,14 +309,17 @@ pub(crate) struct ModuleManager {
     modules: Modules,
     /// The order of the modules that have been imported.
     import_order: Vec<PathBuf>,
+    /// External modules that can be imported.
+    external_modules: Vec<String>,
 }
 
 impl ModuleManager {
     /// Creates a new module manager for the given path.
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(external_modules: &[&str]) -> Self {
         Self {
             modules: Modules::new(),
             import_order: Vec::new(),
+            external_modules: external_modules.iter().map(|s| s.to_string()).collect(),
         }
     }
 
@@ -307,18 +329,24 @@ impl ModuleManager {
             return false;
         }
         let path = path.as_ref().to_path_buf();
-        self.modules.insert(path.clone(), Module::new(Vec::new()));
+        self.modules
+            .insert(path.clone(), Module::new_internal(Vec::new()));
         self.import_order.insert(0, path);
         true
     }
 
     /// Adds a module to the manager.
-    pub(crate) fn add_module<P: AsRef<Path>>(&mut self, path: P) -> bool {
+    pub(crate) fn add_module<P: AsRef<Path>>(&mut self, path: P, is_external: bool) -> bool {
         if self.modules.contains_key(path.as_ref()) {
             return false;
         }
         let path = path.as_ref().to_path_buf();
-        self.modules.insert(path.clone(), Module::new(Vec::new()));
+        let module = if is_external {
+            Module::new_external()
+        } else {
+            Module::new_internal(Vec::new())
+        };
+        self.modules.insert(path.clone(), module);
         self.import_order.push(path);
         true
     }
@@ -369,7 +397,7 @@ pub(crate) fn parse_module_from_toktrs<P: AsRef<Path>>(
                 module_manager
                     .get_module_mut(path)
                     .unwrap()
-                    .entries
+                    .mut_entries()
                     .push(ModuleEntry::Assignment(cd));
             }
 
@@ -379,7 +407,7 @@ pub(crate) fn parse_module_from_toktrs<P: AsRef<Path>>(
                 module_manager
                     .get_module_mut(path)
                     .unwrap()
-                    .entries
+                    .mut_entries()
                     .push(ModuleEntry::Class(cd));
             }
 
@@ -732,9 +760,17 @@ fn parse_import<P: AsRef<Path>>(
 
             // Parse the path of import module
             let mut path_gob = Gobbler::new(path_tokens);
+            let mut is_first_tok = true;
+            let mut is_external = false;
             loop {
                 match path_gob.view() {
                     [Identifier(_, name), Dot(_), ..] => {
+                        if is_first_tok {
+                            is_external = module_manager.external_modules.contains(&name.0);
+                            if is_external {
+                                path = PathBuf::new();
+                            }
+                        }
                         path = path.join(&name.0);
                         path_gob.gobble_exact(2);
                     }
@@ -746,12 +782,24 @@ fn parse_import<P: AsRef<Path>>(
                         path_gob.gobble_exact(2);
                     }
                     [Identifier(_, name), As(_), Identifier(_, alias)] => {
+                        if is_first_tok {
+                            is_external = module_manager.external_modules.contains(&name.0);
+                            if is_external {
+                                path = PathBuf::new();
+                            }
+                        }
                         path = path.join(&name.0);
                         import_alias = alias.clone();
                         path_gob.gobble_exact(3);
                         break;
                     }
                     [Identifier(_, name)] => {
+                        if is_first_tok {
+                            is_external = module_manager.external_modules.contains(&name.0);
+                            if is_external {
+                                path = PathBuf::new();
+                            }
+                        }
                         path = path.join(&name.0);
                         import_alias = name.clone();
                         path_gob.gobble_one();
@@ -760,6 +808,7 @@ fn parse_import<P: AsRef<Path>>(
                     [t, ..] => return Err(ParseError::UnexpectedToken(*t.tag())),
                     _ => return Err(ParseError::UnexpectedEnd),
                 }
+                is_first_tok = false;
             }
 
             if import_map
@@ -768,8 +817,8 @@ fn parse_import<P: AsRef<Path>>(
             {
                 panic!("import: duplicate import alias: {import_alias:?}");
             }
-            let add_module_result = module_manager.add_module(&path);
-            if !add_module_result {
+            let add_module_result = module_manager.add_module(&path, is_external);
+            if !add_module_result || is_external {
                 return Ok(());
             }
 
@@ -834,8 +883,8 @@ FARB_NORB = 4 * 8
         let tt = parse_tokens_to_toktrs(&toks).expect("test: treeize tokens");
         eprintln!("tree {tt:#?}");
 
-        let mut module_manager = ModuleManager::new();
-        module_manager.add_module(Path::new(""));
+        let mut module_manager = ModuleManager::new(&[]);
+        module_manager.add_module(Path::new(""), false);
         parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
             .expect("test: parse toktrs");
         eprintln!("module {module_manager:#?}");
@@ -856,8 +905,8 @@ class Foo(Container):
         let tt = parse_tokens_to_toktrs(&toks).expect("test: treeize tokens");
         eprintln!("tree {tt:#?}");
 
-        let mut module_manager = ModuleManager::new();
-        module_manager.add_module(Path::new(""));
+        let mut module_manager = ModuleManager::new(&[]);
+        module_manager.add_module(Path::new(""), false);
         parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
             .expect("test: parse toktrs");
         eprintln!("module {module_manager:#?}");
@@ -885,8 +934,8 @@ class Foo(StableContainer[16]):
         let tt = parse_tokens_to_toktrs(&toks).expect("test: treeize tokens");
         eprintln!("tree {tt:#?}");
 
-        let mut module_manager = ModuleManager::new();
-        module_manager.add_module(Path::new(""));
+        let mut module_manager = ModuleManager::new(&[]);
+        module_manager.add_module(Path::new(""), false);
         parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
             .expect("test: parse toktrs");
         eprintln!("module {module_manager:#?}");
@@ -912,8 +961,8 @@ class Foo(test.A):
         let tt = parse_tokens_to_toktrs(&toks).expect("test: treeize tokens");
         eprintln!("tree {tt:#?}");
 
-        let mut module_manager = ModuleManager::new();
-        module_manager.add_module(Path::new("tests/non_existent"));
+        let mut module_manager = ModuleManager::new(&[]);
+        module_manager.add_module(Path::new("tests/non_existent"), false);
         parse_module_from_toktrs(&tt, Path::new("tests/non_existent"), &mut module_manager)
             .expect("test: parse toktrs");
         eprintln!("module {module_manager:#?}");

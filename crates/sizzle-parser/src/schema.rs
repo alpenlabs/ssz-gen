@@ -167,6 +167,21 @@ pub(crate) fn conv_module_to_schema<'a>(
                         return Err(SchemaError::UnknownImport(imported.module_name().clone()));
                     };
 
+                    if ident_targets.is_external() {
+                        // Treat all external types as non-const (we have no way of getting the value)
+                        resolver.decl_user_type(name.clone())?;
+                        idents.insert(name.clone(), IdentTarget::Ty(TypeData {}));
+                        aliases.push(AliasDef {
+                            name: name.clone(),
+                            ty: Ty::Imported(
+                                path.clone(),
+                                imported.base_name().clone(),
+                                imported.full_name(),
+                            ),
+                        });
+                        continue;
+                    }
+
                     let Some(ident_target) = ident_targets.get(imported.base_name()) else {
                         return Err(SchemaError::UnknownImportItem(
                             imported.module_name().clone(),
