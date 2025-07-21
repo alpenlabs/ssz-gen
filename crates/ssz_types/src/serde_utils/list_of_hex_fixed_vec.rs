@@ -5,32 +5,28 @@
 use crate::{FixedVector, VariableList};
 use serde::{Deserializer, Serializer, ser::SerializeSeq};
 use serde_derive::{Deserialize, Serialize};
-use std::marker::PhantomData;
-use typenum::Unsigned;
 
 /// A wrapper for a `FixedVector<u8, N>`
 #[derive(Deserialize, Debug)]
 #[serde(transparent)]
-pub struct WrappedListOwned<N: Unsigned>(
+pub struct WrappedListOwned<const N: usize>(
     #[serde(with = "crate::serde_utils::hex_fixed_vec")] FixedVector<u8, N>,
 );
 
 /// A wrapper for a `&FixedVector<u8, N>`
 #[derive(Serialize, Debug)]
 #[serde(transparent)]
-pub struct WrappedListRef<'a, N: Unsigned>(
+pub struct WrappedListRef<'a, const N: usize>(
     #[serde(with = "crate::serde_utils::hex_fixed_vec")] &'a FixedVector<u8, N>,
 );
 
 /// Serialize a `VariableList<FixedVector<u8, M>, N>`
-pub fn serialize<S, M, N>(
+pub fn serialize<S, const M: usize, const N: usize>(
     list: &VariableList<FixedVector<u8, M>, N>,
     serializer: S,
 ) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
-    M: Unsigned,
-    N: Unsigned,
 {
     let mut seq = serializer.serialize_seq(Some(list.len()))?;
     for bytes in list {
@@ -40,17 +36,10 @@ where
 }
 
 /// Visitor for deserializing a `VariableList<FixedVector<u8, M>, N>`
-#[derive(Default, Debug)]
-pub struct Visitor<M, N> {
-    _phantom_m: PhantomData<M>,
-    _phantom_n: PhantomData<N>,
-}
+#[derive(Debug)]
+pub struct Visitor<const M: usize, const N: usize>;
 
-impl<'a, M, N> serde::de::Visitor<'a> for Visitor<M, N>
-where
-    M: Unsigned,
-    N: Unsigned,
-{
+impl<'a, const M: usize, const N: usize> serde::de::Visitor<'a> for Visitor<M, N> {
     type Value = VariableList<FixedVector<u8, M>, N>;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -74,13 +63,11 @@ where
 }
 
 /// Deserialize a `VariableList<FixedVector<u8, M>, N>`
-pub fn deserialize<'de, D, M, N>(
+pub fn deserialize<'de, D, const M: usize, const N: usize>(
     deserializer: D,
 ) -> Result<VariableList<FixedVector<u8, M>, N>, D::Error>
 where
     D: Deserializer<'de>,
-    M: Unsigned,
-    N: Unsigned,
 {
-    deserializer.deserialize_seq(Visitor::default())
+    deserializer.deserialize_seq(Visitor)
 }

@@ -2,7 +2,7 @@
 //!
 //! Does the weird bookkeeping to figure out if schema types are well-formed.
 
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 
 use thiserror::Error;
 
@@ -14,6 +14,12 @@ use crate::{
 
 #[derive(Debug, Error)]
 pub enum ResolverError {
+    #[error("unknown import '{0:?}'")]
+    UnknownImport(Identifier),
+
+    #[error("unknown import item '{0:?}' in '{1:?}'")]
+    UnknownImportItem(Identifier, Identifier),
+
     #[error("unknown type '{0:?}'")]
     UnknownType(Identifier),
 
@@ -105,8 +111,39 @@ pub(crate) enum AliasRef {
     Direct(Ty),
 }
 
+/// Describes the type of a module.
+pub(crate) enum ModuleTypeMap {
+    External,
+    Internal(HashMap<Identifier, IdentTarget>),
+}
+
+impl ModuleTypeMap {
+    pub(crate) fn is_external(&self) -> bool {
+        matches!(self, Self::External)
+    }
+
+    pub(crate) fn get(&self, ident: &Identifier) -> Option<&IdentTarget> {
+        match self {
+            Self::External => None,
+            Self::Internal(idents) => idents.get(ident),
+        }
+    }
+
+    pub(crate) fn contains_key(&self, ident: &Identifier) -> bool {
+        match self {
+            Self::External => false,
+            Self::Internal(idents) => idents.contains_key(ident),
+        }
+    }
+}
+
+pub(crate) type CrossModuleTypeMap<'a> = HashMap<PathBuf, ModuleTypeMap>;
+
 #[derive(Clone)]
-pub(crate) struct TypeResolver {
+pub(crate) struct TypeResolver<'a> {
+    /// Map of module paths to their respective resolvers.
+    cross_module_types: &'a CrossModuleTypeMap<'a>,
+
     // TODO some way to express types that can be inherited from and types that can only be used as a member
     /// Constants in the module scope.
     idents: HashMap<Identifier, IdentTarget>,
@@ -115,9 +152,10 @@ pub(crate) struct TypeResolver {
     aliases: HashMap<Identifier, AliasRef>,
 }
 
-impl TypeResolver {
-    pub(crate) fn new() -> Self {
+impl<'a> TypeResolver<'a> {
+    pub(crate) fn new(cross_module_types: &'a CrossModuleTypeMap<'a>) -> Self {
         Self {
+            cross_module_types,
             idents: HashMap::new(),
             aliases: HashMap::new(),
         }
@@ -311,7 +349,15 @@ impl TypeResolver {
                                 ));
                             }
                             (CtorArg::Ty, TyArgSpec::Ident(arg_ident)) => {
-                                self.resolve_ident_with_args(arg_ident, None)?
+                                let expr = self.resolve_ident_with_args(arg_ident, None)?;
+                                match expr {
+                                    TyExpr::Ty(_) => expr,
+                                    _ => {
+                                        return Err(ResolverError::MismatchedArgKind(
+                                            ident.clone(),
+                                        ));
+                                    }
+                                }
                             }
                             (CtorArg::Ty, TyArgSpec::Complex(complex)) => {
                                 match self.resolve_ident_with_args(
@@ -335,13 +381,103 @@ impl TypeResolver {
                                 ));
                             }
                             (CtorArg::Int, TyArgSpec::Ident(arg_ident)) => {
-                                self.resolve_ident_with_args(arg_ident, None)?
+                                let expr = self.resolve_ident_with_args(arg_ident, None)?;
+                                match expr {
+                                    TyExpr::Int(v) => TyExpr::Int(v),
+                                    _ => {
+                                        return Err(ResolverError::MismatchedArgKind(
+                                            ident.clone(),
+                                        ));
+                                    }
+                                }
                             }
                             (CtorArg::Int, TyArgSpec::Complex(_)) => {
                                 return Err(ResolverError::MismatchedArgKind(ident.clone()));
                             }
                             (CtorArg::Int, TyArgSpec::IntLiteral(v)) => {
                                 TyExpr::Int(ConstValue::Int(*v))
+                            }
+                            (CtorArg::Ty, TyArgSpec::Imported(imported)) => {
+                                let Some(ident_targets) =
+                                    self.cross_module_types.get(imported.module_path())
+                                else {
+                                    return Err(ResolverError::UnknownImport(
+                                        imported.module_name().clone(),
+                                    ));
+                                };
+
+                                // If external just skip and pretend it works.
+                                if ident_targets.is_external() {
+                                    TyExpr::Ty(Ty::Imported(
+                                        imported.module_path().clone(),
+                                        imported.base_name().clone(),
+                                        imported.full_name(),
+                                    ))
+                                } else {
+                                    // Otherwise, we need to make sure it's a valid identifier.
+                                    let Some(ident_target) =
+                                        ident_targets.get(imported.base_name())
+                                    else {
+                                        return Err(ResolverError::UnknownImportItem(
+                                            imported.module_name().clone(),
+                                            imported.base_name().clone(),
+                                        ));
+                                    };
+
+                                    match ident_target {
+                                        IdentTarget::Ty(_) => TyExpr::Ty(Ty::Imported(
+                                            imported.module_path().clone(),
+                                            imported.base_name().clone(),
+                                            imported.full_name(),
+                                        )),
+                                        _ => {
+                                            return Err(ResolverError::MismatchedArgKind(
+                                                ident.clone(),
+                                            ));
+                                        }
+                                    }
+                                }
+                            }
+                            (CtorArg::Int, TyArgSpec::Imported(imported)) => {
+                                let Some(ident_targets) =
+                                    self.cross_module_types.get(imported.module_path())
+                                else {
+                                    return Err(ResolverError::UnknownImport(
+                                        imported.module_name().clone(),
+                                    ));
+                                };
+
+                                // If external just skip and pretend it works.
+                                if ident_targets.is_external() {
+                                    TyExpr::Ty(Ty::Imported(
+                                        imported.module_path().clone(),
+                                        imported.base_name().clone(),
+                                        imported.full_name(),
+                                    ))
+                                } else {
+                                    // Otherwise, we need to make sure it's a valid identifier.
+                                    let Some(ident_target) =
+                                        ident_targets.get(imported.base_name())
+                                    else {
+                                        return Err(ResolverError::UnknownImportItem(
+                                            imported.module_name().clone(),
+                                            imported.base_name().clone(),
+                                        ));
+                                    };
+
+                                    match ident_target {
+                                        IdentTarget::Const(_) => TyExpr::Ty(Ty::Imported(
+                                            imported.module_path().clone(),
+                                            imported.base_name().clone(),
+                                            imported.full_name(),
+                                        )),
+                                        _ => {
+                                            return Err(ResolverError::MismatchedArgKind(
+                                                ident.clone(),
+                                            ));
+                                        }
+                                    }
+                                }
                             }
                         };
 
@@ -372,6 +508,47 @@ impl TypeResolver {
                             TyArgSpec::IntLiteral(_) => {
                                 return Err(ResolverError::MismatchedArgKind(ident.clone()));
                             }
+                            TyArgSpec::Imported(imported) => {
+                                let Some(ident_targets) =
+                                    self.cross_module_types.get(imported.module_path())
+                                else {
+                                    return Err(ResolverError::UnknownImport(
+                                        imported.module_name().clone(),
+                                    ));
+                                };
+
+                                // If external just skip and pretend it works.
+                                if ident_targets.is_external() {
+                                    TyExpr::Ty(Ty::Imported(
+                                        imported.module_path().clone(),
+                                        imported.base_name().clone(),
+                                        imported.full_name(),
+                                    ))
+                                } else {
+                                    // Otherwise, we need to make sure it's a valid identifier.
+                                    let Some(ident_target) =
+                                        ident_targets.get(imported.base_name())
+                                    else {
+                                        return Err(ResolverError::UnknownImportItem(
+                                            imported.module_name().clone(),
+                                            imported.base_name().clone(),
+                                        ));
+                                    };
+
+                                    match ident_target {
+                                        IdentTarget::Ty(_) => TyExpr::Ty(Ty::Imported(
+                                            imported.module_path().clone(),
+                                            imported.base_name().clone(),
+                                            imported.full_name(),
+                                        )),
+                                        _ => {
+                                            return Err(ResolverError::MismatchedArgKind(
+                                                ident.clone(),
+                                            ));
+                                        }
+                                    }
+                                }
+                            }
                         };
 
                         args.push(arg);
@@ -396,6 +573,35 @@ impl TypeResolver {
             TyExprSpec::Complex(complex) => {
                 self.resolve_ident_with_args(complex.base_name(), Some(complex.args()))?
             }
+            TyExprSpec::Imported(imported) => {
+                let Some(ident_targets) = self.cross_module_types.get(imported.module_path())
+                else {
+                    return Err(ResolverError::UnknownImport(imported.module_name().clone()));
+                };
+
+                // If external just skip and pretend it works.
+                if ident_targets.is_external() {
+                    return Ok(Ty::Imported(
+                        imported.module_path().clone(),
+                        imported.base_name().clone(),
+                        imported.full_name(),
+                    ));
+                }
+
+                // Otherwise, we need to make sure it's a valid identifier.
+                if !ident_targets.contains_key(imported.base_name()) {
+                    return Err(ResolverError::UnknownImportItem(
+                        imported.module_name().clone(),
+                        imported.base_name().clone(),
+                    ));
+                }
+
+                TyExpr::Ty(Ty::Imported(
+                    imported.module_path().clone(),
+                    imported.base_name().clone(),
+                    imported.full_name(),
+                ))
+            }
         };
 
         // And then just make sure it's a const.
@@ -410,6 +616,8 @@ impl TypeResolver {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use crate::{
         Identifier,
         ast::{ComplexTySpec, TyArgSpec, TyExprSpec},
@@ -417,21 +625,22 @@ mod tests {
         tysys::ConstValue,
     };
 
-    use super::TypeResolver;
+    use super::{CrossModuleTypeMap, TypeResolver};
 
     fn make_ident(s: &str) -> Identifier {
         Identifier::try_from(s.to_owned()).expect("test: make ident")
     }
 
-    fn make_resolver() -> TypeResolver {
-        let mut resolv = TypeResolver::new();
+    fn make_resolver<'a>(cross_module_types: &'a CrossModuleTypeMap<'a>) -> TypeResolver<'a> {
+        let mut resolv = TypeResolver::new(cross_module_types);
         builtins::populate_builtin_types(&mut resolv);
         resolv
     }
 
     #[test]
     fn test_resolver_simple() {
-        let resolv = make_resolver();
+        let cross_module_types = HashMap::new();
+        let resolv = make_resolver(&cross_module_types);
 
         let spec = TyExprSpec::Simple(make_ident("Container"));
 
@@ -444,7 +653,8 @@ mod tests {
 
     #[test]
     fn test_resolver_list_simple() {
-        let resolv = make_resolver();
+        let cross_module_types = HashMap::new();
+        let resolv = make_resolver(&cross_module_types);
 
         let arg1 = TyArgSpec::Ident(make_ident("byte"));
         let arg2 = TyArgSpec::IntLiteral(32);
@@ -459,7 +669,8 @@ mod tests {
 
     #[test]
     fn test_resolver_list_const() {
-        let mut resolv = make_resolver();
+        let cross_module_types = HashMap::new();
+        let mut resolv = make_resolver(&cross_module_types);
 
         let const_name = make_ident("FOOBAR");
         resolv
@@ -479,7 +690,8 @@ mod tests {
 
     #[test]
     fn test_resolver_stablecontainer() {
-        let mut resolv = make_resolver();
+        let cross_module_types = HashMap::new();
+        let mut resolv = make_resolver(&cross_module_types);
 
         let const_name = make_ident("FOOBAR");
         resolv
@@ -501,7 +713,8 @@ mod tests {
 
     #[test]
     fn test_resolver_list_user() {
-        let mut resolv = make_resolver();
+        let cross_module_types = HashMap::new();
+        let mut resolv = make_resolver(&cross_module_types);
 
         let const_name = make_ident("FOOBAR");
         resolv

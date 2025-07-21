@@ -9,7 +9,6 @@ use ssz_derive as _;
 use ssz_types as _;
 use tree_hash as _;
 use tree_hash_derive as _;
-use typenum as _;
 
 use sizzle_parser::parse_str_schema;
 use std::path::Path;
@@ -28,7 +27,9 @@ pub mod types;
 ///
 /// # Arguments
 ///
-/// * `input_dir` - Path to the directory containing SSZ definition files
+/// * `entry_points` - Paths to the entrypoint SSZ definition files
+/// * `base_dir` - Path to the base directory of the SSZ definition files
+/// * `crates` - A slice of strings representing the external crates you want to import in your ssz schema
 /// * `output_dir` - Path where the generated Rust code files will be written
 ///
 /// # Example
@@ -37,47 +38,31 @@ pub mod types;
 /// // In build.rs
 /// use ssz_codegen::build_ssz_files;
 /// fn main() {
-///     let out_dir = std::env::var("OUT_DIR").unwrap();
-///     build_ssz_files("specs/", &out_dir).expect("Failed to generate SSZ types");
+///     let out_dir = Path::new(std::env::var("OUT_DIR").unwrap().as_str()).join("generated_ssz.rs");
+///     build_ssz_files(
+///         &["test_1.ssz", "test_2.ssz"],
+///         "specs/",
+///         &["ssz_defs_1", "ssz_defs_2"],
+///         out_dir.to_str().unwrap(),
+///     )
+///     .expect("Failed to generate SSZ types");
 /// }
 /// ```
 pub fn build_ssz_files(
-    input_dir: &str,
-    output_dir: &str,
+    entry_points: &[&str],
+    base_dir: &str,
+    crates: &[&str],
+    output_file_path: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    std::fs::create_dir_all(output_dir)?;
-    let files = files::read_directory_ssz_files(Path::new(input_dir))?;
-
-    for (file_path, content) in files {
-        let schema = parse_str_schema(&content)?;
-        let rust_code = codegen::schema_to_rust_code(&schema);
-        let pretty_rust_code = prettyplease::unparse(&syn::parse_str(&rust_code.to_string())?);
-
-        let rust_file_name = if let Some(pos) = file_path.rfind(".ssz") {
-            let mut name = file_path.clone();
-            name.replace_range(pos..pos + 4, ".rs");
-            name
-        } else {
-            // Not supposed to happen since read_directory_ssz_files_recursive only reads files with .ssz extension
-            panic!("File {file_path} does not have a .ssz extension");
-        };
-
-        let output_path = Path::new(output_dir).join(rust_file_name);
-        if let Some(parent) = output_path.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-
-        std::fs::write(output_path, pretty_rust_code)?;
-
-        // Tell Cargo to rerun if this input file changes
-        println!(
-            "cargo:rerun-if-changed={}",
-            Path::new(input_dir).join(file_path).display()
-        );
+    let files = files::read_entrypoint_ssz(entry_points, base_dir)?;
+    println!("cargo:rerun-if-changed={base_dir}");
+    let (parsing_order, schema_map) = parse_str_schema(&files, crates)?;
+    let rust_code = codegen::schema_map_to_rust_code(&parsing_order, &schema_map);
+    let pretty_rust_code = prettyplease::unparse(&syn::parse_str(&rust_code.to_string())?);
+    let output_path = Path::new(output_file_path);
+    if let Some(parent) = output_path.parent() {
+        std::fs::create_dir_all(parent)?;
     }
-
-    // Also rerun if the input directory structure changes
-    println!("cargo:rerun-if-changed={input_dir}");
-
+    std::fs::write(output_path, pretty_rust_code)?;
     Ok(())
 }

@@ -19,7 +19,6 @@ ssz_derive.workspace = true
 tree_hash.workspace = true
 tree_hash_derive.workspace = true
 ssz_types.workspace = true
-typenum.workspace = true
 sizzle-parser.workspace = true
 proc-macro2.workspace = true
 quote.workspace = true

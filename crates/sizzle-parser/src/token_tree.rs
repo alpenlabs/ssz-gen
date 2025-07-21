@@ -18,6 +18,10 @@ pub(crate) type SrcToktr = TaggedToktr<SrcPos>;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TaggedToktr<T> {
     // Keywords and structural elements.
+    /// `import` keyword.
+    Import(T),
+    /// `as` keyword.
+    As(T),
     /// `class` keyword.
     Class(T),
     /// `:` keyword.
@@ -26,6 +30,8 @@ pub enum TaggedToktr<T> {
     Eq(T),
     /// `,` keyword.
     Comma(T),
+    /// `.` keyword.
+    Dot(T),
     /// `\n` newline.
     Newline(T),
     /// `null` keyword.
@@ -56,10 +62,13 @@ impl<T> TaggedToktr<T> {
     /// Gets the tag of the token.
     pub fn tag(&self) -> &T {
         match self {
+            Self::Import(t) => t,
+            Self::As(t) => t,
             Self::Class(t) => t,
             Self::Colon(t) => t,
             Self::Eq(t) => t,
             Self::Comma(t) => t,
+            Self::Dot(t) => t,
             Self::Newline(t) => t,
             Self::Null(t) => t,
             Self::Identifier(t, _) => t,
@@ -207,9 +216,12 @@ pub(crate) fn parse_tokens_to_toktrs(tokens: &[SrcToken]) -> Result<Vec<SrcToktr
         let tt = match cur {
             TaggedToken::Null(sp) => TaggedToktr::Null(*sp),
             TaggedToken::Class(sp) => TaggedToktr::Class(*sp),
+            TaggedToken::Import(sp) => TaggedToktr::Import(*sp),
+            TaggedToken::As(sp) => TaggedToktr::As(*sp),
             TaggedToken::Colon(sp) => TaggedToktr::Colon(*sp),
             TaggedToken::Eq(sp) => TaggedToktr::Eq(*sp),
             TaggedToken::Comma(sp) => TaggedToktr::Comma(*sp),
+            TaggedToken::Dot(sp) => TaggedToktr::Dot(*sp),
             TaggedToken::Newline(sp) => TaggedToktr::Newline(*sp),
             TaggedToken::Identifier(sp, ident) => TaggedToktr::Identifier(*sp, ident.clone()),
             TaggedToken::IntegerLiteral(sp, v) => TaggedToktr::IntegerLiteral(*sp, *v),

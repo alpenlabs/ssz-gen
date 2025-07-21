@@ -120,6 +120,42 @@ alias = Union[uint8, alias_union]
 
 The variants within the enum are named `Selector{index}`.
 
+### Imports
+You can import definitions from other files using `import FILE` or `IMPORT FILE as IDENT` or from other crates using `IMPORT CRATE.MODULE`. To import from other crates the crate must be provided to `build_ssz_files` in the `crates` argument.
+- In case of importing from local files:
+    - The path to the file must be relative to the current module.
+    - `..` for parent folder, `.` as the separator for folders
+    - Example: 2 folders back, inside utils folder, in maths.ssz -> `import ....utils.maths as maths`
+- In case of importing `ssz_types::containers::ContainerA` from external crate `ssz_types`:
+    - Make sure `ssz_types` is included in the `crates` argument of `build_ssz_files`.
+    - On top of your SSZ schema file add `import ssz_types.containers as external_containers`
+    - Now you can use `ContainerA` the following way: `ImportedContainer = external_containers.ContainerA`
+
+`common.ssz`:
+```python
+alias_uint8 = uint8
+alias_union = Union[uint8, uint16]
+class Foo(Container):
+    a: alias_uint8
+    b: alias_union
+```
+
+`file.ssz`:
+```python
+import common
+
+class Bar(common.Foo):
+    c: common.union
+```
+
+this is equivalent to
+```python
+class Bar(Container):
+    a: uint8
+    b: Union[uint8, uint16]
+    c: Union[uint8, uint16]
+```
+
 # Example Input / Output
 Input: [`tests/input/test_1.ssz`](/crates/ssz_codegen/tests/input/test_1.ssz)
 

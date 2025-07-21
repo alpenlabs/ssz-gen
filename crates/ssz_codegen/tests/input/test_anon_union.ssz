@@ -1,0 +1,2 @@
+class BadClass(Container):
+    field: Union[uint8, uint16]

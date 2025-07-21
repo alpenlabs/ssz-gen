@@ -1,5 +1,7 @@
 //! Core type system expressions.
 
+use std::path::PathBuf;
+
 use crate::Identifier;
 
 /// A type expression is something that we resolve from an identifier and are
@@ -51,6 +53,9 @@ impl TyExpr {
 /// type.
 #[derive(Clone, Debug)]
 pub enum Ty {
+    /// An imported type.
+    Imported(PathBuf, Identifier, Identifier),
+
     /// A simple type without arguments.
     Simple(Identifier),
 
@@ -62,6 +67,7 @@ impl Ty {
     /// The base name of the type, without any arguments.
     pub fn base_name(&self) -> &Identifier {
         match self {
+            Ty::Imported(_, _, name) => name,
             Ty::Simple(name) => name,
             Ty::Complex(name, _) => name,
         }
@@ -72,7 +78,7 @@ impl Ty {
         let bn = self.base_name();
 
         let ext = match self {
-            Ty::Simple(_) => &[],
+            Ty::Imported(_, _, _) | Ty::Simple(_) => &[],
             Ty::Complex(_, ch) => ch.as_slice(),
         };
 

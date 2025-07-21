@@ -1,0 +1,11 @@
+BigUnion = Union[uint8, uint16, uint32, uint64, uint128, uint256]
+
+SameTypeUnion = Union[uint8, uint8, uint8, uint8]
+
+MixedUnion = Union[uint8, List[uint8, 5], Vector[uint16, 3], Bitvector[8]]
+
+class ContainerWithBigUnions(Container):
+    big: BigUnion
+    same: SameTypeUnion  
+    mixed: MixedUnion
+

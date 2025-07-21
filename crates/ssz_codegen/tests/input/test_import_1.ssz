@@ -1,0 +1,25 @@
+import test_common as common
+
+CONSTANT_VALUE = 5
+CONSTANT_VALUE_2 = CONSTANT_VALUE
+CONSTANT_VALUE_IMPORTED = common.CONSTANT_VALUE
+
+AliasListImportedLength = List[common.AliasUint8, common.CONSTANT_VALUE]
+AliasListImportedConstant = List[common.AliasUint8, CONSTANT_VALUE_IMPORTED]
+
+AliasContainer = common.AliasContainer
+AliasStableContainer = common.AliasStableContainer
+AliasStableContainerWithConstant = common.AliasStableContainerWithConstant
+
+class StableContainerClass(common.AliasStableContainerWithConstant):
+    a: Optional[common.AliasUint8]
+
+AliasClassStableContainer = common.StableContainerClass
+
+AliasProfile = common.AliasProfile
+
+AliasUint8 = common.AliasUint8
+AliasAliasUint8 = common.AliasAliasUint8
+
+AliasUnion = common.AliasUnion
+AliasUnionUnion = Union[null, common.AliasUint8, common.AliasUnion]

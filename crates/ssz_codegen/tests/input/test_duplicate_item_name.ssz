@@ -1,0 +1,6 @@
+MyType = uint8
+MyType = uint16
+
+MyName = uint8
+class MyName(Container):
+    field: uint8

@@ -173,7 +173,7 @@ use darling::{FromDeriveInput, FromMeta};
 use proc_macro::TokenStream;
 use quote::quote;
 use std::convert::TryInto;
-use syn::{DataEnum, DataStruct, DeriveInput, Expr, Ident, Index, parse_macro_input};
+use syn::{DataEnum, DataStruct, DeriveInput, Ident, Index, parse_macro_input};
 
 /// The highest possible union selector value (higher values are reserved for backwards compatible
 /// extensions).
@@ -190,7 +190,7 @@ struct StructOpts {
     #[darling(default)]
     struct_behaviour: Option<String>,
     #[darling(default)]
-    max_fields: Option<String>,
+    max_fields: Option<usize>,
 }
 
 /// Field-level configuration.
@@ -211,7 +211,7 @@ enum Procedure<'a> {
     },
     StableStruct {
         data: &'a syn::DataStruct,
-        max_fields: proc_macro2::TokenStream,
+        max_fields: usize,
     },
     ProfileStruct {
         data: &'a syn::DataStruct,
@@ -249,13 +249,11 @@ impl<'a> Procedure<'a> {
                         behaviour: StructBehaviour::Container,
                     },
                     Some("stable_container") => {
-                        if let Some(max_fields_string) = opts.max_fields {
-                            let max_fields_ref = max_fields_string.as_ref();
-                            let max_fields_ty: Expr = syn::parse_str(max_fields_ref)
-                                .expect("\"max_fields\" is not a valid type.");
-                            let max_fields: proc_macro2::TokenStream = quote! { #max_fields_ty };
-
-                            Procedure::StableStruct { data, max_fields }
+                        if let Some(max_fields_value) = opts.max_fields {
+                            Procedure::StableStruct {
+                                data,
+                                max_fields: max_fields_value,
+                            }
                         } else {
                             panic!("\"stable_container\" requires \"max_fields\"")
                         }
@@ -471,7 +469,7 @@ fn ssz_encode_derive_struct(derive_input: &DeriveInput, struct_data: &DataStruct
 fn ssz_encode_derive_stable_container(
     derive_input: &DeriveInput,
     struct_data: &DataStruct,
-    max_fields: proc_macro2::TokenStream,
+    max_fields: usize,
 ) -> TokenStream {
     let name = &derive_input.ident;
     let (impl_generics, ty_generics, where_clause) = &derive_input.generics.split_for_impl();
@@ -667,9 +665,8 @@ fn ssz_encode_derive_profile_container(
         }
     }
 
-    // We can infer the typenum required for the BitVector from the number of optional fields.
-    let typenum = format!("typenum::U{optional_count}");
-    let max_optional_fields: syn::Expr = syn::parse_str(&typenum).unwrap();
+    // We can infer the constant required for the BitVector from the number of optional fields.
+    let max_optional_fields: usize = optional_count;
 
     let output = quote! {
         impl #impl_generics ssz::Encode for #name #ty_generics #where_clause {
@@ -1351,7 +1348,7 @@ fn ssz_decode_derive_struct_transparent(
 fn ssz_decode_derive_stable_container(
     item: &DeriveInput,
     struct_data: &DataStruct,
-    max_fields: proc_macro2::TokenStream,
+    max_fields: usize,
 ) -> TokenStream {
     let name = &item.ident;
     let (impl_generics, ty_generics, where_clause) = &item.generics.split_for_impl();
@@ -1476,7 +1473,7 @@ fn ssz_decode_derive_stable_container(
 
             fn from_ssz_bytes(bytes: &[u8]) -> std::result::Result<Self, ssz::DecodeError> {
                 // Decode the leading BitVector first.
-                let bitvector_length: usize = #max_fields::to_usize().div_ceil(8);
+                let bitvector_length: usize = #max_fields.div_ceil(8);
                 let bitvector = BitVector::<#max_fields>::from_ssz_bytes(&bytes[0..bitvector_length]).unwrap();
 
                 let bytes = &bytes[bitvector_length..];
@@ -1662,9 +1659,8 @@ fn ssz_decode_derive_profile_container(
         };
     }
 
-    // We can infer the typenum required for the BitVector from the number of optional fields.
-    let typenum = format!("typenum::U{working_optional_index}");
-    let max_optional_fields: Expr = syn::parse_str(&typenum).unwrap();
+    // We can infer the constant required for the BitVector from the number of optional fields.
+    let max_optional_fields: usize = working_optional_index;
 
     let output = quote! {
         impl #impl_generics ssz::Decode for #name #ty_generics #where_clause {
@@ -1691,7 +1687,7 @@ fn ssz_decode_derive_profile_container(
 
             fn from_ssz_bytes(bytes: &[u8]) -> std::result::Result<Self, ssz::DecodeError> {
                 // Decode the leading BitVector first.
-                let bitvector_length: usize = #max_optional_fields::to_usize().div_ceil(8);
+                let bitvector_length: usize = #max_optional_fields.div_ceil(8);
                 let bitvector = if bitvector_length == 0 {
                     ssz_types::BitVector::<#max_optional_fields>::new()
                 } else {

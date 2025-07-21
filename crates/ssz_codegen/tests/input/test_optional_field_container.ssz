@@ -1,0 +1,2 @@
+class BadInheritance(Container):
+    field: Optional[uint8]

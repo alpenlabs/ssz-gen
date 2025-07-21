@@ -1,0 +1,5 @@
+class A(Container):
+    field_b: B
+
+class B(Container):
+    field_a: A

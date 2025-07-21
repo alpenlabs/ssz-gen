@@ -1,0 +1,5 @@
+import test_common as common
+
+class ProfileInehritance(common.AliasProfile):
+    a: uint8
+    b: Optional[Union[null, uint8]]

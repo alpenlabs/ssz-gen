@@ -24,9 +24,24 @@ pub fn primitive_rust_type(base_name: &str) -> syn::Type {
     })
 }
 
+/// Represents the resolution of a type
+#[derive(Clone, Debug)]
+pub struct TypeResolution {
+    /// The type we want to use in our generated rust code
+    pub ty: Option<syn::Type>,
+    /// What SSZ primitive type this type resolves to
+    pub resolution: TypeResolutionKind,
+}
+
+impl PartialEq for TypeResolution {
+    fn eq(&self, other: &Self) -> bool {
+        self.resolution == other.resolution
+    }
+}
+
 /// Represents the resolution status of a type reference
 #[derive(Clone, Debug, PartialEq)]
-pub enum TypeResolution {
+pub enum TypeResolutionKind {
     /// Type has not been resolved yet
     Unresolved,
     /// Type resolves to None
@@ -57,6 +72,8 @@ pub enum TypeResolution {
     Union(String, Vec<TypeResolution>),
     /// Fixed-length byte array
     Bytes(usize),
+    /// External type always assumed valid no matter the context
+    External,
 }
 
 impl TypeResolution {
@@ -66,7 +83,7 @@ impl TypeResolution {
     ///
     /// `true` if the resolution is `Unresolved`, `false` otherwise
     pub fn is_unresolved(&self) -> bool {
-        matches!(self, TypeResolution::Unresolved)
+        matches!(self.resolution, TypeResolutionKind::Unresolved)
     }
 
     /// Returns true if the resolution is not `Unresolved`
@@ -84,7 +101,7 @@ impl TypeResolution {
     ///
     /// `true` if the resolution is a BaseClass, `false` otherwise
     pub fn is_base_class(&self) -> bool {
-        matches!(self, TypeResolution::BaseClass(_))
+        matches!(self.resolution, TypeResolutionKind::BaseClass(_))
     }
 
     /// Returns true if the resolution is a Type
@@ -96,7 +113,16 @@ impl TypeResolution {
         !self.is_base_class() && !self.is_unresolved()
     }
 
-    /// Unwraps any of the type variants, panics if not a type variant
+    /// Returns true if the resolution is a constant
+    ///
+    /// # Returns
+    ///
+    /// `true` if the resolution is a constant, `false` otherwise
+    pub fn is_constant(&self) -> bool {
+        matches!(self.resolution, TypeResolutionKind::Constant(_))
+    }
+
+    /// Unwraps any of the type variants into a syn::Type, panics if not a type variant
     ///
     /// # Arguments
     ///
@@ -110,47 +136,49 @@ impl TypeResolution {
     ///
     /// Panics if the resolution is not a type variant
     pub fn unwrap_type(&self) -> syn::Type {
-        match self {
-            TypeResolution::Class(class) => {
+        if let Some(ty) = &self.ty {
+            return ty.clone();
+        }
+
+        match &self.resolution {
+            TypeResolutionKind::Class(class) => {
                 let class = syn::Ident::new(class, proc_macro2::Span::call_site());
                 parse_quote!(#class)
             }
-            TypeResolution::Boolean => primitive_rust_type("bool"),
-            TypeResolution::UInt(size) => primitive_rust_type(&format!("u{size}")),
-            TypeResolution::Vector(ty, size) => {
+            TypeResolutionKind::Boolean => primitive_rust_type("bool"),
+            TypeResolutionKind::UInt(size) => primitive_rust_type(&format!("u{size}")),
+            TypeResolutionKind::Vector(ty, size) => {
                 let ty = ty.unwrap_type();
-                let constant = syn::Ident::new(&format!("U{size}"), proc_macro2::Span::call_site());
-                parse_quote!(FixedVector<#ty, typenum::#constant>)
+                let size = *size as usize;
+                parse_quote!(FixedVector<#ty, #size>)
             }
-            TypeResolution::List(ty, size) => {
+            TypeResolutionKind::List(ty, size) => {
                 let ty = ty.unwrap_type();
-                let constant = syn::Ident::new(&format!("U{size}"), proc_macro2::Span::call_site());
-                parse_quote!(VariableList<#ty, typenum::#constant>)
+                let size = *size as usize;
+                parse_quote!(VariableList<#ty, #size>)
             }
-            TypeResolution::Bitvector(size) => {
-                let constant = syn::Ident::new(&format!("U{size}"), proc_macro2::Span::call_site());
-                parse_quote!(BitVector<typenum::#constant>)
+            TypeResolutionKind::Bitvector(size) => {
+                let size = *size as usize;
+                parse_quote!(BitVector<#size>)
             }
-            TypeResolution::Bitlist(size) => {
-                let constant = syn::Ident::new(&format!("U{size}"), proc_macro2::Span::call_site());
-                parse_quote!(BitList<typenum::#constant>)
+            TypeResolutionKind::Bitlist(size) => {
+                let size = *size as usize;
+                parse_quote!(BitList<#size>)
             }
-            TypeResolution::Optional(ty) => {
+            TypeResolutionKind::Optional(ty) => {
                 let ty = ty.unwrap_type();
                 parse_quote!(Optional<#ty>)
             }
-            TypeResolution::Option(ty) => {
+            TypeResolutionKind::Option(ty) => {
                 let ty = ty.unwrap_type();
                 parse_quote!(Option<#ty>)
             }
-            TypeResolution::Union(ident, _) => {
+            TypeResolutionKind::Union(ident, _) => {
                 let ident = syn::Ident::new(ident, proc_macro2::Span::call_site());
                 parse_quote!(#ident)
             }
-            TypeResolution::Bytes(size) => {
-                let typenum_int =
-                    syn::Ident::new(&format!("U{size}"), proc_macro2::Span::call_site());
-                parse_quote!(FixedVector<u8, typenum::#typenum_int>)
+            TypeResolutionKind::Bytes(size) => {
+                parse_quote!(FixedVector<u8, #size>)
             }
             _ => panic!("Expected type resolution to be a type"),
         }
@@ -166,8 +194,8 @@ impl TypeResolution {
     ///
     /// Panics if the resolution is not a BaseClass
     pub fn unwrap_base_class(self) -> BaseClass {
-        match self {
-            TypeResolution::BaseClass(base_class) => base_class,
+        match self.resolution {
+            TypeResolutionKind::BaseClass(base_class) => base_class,
             _ => panic!("Expected type resolution to be a base class"),
         }
     }
@@ -184,38 +212,44 @@ impl TypeResolution {
     pub fn check_field_compatibility_for_profile(
         &self,
         other: &TypeResolution,
-        resolver: &TypeResolver,
+        resolver: &TypeResolver<'_>,
     ) -> bool {
-        if self == other {
+        if self.resolution == other.resolution {
             return true;
         }
 
-        match (self, other) {
+        if self.resolution == TypeResolutionKind::External
+            || other.resolution == TypeResolutionKind::External
+        {
+            return true;
+        }
+
+        match (&self.resolution, &other.resolution) {
             // Fields MAY be required in Profile[B] by unwrapping them from Optional
-            (TypeResolution::Optional(original_inner_ty), _) => {
+            (TypeResolutionKind::Optional(original_inner_ty), _) => {
                 original_inner_ty.check_field_compatibility_for_profile(other, resolver)
             }
 
             // Bitlist[N] / Bitvector[N] field types are compatible if they share the same capacity N
-            (TypeResolution::Bitvector(original_cap), TypeResolution::Bitlist(new_cap))
-            | (TypeResolution::Bitlist(original_cap), TypeResolution::Bitvector(new_cap)) => {
+            (TypeResolutionKind::Bitvector(original_cap), TypeResolutionKind::Bitlist(new_cap))
+            | (TypeResolutionKind::Bitlist(original_cap), TypeResolutionKind::Bitvector(new_cap)) => {
                 original_cap == new_cap
             }
 
             // List[T, N] / Vector[T, N] field types are compatible if T is compatible and if they also share the same capacity N
             (
-                TypeResolution::List(original_ty, original_cap),
-                TypeResolution::Vector(new_ty, new_cap),
+                TypeResolutionKind::List(original_ty, original_cap),
+                TypeResolutionKind::Vector(new_ty, new_cap),
             )
             | (
-                TypeResolution::Vector(original_ty, original_cap),
-                TypeResolution::List(new_ty, new_cap),
+                TypeResolutionKind::Vector(original_ty, original_cap),
+                TypeResolutionKind::List(new_ty, new_cap),
             ) => {
                 original_ty.check_field_compatibility_for_profile(new_ty, resolver)
                     && *original_cap == *new_cap
             }
 
-            (TypeResolution::Class(original_class), TypeResolution::Class(new_class)) => {
+            (TypeResolutionKind::Class(original_class), TypeResolutionKind::Class(new_class)) => {
                 // Get class definitions
                 let original_class_def = match resolver.classes.get(original_class).unwrap() {
                     ClassDefinition::Custom(class_def) => class_def,
@@ -433,7 +467,7 @@ impl ClassDef {
     /// # Returns
     ///
     /// `true` if the fields are compatible, `false` otherwise
-    pub fn check_field_compatibility(&self, other: &ClassDef, resolver: &TypeResolver) -> bool {
+    pub fn check_field_compatibility(&self, other: &ClassDef, resolver: &TypeResolver<'_>) -> bool {
         self.fields
             .iter()
             .zip(other.fields.iter())
@@ -468,7 +502,7 @@ impl ClassDef {
                 }
             }
             BaseClass::StableContainer(Some(max)) => {
-                let max = format!("typenum::U{max}");
+                let max = max as usize;
                 quote! {
                     #[derive(Encode, Decode, TreeHash)]
                     #[ssz(struct_behaviour="stable_container", max_fields=#max)]
@@ -479,7 +513,7 @@ impl ClassDef {
                 }
             }
             BaseClass::Profile(Some((_, max))) => {
-                let max = format!("typenum::U{max}");
+                let max = max as usize;
                 let index = self
                     .fields
                     .iter()
@@ -525,7 +559,7 @@ pub enum TypeDefinition {
     /// Fixed-length byte array
     Bytes(usize),
     /// Custom user-defined type
-    CustomType(TypeResolution),
+    CustomType(Box<TypeResolution>),
 }
 
 /// Represents the different class definitions that can be used

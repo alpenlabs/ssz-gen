@@ -1,0 +1,17 @@
+CONSTANT_VALUE = 5
+
+AliasContainer = Container
+AliasStableContainer = StableContainer[10]
+AliasStableContainerWithConstant = StableContainer[CONSTANT_VALUE]
+
+class StableContainerClass(AliasStableContainerWithConstant):
+    a: Optional[uint8]
+    b: Optional[AliasUnion]
+
+AliasProfile = Profile[StableContainerClass]
+
+AliasUint8 = uint8
+AliasAliasUint8 = AliasUint8
+
+AliasUnion = Union[null, uint8]
+AliasUnionUnion = Union[uint8, AliasUnion]

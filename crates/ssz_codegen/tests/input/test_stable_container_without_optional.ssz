@@ -1,0 +1,3 @@
+class BadStableContainer(StableContainer[128]):
+    field1: uint8
+

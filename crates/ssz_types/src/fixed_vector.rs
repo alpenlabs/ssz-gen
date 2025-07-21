@@ -5,11 +5,9 @@ use crate::Error;
 use crate::tree_hash::vec_tree_hash_root;
 use serde::Deserialize;
 use serde_derive::Serialize;
-use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut, Index, IndexMut};
 use std::slice::SliceIndex;
-use tree_hash::Hash256;
-use typenum::Unsigned;
+
 /// Emulates a SSZ `Vector` (distinct from a Rust `Vec`).
 ///
 /// An ordered, heap-allocated, fixed-length, homogeneous collection of `T`, with `N` values.
@@ -17,8 +15,7 @@ use typenum::Unsigned;
 /// This struct is backed by a Rust `Vec` but constrained such that it must be instantiated with a
 /// fixed number of elements and you may not add or remove elements, only modify.
 ///
-/// The length of this struct is fixed at the type-level using
-/// [typenum](https://crates.io/crates/typenum).
+/// The length of this struct is fixed at the type-level
 ///
 /// ## Note
 ///
@@ -28,52 +25,48 @@ use typenum::Unsigned;
 /// ## Example
 ///
 /// ```
-/// use ssz_types::{FixedVector, typenum};
+/// use ssz_types::FixedVector;
 ///
 /// let base: Vec<u64> = vec![1, 2, 3, 4];
 ///
 /// // Create a `FixedVector` from a `Vec` that has the expected length.
-/// let exact: FixedVector<_, typenum::U4> = FixedVector::from(base.clone());
+/// let exact: FixedVector<_, 4> = FixedVector::from(base.clone());
 /// assert_eq!(&exact[..], &[1, 2, 3, 4]);
 ///
 /// // Create a `FixedVector` from a `Vec` that is too long and the `Vec` is truncated.
-/// let short: FixedVector<_, typenum::U3> = FixedVector::from(base.clone());
+/// let short: FixedVector<_, 3> = FixedVector::from(base.clone());
 /// assert_eq!(&short[..], &[1, 2, 3]);
 ///
 /// // Create a `FixedVector` from a `Vec` that is too short and the missing values are created
 /// // using `std::default::Default`.
-/// let long: FixedVector<_, typenum::U5> = FixedVector::from(base);
+/// let long: FixedVector<_, 5> = FixedVector::from(base);
 /// assert_eq!(&long[..], &[1, 2, 3, 4, 0]);
 /// ```
 #[derive(Debug, Clone, Serialize)]
 #[serde(transparent)]
-pub struct FixedVector<T, N> {
+pub struct FixedVector<T, const N: usize> {
     vec: Vec<T>,
-    _phantom: PhantomData<N>,
 }
 
 // Implement comparison functions even if N doesn't implement PartialEq
-impl<T: PartialEq, N> PartialEq for FixedVector<T, N> {
+impl<T: PartialEq, const N: usize> PartialEq for FixedVector<T, N> {
     fn eq(&self, other: &Self) -> bool {
         self.vec == other.vec
     }
 }
-impl<T: Eq, N> Eq for FixedVector<T, N> {}
-impl<T: std::hash::Hash, N> std::hash::Hash for FixedVector<T, N> {
+impl<T: Eq, const N: usize> Eq for FixedVector<T, N> {}
+impl<T: std::hash::Hash, const N: usize> std::hash::Hash for FixedVector<T, N> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.vec.hash(state);
     }
 }
 
-impl<T, N: Unsigned> FixedVector<T, N> {
+impl<T, const N: usize> FixedVector<T, N> {
     /// Returns `Ok` if the given `vec` equals the fixed length of `Self`. Otherwise returns
     /// `Err`.
     pub fn new(vec: Vec<T>) -> Result<Self, Error> {
         if vec.len() == Self::capacity() {
-            Ok(Self {
-                vec,
-                _phantom: PhantomData,
-            })
+            Ok(Self { vec })
         } else {
             Err(Error::OutOfBounds {
                 i: vec.len(),
@@ -87,10 +80,7 @@ impl<T, N: Unsigned> FixedVector<T, N> {
     where
         T: Clone,
     {
-        Self {
-            vec: vec![elem; N::to_usize()],
-            _phantom: PhantomData,
-        }
+        Self { vec: vec![elem; N] }
     }
 
     /// Identical to `self.capacity`, returns the type-level constant length.
@@ -107,37 +97,33 @@ impl<T, N: Unsigned> FixedVector<T, N> {
 
     /// Returns the type-level constant length.
     pub fn capacity() -> usize {
-        N::to_usize()
+        N
     }
 }
 
-impl<T: Default, N: Unsigned> From<Vec<T>> for FixedVector<T, N> {
+impl<T: Default, const N: usize> From<Vec<T>> for FixedVector<T, N> {
     fn from(mut vec: Vec<T>) -> Self {
         vec.resize_with(Self::capacity(), Default::default);
 
-        Self {
-            vec,
-            _phantom: PhantomData,
-        }
+        Self { vec }
     }
 }
 
-impl<T, N: Unsigned> From<FixedVector<T, N>> for Vec<T> {
+impl<T, const N: usize> From<FixedVector<T, N>> for Vec<T> {
     fn from(vector: FixedVector<T, N>) -> Vec<T> {
         vector.vec
     }
 }
 
-impl<T: Default, N: Unsigned> Default for FixedVector<T, N> {
+impl<T: Default, const N: usize> Default for FixedVector<T, N> {
     fn default() -> Self {
         Self {
-            vec: (0..N::to_usize()).map(|_| T::default()).collect(),
-            _phantom: PhantomData,
+            vec: (0..N).map(|_| T::default()).collect(),
         }
     }
 }
 
-impl<T, N: Unsigned, I: SliceIndex<[T]>> Index<I> for FixedVector<T, N> {
+impl<T, const N: usize, I: SliceIndex<[T]>> Index<I> for FixedVector<T, N> {
     type Output = I::Output;
 
     #[inline]
@@ -146,14 +132,14 @@ impl<T, N: Unsigned, I: SliceIndex<[T]>> Index<I> for FixedVector<T, N> {
     }
 }
 
-impl<T, N: Unsigned, I: SliceIndex<[T]>> IndexMut<I> for FixedVector<T, N> {
+impl<T, const N: usize, I: SliceIndex<[T]>> IndexMut<I> for FixedVector<T, N> {
     #[inline]
     fn index_mut(&mut self, index: I) -> &mut Self::Output {
         IndexMut::index_mut(&mut self.vec, index)
     }
 }
 
-impl<T, N: Unsigned> Deref for FixedVector<T, N> {
+impl<T, const N: usize> Deref for FixedVector<T, N> {
     type Target = [T];
 
     fn deref(&self) -> &[T] {
@@ -165,13 +151,13 @@ impl<T, N: Unsigned> Deref for FixedVector<T, N> {
 //
 // It's safe because none of the methods on mutable slices allow changing the length
 // of the backing vec.
-impl<T, N: Unsigned> DerefMut for FixedVector<T, N> {
+impl<T, const N: usize> DerefMut for FixedVector<T, N> {
     fn deref_mut(&mut self) -> &mut [T] {
         &mut self.vec[..]
     }
 }
 
-impl<'a, T, N: Unsigned> IntoIterator for &'a FixedVector<T, N> {
+impl<'a, T, const N: usize> IntoIterator for &'a FixedVector<T, N> {
     type Item = &'a T;
     type IntoIter = std::slice::Iter<'a, T>;
 
@@ -180,7 +166,7 @@ impl<'a, T, N: Unsigned> IntoIterator for &'a FixedVector<T, N> {
     }
 }
 
-impl<T, N: Unsigned> IntoIterator for FixedVector<T, N> {
+impl<T, const N: usize> IntoIterator for FixedVector<T, N> {
     type Item = T;
     type IntoIter = std::vec::IntoIter<T>;
 
@@ -189,9 +175,9 @@ impl<T, N: Unsigned> IntoIterator for FixedVector<T, N> {
     }
 }
 
-impl<T, N: Unsigned> tree_hash::TreeHash for FixedVector<T, N>
+impl<T, const N: usize, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for FixedVector<T, N>
 where
-    T: tree_hash::TreeHash,
+    T: tree_hash::TreeHash<H>,
 {
     fn tree_hash_type() -> tree_hash::TreeHashType {
         tree_hash::TreeHashType::Vector
@@ -205,12 +191,12 @@ where
         unreachable!("Vector should never be packed.")
     }
 
-    fn tree_hash_root(&self) -> Hash256 {
-        vec_tree_hash_root::<T, N>(&self.vec)
+    fn tree_hash_root(&self) -> H::Output {
+        vec_tree_hash_root::<T, N, H>(&self.vec)
     }
 }
 
-impl<T, N: Unsigned> ssz::Encode for FixedVector<T, N>
+impl<T, const N: usize> ssz::Encode for FixedVector<T, N>
 where
     T: ssz::Encode,
 {
@@ -220,7 +206,7 @@ where
 
     fn ssz_fixed_len() -> usize {
         if <Self as ssz::Encode>::is_ssz_fixed_len() {
-            T::ssz_fixed_len() * N::to_usize()
+            T::ssz_fixed_len() * N
         } else {
             ssz::BYTES_PER_LENGTH_OFFSET
         }
@@ -250,14 +236,14 @@ where
     }
 }
 
-impl<T, N: Unsigned> ssz::TryFromIter<T> for FixedVector<T, N> {
+impl<T, const N: usize> ssz::TryFromIter<T> for FixedVector<T, N> {
     type Error = Error;
 
     fn try_from_iter<I>(value: I) -> Result<Self, Self::Error>
     where
         I: IntoIterator<Item = T>,
     {
-        let n = N::to_usize();
+        let n = N;
         let iter = value.into_iter();
 
         let (_, opt_max_len) = iter.size_hint();
@@ -279,7 +265,7 @@ impl<T, N: Unsigned> ssz::TryFromIter<T> for FixedVector<T, N> {
     }
 }
 
-impl<T, N: Unsigned> ssz::Decode for FixedVector<T, N>
+impl<T, const N: usize> ssz::Decode for FixedVector<T, N>
 where
     T: ssz::Decode,
 {
@@ -289,14 +275,14 @@ where
 
     fn ssz_fixed_len() -> usize {
         if <Self as ssz::Decode>::is_ssz_fixed_len() {
-            T::ssz_fixed_len() * N::to_usize()
+            T::ssz_fixed_len() * N
         } else {
             ssz::BYTES_PER_LENGTH_OFFSET
         }
     }
 
     fn from_ssz_bytes(bytes: &[u8]) -> Result<Self, ssz::DecodeError> {
-        let fixed_len = N::to_usize();
+        let fixed_len = N;
 
         if bytes.is_empty() {
             Err(ssz::DecodeError::InvalidByteLength {
@@ -338,25 +324,21 @@ where
     }
 }
 
-impl<'de, T, N> Deserialize<'de> for FixedVector<T, N>
+impl<'de, T, const N: usize> Deserialize<'de> for FixedVector<T, N>
 where
     T: Deserialize<'de>,
-    N: Unsigned,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
         let vec = Vec::<T>::deserialize(deserializer)?;
-        if vec.len() == N::to_usize() {
-            Ok(FixedVector {
-                vec,
-                _phantom: PhantomData,
-            })
+        if vec.len() == N {
+            Ok(FixedVector { vec })
         } else {
             Err(serde::de::Error::custom(format!(
                 "Wrong number of FixedVector elements. Expected {}, actual {}",
-                N::to_usize(),
+                N,
                 vec.len(),
             )))
         }
@@ -364,11 +346,11 @@ where
 }
 
 #[cfg(feature = "arbitrary")]
-impl<'a, T: arbitrary::Arbitrary<'a>, N: 'static + Unsigned> arbitrary::Arbitrary<'a>
+impl<'a, T: arbitrary::Arbitrary<'a>, const N: usize> arbitrary::Arbitrary<'a>
     for FixedVector<T, N>
 {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
-        let size = N::to_usize();
+        let size = N;
         let mut vec: Vec<T> = Vec::with_capacity(size);
         for _ in 0..size {
             vec.push(<T>::arbitrary(u)?);
@@ -384,20 +366,19 @@ mod test {
     use std::collections::HashSet;
     use tree_hash::{TreeHash, merkle_root_with_hasher};
     use tree_hash_derive::TreeHash;
-    use typenum::*;
 
     #[test]
     fn new() {
         let vec = vec![42; 5];
-        let fixed: Result<FixedVector<u64, U4>, _> = FixedVector::new(vec);
+        let fixed: Result<FixedVector<u64, 4>, _> = FixedVector::new(vec);
         assert!(fixed.is_err());
 
         let vec = vec![42; 3];
-        let fixed: Result<FixedVector<u64, U4>, _> = FixedVector::new(vec);
+        let fixed: Result<FixedVector<u64, 4>, _> = FixedVector::new(vec);
         assert!(fixed.is_err());
 
         let vec = vec![42; 4];
-        let fixed: Result<FixedVector<u64, U4>, _> = FixedVector::new(vec);
+        let fixed: Result<FixedVector<u64, 4>, _> = FixedVector::new(vec);
         assert!(fixed.is_ok());
     }
 
@@ -405,7 +386,7 @@ mod test {
     fn indexing() {
         let vec = vec![1, 2];
 
-        let mut fixed: FixedVector<u64, U8192> = vec.clone().into();
+        let mut fixed: FixedVector<u64, 8192> = vec.clone().into();
 
         assert_eq!(fixed[0], 1);
         assert_eq!(&fixed[0..1], &vec[0..1]);
@@ -418,23 +399,23 @@ mod test {
     #[test]
     fn length() {
         let vec = vec![42; 5];
-        let fixed: FixedVector<u64, U4> = FixedVector::from(vec.clone());
+        let fixed: FixedVector<u64, 4> = FixedVector::from(vec.clone());
         assert_eq!(&fixed[..], &vec[0..4]);
 
         let vec = vec![42; 3];
-        let fixed: FixedVector<u64, U4> = FixedVector::from(vec.clone());
+        let fixed: FixedVector<u64, 4> = FixedVector::from(vec.clone());
         assert_eq!(&fixed[0..3], &vec[..]);
         assert_eq!(&fixed[..], &vec![42, 42, 42, 0][..]);
 
         let vec = vec![];
-        let fixed: FixedVector<u64, U4> = FixedVector::from(vec);
+        let fixed: FixedVector<u64, 4> = FixedVector::from(vec);
         assert_eq!(&fixed[..], &vec![0, 0, 0, 0][..]);
     }
 
     #[test]
     fn deref() {
         let vec = vec![0, 2, 4, 6];
-        let fixed: FixedVector<u64, U4> = FixedVector::from(vec);
+        let fixed: FixedVector<u64, 4> = FixedVector::from(vec);
 
         assert_eq!(fixed.first(), Some(&0));
         assert_eq!(fixed.get(3), Some(&6));
@@ -444,7 +425,7 @@ mod test {
     #[test]
     fn iterator() {
         let vec = vec![0, 2, 4, 6];
-        let fixed: FixedVector<u64, U4> = FixedVector::from(vec);
+        let fixed: FixedVector<u64, 4> = FixedVector::from(vec);
 
         // test the reference version
         assert_eq!((&fixed).into_iter().sum::<u64>(), 12);
@@ -454,9 +435,9 @@ mod test {
 
     #[test]
     fn ssz_encode() {
-        let vec: FixedVector<u16, U2> = vec![0; 2].into();
+        let vec: FixedVector<u16, 2> = vec![0; 2].into();
         assert_eq!(vec.as_ssz_bytes(), vec![0, 0, 0, 0]);
-        assert_eq!(<FixedVector<u16, U2> as Encode>::ssz_fixed_len(), 4);
+        assert_eq!(<FixedVector<u16, 2> as Encode>::ssz_fixed_len(), 4);
     }
 
     fn ssz_round_trip<T: Encode + Decode + std::fmt::Debug + PartialEq>(item: T) {
@@ -467,40 +448,40 @@ mod test {
 
     #[test]
     fn ssz_round_trip_u16_len_8() {
-        ssz_round_trip::<FixedVector<u16, U8>>(vec![42; 8].into());
-        ssz_round_trip::<FixedVector<u16, U8>>(vec![0; 8].into());
+        ssz_round_trip::<FixedVector<u16, 8>>(vec![42; 8].into());
+        ssz_round_trip::<FixedVector<u16, 8>>(vec![0; 8].into());
     }
 
     #[test]
     fn tree_hash_u8() {
-        let fixed: FixedVector<u8, U0> = FixedVector::from(vec![]);
+        let fixed: FixedVector<u8, 0> = FixedVector::from(vec![]);
         assert_eq!(
-            fixed.tree_hash_root(),
+            <FixedVector<u8, 0> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
             merkle_root_with_hasher::<tree_hash::Sha256Hasher>(&[0; 8], 0)
         );
 
-        let fixed: FixedVector<u8, U1> = FixedVector::from(vec![0; 1]);
+        let fixed: FixedVector<u8, 1> = FixedVector::from(vec![0; 1]);
         assert_eq!(
-            fixed.tree_hash_root(),
+            <FixedVector<u8, 1> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
             merkle_root_with_hasher::<tree_hash::Sha256Hasher>(&[0; 8], 0)
         );
 
-        let fixed: FixedVector<u8, U8> = FixedVector::from(vec![0; 8]);
+        let fixed: FixedVector<u8, 8> = FixedVector::from(vec![0; 8]);
         assert_eq!(
-            fixed.tree_hash_root(),
+            <FixedVector<u8, 8> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
             merkle_root_with_hasher::<tree_hash::Sha256Hasher>(&[0; 8], 0)
         );
 
-        let fixed: FixedVector<u8, U16> = FixedVector::from(vec![42; 16]);
+        let fixed: FixedVector<u8, 16> = FixedVector::from(vec![42; 16]);
         assert_eq!(
-            fixed.tree_hash_root(),
+            <FixedVector<u8, 16> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
             merkle_root_with_hasher::<tree_hash::Sha256Hasher>(&[42; 16], 0)
         );
 
         let source: Vec<u8> = (0..16).collect();
-        let fixed: FixedVector<u8, U16> = FixedVector::from(source.clone());
+        let fixed: FixedVector<u8, 16> = FixedVector::from(source.clone());
         assert_eq!(
-            fixed.tree_hash_root(),
+            <FixedVector<u8, 16> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
             merkle_root_with_hasher::<tree_hash::Sha256Hasher>(&source, 0)
         );
     }
@@ -526,39 +507,39 @@ mod test {
     fn tree_hash_composite() {
         let a = A { a: 0, b: 1 };
 
-        let fixed: FixedVector<A, U0> = FixedVector::from(vec![]);
+        let fixed: FixedVector<A, 0> = FixedVector::from(vec![]);
         assert_eq!(
-            fixed.tree_hash_root(),
+            <FixedVector<A, 0> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
             merkle_root_with_hasher::<tree_hash::Sha256Hasher>(&[0; 32], 0)
         );
 
-        let fixed: FixedVector<A, U1> = FixedVector::from(vec![a]);
+        let fixed: FixedVector<A, 1> = FixedVector::from(vec![a]);
         assert_eq!(
-            fixed.tree_hash_root(),
+            <FixedVector<A, 1> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
             merkle_root_with_hasher::<tree_hash::Sha256Hasher>(a.tree_hash_root().as_slice(), 0)
         );
 
-        let fixed: FixedVector<A, U8> = FixedVector::from(vec![a; 8]);
+        let fixed: FixedVector<A, 8> = FixedVector::from(vec![a; 8]);
         assert_eq!(
-            fixed.tree_hash_root(),
+            <FixedVector<A, 8> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
             merkle_root_with_hasher::<tree_hash::Sha256Hasher>(
                 &repeat(a.tree_hash_root().as_slice(), 8),
                 0
             )
         );
 
-        let fixed: FixedVector<A, U13> = FixedVector::from(vec![a; 13]);
+        let fixed: FixedVector<A, 13> = FixedVector::from(vec![a; 13]);
         assert_eq!(
-            fixed.tree_hash_root(),
+            <FixedVector<A, 13> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
             merkle_root_with_hasher::<tree_hash::Sha256Hasher>(
                 &repeat(a.tree_hash_root().as_slice(), 13),
                 0
             )
         );
 
-        let fixed: FixedVector<A, U16> = FixedVector::from(vec![a; 16]);
+        let fixed: FixedVector<A, 16> = FixedVector::from(vec![a; 16]);
         assert_eq!(
-            fixed.tree_hash_root(),
+            <FixedVector<A, 16> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
             merkle_root_with_hasher::<tree_hash::Sha256Hasher>(
                 &repeat(a.tree_hash_root().as_slice(), 16),
                 0
@@ -568,8 +549,8 @@ mod test {
 
     #[test]
     fn std_hash() {
-        let x: FixedVector<u32, U16> = FixedVector::from(vec![3; 16]);
-        let y: FixedVector<u32, U16> = FixedVector::from(vec![4; 16]);
+        let x: FixedVector<u32, 16> = FixedVector::from(vec![3; 16]);
+        let y: FixedVector<u32, 16> = FixedVector::from(vec![4; 16]);
         let mut hashset = HashSet::new();
 
         for value in [x.clone(), y.clone()] {
@@ -581,17 +562,16 @@ mod test {
     }
     #[test]
     fn serde_invalid_length() {
-        use typenum::U4;
         let json = serde_json::json!([1, 2, 3, 4, 5]);
-        let result: Result<FixedVector<u64, U4>, _> = serde_json::from_value(json);
+        let result: Result<FixedVector<u64, 4>, _> = serde_json::from_value(json);
         assert!(result.is_err());
 
         let json = serde_json::json!([1, 2, 3]);
-        let result: Result<FixedVector<u64, U4>, _> = serde_json::from_value(json);
+        let result: Result<FixedVector<u64, 4>, _> = serde_json::from_value(json);
         assert!(result.is_err());
 
         let json = serde_json::json!([1, 2, 3, 4]);
-        let result: Result<FixedVector<u64, U4>, _> = serde_json::from_value(json);
+        let result: Result<FixedVector<u64, 4>, _> = serde_json::from_value(json);
         assert!(result.is_ok());
     }
 }

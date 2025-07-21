@@ -1,0 +1,8 @@
+class Base(StableContainer[3]):
+    field1: Optional[uint8]
+    field2: Optional[uint16]
+    field3: Optional[uint32]
+
+class BadProfile(Profile[Base]):
+    field3: uint32
+    field1: uint8

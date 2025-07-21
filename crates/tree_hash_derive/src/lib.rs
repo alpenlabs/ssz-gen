@@ -22,7 +22,7 @@ struct StructOpts {
     #[darling(default)]
     enum_behaviour: Option<String>,
     #[darling(default)]
-    max_fields: Option<String>,
+    max_fields: Option<usize>,
     #[darling(default)]
     hasher: Option<String>,
 }
@@ -191,25 +191,20 @@ pub fn tree_hash_derive(input: TokenStream) -> TokenStream {
                     tree_hash_derive_struct_container(&item, s, &hasher_type)
                 }
                 Some(StructBehaviour::StableContainer) => {
-                    if let Some(max_fields_string) = opts.max_fields {
-                        let max_fields_ref = max_fields_string.as_ref();
-                        let max_fields_ty: Expr = syn::parse_str(max_fields_ref)
-                            .expect("\"max_fields\" is not a valid type.");
-                        let max_fields: proc_macro2::TokenStream = quote! { #max_fields_ty };
-
-                        tree_hash_derive_struct_stable_container(&item, s, max_fields, &hasher_type)
+                    if let Some(max_fields_value) = opts.max_fields {
+                        tree_hash_derive_struct_stable_container(
+                            &item,
+                            s,
+                            max_fields_value,
+                            &hasher_type,
+                        )
                     } else {
                         panic!("stable_container requires \"max_fields\"")
                     }
                 }
                 Some(StructBehaviour::Profile) => {
-                    if let Some(max_fields_string) = opts.max_fields {
-                        let max_fields_ref = max_fields_string.as_ref();
-                        let max_fields_ty: Expr = syn::parse_str(max_fields_ref)
-                            .expect("\"max_fields\" is not a valid type.");
-                        let max_fields: proc_macro2::TokenStream = quote! { #max_fields_ty };
-
-                        tree_hash_derive_struct_profile(&item, s, max_fields, &hasher_type)
+                    if let Some(max_fields_value) = opts.max_fields {
+                        tree_hash_derive_struct_profile(&item, s, max_fields_value, &hasher_type)
                     } else {
                         panic!("profile requires \"max_fields\"")
                     }
@@ -286,7 +281,7 @@ fn tree_hash_derive_struct_container(
 fn tree_hash_derive_struct_stable_container(
     item: &DeriveInput,
     struct_data: &DataStruct,
-    max_fields: proc_macro2::TokenStream,
+    max_fields: usize,
     hasher_type: &syn::Type,
 ) -> TokenStream {
     let name = &item.ident;
@@ -326,7 +321,7 @@ fn tree_hash_derive_struct_stable_container(
                 )*
 
                 // Hash according to `max_fields` regardless of the actual number of fields on the struct.
-                let mut hasher = tree_hash::MerkleHasher::<#hasher_type>::with_leaves(#max_fields::to_usize());
+                let mut hasher = tree_hash::MerkleHasher::<#hasher_type>::with_leaves(#max_fields);
 
                 #(
                     if self.#idents.is_some() {
@@ -351,7 +346,7 @@ fn tree_hash_derive_struct_stable_container(
 fn tree_hash_derive_struct_profile(
     item: &DeriveInput,
     struct_data: &DataStruct,
-    max_fields: proc_macro2::TokenStream,
+    max_fields: usize,
     hasher_type: &syn::Type,
 ) -> TokenStream {
     let name = &item.ident;
@@ -449,7 +444,7 @@ fn tree_hash_derive_struct_profile(
                 )*
 
                 // Hash according to `max_fields` regardless of the actual number of fields on the struct.
-                let mut hasher = tree_hash::MerkleHasher::<#hasher_type>::with_leaves(#max_fields::to_usize());
+                let mut hasher = tree_hash::MerkleHasher::<#hasher_type>::with_leaves(#max_fields);
 
                 #(
                     #hashes

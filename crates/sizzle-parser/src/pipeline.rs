@@ -1,14 +1,15 @@
 //! High-level logic for full-pipeline parsing.
 
+use std::{collections::HashMap, path::PathBuf};
 use thiserror::Error;
 
 use crate::{
     SszSchema,
-    ast::{self, ParseError},
+    ast::{self, ModuleManager, ParseError},
     schema::{self, SchemaError},
     token::{self, TokenError},
     token_tree::{self, ToktrError},
-    ty_resolver::ResolverError,
+    ty_resolver::{CrossModuleTypeMap, ModuleTypeMap, ResolverError},
 };
 
 /// Represents an error from any of the phases of parsing a raw schema.
@@ -36,19 +37,44 @@ pub enum SszError {
 }
 
 /// High-level parse function.
-pub fn parse_str_schema(s: &str) -> Result<SszSchema, SszError> {
-    let s_chars = s.chars().collect::<Vec<_>>();
+pub fn parse_str_schema(
+    files: &HashMap<PathBuf, String>,
+    external_modules: &[&str],
+) -> Result<(Vec<PathBuf>, HashMap<PathBuf, SszSchema>), SszError> {
+    let mut module_manager = ModuleManager::new(external_modules);
 
-    let tokens = token::parse_char_array_to_tokens(&s_chars)?;
-    let toktrs = token_tree::parse_tokens_to_toktrs(&tokens)?;
-    let ast_mod = ast::parse_module_from_toktrs(&toktrs)?;
-    let schema = schema::conv_module_to_schema(&ast_mod)?;
+    for (path, content) in files {
+        let chars = content.chars().collect::<Vec<_>>();
+        let tokens = token::parse_char_array_to_tokens(&chars)?;
+        let toktrs = token_tree::parse_tokens_to_toktrs(&tokens)?;
 
-    Ok(schema)
+        // TODO: Inserts at positon 0 in Vec, it's ok for now since we don't expect too many imports
+        // but if it becomes a bottleneck we can fix it.
+        module_manager.add_module_to_front(path.clone());
+        ast::parse_module_from_toktrs(&toktrs, path, &mut module_manager)?;
+    }
+
+    let mut schema_map = HashMap::new();
+    let mut cross_module_types = CrossModuleTypeMap::new();
+    let mut parsing_order = Vec::new();
+    while let Some((path, module)) = module_manager.pop_module() {
+        if module.is_external() {
+            cross_module_types.insert(path.clone(), ModuleTypeMap::External);
+            continue;
+        }
+        let (schema, idents) = schema::conv_module_to_schema(&module, &cross_module_types)?;
+        parsing_order.push(path.clone());
+        cross_module_types.insert(path.clone(), ModuleTypeMap::Internal(idents));
+        schema_map.insert(path, schema);
+    }
+
+    Ok((parsing_order, schema_map))
 }
 
 #[cfg(test)]
 mod tests {
+    use std::{collections::HashMap, path::Path};
+
     use crate::pipeline::parse_str_schema;
 
     /*fn make_ident(s: &str) -> Identifier {
@@ -63,7 +89,8 @@ class Point2d(Container):
   y_coord: uint32
 ";
 
-        let schema = parse_str_schema(SCHEMA).expect("test: parse schema");
+        let files = HashMap::from([(Path::new("").to_path_buf(), SCHEMA.to_string())]);
+        let schema = parse_str_schema(&files, &[]).expect("test: parse schema");
 
         eprintln!("{schema:#?}");
     }
@@ -84,7 +111,8 @@ class DepositRequest(Container):
     index: uint64
 ";
 
-        let schema = parse_str_schema(SCHEMA).expect("test: parse schema");
+        let files = HashMap::from([(Path::new("").to_path_buf(), SCHEMA.to_string())]);
+        let schema = parse_str_schema(&files, &[]).expect("test: parse schema");
 
         eprintln!("{schema:#?}");
     }
@@ -101,7 +129,8 @@ class Header(Container):
     epoch: Epoch
 ";
 
-        let schema = parse_str_schema(SCHEMA).expect("test: parse schema");
+        let files = HashMap::from([(Path::new("").to_path_buf(), SCHEMA.to_string())]);
+        let schema = parse_str_schema(&files, &[]).expect("test: parse schema");
 
         eprintln!("{schema:#?}");
     }
@@ -117,7 +146,71 @@ class MagicFoo(MagicStable):
     bar: Optional[uint64]
 ";
 
-        let schema = parse_str_schema(SCHEMA).expect("test: parse schema");
+        let files = HashMap::from([(Path::new("").to_path_buf(), SCHEMA.to_string())]);
+        let schema = parse_str_schema(&files, &[]).expect("test: parse schema");
+
+        eprintln!("{schema:#?}");
+    }
+
+    #[test]
+    fn test_pipeline_imports() {
+        const SCHEMA_AS: &str = r"
+import import_test as test
+import ssz_external as external
+
+TestA = test.A
+TestB = test.B
+TestC = test.C
+TestD = external.D
+
+VAL_A = 12
+VAL_B = VAL_A
+TEST_CONST = test.D
+
+class Header(test.A):
+    a: Union[null, test.B]
+    b: test.B
+    c: test.C
+    d: uint8
+
+f = List[test.A, TEST_CONST]
+";
+
+        const SCHEMA: &str = r"
+import import_test
+import ssz_external.module_a
+
+TestA = import_test.A
+TestB = import_test.B
+TestC = import_test.C
+TestD = module_a.D
+
+VAL_A = 12
+VAL_B = VAL_A
+TEST_CONST = import_test.D
+
+class Header(import_test.A):
+    a: Union[null, import_test.B]
+    b: import_test.B
+    c: import_test.C
+    d: uint8
+
+f = List[import_test.A, TEST_CONST]
+";
+
+        let files = HashMap::from([(
+            Path::new("tests/non_existent").to_path_buf(),
+            SCHEMA_AS.to_string(),
+        )]);
+        let schema = parse_str_schema(&files, &["ssz_external"]).expect("test: parse schema");
+
+        eprintln!("{schema:#?}");
+
+        let files = HashMap::from([(
+            Path::new("tests/non_existent").to_path_buf(),
+            SCHEMA.to_string(),
+        )]);
+        let schema = parse_str_schema(&files, &["ssz_external"]).expect("test: parse schema");
 
         eprintln!("{schema:#?}");
     }

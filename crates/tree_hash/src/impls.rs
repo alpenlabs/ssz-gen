@@ -7,7 +7,6 @@ use super::*;
 use ssz::{Bitfield, Fixed, Variable};
 use ssz_primitives::{FixedBytes, U128, U256};
 use std::sync::Arc;
-use typenum::Unsigned;
 
 fn int_to_hasher_output<H: TreeHashDigest>(int: u64) -> H::Output {
     let mut bytes = vec![0; H::HASH_SIZE];
@@ -163,8 +162,8 @@ impl<T: TreeHash<H>, H: TreeHashDigest> TreeHash<H> for Arc<T> {
 
 /// A helper function providing common functionality for finding the Merkle root of some bytes that
 /// represent a bitfield.
-pub fn bitfield_bytes_tree_hash_root<N: Unsigned, H: TreeHashDigest>(bytes: &[u8]) -> H::Output {
-    let byte_size = N::to_usize().div_ceil(8);
+pub fn bitfield_bytes_tree_hash_root<const N: usize, H: TreeHashDigest>(bytes: &[u8]) -> H::Output {
+    let byte_size = N.div_ceil(8);
     let leaf_count = byte_size.div_ceil(BYTES_PER_CHUNK);
 
     let mut hasher = MerkleHasher::<H>::with_leaves(leaf_count);
@@ -176,7 +175,7 @@ pub fn bitfield_bytes_tree_hash_root<N: Unsigned, H: TreeHashDigest>(bytes: &[u8
         .expect("bitfield tree hash buffer should not exceed leaf limit")
 }
 
-impl<N: Unsigned + Clone, H: TreeHashDigest> TreeHash<H> for Bitfield<Variable<N>> {
+impl<const N: usize, H: TreeHashDigest> TreeHash<H> for Bitfield<Variable<N>> {
     fn tree_hash_type() -> TreeHashType {
         TreeHashType::List
     }
@@ -197,7 +196,7 @@ impl<N: Unsigned + Clone, H: TreeHashDigest> TreeHash<H> for Bitfield<Variable<N
     }
 }
 
-impl<N: Unsigned + Clone, H: TreeHashDigest> TreeHash<H> for Bitfield<Fixed<N>> {
+impl<const N: usize, H: TreeHashDigest> TreeHash<H> for Bitfield<Fixed<N>> {
     fn tree_hash_type() -> TreeHashType {
         TreeHashType::Vector
     }
@@ -251,7 +250,6 @@ impl<T: TreeHash<H>, H: TreeHashDigest> TreeHash<H> for Option<T> {
 mod test {
     use super::*;
     use ssz::{BitList, BitVector};
-    use typenum::{U8, U32};
 
     #[test]
     fn bool() {
@@ -301,17 +299,17 @@ mod test {
 
     #[test]
     fn bitvector() {
-        let empty_bitvector = BitVector::<U8>::new();
+        let empty_bitvector = BitVector::<8>::new();
         assert_eq!(
-            <BitVector<U8> as TreeHash<Sha256Hasher>>::tree_hash_root(&empty_bitvector),
+            <BitVector<8> as TreeHash<Sha256Hasher>>::tree_hash_root(&empty_bitvector),
             Hash256::ZERO
         );
 
         let small_bitvector_bytes = vec![0xff_u8, 0xee, 0xdd, 0xcc];
         let small_bitvector =
-            BitVector::<U32>::from_bytes(small_bitvector_bytes.clone().into()).unwrap();
+            BitVector::<32>::from_bytes(small_bitvector_bytes.clone().into()).unwrap();
         assert_eq!(
-            <BitVector<U32> as TreeHash<Sha256Hasher>>::tree_hash_root(&small_bitvector).as_slice()
+            <BitVector<32> as TreeHash<Sha256Hasher>>::tree_hash_root(&small_bitvector).as_slice()
                 [..4],
             small_bitvector_bytes
         );
@@ -319,18 +317,18 @@ mod test {
 
     #[test]
     fn bitlist() {
-        let empty_bitlist = BitList::<U8>::with_capacity(8).unwrap();
+        let empty_bitlist = BitList::<8>::with_capacity(8).unwrap();
         assert_eq!(
-            <BitList<U8> as TreeHash<Sha256Hasher>>::tree_hash_root(&empty_bitlist),
+            <BitList<8> as TreeHash<Sha256Hasher>>::tree_hash_root(&empty_bitlist),
             "0x5ac78d953211aa822c3ae6e9b0058e42394dd32e5992f29f9c12da3681985130"
                 .parse()
                 .unwrap()
         );
 
-        let mut small_bitlist = BitList::<U32>::with_capacity(4).unwrap();
+        let mut small_bitlist = BitList::<32>::with_capacity(4).unwrap();
         small_bitlist.set(1, true).unwrap();
         assert_eq!(
-            <BitList<U32> as TreeHash<Sha256Hasher>>::tree_hash_root(&small_bitlist),
+            <BitList<32> as TreeHash<Sha256Hasher>>::tree_hash_root(&small_bitlist),
             "0x7eb03d394d83a389980b79897207be3a6512d964cb08978bb7f3cfc0db8cfb8a"
                 .parse()
                 .unwrap()

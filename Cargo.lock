@@ -411,7 +411,6 @@ dependencies = [
  "smallvec",
  "ssz_derive",
  "ssz_primitives",
- "typenum",
 ]
 
 [[package]]
@@ -428,7 +427,6 @@ dependencies = [
  "syn",
  "tree_hash",
  "tree_hash_derive",
- "typenum",
 ]
 
 [[package]]
@@ -436,7 +434,6 @@ name = "ssz_derive"
 version = "0.1.0"
 dependencies = [
  "darling",
- "proc-macro2",
  "quote",
  "ssz",
  "ssz_types",
@@ -465,7 +462,6 @@ dependencies = [
  "ssz_primitives",
  "tree_hash",
  "tree_hash_derive",
- "typenum",
 ]
 
 [[package]]
@@ -518,7 +514,6 @@ dependencies = [
  "ssz_primitives",
  "ssz_types",
  "tree_hash_derive",
- "typenum",
 ]
 
 [[package]]
@@ -526,7 +521,6 @@ name = "tree_hash_derive"
 version = "0.1.0"
 dependencies = [
  "darling",
- "proc-macro2",
  "quote",
  "syn",
 ]
