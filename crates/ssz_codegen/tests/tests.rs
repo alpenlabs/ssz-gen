@@ -11,7 +11,7 @@ use syn as _;
 use tree_hash as _;
 use tree_hash_derive as _;
 
-use ssz_codegen::build_ssz_files;
+use ssz_codegen::{ModuleGeneration, build_ssz_files};
 use std::fs;
 
 #[test]
@@ -286,4 +286,72 @@ fn test_profile_field_order() {
         None,
     )
     .expect("This should panic due to field order in profile");
+}
+
+#[test]
+fn test_single_module_generation() {
+    build_ssz_files(
+        &["test_1.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_single_module.rs",
+        Some(ModuleGeneration::SingleModule),
+    )
+    .expect("Failed to generate SSZ types with SingleModule");
+
+    let expected_output = fs::read_to_string("tests/expected_output/test_single_module.rs")
+        .expect("Failed to read expected single module output");
+    let actual_output = fs::read_to_string("tests/output/test_single_module.rs")
+        .expect("Failed to read actual single module output");
+
+    assert_eq!(expected_output.trim(), actual_output.trim());
+}
+
+#[test]
+fn test_flat_modules_generation() {
+    build_ssz_files(
+        &["test_1.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_flat_modules.rs",
+        Some(ModuleGeneration::FlatModules),
+    )
+    .expect("Failed to generate SSZ types with FlatModules");
+
+    let expected_output = fs::read_to_string("tests/expected_output/test_flat_modules.rs")
+        .expect("Failed to read expected flat modules output");
+    let actual_output = fs::read_to_string("tests/output/test_flat_modules.rs")
+        .expect("Failed to read actual flat modules output");
+
+    assert_eq!(expected_output.trim(), actual_output.trim());
+}
+
+#[test]
+fn test_nested_modules_is_default() {
+    // Test that None defaults to NestedModules
+    build_ssz_files(
+        &["test_1.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_default_nested.rs",
+        None,
+    )
+    .expect("Failed to generate SSZ types with default");
+
+    build_ssz_files(
+        &["test_1.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_explicit_nested.rs",
+        Some(ModuleGeneration::NestedModules),
+    )
+    .expect("Failed to generate SSZ types with explicit NestedModules");
+
+    let default_output = fs::read_to_string("tests/output/test_default_nested.rs")
+        .expect("Failed to read default output");
+    let explicit_output = fs::read_to_string("tests/output/test_explicit_nested.rs")
+        .expect("Failed to read explicit nested output");
+
+    // They should be identical
+    assert_eq!(default_output.trim(), explicit_output.trim());
 }
