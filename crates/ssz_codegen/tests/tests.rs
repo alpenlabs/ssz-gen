@@ -21,6 +21,7 @@ fn test_basic_codegen() {
         "tests/input",
         &[],
         "tests/output/test_1.rs",
+        None,
     )
     .expect("Failed to generate SSZ types");
 
@@ -38,6 +39,7 @@ fn test_profile() {
         "tests/input",
         &[],
         "tests/output/test_2.rs",
+        None,
     )
     .expect("Failed to generate SSZ types");
 
@@ -55,6 +57,7 @@ fn test_imports() {
         "tests/input",
         &[],
         "tests/output/test_import.rs",
+        None,
     )
     .expect("Failed to generate SSZ types");
 
@@ -72,6 +75,7 @@ fn test_large_unions() {
         "tests/input",
         &[],
         "tests/output/test_large_unions.rs",
+        None,
     )
     .expect("Failed to generate SSZ types");
 
@@ -89,6 +93,7 @@ fn test_nested_aliases() {
         "tests/input",
         &[],
         "tests/output/test_nested_aliases.rs",
+        None,
     )
     .expect("Failed to generate SSZ types");
 
@@ -106,6 +111,7 @@ fn test_bitfields() {
         "tests/input",
         &[],
         "tests/output/test_bitfields.rs",
+        None,
     )
     .expect("Failed to generate SSZ types");
 
@@ -123,6 +129,7 @@ fn test_union_edge_cases() {
         "tests/input",
         &[],
         "tests/output/test_union_edge_cases.rs",
+        None,
     )
     .expect("Failed to generate SSZ types");
 
@@ -140,6 +147,7 @@ fn test_external_import() {
         "tests/input",
         &["external_ssz"],
         "tests/output/test_external.rs",
+        None,
     )
     .expect("Failed to generate SSZ types");
 
@@ -158,6 +166,7 @@ fn test_circular_dep() {
         "tests/input",
         &[],
         "tests/output/test_circular_dep.rs",
+        None,
     )
     .expect("This should panic due to circular dependency");
 }
@@ -170,6 +179,7 @@ fn test_unknown_import_item() {
         "tests/input",
         &[],
         "tests/output/test_unknown_import_item.rs",
+        None,
     )
     .expect("This should panic due to unknown import item");
 }
@@ -182,6 +192,7 @@ fn test_duplicate_field_name() {
         "tests/input",
         &[],
         "tests/output/test_duplicate_field_name.rs",
+        None,
     )
     .expect("This should panic due to duplicate field name");
 }
@@ -194,6 +205,7 @@ fn test_duplicate_item_name() {
         "tests/input",
         &[],
         "tests/output/test_duplicate_item_name.rs",
+        None,
     )
     .expect("This should panic due to duplicate item name");
 }
@@ -206,6 +218,7 @@ fn test_optional_field_container() {
         "tests/input",
         &[],
         "tests/output/test_optional_field_container.rs",
+        None,
     )
     .expect("This should panic due to optional field in container");
 }
@@ -218,6 +231,7 @@ fn test_stable_container_without_optional() {
         "tests/input",
         &[],
         "tests/output/test_stable_container_without_optional.rs",
+        None,
     )
     .expect("This should panic due to stable container without optional");
 }
@@ -230,6 +244,7 @@ fn test_union_null_position() {
         "tests/input",
         &[],
         "tests/output/test_union_null_position.rs",
+        None,
     )
     .expect("This should panic due to none not being first in union");
 }
@@ -242,6 +257,7 @@ fn test_anon_union() {
         "tests/input",
         &[],
         "tests/output/test_anon_union.rs",
+        None,
     )
     .expect("This should panic due to anonymous union");
 }
@@ -254,6 +270,7 @@ fn test_profile_new_fields() {
         "tests/input",
         &[],
         "tests/output/test_profile_new_fields.rs",
+        None,
     )
     .expect("This should panic due to new fields in profile");
 }
@@ -266,6 +283,7 @@ fn test_profile_field_order() {
         "tests/input",
         &[],
         "tests/output/test_profile_field_order.rs",
+        None,
     )
     .expect("This should panic due to field order in profile");
 }
