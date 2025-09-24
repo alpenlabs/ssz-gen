@@ -11,9 +11,11 @@ use tree_hash as _;
 use tree_hash_derive as _;
 
 use sizzle_parser::parse_str_schema;
+use std::error;
+use std::fs;
 use std::path::Path;
 
-/// Controls how modules are generated in the output
+/// Controls how modules are generated in the output.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ModuleGeneration {
     /// Generate a single flat module with all definitions at the root level
@@ -45,7 +47,7 @@ pub mod types;
 /// * `base_dir` - Path to the base directory of the SSZ definition files
 /// * `crates` - A slice of strings representing the external crates you want to import in your ssz schema
 /// * `output_file_path` - Path where the generated Rust code files will be written
-/// * `module_generation` - Optional module generation strategy, defaults to NestedModules if None
+/// * `module_generation` - Module generation strategy.
 ///
 /// # Example
 ///
@@ -53,13 +55,13 @@ pub mod types;
 /// // In build.rs
 /// use ssz_codegen::build_ssz_files;
 /// fn main() {
-///     let out_dir = Path::new(std::env::var("OUT_DIR").unwrap().as_str()).join("generated_ssz.rs");
+///     let out_dir = Path::new(env::var("OUT_DIR").unwrap().as_str()).join("generated_ssz.rs");
 ///     build_ssz_files(
 ///         &["test_1.ssz", "test_2.ssz"],
 ///         "specs/",
 ///         &["ssz_defs_1", "ssz_defs_2"],
 ///         out_dir.to_str().unwrap(),
-///         None, // Use default module generation
+///         ModuleGeneration::NestedModules, // Use default module generation
 ///     )
 ///     .expect("Failed to generate SSZ types");
 /// }
@@ -69,18 +71,18 @@ pub fn build_ssz_files(
     base_dir: &str,
     crates: &[&str],
     output_file_path: &str,
-    module_generation: Option<ModuleGeneration>,
-) -> Result<(), Box<dyn std::error::Error>> {
+    module_generation: ModuleGeneration,
+) -> Result<(), Box<dyn error::Error>> {
     let files = files::read_entrypoint_ssz(entry_points, base_dir)?;
     println!("cargo:rerun-if-changed={base_dir}");
     let (parsing_order, schema_map) = parse_str_schema(&files, crates)?;
-    let generation_mode = module_generation.unwrap_or_default();
+    let generation_mode = module_generation;
     let rust_code = codegen::schema_map_to_rust_code(&parsing_order, &schema_map, generation_mode);
     let pretty_rust_code = prettyplease::unparse(&syn::parse_str(&rust_code.to_string())?);
     let output_path = Path::new(output_file_path);
     if let Some(parent) = output_path.parent() {
-        std::fs::create_dir_all(parent)?;
+        fs::create_dir_all(parent)?;
     }
-    std::fs::write(output_path, pretty_rust_code)?;
+    fs::write(output_path, pretty_rust_code)?;
     Ok(())
 }

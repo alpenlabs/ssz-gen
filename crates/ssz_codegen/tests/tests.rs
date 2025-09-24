@@ -21,7 +21,7 @@ fn test_basic_codegen() {
         "tests/input",
         &[],
         "tests/output/test_1.rs",
-        None,
+        ModuleGeneration::NestedModules,
     )
     .expect("Failed to generate SSZ types");
 
@@ -39,7 +39,7 @@ fn test_profile() {
         "tests/input",
         &[],
         "tests/output/test_2.rs",
-        None,
+        ModuleGeneration::NestedModules,
     )
     .expect("Failed to generate SSZ types");
 
@@ -57,7 +57,7 @@ fn test_imports() {
         "tests/input",
         &[],
         "tests/output/test_import.rs",
-        None,
+        ModuleGeneration::NestedModules,
     )
     .expect("Failed to generate SSZ types");
 
@@ -75,7 +75,7 @@ fn test_large_unions() {
         "tests/input",
         &[],
         "tests/output/test_large_unions.rs",
-        None,
+        ModuleGeneration::NestedModules,
     )
     .expect("Failed to generate SSZ types");
 
@@ -93,7 +93,7 @@ fn test_nested_aliases() {
         "tests/input",
         &[],
         "tests/output/test_nested_aliases.rs",
-        None,
+        ModuleGeneration::NestedModules,
     )
     .expect("Failed to generate SSZ types");
 
@@ -111,7 +111,7 @@ fn test_bitfields() {
         "tests/input",
         &[],
         "tests/output/test_bitfields.rs",
-        None,
+        ModuleGeneration::NestedModules,
     )
     .expect("Failed to generate SSZ types");
 
@@ -129,7 +129,7 @@ fn test_union_edge_cases() {
         "tests/input",
         &[],
         "tests/output/test_union_edge_cases.rs",
-        None,
+        ModuleGeneration::NestedModules,
     )
     .expect("Failed to generate SSZ types");
 
@@ -147,7 +147,7 @@ fn test_external_import() {
         "tests/input",
         &["external_ssz"],
         "tests/output/test_external.rs",
-        None,
+        ModuleGeneration::NestedModules,
     )
     .expect("Failed to generate SSZ types");
 
@@ -166,7 +166,7 @@ fn test_circular_dep() {
         "tests/input",
         &[],
         "tests/output/test_circular_dep.rs",
-        None,
+        ModuleGeneration::NestedModules,
     )
     .expect("This should panic due to circular dependency");
 }
@@ -179,7 +179,7 @@ fn test_unknown_import_item() {
         "tests/input",
         &[],
         "tests/output/test_unknown_import_item.rs",
-        None,
+        ModuleGeneration::NestedModules,
     )
     .expect("This should panic due to unknown import item");
 }
@@ -192,7 +192,7 @@ fn test_duplicate_field_name() {
         "tests/input",
         &[],
         "tests/output/test_duplicate_field_name.rs",
-        None,
+        ModuleGeneration::NestedModules,
     )
     .expect("This should panic due to duplicate field name");
 }
@@ -205,7 +205,7 @@ fn test_duplicate_item_name() {
         "tests/input",
         &[],
         "tests/output/test_duplicate_item_name.rs",
-        None,
+        ModuleGeneration::NestedModules,
     )
     .expect("This should panic due to duplicate item name");
 }
@@ -218,7 +218,7 @@ fn test_optional_field_container() {
         "tests/input",
         &[],
         "tests/output/test_optional_field_container.rs",
-        None,
+        ModuleGeneration::NestedModules,
     )
     .expect("This should panic due to optional field in container");
 }
@@ -231,7 +231,7 @@ fn test_stable_container_without_optional() {
         "tests/input",
         &[],
         "tests/output/test_stable_container_without_optional.rs",
-        None,
+        ModuleGeneration::NestedModules,
     )
     .expect("This should panic due to stable container without optional");
 }
@@ -244,7 +244,7 @@ fn test_union_null_position() {
         "tests/input",
         &[],
         "tests/output/test_union_null_position.rs",
-        None,
+        ModuleGeneration::NestedModules,
     )
     .expect("This should panic due to none not being first in union");
 }
@@ -257,7 +257,7 @@ fn test_anon_union() {
         "tests/input",
         &[],
         "tests/output/test_anon_union.rs",
-        None,
+        ModuleGeneration::NestedModules,
     )
     .expect("This should panic due to anonymous union");
 }
@@ -270,7 +270,7 @@ fn test_profile_new_fields() {
         "tests/input",
         &[],
         "tests/output/test_profile_new_fields.rs",
-        None,
+        ModuleGeneration::NestedModules,
     )
     .expect("This should panic due to new fields in profile");
 }
@@ -283,7 +283,7 @@ fn test_profile_field_order() {
         "tests/input",
         &[],
         "tests/output/test_profile_field_order.rs",
-        None,
+        ModuleGeneration::NestedModules,
     )
     .expect("This should panic due to field order in profile");
 }
@@ -295,7 +295,7 @@ fn test_single_module_generation() {
         "tests/input",
         &[],
         "tests/output/test_single_module.rs",
-        Some(ModuleGeneration::SingleModule),
+        ModuleGeneration::SingleModule,
     )
     .expect("Failed to generate SSZ types with SingleModule");
 
@@ -314,7 +314,7 @@ fn test_flat_modules_generation() {
         "tests/input",
         &[],
         "tests/output/test_flat_modules.rs",
-        Some(ModuleGeneration::FlatModules),
+        ModuleGeneration::FlatModules,
     )
     .expect("Failed to generate SSZ types with FlatModules");
 
@@ -328,13 +328,13 @@ fn test_flat_modules_generation() {
 
 #[test]
 fn test_nested_modules_is_default() {
-    // Test that None defaults to NestedModules
+    // Test that default is NestedModules
     build_ssz_files(
         &["test_1.ssz"],
         "tests/input",
         &[],
         "tests/output/test_default_nested.rs",
-        None,
+        ModuleGeneration::NestedModules,
     )
     .expect("Failed to generate SSZ types with default");
 
@@ -343,7 +343,7 @@ fn test_nested_modules_is_default() {
         "tests/input",
         &[],
         "tests/output/test_explicit_nested.rs",
-        Some(ModuleGeneration::NestedModules),
+        ModuleGeneration::NestedModules,
     )
     .expect("Failed to generate SSZ types with explicit NestedModules");
 
