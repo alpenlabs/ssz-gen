@@ -1,22 +1,23 @@
 [workspace]
 members = [
-    "crates/ssz_codegen",
-    "crates/ssz",
-    "crates/ssz_derive",
-    "crates/tree_hash",
-    "crates/tree_hash_derive",
-    "crates/ssz_types",
-    "crates/sizzle-parser",
-    "crates/ssz_primitives",
+  "crates/ssz_codegen",
+  "crates/ssz",
+  "crates/ssz_derive",
+  "crates/tree_hash",
+  "crates/tree_hash_derive",
+  "crates/ssz_types",
+  "crates/sizzle-parser",
+  "crates/ssz_primitives",
 ]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 authors = [
-    "Trey Del Bonis <trey@alpenlabs.io>",
-    "Ali Rezai <ali.baghbidi@nethermind.io>",
+  "Trey Del Bonis <trey@alpenlabs.io>",
+  "Ali Rezai <ali.baghbidi@nethermind.io>",
+  "Jose Storopoli <jose@alpenlabs.io>",
 ]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
@@ -31,7 +32,7 @@ rust.unreachable_pub = "warn"
 rust.unused_crate_dependencies = "deny"
 rust.unused_must_use = "deny"
 rust.unexpected_cfgs = { level = "warn", check-cfg = [
-    'cfg(coverage, coverage_nightly)',
+  'cfg(coverage, coverage_nightly)',
 ] }
 rust.missing_docs = "warn"
 rustdoc.all = "warn"
@@ -59,7 +60,7 @@ hex = "0.4"
 itertools = "0.13.0"
 proc-macro2 = "1.0.23"
 quote = "1.0.18"
-rand =  "0.8.5"
+rand = "0.8.5"
 ruint = { version = "1.14.0", default-features = false, features = ["alloc"] }
 serde = "1.0.0"
 serde_derive = "1.0.0"

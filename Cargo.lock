@@ -388,7 +388,7 @@ dependencies = [
 
 [[package]]
 name = "sizzle-parser"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "thiserror",
 ]
@@ -401,7 +401,7 @@ checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
 
 [[package]]
 name = "ssz"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "arbitrary",
  "hex",
@@ -415,7 +415,7 @@ dependencies = [
 
 [[package]]
 name = "ssz_codegen"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "prettyplease",
  "proc-macro2",
@@ -431,7 +431,7 @@ dependencies = [
 
 [[package]]
 name = "ssz_derive"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "darling",
  "quote",
@@ -442,7 +442,7 @@ dependencies = [
 
 [[package]]
 name = "ssz_primitives"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "hex",
  "rand 0.8.5",
@@ -451,7 +451,7 @@ dependencies = [
 
 [[package]]
 name = "ssz_types"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "arbitrary",
  "itertools",
@@ -503,7 +503,7 @@ dependencies = [
 
 [[package]]
 name = "tree_hash"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "digest",
  "rand 0.8.5",
@@ -518,7 +518,7 @@ dependencies = [
 
 [[package]]
 name = "tree_hash_derive"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "darling",
  "quote",
