@@ -1,7 +1,11 @@
 //! Code generation module for converting SSZ schemas into Rust code.
 
-use crate::types::{
-    BaseClass, ClassDef, ClassDefinition, ClassFieldDef, TypeResolutionKind, resolver::TypeResolver,
+use crate::{
+    ModuleGeneration,
+    types::{
+        BaseClass, ClassDef, ClassDefinition, ClassFieldDef, TypeResolutionKind,
+        resolver::TypeResolver,
+    },
 };
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -438,6 +442,61 @@ fn generate_module_code(
     }
 }
 
+/// Generates a single flat module with all definitions at the root level
+fn single_module_rust_code(schema_map: &HashMap<&PathBuf, TokenStream>) -> TokenStream {
+    let mut all_tokens = Vec::new();
+
+    // Sort paths to ensure consistent ordering
+    let mut paths: Vec<_> = schema_map.keys().collect();
+    paths.sort();
+
+    for path in paths {
+        if let Some(tokens) = schema_map.get(path) {
+            all_tokens.push(tokens.clone());
+        }
+    }
+
+    quote! {
+        use ssz_types::*;
+        use ssz_derive::{Encode, Decode};
+        use tree_hash::TreeHashDigest;
+        use tree_hash_derive::TreeHash;
+
+        #(#all_tokens)*
+    }
+}
+
+/// Generates flat modules without deep nesting (one level per file)
+fn flat_modules_rust_code(schema_map: &HashMap<&PathBuf, TokenStream>) -> TokenStream {
+    let mut modules = Vec::new();
+
+    // Sort paths to ensure consistent ordering
+    let mut paths: Vec<_> = schema_map.keys().collect();
+    paths.sort();
+
+    for path in paths {
+        let module_name = path.file_stem().unwrap_or_default().to_string_lossy();
+        let module_ident = syn::Ident::new(&module_name, proc_macro2::Span::call_site());
+
+        if let Some(content_tokens) = schema_map.get(path) {
+            modules.push(quote! {
+                pub mod #module_ident {
+                    use ssz_types::*;
+                    use ssz_derive::{Encode, Decode};
+                    use tree_hash::TreeHashDigest;
+                    use tree_hash_derive::TreeHash;
+
+                    #content_tokens
+                }
+            });
+        }
+    }
+
+    quote! {
+        #(#modules)*
+    }
+}
+
 fn module_tokens_to_rust_code(schema_map: &HashMap<&PathBuf, TokenStream>) -> TokenStream {
     let mut root_nodes = Vec::new();
 
@@ -494,7 +553,9 @@ fn module_tokens_to_rust_code(schema_map: &HashMap<&PathBuf, TokenStream>) -> To
 ///
 /// # Arguments
 ///
+/// * `parsing_order` - The order in which to process the schemas
 /// * `schema_map` - The mapping of module path => SSZ schema to convert
+/// * `module_generation` - Controls how modules are structured in the generated code
 ///
 /// # Returns
 ///
@@ -502,8 +563,10 @@ fn module_tokens_to_rust_code(schema_map: &HashMap<&PathBuf, TokenStream>) -> To
 pub fn schema_map_to_rust_code(
     parsing_order: &[PathBuf],
     schema_map: &HashMap<PathBuf, SszSchema>,
+    module_generation: ModuleGeneration,
 ) -> TokenStream {
     let mut module_tokens = HashMap::new();
+    let mut module_content_tokens = HashMap::new(); // Content without imports for `SingleModule`
     let resolvers = RefCell::new(HashMap::new());
 
     for path in parsing_order {
@@ -539,6 +602,18 @@ pub fn schema_map_to_rust_code(
             }
         });
 
+        let content_tokens = quote! {
+            #(#unions)*
+
+            #(#constants)*
+
+            #(#tokens)*
+        };
+
+        // Store content without imports for SingleModule mode
+        module_content_tokens.insert(path, content_tokens.clone());
+
+        // Store full module with imports for other modes
         module_tokens.insert(
             path,
             quote! {
@@ -547,11 +622,7 @@ pub fn schema_map_to_rust_code(
                 use tree_hash::TreeHashDigest;
                 use tree_hash_derive::TreeHash;
 
-                #(#unions)*
-
-                #(#constants)*
-
-                #(#tokens)*
+                #content_tokens
             },
         );
 
@@ -559,5 +630,9 @@ pub fn schema_map_to_rust_code(
         resolvers.borrow_mut().insert(path.clone(), type_resolver);
     }
 
-    module_tokens_to_rust_code(&module_tokens)
+    match module_generation {
+        ModuleGeneration::SingleModule => single_module_rust_code(&module_content_tokens),
+        ModuleGeneration::FlatModules => flat_modules_rust_code(&module_content_tokens),
+        ModuleGeneration::NestedModules => module_tokens_to_rust_code(&module_tokens),
+    }
 }

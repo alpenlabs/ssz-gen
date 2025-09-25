@@ -109,6 +109,20 @@ impl<T: Default, const N: usize> From<Vec<T>> for FixedVector<T, N> {
     }
 }
 
+impl<T, const N: usize> From<[T; N]> for FixedVector<T, N> {
+    fn from(array: [T; N]) -> Self {
+        Self { vec: array.into() }
+    }
+}
+
+impl<T: Clone, const N: usize> From<&[T; N]> for FixedVector<T, N> {
+    fn from(array: &[T; N]) -> Self {
+        Self {
+            vec: array.to_vec(),
+        }
+    }
+}
+
 impl<T, const N: usize> From<FixedVector<T, N>> for Vec<T> {
     fn from(vector: FixedVector<T, N>) -> Vec<T> {
         vector.vec
@@ -573,5 +587,27 @@ mod test {
         let json = serde_json::json!([1, 2, 3, 4]);
         let result: Result<FixedVector<u64, 4>, _> = serde_json::from_value(json);
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn from_array() {
+        let array = [1u64, 2, 3, 4];
+        let fixed: FixedVector<u64, 4> = FixedVector::from(array);
+        assert_eq!(&fixed[..], &[1, 2, 3, 4]);
+
+        let array = [42u64; 8];
+        let fixed: FixedVector<u64, 8> = FixedVector::from(array);
+        assert_eq!(&fixed[..], &[42; 8]);
+    }
+
+    #[test]
+    fn from_array_ref() {
+        let array = &[1u64, 2, 3, 4];
+        let fixed: FixedVector<u64, 4> = FixedVector::from(array);
+        assert_eq!(&fixed[..], &[1, 2, 3, 4]);
+
+        let array = &[42u64; 8];
+        let fixed: FixedVector<u64, 8> = FixedVector::from(array);
+        assert_eq!(&fixed[..], &[42; 8]);
     }
 }

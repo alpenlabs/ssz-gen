@@ -11,7 +11,7 @@ use syn as _;
 use tree_hash as _;
 use tree_hash_derive as _;
 
-use ssz_codegen::build_ssz_files;
+use ssz_codegen::{ModuleGeneration, build_ssz_files};
 use std::fs;
 
 #[test]
@@ -21,6 +21,7 @@ fn test_basic_codegen() {
         "tests/input",
         &[],
         "tests/output/test_1.rs",
+        ModuleGeneration::NestedModules,
     )
     .expect("Failed to generate SSZ types");
 
@@ -38,6 +39,7 @@ fn test_profile() {
         "tests/input",
         &[],
         "tests/output/test_2.rs",
+        ModuleGeneration::NestedModules,
     )
     .expect("Failed to generate SSZ types");
 
@@ -55,6 +57,7 @@ fn test_imports() {
         "tests/input",
         &[],
         "tests/output/test_import.rs",
+        ModuleGeneration::NestedModules,
     )
     .expect("Failed to generate SSZ types");
 
@@ -72,6 +75,7 @@ fn test_large_unions() {
         "tests/input",
         &[],
         "tests/output/test_large_unions.rs",
+        ModuleGeneration::NestedModules,
     )
     .expect("Failed to generate SSZ types");
 
@@ -89,6 +93,7 @@ fn test_nested_aliases() {
         "tests/input",
         &[],
         "tests/output/test_nested_aliases.rs",
+        ModuleGeneration::NestedModules,
     )
     .expect("Failed to generate SSZ types");
 
@@ -106,6 +111,7 @@ fn test_bitfields() {
         "tests/input",
         &[],
         "tests/output/test_bitfields.rs",
+        ModuleGeneration::NestedModules,
     )
     .expect("Failed to generate SSZ types");
 
@@ -123,6 +129,7 @@ fn test_union_edge_cases() {
         "tests/input",
         &[],
         "tests/output/test_union_edge_cases.rs",
+        ModuleGeneration::NestedModules,
     )
     .expect("Failed to generate SSZ types");
 
@@ -140,6 +147,7 @@ fn test_external_import() {
         "tests/input",
         &["external_ssz"],
         "tests/output/test_external.rs",
+        ModuleGeneration::NestedModules,
     )
     .expect("Failed to generate SSZ types");
 
@@ -158,6 +166,7 @@ fn test_circular_dep() {
         "tests/input",
         &[],
         "tests/output/test_circular_dep.rs",
+        ModuleGeneration::NestedModules,
     )
     .expect("This should panic due to circular dependency");
 }
@@ -170,6 +179,7 @@ fn test_unknown_import_item() {
         "tests/input",
         &[],
         "tests/output/test_unknown_import_item.rs",
+        ModuleGeneration::NestedModules,
     )
     .expect("This should panic due to unknown import item");
 }
@@ -182,6 +192,7 @@ fn test_duplicate_field_name() {
         "tests/input",
         &[],
         "tests/output/test_duplicate_field_name.rs",
+        ModuleGeneration::NestedModules,
     )
     .expect("This should panic due to duplicate field name");
 }
@@ -194,6 +205,7 @@ fn test_duplicate_item_name() {
         "tests/input",
         &[],
         "tests/output/test_duplicate_item_name.rs",
+        ModuleGeneration::NestedModules,
     )
     .expect("This should panic due to duplicate item name");
 }
@@ -206,6 +218,7 @@ fn test_optional_field_container() {
         "tests/input",
         &[],
         "tests/output/test_optional_field_container.rs",
+        ModuleGeneration::NestedModules,
     )
     .expect("This should panic due to optional field in container");
 }
@@ -218,6 +231,7 @@ fn test_stable_container_without_optional() {
         "tests/input",
         &[],
         "tests/output/test_stable_container_without_optional.rs",
+        ModuleGeneration::NestedModules,
     )
     .expect("This should panic due to stable container without optional");
 }
@@ -230,6 +244,7 @@ fn test_union_null_position() {
         "tests/input",
         &[],
         "tests/output/test_union_null_position.rs",
+        ModuleGeneration::NestedModules,
     )
     .expect("This should panic due to none not being first in union");
 }
@@ -242,6 +257,7 @@ fn test_anon_union() {
         "tests/input",
         &[],
         "tests/output/test_anon_union.rs",
+        ModuleGeneration::NestedModules,
     )
     .expect("This should panic due to anonymous union");
 }
@@ -254,6 +270,7 @@ fn test_profile_new_fields() {
         "tests/input",
         &[],
         "tests/output/test_profile_new_fields.rs",
+        ModuleGeneration::NestedModules,
     )
     .expect("This should panic due to new fields in profile");
 }
@@ -266,6 +283,75 @@ fn test_profile_field_order() {
         "tests/input",
         &[],
         "tests/output/test_profile_field_order.rs",
+        ModuleGeneration::NestedModules,
     )
     .expect("This should panic due to field order in profile");
+}
+
+#[test]
+fn test_single_module_generation() {
+    build_ssz_files(
+        &["test_1.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_single_module.rs",
+        ModuleGeneration::SingleModule,
+    )
+    .expect("Failed to generate SSZ types with SingleModule");
+
+    let expected_output = fs::read_to_string("tests/expected_output/test_single_module.rs")
+        .expect("Failed to read expected single module output");
+    let actual_output = fs::read_to_string("tests/output/test_single_module.rs")
+        .expect("Failed to read actual single module output");
+
+    assert_eq!(expected_output.trim(), actual_output.trim());
+}
+
+#[test]
+fn test_flat_modules_generation() {
+    build_ssz_files(
+        &["test_1.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_flat_modules.rs",
+        ModuleGeneration::FlatModules,
+    )
+    .expect("Failed to generate SSZ types with FlatModules");
+
+    let expected_output = fs::read_to_string("tests/expected_output/test_flat_modules.rs")
+        .expect("Failed to read expected flat modules output");
+    let actual_output = fs::read_to_string("tests/output/test_flat_modules.rs")
+        .expect("Failed to read actual flat modules output");
+
+    assert_eq!(expected_output.trim(), actual_output.trim());
+}
+
+#[test]
+fn test_nested_modules_is_default() {
+    // Test that default is NestedModules
+    build_ssz_files(
+        &["test_1.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_default_nested.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types with default");
+
+    build_ssz_files(
+        &["test_1.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_explicit_nested.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types with explicit NestedModules");
+
+    let default_output = fs::read_to_string("tests/output/test_default_nested.rs")
+        .expect("Failed to read default output");
+    let explicit_output = fs::read_to_string("tests/output/test_explicit_nested.rs")
+        .expect("Failed to read explicit nested output");
+
+    // They should be identical
+    assert_eq!(default_output.trim(), explicit_output.trim());
 }
