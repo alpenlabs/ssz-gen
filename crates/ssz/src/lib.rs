@@ -42,6 +42,7 @@ pub mod decode;
 pub mod encode;
 pub mod legacy;
 /// Serde utilities for SSZ types.
+#[cfg(feature = "serde")]
 pub mod serde_utils;
 mod union_selector;
 

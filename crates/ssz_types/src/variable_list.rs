@@ -3,7 +3,9 @@
 
 use crate::Error;
 use crate::tree_hash::vec_tree_hash_root;
+#[cfg(feature = "serde")]
 use serde::Deserialize;
+#[cfg(feature = "serde")]
 use serde_derive::Serialize;
 use std::ops::{Deref, DerefMut, Index, IndexMut};
 use std::slice::SliceIndex;
@@ -44,8 +46,9 @@ use std::slice::SliceIndex;
 /// // Push a value to if it _does_ exceed the maximum.
 /// assert!(long.push(6).is_err());
 /// ```
-#[derive(Debug, Clone, Serialize)]
-#[serde(transparent)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct VariableList<T, const N: usize> {
     vec: Vec<T>,
 }
@@ -297,6 +300,7 @@ where
     }
 }
 
+#[cfg(feature = "serde")]
 impl<'de, T, const N: usize> Deserialize<'de> for VariableList<T, N>
 where
     T: Deserialize<'de>,
@@ -593,7 +597,10 @@ mod test {
     }
 
     #[test]
+    #[cfg(feature = "serde")]
     fn serde_invalid_length() {
+        use serde_json;
+
         let json = serde_json::json!([1, 2, 3, 4, 5]);
         let result: Result<VariableList<u64, 4>, _> = serde_json::from_value(json);
         assert!(result.is_err());

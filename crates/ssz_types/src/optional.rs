@@ -1,6 +1,7 @@
 // Modified in 2025 from the original version
 // Original source licensed under the Apache License 2.0
 
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use tree_hash::Hash256;
 
@@ -164,6 +165,7 @@ where
     }
 }
 
+#[cfg(feature = "serde")]
 impl<T> Serialize for Optional<T>
 where
     T: Serialize,
@@ -179,6 +181,7 @@ where
     }
 }
 
+#[cfg(feature = "serde")]
 impl<'de, T> Deserialize<'de> for Optional<T>
 where
     T: Deserialize<'de>,
@@ -245,7 +248,10 @@ mod test {
     }
 
     #[test]
+    #[cfg(feature = "serde")]
     fn serde() {
+        use serde_json;
+
         let json = serde_json::json!(null);
         let result: Result<Optional<u64>, _> = serde_json::from_value(json);
         assert!(result.is_ok());

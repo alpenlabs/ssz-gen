@@ -17,9 +17,9 @@ workspace = true
 
 [dependencies]
 arbitrary = { workspace = true, optional = true }
-itertools.workspace = true
-serde.workspace = true
-serde_derive.workspace = true
+itertools = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_derive = { workspace = true, optional = true }
 ssz.workspace = true
 ssz_primitives.workspace = true
 tree_hash.workspace = true
@@ -27,3 +27,8 @@ tree_hash.workspace = true
 [dev-dependencies]
 serde_json.workspace = true
 tree_hash_derive.workspace = true
+ssz = { workspace = true, features = ["serde"] }
+
+[features]
+default = []
+serde = ["dep:serde", "dep:serde_derive", "dep:itertools", "ssz/serde"]
