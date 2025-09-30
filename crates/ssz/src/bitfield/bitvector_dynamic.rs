@@ -3,13 +3,16 @@
 
 //! Provides `Bitfield<Dynamic>` (BitVectorDynamic)
 /// for encoding and decoding bitvectors that have a dynamic length.
+#[cfg(feature = "serde")]
 use crate::serde_utils::hex::{PrefixedHexVisitor, encode as hex_encode};
 use crate::{
     Decode, DecodeError, Encode,
     bitfield::{Bitfield, BitfieldBehaviour, Error, SMALLVEC_LEN, bytes_for_bit_len},
 };
 use core::marker::PhantomData;
+#[cfg(feature = "serde")]
 use serde::de::{Deserialize, Deserializer};
+#[cfg(feature = "serde")]
 use serde::ser::{Serialize, Serializer};
 use smallvec::{SmallVec, ToSmallVec, smallvec};
 
@@ -121,6 +124,7 @@ impl Decode for Bitfield<Dynamic> {
     }
 }
 
+#[cfg(feature = "serde")]
 impl Serialize for Bitfield<Dynamic> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -130,6 +134,7 @@ impl Serialize for Bitfield<Dynamic> {
     }
 }
 
+#[cfg(feature = "serde")]
 impl<'de> Deserialize<'de> for Bitfield<Dynamic> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -485,6 +490,7 @@ mod roundtrip_tests {
     }
 
     #[test]
+    #[cfg(feature = "serde")]
     fn test_serde_roundtrip() -> Result<(), Error> {
         use serde_json::de::Deserializer as json_deserializer;
         use serde_json::ser::Serializer as json_serializer;

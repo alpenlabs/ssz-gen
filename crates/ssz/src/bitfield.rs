@@ -3,10 +3,13 @@
 
 //! Bitfield implementation
 
+#[cfg(feature = "serde")]
 use crate::serde_utils::hex::{PrefixedHexVisitor, encode as hex_encode};
 use crate::{Decode, DecodeError, Encode};
 use core::marker::PhantomData;
+#[cfg(feature = "serde")]
 use serde::de::{Deserialize, Deserializer};
+#[cfg(feature = "serde")]
 use serde::ser::{Serialize, Serializer};
 use smallvec::{SmallVec, ToSmallVec, smallvec};
 
@@ -642,6 +645,7 @@ impl<const N: usize> Decode for Bitfield<Fixed<N>> {
     }
 }
 
+#[cfg(feature = "serde")]
 impl<const N: usize> Serialize for Bitfield<Variable<N>> {
     /// Serde serialization is compliant with the Ethereum YAML test format.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -652,6 +656,7 @@ impl<const N: usize> Serialize for Bitfield<Variable<N>> {
     }
 }
 
+#[cfg(feature = "serde")]
 impl<'de, const N: usize> Deserialize<'de> for Bitfield<Variable<N>> {
     /// Serde serialization is compliant with the Ethereum YAML test format.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -664,6 +669,7 @@ impl<'de, const N: usize> Deserialize<'de> for Bitfield<Variable<N>> {
     }
 }
 
+#[cfg(feature = "serde")]
 impl<const N: usize> Serialize for Bitfield<Fixed<N>> {
     /// Serde serialization is compliant with the Ethereum YAML test format.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -674,6 +680,7 @@ impl<const N: usize> Serialize for Bitfield<Fixed<N>> {
     }
 }
 
+#[cfg(feature = "serde")]
 impl<'de, const N: usize> Deserialize<'de> for Bitfield<Fixed<N>> {
     /// Serde serialization is compliant with the Ethereum YAML test format.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
