@@ -1,14 +1,14 @@
 //! The types used in the SSZ codegen
 
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use std::collections::HashMap;
-use syn::parse_quote;
+use syn::{Ident, Path, Type, TypePath, parse_quote};
 
 use crate::types::resolver::TypeResolver;
 pub mod resolver;
 
-/// Converts a primitive type name into a Rust syn::Type
+/// Converts a primitive type name into a Rust [`Type`].
 ///
 /// # Arguments
 ///
@@ -16,11 +16,11 @@ pub mod resolver;
 ///
 /// # Returns
 ///
-/// A syn::Type representing the Rust primitive type
-pub fn primitive_rust_type(base_name: &str) -> syn::Type {
-    syn::Type::Path(syn::TypePath {
+/// A [`Type`] representing the Rust primitive type
+pub fn primitive_rust_type(base_name: &str) -> Type {
+    Type::Path(TypePath {
         qself: None,
-        path: syn::Path::from(syn::Ident::new(base_name, proc_macro2::Span::call_site())),
+        path: Path::from(Ident::new(base_name, Span::call_site())),
     })
 }
 
@@ -28,7 +28,7 @@ pub fn primitive_rust_type(base_name: &str) -> syn::Type {
 #[derive(Clone, Debug)]
 pub struct TypeResolution {
     /// The type we want to use in our generated rust code
-    pub ty: Option<syn::Type>,
+    pub ty: Option<Type>,
     /// What SSZ primitive type this type resolves to
     pub resolution: TypeResolutionKind,
 }
@@ -122,7 +122,7 @@ impl TypeResolution {
         matches!(self.resolution, TypeResolutionKind::Constant(_))
     }
 
-    /// Unwraps any of the type variants into a syn::Type, panics if not a type variant
+    /// Unwraps any of the type variants into a [`Type`], panics if not a type variant.
     ///
     /// # Arguments
     ///
@@ -130,19 +130,19 @@ impl TypeResolution {
     ///
     /// # Returns
     ///
-    /// The unwrapped syn::Type if this is one of the type variants
+    /// The unwrapped [`Type`] if this is one of the type variants
     ///
     /// # Panics
     ///
-    /// Panics if the resolution is not a type variant
-    pub fn unwrap_type(&self) -> syn::Type {
+    /// Panics if the resolution is not a type variant.
+    pub fn unwrap_type(&self) -> Type {
         if let Some(ty) = &self.ty {
             return ty.clone();
         }
 
         match &self.resolution {
             TypeResolutionKind::Class(class) => {
-                let class = syn::Ident::new(class, proc_macro2::Span::call_site());
+                let class = Ident::new(class, Span::call_site());
                 parse_quote!(#class)
             }
             TypeResolutionKind::Boolean => primitive_rust_type("bool"),
@@ -174,7 +174,7 @@ impl TypeResolution {
                 parse_quote!(Option<#ty>)
             }
             TypeResolutionKind::Union(ident, _) => {
-                let ident = syn::Ident::new(ident, proc_macro2::Span::call_site());
+                let ident = Ident::new(ident, Span::call_site());
                 parse_quote!(#ident)
             }
             TypeResolutionKind::Bytes(size) => {
@@ -197,6 +197,67 @@ impl TypeResolution {
         match self.resolution {
             TypeResolutionKind::BaseClass(base_class) => base_class,
             _ => panic!("Expected type resolution to be a base class"),
+        }
+    }
+
+    /// Converts an owned type to its corresponding view type for zero-copy decoding
+    ///
+    /// # Returns
+    ///
+    /// A [`Type`] representing the view type (e.g., `BytesRef`, `FixedBytesRef`)
+    pub fn to_view_type(&self) -> Type {
+        match &self.resolution {
+            TypeResolutionKind::Class(class) => {
+                let ref_ident = Ident::new(&format!("{}Ref", class), Span::call_site());
+                parse_quote!(#ref_ident<'a>)
+            }
+            TypeResolutionKind::Boolean => primitive_rust_type("bool"),
+            TypeResolutionKind::UInt(size) => primitive_rust_type(&format!("u{size}")),
+            TypeResolutionKind::Vector(ty, size) => {
+                let inner_view_ty = ty.to_view_type();
+                let size = *size as usize;
+                parse_quote!(FixedVectorRef<'a, #inner_view_ty, #size>)
+            }
+            TypeResolutionKind::List(ty, size) => {
+                let inner = &**ty;
+                let size = *size as usize;
+
+                // Special case: List<u8, N> -> BytesRef<'a>
+                if matches!(inner.resolution, TypeResolutionKind::UInt(8)) {
+                    parse_quote!(BytesRef<'a>)
+                } else {
+                    let inner_view_ty = ty.to_view_type();
+                    parse_quote!(VariableListRef<'a, #inner_view_ty, #size>)
+                }
+            }
+            TypeResolutionKind::Bitvector(size) => {
+                let size = *size as usize;
+                parse_quote!(BitVectorRef<'a, #size>)
+            }
+            TypeResolutionKind::Bitlist(size) => {
+                let size = *size as usize;
+                parse_quote!(BitListRef<'a, #size>)
+            }
+            TypeResolutionKind::Optional(ty) => {
+                let inner_view_ty = ty.to_view_type();
+                parse_quote!(Optional<#inner_view_ty>)
+            }
+            TypeResolutionKind::Option(ty) => {
+                let inner_view_ty = ty.to_view_type();
+                parse_quote!(Option<#inner_view_ty>)
+            }
+            TypeResolutionKind::Union(ident, _) => {
+                let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
+                parse_quote!(#ref_ident<'a>)
+            }
+            TypeResolutionKind::Bytes(size) => {
+                parse_quote!(FixedBytesRef<'a, #size>)
+            }
+            TypeResolutionKind::External => {
+                // External types remain as-is since we don't control them
+                self.unwrap_type()
+            }
+            _ => panic!("Cannot convert {:?} to view type", self.resolution),
         }
     }
 
@@ -488,7 +549,7 @@ impl ClassDef {
     /// # Returns
     ///
     /// A TokenStream containing the generated Rust code for the class
-    pub fn to_token_stream(&self, ident: &syn::Ident) -> TokenStream {
+    pub fn to_token_stream(&self, ident: &Ident) -> TokenStream {
         let field_tokens = &self.field_tokens;
         match self.base {
             BaseClass::Container => {
@@ -533,6 +594,192 @@ impl ClassDef {
                 }
             }
             _ => panic!("Base class arguments not set"),
+        }
+    }
+
+    /// Generates the view struct definition for zero-copy decoding.
+    ///
+    /// # Arguments
+    ///
+    /// * `ident` - The base identifier for the class (e.g., `Foo`)
+    ///
+    /// # Returns
+    ///
+    /// A [`TokenStream`] containing the generated Rust code for the view struct (e.g., `FooRef<'a>`).
+    pub fn to_view_struct(&self, ident: &Ident) -> TokenStream {
+        let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
+
+        // Generate view field tokens
+        let view_field_tokens: Vec<TokenStream> = self
+            .fields
+            .iter()
+            .map(|field| {
+                let field_name = Ident::new(&field.name, Span::call_site());
+                let view_ty = field.ty.to_view_type();
+                quote! { pub #field_name: #view_ty }
+            })
+            .collect();
+
+        match self.base {
+            BaseClass::Container => {
+                quote! {
+                    #[derive(TreeHash)]
+                    #[tree_hash(struct_behaviour="container")]
+                    pub struct #ref_ident<'a> {
+                        #(#view_field_tokens),*
+                    }
+                }
+            }
+            BaseClass::StableContainer(Some(max)) => {
+                let max = max as usize;
+                quote! {
+                    #[derive(TreeHash)]
+                    #[tree_hash(struct_behaviour="stable_container", max_fields=#max)]
+                    pub struct #ref_ident<'a> {
+                        #(#view_field_tokens),*
+                    }
+                }
+            }
+            BaseClass::Profile(Some((_, max))) => {
+                let max = max as usize;
+                let index = self
+                    .fields
+                    .iter()
+                    .map(|field| field.index)
+                    .collect::<Vec<_>>();
+
+                quote! {
+                    #[derive(TreeHash)]
+                    #[tree_hash(struct_behaviour="profile", max_fields=#max)]
+                    pub struct #ref_ident<'a> {
+                        #(
+                            #[tree_hash(stable_index = #index)]
+                            #view_field_tokens
+                        ),*
+                    }
+                }
+            }
+            _ => panic!("Base class arguments not set"),
+        }
+    }
+
+    /// Generates the [`DecodeView`](ssz::view::DecodeView) implementation for the view struct
+    ///
+    /// # Arguments
+    ///
+    /// * `ident` - The base identifier for the class
+    ///
+    /// # Returns
+    ///
+    /// A [`TokenStream`] containing the [`DecodeView`](ssz::view::DecodeView) implementation
+    pub fn to_view_decode_impl(&self, ident: &Ident) -> TokenStream {
+        let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
+
+        // Generate field decode calls
+        let field_decodes: Vec<TokenStream> = self
+            .fields
+            .iter()
+            .map(|field| {
+                let field_name = Ident::new(&field.name, Span::call_site());
+                quote! {
+                    let #field_name = decoder.decode_next_view()?;
+                }
+            })
+            .collect();
+
+        let field_names: Vec<Ident> = self
+            .fields
+            .iter()
+            .map(|field| Ident::new(&field.name, Span::call_site()))
+            .collect();
+
+        // Generate type registration for the builder
+        let type_registrations: Vec<TokenStream> = self
+            .fields
+            .iter()
+            .map(|field| {
+                let owned_ty = field.ty.unwrap_type();
+                quote! {
+                    builder.register_type::<#owned_ty>()?;
+                }
+            })
+            .collect();
+
+        match self.base {
+            BaseClass::Container => {
+                quote! {
+                    impl<'a> ssz::view::DecodeView<'a> for #ref_ident<'a> {
+                        fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                            let mut builder = ssz::SszDecoderBuilder::new(bytes);
+                            #(#type_registrations)*
+                            let mut decoder = builder.build()?;
+                            #(#field_decodes)*
+                            Ok(Self {
+                                #(#field_names),*
+                            })
+                        }
+                    }
+                }
+            }
+            BaseClass::StableContainer(_) | BaseClass::Profile(_) => {
+                quote! {
+                    impl<'a> DecodeView<'a> for #ref_ident<'a> {
+                        fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                            let mut builder = SszDecoderBuilder::new(bytes);
+                            #(#type_registrations)*
+                            let mut decoder = builder.build()?;
+                            #(#field_decodes)*
+                            Ok(Self {
+                                #(#field_names),*
+                            })
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Generates the to_owned implementation for converting view to owned
+    ///
+    /// # Arguments
+    ///
+    /// * `ident` - The base identifier for the class
+    ///
+    /// # Returns
+    ///
+    /// A [`TokenStream`] containing the `to_owned` method implementation.
+    pub fn to_view_to_owned_impl(&self, ident: &Ident) -> TokenStream {
+        let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
+
+        // Generate field conversions
+        let field_conversions: Vec<TokenStream> = self
+            .fields
+            .iter()
+            .map(|field| {
+                let field_name = Ident::new(&field.name, Span::call_site());
+
+                // Determine if we need to call to_owned() or clone() for the field
+                match &field.ty.resolution {
+                    TypeResolutionKind::Boolean | TypeResolutionKind::UInt(_) => {
+                        // Primitives can be copied directly
+                        quote! { #field_name: self.#field_name }
+                    }
+                    _ => {
+                        // For complex types, call to_owned()
+                        quote! { #field_name: self.#field_name.to_owned() }
+                    }
+                }
+            })
+            .collect();
+
+        quote! {
+            impl<'a> #ref_ident<'a> {
+                pub fn to_owned(&self) -> #ident {
+                    #ident {
+                        #(#field_conversions),*
+                    }
+                }
+            }
         }
     }
 }
