@@ -58,6 +58,11 @@ pub use ssz::{BitList, BitVector, Bitfield};
 pub use ssz_primitives::{FixedBytes, Hash256, U128, U256};
 pub use variable_list::VariableList;
 
+#[cfg(test)]
+use criterion as _;
+#[cfg(test)]
+use rand as _;
+
 pub mod length {
     //! Length types for SSZ.
     pub use ssz::{Fixed, Variable};

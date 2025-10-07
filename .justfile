@@ -40,6 +40,10 @@ lints: toml-check-fmt toml-lint check-fmt clippy
 # Rust all tests
 test: unit-test doctest
 
+# Run benchmarks
+bench:
+  cargo bench --benches --workspace
+
 # Publish crate to crates.io
 publish:
   cargo publish --token $CARGO_REGISTRY_TOKEN
