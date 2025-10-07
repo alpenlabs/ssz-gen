@@ -4,6 +4,9 @@
 //! Tree hash implementations for different types
 
 use super::*;
+use ssz::view::{
+    BitListRef, BitVectorRef, BytesRef, DecodeView, FixedBytesRef, ListRef, UnionRef, VectorRef,
+};
 use ssz::{Bitfield, Fixed, Variable};
 use ssz_primitives::{FixedBytes, U128, U256};
 use std::sync::Arc;
@@ -246,6 +249,250 @@ impl<T: TreeHash<H>, H: TreeHashDigest> TreeHash<H> for Option<T> {
     }
 }
 
+impl<'a, const N: usize, H: TreeHashDigest> TreeHash<H> for FixedBytesRef<'a, N> {
+    fn tree_hash_type() -> TreeHashType {
+        TreeHashType::Vector
+    }
+
+    fn tree_hash_packed_encoding(&self) -> PackedEncoding {
+        unreachable!("Vector should never be packed.")
+    }
+
+    fn tree_hash_packing_factor() -> usize {
+        unreachable!("Vector should never be packed.")
+    }
+
+    fn tree_hash_root(&self) -> H::Output {
+        // Directly hash the bytes without copying
+        merkle_root_with_hasher::<H>(self.as_bytes(), 0)
+    }
+}
+
+impl<'a, H: TreeHashDigest> TreeHash<H> for BytesRef<'a> {
+    fn tree_hash_type() -> TreeHashType {
+        TreeHashType::List
+    }
+
+    fn tree_hash_packed_encoding(&self) -> PackedEncoding {
+        unreachable!("List should never be packed.")
+    }
+
+    fn tree_hash_packing_factor() -> usize {
+        unreachable!("List should never be packed.")
+    }
+
+    fn tree_hash_root(&self) -> H::Output {
+        // Directly hash the bytes without copying to owned Vec
+        let chunks_root = merkle_root_with_hasher::<H>(self.as_bytes(), 0);
+        mix_in_length_with_hasher::<H>(&chunks_root, self.len())
+    }
+}
+
+// TreeHash implementation for ListRef
+impl<'a, TRef, H> TreeHash<H> for ListRef<'a, TRef>
+where
+    TRef: DecodeView<'a> + TreeHash<H>,
+    H: TreeHashDigest,
+{
+    fn tree_hash_type() -> TreeHashType {
+        TreeHashType::List
+    }
+
+    fn tree_hash_packed_encoding(&self) -> PackedEncoding {
+        unreachable!("List should never be packed.")
+    }
+
+    fn tree_hash_packing_factor() -> usize {
+        unreachable!("List should never be packed.")
+    }
+
+    fn tree_hash_root(&self) -> H::Output {
+        let item_type = TRef::tree_hash_type();
+
+        if self.is_empty() {
+            let chunks_root = H::get_zero_hash(0);
+            return mix_in_length_with_hasher::<H>(&chunks_root, 0);
+        }
+
+        match item_type {
+            TreeHashType::Basic => {
+                // For basic types with fixed length, bytes are already properly laid out
+                if !self.is_empty() {
+                    let chunks_root = merkle_root_with_hasher::<H>(self.as_bytes(), 0);
+                    mix_in_length_with_hasher::<H>(&chunks_root, self.len())
+                } else {
+                    let chunks_root = H::get_zero_hash(0);
+                    mix_in_length_with_hasher::<H>(&chunks_root, 0)
+                }
+            }
+            _ => {
+                // For composite types (Container, Vector, List), hash each item
+                tree_hash_composite_list_items::<TRef, H>(self)
+            }
+        }
+    }
+}
+
+/// Helper function to hash composite items in a [`ListRef`].
+fn tree_hash_composite_list_items<'a, TRef, H>(list: &ListRef<'a, TRef>) -> H::Output
+where
+    TRef: DecodeView<'a> + TreeHash<H>,
+    H: TreeHashDigest,
+{
+    let num_items = list.len();
+    if num_items == 0 {
+        let chunks_root = H::get_zero_hash(0);
+        return mix_in_length_with_hasher::<H>(&chunks_root, 0);
+    }
+
+    // Create a hasher with enough leaves for all items
+    let mut hasher = MerkleHasher::<H>::with_leaves(num_items);
+
+    // Hash each item and write to the hasher
+    for item_result in list.iter() {
+        let item = item_result.expect("ListRef iteration should not fail during tree hashing");
+        let item_root = item.tree_hash_root();
+        hasher
+            .write(item_root.as_ref())
+            .expect("hasher has sufficient leaves");
+    }
+
+    let chunks_root = hasher.finish().expect("hasher has sufficient leaves");
+    mix_in_length_with_hasher::<H>(&chunks_root, num_items)
+}
+
+/// TreeHash implementation for [`VectorRef`].
+impl<'a, TRef, const N: usize, H> TreeHash<H> for VectorRef<'a, TRef, N>
+where
+    TRef: DecodeView<'a> + TreeHash<H>,
+    H: TreeHashDigest,
+{
+    fn tree_hash_type() -> TreeHashType {
+        TreeHashType::Vector
+    }
+
+    fn tree_hash_packed_encoding(&self) -> PackedEncoding {
+        unreachable!("Vector should never be packed.")
+    }
+
+    fn tree_hash_packing_factor() -> usize {
+        unreachable!("Vector should never be packed.")
+    }
+
+    fn tree_hash_root(&self) -> H::Output {
+        let item_type = TRef::tree_hash_type();
+
+        if N == 0 {
+            return H::get_zero_hash(0);
+        }
+
+        match item_type {
+            TreeHashType::Basic => {
+                // For basic types with fixed length, bytes are already properly laid out
+                merkle_root_with_hasher::<H>(self.as_bytes(), 0)
+            }
+            _ => {
+                // For composite types, hash each item
+                tree_hash_composite_vector_items::<TRef, H, N>(self)
+            }
+        }
+    }
+}
+
+/// Helper function to hash composite items in a [`VectorRef`].
+fn tree_hash_composite_vector_items<'a, TRef, H, const N: usize>(
+    vector: &VectorRef<'a, TRef, N>,
+) -> H::Output
+where
+    TRef: DecodeView<'a> + TreeHash<H>,
+    H: TreeHashDigest,
+{
+    if N == 0 {
+        return H::get_zero_hash(0);
+    }
+
+    // Create a hasher with enough leaves for all items
+    let mut hasher = MerkleHasher::<H>::with_leaves(N);
+
+    // Hash each item and write to the hasher
+    for item_result in vector.iter() {
+        let item = item_result.expect("VectorRef iteration should not fail during tree hashing");
+        let item_root = item.tree_hash_root();
+        hasher
+            .write(item_root.as_ref())
+            .expect("hasher has sufficient leaves");
+    }
+
+    hasher.finish().expect("hasher has sufficient leaves")
+}
+
+impl<'a, VRef, H> TreeHash<H> for UnionRef<'a, VRef>
+where
+    VRef: DecodeView<'a> + TreeHash<H>,
+    H: TreeHashDigest,
+{
+    fn tree_hash_type() -> TreeHashType {
+        TreeHashType::Container // Unions are hashed like containers
+    }
+
+    fn tree_hash_packed_encoding(&self) -> PackedEncoding {
+        unreachable!("Union should never be packed.")
+    }
+
+    fn tree_hash_packing_factor() -> usize {
+        unreachable!("Union should never be packed.")
+    }
+
+    fn tree_hash_root(&self) -> H::Output {
+        // Decode the body and get its tree hash root
+        let body = VRef::from_ssz_bytes(self.body_bytes())
+            .expect("UnionRef body should be valid during tree hashing");
+        let body_root = body.tree_hash_root();
+
+        // Mix in the selector
+        mix_in_selector_with_hasher::<H>(&body_root, u8::from(self.selector()))
+            .expect("selector should be valid")
+    }
+}
+
+impl<'a, const N: usize, H: TreeHashDigest> TreeHash<H> for BitVectorRef<'a, N> {
+    fn tree_hash_type() -> TreeHashType {
+        TreeHashType::Vector
+    }
+
+    fn tree_hash_packed_encoding(&self) -> PackedEncoding {
+        unreachable!("BitVector should never be packed.")
+    }
+
+    fn tree_hash_packing_factor() -> usize {
+        unreachable!("BitVector should never be packed.")
+    }
+
+    fn tree_hash_root(&self) -> H::Output {
+        // Directly hash the bytes without converting to owned BitVector
+        merkle_root_with_hasher::<H>(self.as_bytes(), 0)
+    }
+}
+
+impl<'a, const N: usize, H: TreeHashDigest> TreeHash<H> for BitListRef<'a, N> {
+    fn tree_hash_type() -> TreeHashType {
+        TreeHashType::List
+    }
+
+    fn tree_hash_packed_encoding(&self) -> PackedEncoding {
+        unreachable!("BitList should never be packed.")
+    }
+
+    fn tree_hash_packing_factor() -> usize {
+        unreachable!("BitList should never be packed.")
+    }
+
+    fn tree_hash_root(&self) -> H::Output {
+        // Directly hash the bytes without converting to owned BitList
+        let chunks_root = merkle_root_with_hasher::<H>(self.as_bytes(), 0);
+        mix_in_length_with_hasher::<H>(&chunks_root, self.len())
+    }
+}
 #[cfg(test)]
 mod test {
     use super::*;

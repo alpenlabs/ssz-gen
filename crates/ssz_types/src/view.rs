@@ -383,8 +383,7 @@ where
 
 impl<'a, TRef, const N: usize, H> TreeHash<H> for VariableListRef<'a, TRef, N>
 where
-    TRef: DecodeView<'a> + ToOwnedSsz<TRef>,
-    TRef: TreeHash<H>,
+    TRef: DecodeView<'a> + TreeHash<H>,
     H: TreeHashDigest,
 {
     fn tree_hash_type() -> TreeHashType {
@@ -400,15 +399,50 @@ where
     }
 
     fn tree_hash_root(&self) -> H::Output {
-        let owned = self.to_owned().expect("TreeHash conversion failed");
-        owned.tree_hash_root()
+        use tree_hash::{MerkleHasher, mix_in_length_with_hasher};
+
+        let item_type = TRef::tree_hash_type();
+
+        // For VariableList, we must use the maximum capacity N for the hasher,
+        // not the actual length, to match the owned implementation
+        let root = match item_type {
+            TreeHashType::Basic => {
+                let leaves = N.div_ceil(TRef::tree_hash_packing_factor());
+                let mut hasher = MerkleHasher::<H>::with_leaves(leaves);
+
+                for item_result in self.iter() {
+                    let item = item_result.expect("VariableListRef iteration should not fail");
+                    hasher
+                        .write(&item.tree_hash_packed_encoding())
+                        .expect("hasher has sufficient leaves");
+                }
+
+                hasher.finish().expect("hasher has sufficient leaves")
+            }
+            TreeHashType::Container
+            | TreeHashType::StableContainer
+            | TreeHashType::List
+            | TreeHashType::Vector => {
+                let mut hasher = MerkleHasher::<H>::with_leaves(N);
+
+                for item_result in self.iter() {
+                    let item = item_result.expect("VariableListRef iteration should not fail");
+                    hasher
+                        .write(item.tree_hash_root().as_ref())
+                        .expect("hasher has sufficient leaves");
+                }
+
+                hasher.finish().expect("hasher has sufficient leaves")
+            }
+        };
+
+        mix_in_length_with_hasher::<H>(&root, self.len())
     }
 }
 
 impl<'a, TRef, const N: usize, H> TreeHash<H> for FixedVectorRef<'a, TRef, N>
 where
-    TRef: DecodeView<'a> + ToOwnedSsz<TRef>,
-    TRef: TreeHash<H>,
+    TRef: DecodeView<'a> + TreeHash<H>,
     H: TreeHashDigest,
 {
     fn tree_hash_type() -> TreeHashType {
@@ -424,8 +458,7 @@ where
     }
 
     fn tree_hash_root(&self) -> H::Output {
-        let owned = self.to_owned().expect("TreeHash conversion failed");
-        owned.tree_hash_root()
+        self.inner.tree_hash_root()
     }
 }
 
