@@ -348,6 +348,35 @@ impl<'a> SszDecoder<'a> {
     {
         f(self.items.remove(0))
     }
+
+    /// Decodes the next item as a zero-copy view.
+    ///
+    /// This is a convenience method for decoding items as reference-backed views
+    /// instead of owned values, avoiding allocations and memcpy operations.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ssz::{SszDecoderBuilder, Decode};
+    /// use ssz::view::{DecodeView, BytesRef};
+    ///
+    /// # fn example() -> Result<(), ssz::DecodeError> {
+    /// let bytes = vec![0x01, 0x02, 0x03];
+    /// let mut builder = SszDecoderBuilder::new(&bytes);
+    /// builder.register_anonymous_variable_length_item()?;
+    /// let mut decoder = builder.build()?;
+    ///
+    /// let view: BytesRef = decoder.decode_next_view()?;
+    /// assert_eq!(view.as_bytes(), &[0x01, 0x02, 0x03]);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn decode_next_view<TRef>(&mut self) -> Result<TRef, DecodeError>
+    where
+        TRef: crate::view::DecodeView<'a>,
+    {
+        self.decode_next_with(|slice| TRef::from_ssz_bytes(slice))
+    }
 }
 
 /// Takes `bytes`, assuming it is the encoding for a SSZ union, and returns the union-selector and

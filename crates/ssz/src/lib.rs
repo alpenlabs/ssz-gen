@@ -44,6 +44,7 @@ pub mod legacy;
 /// Serde utilities for SSZ types.
 pub mod serde_utils;
 mod union_selector;
+pub mod view;
 
 pub use bitfield::bitvector_dynamic::{BitVectorDynamic, Dynamic};
 #[doc(hidden)]
