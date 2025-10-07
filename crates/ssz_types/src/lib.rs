@@ -47,6 +47,7 @@ mod optional;
 pub mod serde_utils;
 mod tree_hash;
 mod variable_list;
+pub mod view;
 
 #[cfg(any(test, doctest))]
 use serde_json as _;
