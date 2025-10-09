@@ -8,7 +8,33 @@
 //! specification](https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/ssz/simple-serialize.md)
 //! at v0.12.1.
 //!
-//! ## Example
+//! ## Decoding SSZ Data
+//!
+//! **For reading/parsing SSZ data, prefer zero-copy views:**
+//!
+//! ```rust
+//! use ssz::view::DecodeView;
+//!
+//! # #[derive(Debug, Copy, Clone)]
+//! # struct MyContainerRef<'a> { bytes: &'a [u8] }
+//! # impl<'a> DecodeView<'a> for MyContainerRef<'a> {
+//! #     fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+//! #         Ok(Self { bytes })
+//! #     }
+//! # }
+//! # impl<'a> MyContainerRef<'a> {
+//! #     fn field_a(&self) -> Result<u64, ssz::DecodeError> { Ok(42) }
+//! # }
+//! # fn example() -> Result<(), ssz::DecodeError> {
+//! # let ssz_bytes = vec![0u8; 8];
+//! // Zero-copy view - validates structure but doesn't allocate
+//! let view = MyContainerRef::from_ssz_bytes(&ssz_bytes)?;
+//! let field = view.field_a()?;  // Lazy field access
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! **Use owned types only when you need to modify data:**
 //!
 //! ```rust
 //! use ssz_derive::{Encode, Decode};
@@ -27,15 +53,12 @@
 //!     };
 //!
 //!     let ssz_bytes: Vec<u8> = foo.as_ssz_bytes();
-//!
 //!     let decoded_foo = Foo::from_ssz_bytes(&ssz_bytes).unwrap();
-//!
 //!     assert_eq!(foo, decoded_foo);
 //! }
-//!
 //! ```
 //!
-//! See `examples/` for manual implementations of the `Encode` and `Decode` traits.
+//! See `examples/` for manual implementations and [`view`] module for zero-copy types.
 
 pub mod bitfield;
 pub mod decode;
