@@ -71,28 +71,114 @@ pub mod tests {
                 pub field_a: external_ssz::A,
                 pub field_b: external_ssz::module_a::module_b::B,
             }
-            #[derive(TreeHash)]
-            #[tree_hash(struct_behaviour = "container")]
+            #[derive(Debug, Copy, Clone)]
             pub struct ExternalContainerRef<'a> {
-                pub field_a: external_ssz::A,
-                pub field_b: external_ssz::module_a::module_b::B,
+                bytes: &'a [u8],
+            }
+            impl<'a> ExternalContainerRef<'a> {
+                pub fn field_a(&self) -> Result<external_ssz::A, ssz::DecodeError> {
+                    let start = ssz::layout::read_variable_offset(
+                        self.bytes,
+                        8usize,
+                        2usize,
+                        0usize,
+                    )?;
+                    let end = ssz::layout::read_variable_offset_or_end(
+                        self.bytes,
+                        8usize,
+                        2usize,
+                        0usize + 1,
+                    )?;
+                    if start > end || end > self.bytes.len() {
+                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+                    }
+                    let bytes = &self.bytes[start..end];
+                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                }
+                pub fn field_b(
+                    &self,
+                ) -> Result<external_ssz::module_a::module_b::B, ssz::DecodeError> {
+                    let start = ssz::layout::read_variable_offset(
+                        self.bytes,
+                        8usize,
+                        2usize,
+                        1usize,
+                    )?;
+                    let end = ssz::layout::read_variable_offset_or_end(
+                        self.bytes,
+                        8usize,
+                        2usize,
+                        1usize + 1,
+                    )?;
+                    if start > end || end > self.bytes.len() {
+                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+                    }
+                    let bytes = &self.bytes[start..end];
+                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                }
+            }
+            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
+            for ExternalContainerRef<'a> {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Container
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    use tree_hash::TreeHash;
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let field_a = self.field_a().expect("valid view");
+                    hasher
+                        .write(field_a.tree_hash_root().as_ref())
+                        .expect("write field");
+                    let field_b = self.field_b().expect("valid view");
+                    hasher
+                        .write(field_b.tree_hash_root().as_ref())
+                        .expect("write field");
+                    hasher.finish().expect("finish hasher")
+                }
             }
             impl<'a> ssz::view::DecodeView<'a> for ExternalContainerRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    let mut builder = ssz::SszDecoderBuilder::new(bytes);
-                    builder.register_type::<external_ssz::A>()?;
-                    builder.register_type::<external_ssz::module_a::module_b::B>()?;
-                    let mut decoder = builder.build()?;
-                    let field_a = decoder.decode_next_view()?;
-                    let field_b = decoder.decode_next_view()?;
-                    Ok(Self { field_a, field_b })
+                    if bytes.len() < 8usize {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: bytes.len(),
+                            expected: 8usize,
+                        });
+                    }
+                    let mut prev_offset: Option<usize> = None;
+                    for i in 0..2usize {
+                        let offset = ssz::layout::read_variable_offset(
+                            bytes,
+                            8usize,
+                            2usize,
+                            i,
+                        )?;
+                        if i == 0 && offset != 8usize {
+                            return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
+                        }
+                        if let Some(prev) = prev_offset {
+                            if offset < prev {
+                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                            }
+                        }
+                        if offset > bytes.len() {
+                            return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                        }
+                        prev_offset = Some(offset);
+                    }
+                    Ok(Self { bytes })
                 }
             }
             impl<'a> ExternalContainerRef<'a> {
                 pub fn to_owned(&self) -> ExternalContainer {
                     ExternalContainer {
-                        field_a: self.field_a.to_owned(),
-                        field_b: self.field_b.to_owned(),
+                        field_a: self.field_a().expect("valid view").to_owned(),
+                        field_b: self.field_b().expect("valid view").to_owned(),
                     }
                 }
             }

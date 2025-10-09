@@ -149,51 +149,208 @@ pub mod tests {
                 pub opt_complex: OptionalComplex,
                 pub opt_union: OptionalUnion,
             }
-            #[derive(TreeHash)]
-            #[tree_hash(struct_behaviour = "container")]
+            #[derive(Debug, Copy, Clone)]
             pub struct UnionEdgeCasesRef<'a> {
-                pub simple: SimpleUnionRef<'a>,
-                pub nested: NestedUnionRef<'a>,
-                pub complex: ComplexUnionRef<'a>,
-                pub opt_simple: Option<u8>,
-                pub opt_complex: Option<VariableListRef<'a, u16, 8usize>>,
-                pub opt_union: Option<SimpleUnionRef<'a>>,
+                bytes: &'a [u8],
+            }
+            impl<'a> UnionEdgeCasesRef<'a> {
+                pub fn simple(&self) -> Result<SimpleUnionRef<'a>, ssz::DecodeError> {
+                    let start = ssz::layout::read_variable_offset(
+                        self.bytes,
+                        24usize,
+                        6usize,
+                        0usize,
+                    )?;
+                    let end = ssz::layout::read_variable_offset_or_end(
+                        self.bytes,
+                        24usize,
+                        6usize,
+                        0usize + 1,
+                    )?;
+                    if start > end || end > self.bytes.len() {
+                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+                    }
+                    let bytes = &self.bytes[start..end];
+                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                }
+                pub fn nested(&self) -> Result<NestedUnionRef<'a>, ssz::DecodeError> {
+                    let start = ssz::layout::read_variable_offset(
+                        self.bytes,
+                        24usize,
+                        6usize,
+                        1usize,
+                    )?;
+                    let end = ssz::layout::read_variable_offset_or_end(
+                        self.bytes,
+                        24usize,
+                        6usize,
+                        1usize + 1,
+                    )?;
+                    if start > end || end > self.bytes.len() {
+                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+                    }
+                    let bytes = &self.bytes[start..end];
+                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                }
+                pub fn complex(&self) -> Result<ComplexUnionRef<'a>, ssz::DecodeError> {
+                    let start = ssz::layout::read_variable_offset(
+                        self.bytes,
+                        24usize,
+                        6usize,
+                        2usize,
+                    )?;
+                    let end = ssz::layout::read_variable_offset_or_end(
+                        self.bytes,
+                        24usize,
+                        6usize,
+                        2usize + 1,
+                    )?;
+                    if start > end || end > self.bytes.len() {
+                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+                    }
+                    let bytes = &self.bytes[start..end];
+                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                }
+                pub fn opt_simple(&self) -> Result<Option<u8>, ssz::DecodeError> {
+                    let start = ssz::layout::read_variable_offset(
+                        self.bytes,
+                        24usize,
+                        6usize,
+                        3usize,
+                    )?;
+                    let end = ssz::layout::read_variable_offset_or_end(
+                        self.bytes,
+                        24usize,
+                        6usize,
+                        3usize + 1,
+                    )?;
+                    if start > end || end > self.bytes.len() {
+                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+                    }
+                    let bytes = &self.bytes[start..end];
+                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                }
+                pub fn opt_complex(
+                    &self,
+                ) -> Result<Option<VariableListRef<'a, u16, 8usize>>, ssz::DecodeError> {
+                    let start = ssz::layout::read_variable_offset(
+                        self.bytes,
+                        24usize,
+                        6usize,
+                        4usize,
+                    )?;
+                    let end = ssz::layout::read_variable_offset_or_end(
+                        self.bytes,
+                        24usize,
+                        6usize,
+                        4usize + 1,
+                    )?;
+                    if start > end || end > self.bytes.len() {
+                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+                    }
+                    let bytes = &self.bytes[start..end];
+                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                }
+                pub fn opt_union(
+                    &self,
+                ) -> Result<Option<SimpleUnionRef<'a>>, ssz::DecodeError> {
+                    let start = ssz::layout::read_variable_offset(
+                        self.bytes,
+                        24usize,
+                        6usize,
+                        5usize,
+                    )?;
+                    let end = ssz::layout::read_variable_offset_or_end(
+                        self.bytes,
+                        24usize,
+                        6usize,
+                        5usize + 1,
+                    )?;
+                    if start > end || end > self.bytes.len() {
+                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+                    }
+                    let bytes = &self.bytes[start..end];
+                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                }
+            }
+            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
+            for UnionEdgeCasesRef<'a> {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Container
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    use tree_hash::TreeHash;
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let simple = self.simple().expect("valid view");
+                    hasher.write(simple.tree_hash_root().as_ref()).expect("write field");
+                    let nested = self.nested().expect("valid view");
+                    hasher.write(nested.tree_hash_root().as_ref()).expect("write field");
+                    let complex = self.complex().expect("valid view");
+                    hasher
+                        .write(complex.tree_hash_root().as_ref())
+                        .expect("write field");
+                    let opt_simple = self.opt_simple().expect("valid view");
+                    hasher
+                        .write(opt_simple.tree_hash_root().as_ref())
+                        .expect("write field");
+                    let opt_complex = self.opt_complex().expect("valid view");
+                    hasher
+                        .write(opt_complex.tree_hash_root().as_ref())
+                        .expect("write field");
+                    let opt_union = self.opt_union().expect("valid view");
+                    hasher
+                        .write(opt_union.tree_hash_root().as_ref())
+                        .expect("write field");
+                    hasher.finish().expect("finish hasher")
+                }
             }
             impl<'a> ssz::view::DecodeView<'a> for UnionEdgeCasesRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    let mut builder = ssz::SszDecoderBuilder::new(bytes);
-                    builder.register_type::<SimpleUnion>()?;
-                    builder.register_type::<NestedUnion>()?;
-                    builder.register_type::<ComplexUnion>()?;
-                    builder.register_type::<OptionalSimple>()?;
-                    builder.register_type::<OptionalComplex>()?;
-                    builder.register_type::<OptionalUnion>()?;
-                    let mut decoder = builder.build()?;
-                    let simple = decoder.decode_next_view()?;
-                    let nested = decoder.decode_next_view()?;
-                    let complex = decoder.decode_next_view()?;
-                    let opt_simple = decoder.decode_next_view()?;
-                    let opt_complex = decoder.decode_next_view()?;
-                    let opt_union = decoder.decode_next_view()?;
-                    Ok(Self {
-                        simple,
-                        nested,
-                        complex,
-                        opt_simple,
-                        opt_complex,
-                        opt_union,
-                    })
+                    if bytes.len() < 24usize {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: bytes.len(),
+                            expected: 24usize,
+                        });
+                    }
+                    let mut prev_offset: Option<usize> = None;
+                    for i in 0..6usize {
+                        let offset = ssz::layout::read_variable_offset(
+                            bytes,
+                            24usize,
+                            6usize,
+                            i,
+                        )?;
+                        if i == 0 && offset != 24usize {
+                            return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
+                        }
+                        if let Some(prev) = prev_offset {
+                            if offset < prev {
+                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                            }
+                        }
+                        if offset > bytes.len() {
+                            return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                        }
+                        prev_offset = Some(offset);
+                    }
+                    Ok(Self { bytes })
                 }
             }
             impl<'a> UnionEdgeCasesRef<'a> {
                 pub fn to_owned(&self) -> UnionEdgeCases {
                     UnionEdgeCases {
-                        simple: self.simple.to_owned(),
-                        nested: self.nested.to_owned(),
-                        complex: self.complex.to_owned(),
-                        opt_simple: self.opt_simple.to_owned(),
-                        opt_complex: self.opt_complex.to_owned(),
-                        opt_union: self.opt_union.to_owned(),
+                        simple: self.simple().expect("valid view").to_owned(),
+                        nested: self.nested().expect("valid view").to_owned(),
+                        complex: self.complex().expect("valid view").to_owned(),
+                        opt_simple: self.opt_simple().expect("valid view").to_owned(),
+                        opt_complex: self.opt_complex().expect("valid view").to_owned(),
+                        opt_union: self.opt_union().expect("valid view").to_owned(),
                     }
                 }
             }
@@ -205,32 +362,130 @@ pub mod tests {
                 pub union2: NestedUnion,
                 pub union3: OptionalSimple,
             }
-            #[derive(TreeHash)]
-            #[tree_hash(struct_behaviour = "container")]
+            #[derive(Debug, Copy, Clone)]
             pub struct AllUnionsRef<'a> {
-                pub union1: SimpleUnionRef<'a>,
-                pub union2: NestedUnionRef<'a>,
-                pub union3: Option<u8>,
+                bytes: &'a [u8],
+            }
+            impl<'a> AllUnionsRef<'a> {
+                pub fn union1(&self) -> Result<SimpleUnionRef<'a>, ssz::DecodeError> {
+                    let start = ssz::layout::read_variable_offset(
+                        self.bytes,
+                        12usize,
+                        3usize,
+                        0usize,
+                    )?;
+                    let end = ssz::layout::read_variable_offset_or_end(
+                        self.bytes,
+                        12usize,
+                        3usize,
+                        0usize + 1,
+                    )?;
+                    if start > end || end > self.bytes.len() {
+                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+                    }
+                    let bytes = &self.bytes[start..end];
+                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                }
+                pub fn union2(&self) -> Result<NestedUnionRef<'a>, ssz::DecodeError> {
+                    let start = ssz::layout::read_variable_offset(
+                        self.bytes,
+                        12usize,
+                        3usize,
+                        1usize,
+                    )?;
+                    let end = ssz::layout::read_variable_offset_or_end(
+                        self.bytes,
+                        12usize,
+                        3usize,
+                        1usize + 1,
+                    )?;
+                    if start > end || end > self.bytes.len() {
+                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+                    }
+                    let bytes = &self.bytes[start..end];
+                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                }
+                pub fn union3(&self) -> Result<Option<u8>, ssz::DecodeError> {
+                    let start = ssz::layout::read_variable_offset(
+                        self.bytes,
+                        12usize,
+                        3usize,
+                        2usize,
+                    )?;
+                    let end = ssz::layout::read_variable_offset_or_end(
+                        self.bytes,
+                        12usize,
+                        3usize,
+                        2usize + 1,
+                    )?;
+                    if start > end || end > self.bytes.len() {
+                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+                    }
+                    let bytes = &self.bytes[start..end];
+                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                }
+            }
+            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
+            for AllUnionsRef<'a> {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Container
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    use tree_hash::TreeHash;
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let union1 = self.union1().expect("valid view");
+                    hasher.write(union1.tree_hash_root().as_ref()).expect("write field");
+                    let union2 = self.union2().expect("valid view");
+                    hasher.write(union2.tree_hash_root().as_ref()).expect("write field");
+                    let union3 = self.union3().expect("valid view");
+                    hasher.write(union3.tree_hash_root().as_ref()).expect("write field");
+                    hasher.finish().expect("finish hasher")
+                }
             }
             impl<'a> ssz::view::DecodeView<'a> for AllUnionsRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    let mut builder = ssz::SszDecoderBuilder::new(bytes);
-                    builder.register_type::<SimpleUnion>()?;
-                    builder.register_type::<NestedUnion>()?;
-                    builder.register_type::<OptionalSimple>()?;
-                    let mut decoder = builder.build()?;
-                    let union1 = decoder.decode_next_view()?;
-                    let union2 = decoder.decode_next_view()?;
-                    let union3 = decoder.decode_next_view()?;
-                    Ok(Self { union1, union2, union3 })
+                    if bytes.len() < 12usize {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: bytes.len(),
+                            expected: 12usize,
+                        });
+                    }
+                    let mut prev_offset: Option<usize> = None;
+                    for i in 0..3usize {
+                        let offset = ssz::layout::read_variable_offset(
+                            bytes,
+                            12usize,
+                            3usize,
+                            i,
+                        )?;
+                        if i == 0 && offset != 12usize {
+                            return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
+                        }
+                        if let Some(prev) = prev_offset {
+                            if offset < prev {
+                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                            }
+                        }
+                        if offset > bytes.len() {
+                            return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                        }
+                        prev_offset = Some(offset);
+                    }
+                    Ok(Self { bytes })
                 }
             }
             impl<'a> AllUnionsRef<'a> {
                 pub fn to_owned(&self) -> AllUnions {
                     AllUnions {
-                        union1: self.union1.to_owned(),
-                        union2: self.union2.to_owned(),
-                        union3: self.union3.to_owned(),
+                        union1: self.union1().expect("valid view").to_owned(),
+                        union2: self.union2().expect("valid view").to_owned(),
+                        union3: self.union3().expect("valid view").to_owned(),
                     }
                 }
             }

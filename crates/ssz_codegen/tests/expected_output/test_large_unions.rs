@@ -107,32 +107,130 @@ pub mod tests {
                 pub same: SameTypeUnion,
                 pub mixed: MixedUnion,
             }
-            #[derive(TreeHash)]
-            #[tree_hash(struct_behaviour = "container")]
+            #[derive(Debug, Copy, Clone)]
             pub struct ContainerWithBigUnionsRef<'a> {
-                pub big: BigUnionRef<'a>,
-                pub same: SameTypeUnionRef<'a>,
-                pub mixed: MixedUnionRef<'a>,
+                bytes: &'a [u8],
+            }
+            impl<'a> ContainerWithBigUnionsRef<'a> {
+                pub fn big(&self) -> Result<BigUnionRef<'a>, ssz::DecodeError> {
+                    let start = ssz::layout::read_variable_offset(
+                        self.bytes,
+                        12usize,
+                        3usize,
+                        0usize,
+                    )?;
+                    let end = ssz::layout::read_variable_offset_or_end(
+                        self.bytes,
+                        12usize,
+                        3usize,
+                        0usize + 1,
+                    )?;
+                    if start > end || end > self.bytes.len() {
+                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+                    }
+                    let bytes = &self.bytes[start..end];
+                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                }
+                pub fn same(&self) -> Result<SameTypeUnionRef<'a>, ssz::DecodeError> {
+                    let start = ssz::layout::read_variable_offset(
+                        self.bytes,
+                        12usize,
+                        3usize,
+                        1usize,
+                    )?;
+                    let end = ssz::layout::read_variable_offset_or_end(
+                        self.bytes,
+                        12usize,
+                        3usize,
+                        1usize + 1,
+                    )?;
+                    if start > end || end > self.bytes.len() {
+                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+                    }
+                    let bytes = &self.bytes[start..end];
+                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                }
+                pub fn mixed(&self) -> Result<MixedUnionRef<'a>, ssz::DecodeError> {
+                    let start = ssz::layout::read_variable_offset(
+                        self.bytes,
+                        12usize,
+                        3usize,
+                        2usize,
+                    )?;
+                    let end = ssz::layout::read_variable_offset_or_end(
+                        self.bytes,
+                        12usize,
+                        3usize,
+                        2usize + 1,
+                    )?;
+                    if start > end || end > self.bytes.len() {
+                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+                    }
+                    let bytes = &self.bytes[start..end];
+                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                }
+            }
+            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
+            for ContainerWithBigUnionsRef<'a> {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Container
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    use tree_hash::TreeHash;
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let big = self.big().expect("valid view");
+                    hasher.write(big.tree_hash_root().as_ref()).expect("write field");
+                    let same = self.same().expect("valid view");
+                    hasher.write(same.tree_hash_root().as_ref()).expect("write field");
+                    let mixed = self.mixed().expect("valid view");
+                    hasher.write(mixed.tree_hash_root().as_ref()).expect("write field");
+                    hasher.finish().expect("finish hasher")
+                }
             }
             impl<'a> ssz::view::DecodeView<'a> for ContainerWithBigUnionsRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    let mut builder = ssz::SszDecoderBuilder::new(bytes);
-                    builder.register_type::<BigUnion>()?;
-                    builder.register_type::<SameTypeUnion>()?;
-                    builder.register_type::<MixedUnion>()?;
-                    let mut decoder = builder.build()?;
-                    let big = decoder.decode_next_view()?;
-                    let same = decoder.decode_next_view()?;
-                    let mixed = decoder.decode_next_view()?;
-                    Ok(Self { big, same, mixed })
+                    if bytes.len() < 12usize {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: bytes.len(),
+                            expected: 12usize,
+                        });
+                    }
+                    let mut prev_offset: Option<usize> = None;
+                    for i in 0..3usize {
+                        let offset = ssz::layout::read_variable_offset(
+                            bytes,
+                            12usize,
+                            3usize,
+                            i,
+                        )?;
+                        if i == 0 && offset != 12usize {
+                            return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
+                        }
+                        if let Some(prev) = prev_offset {
+                            if offset < prev {
+                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                            }
+                        }
+                        if offset > bytes.len() {
+                            return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                        }
+                        prev_offset = Some(offset);
+                    }
+                    Ok(Self { bytes })
                 }
             }
             impl<'a> ContainerWithBigUnionsRef<'a> {
                 pub fn to_owned(&self) -> ContainerWithBigUnions {
                     ContainerWithBigUnions {
-                        big: self.big.to_owned(),
-                        same: self.same.to_owned(),
-                        mixed: self.mixed.to_owned(),
+                        big: self.big().expect("valid view").to_owned(),
+                        same: self.same().expect("valid view").to_owned(),
+                        mixed: self.mixed().expect("valid view").to_owned(),
                     }
                 }
             }

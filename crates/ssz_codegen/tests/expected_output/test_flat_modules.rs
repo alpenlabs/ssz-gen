@@ -183,32 +183,87 @@ pub mod test_1 {
         pub b: u16,
         pub c: AliasVecB,
     }
-    #[derive(TreeHash)]
-    #[tree_hash(struct_behaviour = "container")]
+    #[derive(Debug, Copy, Clone)]
     pub struct AlphaRef<'a> {
-        pub a: u8,
-        pub b: u16,
-        pub c: FixedVectorRef<'a, u8, 10usize>,
+        bytes: &'a [u8],
+    }
+    impl<'a> AlphaRef<'a> {
+        pub fn a(&self) -> Result<u8, ssz::DecodeError> {
+            let offset = 0usize;
+            let end = offset + 1usize;
+            if end > self.bytes.len() {
+                return Err(ssz::DecodeError::InvalidByteLength {
+                    len: self.bytes.len(),
+                    expected: end,
+                });
+            }
+            let bytes = &self.bytes[offset..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn b(&self) -> Result<u16, ssz::DecodeError> {
+            let offset = 1usize;
+            let end = offset + 2usize;
+            if end > self.bytes.len() {
+                return Err(ssz::DecodeError::InvalidByteLength {
+                    len: self.bytes.len(),
+                    expected: end,
+                });
+            }
+            let bytes = &self.bytes[offset..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn c(&self) -> Result<FixedVectorRef<'a, u8, 10usize>, ssz::DecodeError> {
+            let offset = 3usize;
+            let end = offset + 10usize;
+            if end > self.bytes.len() {
+                return Err(ssz::DecodeError::InvalidByteLength {
+                    len: self.bytes.len(),
+                    expected: end,
+                });
+            }
+            let bytes = &self.bytes[offset..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+    }
+    impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for AlphaRef<'a> {
+        fn tree_hash_type() -> tree_hash::TreeHashType {
+            tree_hash::TreeHashType::Container
+        }
+        fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+            unreachable!("Container should never be packed")
+        }
+        fn tree_hash_packing_factor() -> usize {
+            unreachable!("Container should never be packed")
+        }
+        fn tree_hash_root(&self) -> H::Output {
+            use tree_hash::TreeHash;
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+            let a = self.a().expect("valid view");
+            hasher.write(a.tree_hash_root().as_ref()).expect("write field");
+            let b = self.b().expect("valid view");
+            hasher.write(b.tree_hash_root().as_ref()).expect("write field");
+            let c = self.c().expect("valid view");
+            hasher.write(c.tree_hash_root().as_ref()).expect("write field");
+            hasher.finish().expect("finish hasher")
+        }
     }
     impl<'a> ssz::view::DecodeView<'a> for AlphaRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let mut builder = ssz::SszDecoderBuilder::new(bytes);
-            builder.register_type::<u8>()?;
-            builder.register_type::<u16>()?;
-            builder.register_type::<AliasVecB>()?;
-            let mut decoder = builder.build()?;
-            let a = decoder.decode_next_view()?;
-            let b = decoder.decode_next_view()?;
-            let c = decoder.decode_next_view()?;
-            Ok(Self { a, b, c })
+            if bytes.len() != 13usize {
+                return Err(ssz::DecodeError::InvalidByteLength {
+                    len: bytes.len(),
+                    expected: 13usize,
+                });
+            }
+            Ok(Self { bytes })
         }
     }
     impl<'a> AlphaRef<'a> {
         pub fn to_owned(&self) -> Alpha {
             Alpha {
-                a: self.a,
-                b: self.b,
-                c: self.c.to_owned(),
+                a: self.a().expect("valid view"),
+                b: self.b().expect("valid view"),
+                c: self.c().expect("valid view").to_owned(),
             }
         }
     }
@@ -220,32 +275,115 @@ pub mod test_1 {
         pub e: u8,
         pub f: AliasUintAlias,
     }
-    #[derive(TreeHash)]
-    #[tree_hash(struct_behaviour = "container")]
+    #[derive(Debug, Copy, Clone)]
     pub struct BetaRef<'a> {
-        pub d: BytesRef<'a>,
-        pub e: u8,
-        pub f: u16,
+        bytes: &'a [u8],
+    }
+    impl<'a> BetaRef<'a> {
+        pub fn d(&self) -> Result<BytesRef<'a>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                7usize,
+                1usize,
+                0usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                7usize,
+                1usize,
+                0usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn e(&self) -> Result<u8, ssz::DecodeError> {
+            let offset = 4usize;
+            let end = offset + 1usize;
+            if end > self.bytes.len() {
+                return Err(ssz::DecodeError::InvalidByteLength {
+                    len: self.bytes.len(),
+                    expected: end,
+                });
+            }
+            let bytes = &self.bytes[offset..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn f(&self) -> Result<u16, ssz::DecodeError> {
+            let offset = 5usize;
+            let end = offset + 2usize;
+            if end > self.bytes.len() {
+                return Err(ssz::DecodeError::InvalidByteLength {
+                    len: self.bytes.len(),
+                    expected: end,
+                });
+            }
+            let bytes = &self.bytes[offset..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+    }
+    impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for BetaRef<'a> {
+        fn tree_hash_type() -> tree_hash::TreeHashType {
+            tree_hash::TreeHashType::Container
+        }
+        fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+            unreachable!("Container should never be packed")
+        }
+        fn tree_hash_packing_factor() -> usize {
+            unreachable!("Container should never be packed")
+        }
+        fn tree_hash_root(&self) -> H::Output {
+            use tree_hash::TreeHash;
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+            let d = self.d().expect("valid view");
+            hasher.write(d.tree_hash_root().as_ref()).expect("write field");
+            let e = self.e().expect("valid view");
+            hasher.write(e.tree_hash_root().as_ref()).expect("write field");
+            let f = self.f().expect("valid view");
+            hasher.write(f.tree_hash_root().as_ref()).expect("write field");
+            hasher.finish().expect("finish hasher")
+        }
     }
     impl<'a> ssz::view::DecodeView<'a> for BetaRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let mut builder = ssz::SszDecoderBuilder::new(bytes);
-            builder.register_type::<AliasListAlias>()?;
-            builder.register_type::<u8>()?;
-            builder.register_type::<AliasUintAlias>()?;
-            let mut decoder = builder.build()?;
-            let d = decoder.decode_next_view()?;
-            let e = decoder.decode_next_view()?;
-            let f = decoder.decode_next_view()?;
-            Ok(Self { d, e, f })
+            if bytes.len() < 7usize {
+                return Err(ssz::DecodeError::InvalidByteLength {
+                    len: bytes.len(),
+                    expected: 7usize,
+                });
+            }
+            let mut prev_offset: Option<usize> = None;
+            for i in 0..1usize {
+                let offset = ssz::layout::read_variable_offset(
+                    bytes,
+                    7usize,
+                    1usize,
+                    i,
+                )?;
+                if i == 0 && offset != 7usize {
+                    return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
+                }
+                if let Some(prev) = prev_offset {
+                    if offset < prev {
+                        return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                    }
+                }
+                if offset > bytes.len() {
+                    return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                }
+                prev_offset = Some(offset);
+            }
+            Ok(Self { bytes })
         }
     }
     impl<'a> BetaRef<'a> {
         pub fn to_owned(&self) -> Beta {
             Beta {
-                d: self.d.to_owned(),
-                e: self.e,
-                f: self.f,
+                d: self.d().expect("valid view").to_owned(),
+                e: self.e().expect("valid view"),
+                f: self.f().expect("valid view"),
             }
         }
     }
@@ -256,28 +394,82 @@ pub mod test_1 {
         pub g: Optional<u8>,
         pub h: Optional<VariableList<AliasUintAlias, 8usize>>,
     }
-    #[derive(TreeHash)]
-    #[tree_hash(struct_behaviour = "stable_container", max_fields = 42usize)]
+    #[derive(Debug, Copy, Clone)]
     pub struct GammaRef<'a> {
-        pub g: Optional<u8>,
-        pub h: Optional<VariableListRef<'a, u16, 8usize>>,
+        bytes: &'a [u8],
     }
-    impl<'a> DecodeView<'a> for GammaRef<'a> {
+    impl<'a> GammaRef<'a> {
+        pub fn g(&self) -> Result<Optional<u8>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                8usize,
+                2usize,
+                0usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                8usize,
+                2usize,
+                0usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn h(
+            &self,
+        ) -> Result<Optional<VariableListRef<'a, u16, 8usize>>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                8usize,
+                2usize,
+                1usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                8usize,
+                2usize,
+                1usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+    }
+    impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for GammaRef<'a> {
+        fn tree_hash_type() -> tree_hash::TreeHashType {
+            tree_hash::TreeHashType::StableContainer
+        }
+        fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+            unreachable!("StableContainer should never be packed")
+        }
+        fn tree_hash_packing_factor() -> usize {
+            unreachable!("StableContainer should never be packed")
+        }
+        fn tree_hash_root(&self) -> H::Output {
+            use tree_hash::TreeHash;
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(42usize);
+            let g = self.g().expect("valid view");
+            hasher.write(g.tree_hash_root().as_ref()).expect("write field");
+            let h = self.h().expect("valid view");
+            hasher.write(h.tree_hash_root().as_ref()).expect("write field");
+            hasher.finish().expect("finish hasher")
+        }
+    }
+    impl<'a> ssz::view::DecodeView<'a> for GammaRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let mut builder = SszDecoderBuilder::new(bytes);
-            builder.register_type::<Optional<u8>>()?;
-            builder.register_type::<Optional<VariableList<AliasUintAlias, 8usize>>>()?;
-            let mut decoder = builder.build()?;
-            let g = decoder.decode_next_view()?;
-            let h = decoder.decode_next_view()?;
-            Ok(Self { g, h })
+            Ok(Self { bytes })
         }
     }
     impl<'a> GammaRef<'a> {
         pub fn to_owned(&self) -> Gamma {
             Gamma {
-                g: self.g.to_owned(),
-                h: self.h.to_owned(),
+                g: self.g().expect("valid view").to_owned(),
+                h: self.h().expect("valid view").to_owned(),
             }
         }
     }
@@ -288,26 +480,73 @@ pub mod test_1 {
         pub z: bool,
         pub w: u8,
     }
-    #[derive(TreeHash)]
-    #[tree_hash(struct_behaviour = "container")]
+    #[derive(Debug, Copy, Clone)]
     pub struct DeltaRef<'a> {
-        pub z: bool,
-        pub w: u8,
+        bytes: &'a [u8],
+    }
+    impl<'a> DeltaRef<'a> {
+        pub fn z(&self) -> Result<bool, ssz::DecodeError> {
+            let offset = 0usize;
+            let end = offset + 1usize;
+            if end > self.bytes.len() {
+                return Err(ssz::DecodeError::InvalidByteLength {
+                    len: self.bytes.len(),
+                    expected: end,
+                });
+            }
+            let bytes = &self.bytes[offset..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn w(&self) -> Result<u8, ssz::DecodeError> {
+            let offset = 1usize;
+            let end = offset + 1usize;
+            if end > self.bytes.len() {
+                return Err(ssz::DecodeError::InvalidByteLength {
+                    len: self.bytes.len(),
+                    expected: end,
+                });
+            }
+            let bytes = &self.bytes[offset..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+    }
+    impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for DeltaRef<'a> {
+        fn tree_hash_type() -> tree_hash::TreeHashType {
+            tree_hash::TreeHashType::Container
+        }
+        fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+            unreachable!("Container should never be packed")
+        }
+        fn tree_hash_packing_factor() -> usize {
+            unreachable!("Container should never be packed")
+        }
+        fn tree_hash_root(&self) -> H::Output {
+            use tree_hash::TreeHash;
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+            let z = self.z().expect("valid view");
+            hasher.write(z.tree_hash_root().as_ref()).expect("write field");
+            let w = self.w().expect("valid view");
+            hasher.write(w.tree_hash_root().as_ref()).expect("write field");
+            hasher.finish().expect("finish hasher")
+        }
     }
     impl<'a> ssz::view::DecodeView<'a> for DeltaRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let mut builder = ssz::SszDecoderBuilder::new(bytes);
-            builder.register_type::<bool>()?;
-            builder.register_type::<u8>()?;
-            let mut decoder = builder.build()?;
-            let z = decoder.decode_next_view()?;
-            let w = decoder.decode_next_view()?;
-            Ok(Self { z, w })
+            if bytes.len() != 2usize {
+                return Err(ssz::DecodeError::InvalidByteLength {
+                    len: bytes.len(),
+                    expected: 2usize,
+                });
+            }
+            Ok(Self { bytes })
         }
     }
     impl<'a> DeltaRef<'a> {
         pub fn to_owned(&self) -> Delta {
-            Delta { z: self.z, w: self.w }
+            Delta {
+                z: self.z().expect("valid view"),
+                w: self.w().expect("valid view"),
+            }
         }
     }
     #[derive(Encode, Decode, TreeHash)]
@@ -319,36 +558,126 @@ pub mod test_1 {
         pub i: Optional<u8>,
         pub j: Optional<AliasNested>,
     }
-    #[derive(TreeHash)]
-    #[tree_hash(struct_behaviour = "stable_container", max_fields = 42usize)]
+    #[derive(Debug, Copy, Clone)]
     pub struct EpsilonRef<'a> {
-        pub g: Optional<u8>,
-        pub h: Optional<VariableListRef<'a, u16, 8usize>>,
-        pub i: Optional<u8>,
-        pub j: Optional<u16>,
+        bytes: &'a [u8],
     }
-    impl<'a> DecodeView<'a> for EpsilonRef<'a> {
+    impl<'a> EpsilonRef<'a> {
+        pub fn g(&self) -> Result<Optional<u8>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                16usize,
+                4usize,
+                0usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                16usize,
+                4usize,
+                0usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn h(
+            &self,
+        ) -> Result<Optional<VariableListRef<'a, u16, 8usize>>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                16usize,
+                4usize,
+                1usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                16usize,
+                4usize,
+                1usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn i(&self) -> Result<Optional<u8>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                16usize,
+                4usize,
+                2usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                16usize,
+                4usize,
+                2usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn j(&self) -> Result<Optional<u16>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                16usize,
+                4usize,
+                3usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                16usize,
+                4usize,
+                3usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+    }
+    impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for EpsilonRef<'a> {
+        fn tree_hash_type() -> tree_hash::TreeHashType {
+            tree_hash::TreeHashType::StableContainer
+        }
+        fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+            unreachable!("StableContainer should never be packed")
+        }
+        fn tree_hash_packing_factor() -> usize {
+            unreachable!("StableContainer should never be packed")
+        }
+        fn tree_hash_root(&self) -> H::Output {
+            use tree_hash::TreeHash;
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(42usize);
+            let g = self.g().expect("valid view");
+            hasher.write(g.tree_hash_root().as_ref()).expect("write field");
+            let h = self.h().expect("valid view");
+            hasher.write(h.tree_hash_root().as_ref()).expect("write field");
+            let i = self.i().expect("valid view");
+            hasher.write(i.tree_hash_root().as_ref()).expect("write field");
+            let j = self.j().expect("valid view");
+            hasher.write(j.tree_hash_root().as_ref()).expect("write field");
+            hasher.finish().expect("finish hasher")
+        }
+    }
+    impl<'a> ssz::view::DecodeView<'a> for EpsilonRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let mut builder = SszDecoderBuilder::new(bytes);
-            builder.register_type::<Optional<u8>>()?;
-            builder.register_type::<Optional<VariableList<AliasUintAlias, 8usize>>>()?;
-            builder.register_type::<Optional<u8>>()?;
-            builder.register_type::<Optional<AliasNested>>()?;
-            let mut decoder = builder.build()?;
-            let g = decoder.decode_next_view()?;
-            let h = decoder.decode_next_view()?;
-            let i = decoder.decode_next_view()?;
-            let j = decoder.decode_next_view()?;
-            Ok(Self { g, h, i, j })
+            Ok(Self { bytes })
         }
     }
     impl<'a> EpsilonRef<'a> {
         pub fn to_owned(&self) -> Epsilon {
             Epsilon {
-                g: self.g.to_owned(),
-                h: self.h.to_owned(),
-                i: self.i.to_owned(),
-                j: self.j.to_owned(),
+                g: self.g().expect("valid view").to_owned(),
+                h: self.h().expect("valid view").to_owned(),
+                i: self.i().expect("valid view").to_owned(),
+                j: self.j().expect("valid view").to_owned(),
             }
         }
     }
@@ -359,28 +688,82 @@ pub mod test_1 {
         pub u: Optional<FixedVector<u8, 16usize>>,
         pub v: Optional<AliasListAlias>,
     }
-    #[derive(TreeHash)]
-    #[tree_hash(struct_behaviour = "stable_container", max_fields = 128usize)]
+    #[derive(Debug, Copy, Clone)]
     pub struct ZetaRef<'a> {
-        pub u: Optional<FixedVectorRef<'a, u8, 16usize>>,
-        pub v: Optional<BytesRef<'a>>,
+        bytes: &'a [u8],
     }
-    impl<'a> DecodeView<'a> for ZetaRef<'a> {
+    impl<'a> ZetaRef<'a> {
+        pub fn u(
+            &self,
+        ) -> Result<Optional<FixedVectorRef<'a, u8, 16usize>>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                8usize,
+                2usize,
+                0usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                8usize,
+                2usize,
+                0usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn v(&self) -> Result<Optional<BytesRef<'a>>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                8usize,
+                2usize,
+                1usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                8usize,
+                2usize,
+                1usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+    }
+    impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ZetaRef<'a> {
+        fn tree_hash_type() -> tree_hash::TreeHashType {
+            tree_hash::TreeHashType::StableContainer
+        }
+        fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+            unreachable!("StableContainer should never be packed")
+        }
+        fn tree_hash_packing_factor() -> usize {
+            unreachable!("StableContainer should never be packed")
+        }
+        fn tree_hash_root(&self) -> H::Output {
+            use tree_hash::TreeHash;
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(128usize);
+            let u = self.u().expect("valid view");
+            hasher.write(u.tree_hash_root().as_ref()).expect("write field");
+            let v = self.v().expect("valid view");
+            hasher.write(v.tree_hash_root().as_ref()).expect("write field");
+            hasher.finish().expect("finish hasher")
+        }
+    }
+    impl<'a> ssz::view::DecodeView<'a> for ZetaRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let mut builder = SszDecoderBuilder::new(bytes);
-            builder.register_type::<Optional<FixedVector<u8, 16usize>>>()?;
-            builder.register_type::<Optional<AliasListAlias>>()?;
-            let mut decoder = builder.build()?;
-            let u = decoder.decode_next_view()?;
-            let v = decoder.decode_next_view()?;
-            Ok(Self { u, v })
+            Ok(Self { bytes })
         }
     }
     impl<'a> ZetaRef<'a> {
         pub fn to_owned(&self) -> Zeta {
             Zeta {
-                u: self.u.to_owned(),
-                v: self.v.to_owned(),
+                u: self.u().expect("valid view").to_owned(),
+                v: self.v().expect("valid view").to_owned(),
             }
         }
     }
@@ -392,32 +775,115 @@ pub mod test_1 {
         pub ddd: u8,
         pub eee: VariableList<u16, 3usize>,
     }
-    #[derive(TreeHash)]
-    #[tree_hash(struct_behaviour = "container")]
+    #[derive(Debug, Copy, Clone)]
     pub struct TestTypeRef<'a> {
-        pub ccc: u8,
-        pub ddd: u8,
-        pub eee: VariableListRef<'a, u16, 3usize>,
+        bytes: &'a [u8],
+    }
+    impl<'a> TestTypeRef<'a> {
+        pub fn ccc(&self) -> Result<u8, ssz::DecodeError> {
+            let offset = 0usize;
+            let end = offset + 1usize;
+            if end > self.bytes.len() {
+                return Err(ssz::DecodeError::InvalidByteLength {
+                    len: self.bytes.len(),
+                    expected: end,
+                });
+            }
+            let bytes = &self.bytes[offset..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn ddd(&self) -> Result<u8, ssz::DecodeError> {
+            let offset = 1usize;
+            let end = offset + 1usize;
+            if end > self.bytes.len() {
+                return Err(ssz::DecodeError::InvalidByteLength {
+                    len: self.bytes.len(),
+                    expected: end,
+                });
+            }
+            let bytes = &self.bytes[offset..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn eee(&self) -> Result<VariableListRef<'a, u16, 3usize>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                6usize,
+                1usize,
+                0usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                6usize,
+                1usize,
+                0usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+    }
+    impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for TestTypeRef<'a> {
+        fn tree_hash_type() -> tree_hash::TreeHashType {
+            tree_hash::TreeHashType::Container
+        }
+        fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+            unreachable!("Container should never be packed")
+        }
+        fn tree_hash_packing_factor() -> usize {
+            unreachable!("Container should never be packed")
+        }
+        fn tree_hash_root(&self) -> H::Output {
+            use tree_hash::TreeHash;
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+            let ccc = self.ccc().expect("valid view");
+            hasher.write(ccc.tree_hash_root().as_ref()).expect("write field");
+            let ddd = self.ddd().expect("valid view");
+            hasher.write(ddd.tree_hash_root().as_ref()).expect("write field");
+            let eee = self.eee().expect("valid view");
+            hasher.write(eee.tree_hash_root().as_ref()).expect("write field");
+            hasher.finish().expect("finish hasher")
+        }
     }
     impl<'a> ssz::view::DecodeView<'a> for TestTypeRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let mut builder = ssz::SszDecoderBuilder::new(bytes);
-            builder.register_type::<u8>()?;
-            builder.register_type::<u8>()?;
-            builder.register_type::<VariableList<u16, 3usize>>()?;
-            let mut decoder = builder.build()?;
-            let ccc = decoder.decode_next_view()?;
-            let ddd = decoder.decode_next_view()?;
-            let eee = decoder.decode_next_view()?;
-            Ok(Self { ccc, ddd, eee })
+            if bytes.len() < 6usize {
+                return Err(ssz::DecodeError::InvalidByteLength {
+                    len: bytes.len(),
+                    expected: 6usize,
+                });
+            }
+            let mut prev_offset: Option<usize> = None;
+            for i in 0..1usize {
+                let offset = ssz::layout::read_variable_offset(
+                    bytes,
+                    6usize,
+                    1usize,
+                    i,
+                )?;
+                if i == 0 && offset != 6usize {
+                    return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
+                }
+                if let Some(prev) = prev_offset {
+                    if offset < prev {
+                        return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                    }
+                }
+                if offset > bytes.len() {
+                    return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                }
+                prev_offset = Some(offset);
+            }
+            Ok(Self { bytes })
         }
     }
     impl<'a> TestTypeRef<'a> {
         pub fn to_owned(&self) -> TestType {
             TestType {
-                ccc: self.ccc,
-                ddd: self.ddd,
-                eee: self.eee.to_owned(),
+                ccc: self.ccc().expect("valid view"),
+                ddd: self.ddd().expect("valid view"),
+                eee: self.eee().expect("valid view").to_owned(),
             }
         }
     }
@@ -429,32 +895,129 @@ pub mod test_1 {
         pub m: TestType,
         pub n: FirstUnion,
     }
-    #[derive(TreeHash)]
-    #[tree_hash(struct_behaviour = "container")]
+    #[derive(Debug, Copy, Clone)]
     pub struct EtaRef<'a> {
-        pub l: ZetaRef<'a>,
-        pub m: TestTypeRef<'a>,
-        pub n: FirstUnionRef<'a>,
+        bytes: &'a [u8],
+    }
+    impl<'a> EtaRef<'a> {
+        pub fn l(&self) -> Result<ZetaRef<'a>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                12usize,
+                3usize,
+                0usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                12usize,
+                3usize,
+                0usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn m(&self) -> Result<TestTypeRef<'a>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                12usize,
+                3usize,
+                1usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                12usize,
+                3usize,
+                1usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn n(&self) -> Result<FirstUnionRef<'a>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                12usize,
+                3usize,
+                2usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                12usize,
+                3usize,
+                2usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+    }
+    impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for EtaRef<'a> {
+        fn tree_hash_type() -> tree_hash::TreeHashType {
+            tree_hash::TreeHashType::Container
+        }
+        fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+            unreachable!("Container should never be packed")
+        }
+        fn tree_hash_packing_factor() -> usize {
+            unreachable!("Container should never be packed")
+        }
+        fn tree_hash_root(&self) -> H::Output {
+            use tree_hash::TreeHash;
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+            let l = self.l().expect("valid view");
+            hasher.write(l.tree_hash_root().as_ref()).expect("write field");
+            let m = self.m().expect("valid view");
+            hasher.write(m.tree_hash_root().as_ref()).expect("write field");
+            let n = self.n().expect("valid view");
+            hasher.write(n.tree_hash_root().as_ref()).expect("write field");
+            hasher.finish().expect("finish hasher")
+        }
     }
     impl<'a> ssz::view::DecodeView<'a> for EtaRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let mut builder = ssz::SszDecoderBuilder::new(bytes);
-            builder.register_type::<Zeta>()?;
-            builder.register_type::<TestType>()?;
-            builder.register_type::<FirstUnion>()?;
-            let mut decoder = builder.build()?;
-            let l = decoder.decode_next_view()?;
-            let m = decoder.decode_next_view()?;
-            let n = decoder.decode_next_view()?;
-            Ok(Self { l, m, n })
+            if bytes.len() < 12usize {
+                return Err(ssz::DecodeError::InvalidByteLength {
+                    len: bytes.len(),
+                    expected: 12usize,
+                });
+            }
+            let mut prev_offset: Option<usize> = None;
+            for i in 0..3usize {
+                let offset = ssz::layout::read_variable_offset(
+                    bytes,
+                    12usize,
+                    3usize,
+                    i,
+                )?;
+                if i == 0 && offset != 12usize {
+                    return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
+                }
+                if let Some(prev) = prev_offset {
+                    if offset < prev {
+                        return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                    }
+                }
+                if offset > bytes.len() {
+                    return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                }
+                prev_offset = Some(offset);
+            }
+            Ok(Self { bytes })
         }
     }
     impl<'a> EtaRef<'a> {
         pub fn to_owned(&self) -> Eta {
             Eta {
-                l: self.l.to_owned(),
-                m: self.m.to_owned(),
-                n: self.n.to_owned(),
+                l: self.l().expect("valid view").to_owned(),
+                m: self.m().expect("valid view").to_owned(),
+                n: self.n().expect("valid view").to_owned(),
             }
         }
     }
@@ -466,32 +1029,122 @@ pub mod test_1 {
         pub p: UnionC,
         pub q: AliasVecA,
     }
-    #[derive(TreeHash)]
-    #[tree_hash(struct_behaviour = "container")]
+    #[derive(Debug, Copy, Clone)]
     pub struct ThetaRef<'a> {
-        pub o: UnionBRef<'a>,
-        pub p: UnionCRef<'a>,
-        pub q: FixedVectorRef<'a, u8, 10usize>,
+        bytes: &'a [u8],
+    }
+    impl<'a> ThetaRef<'a> {
+        pub fn o(&self) -> Result<UnionBRef<'a>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                18usize,
+                2usize,
+                0usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                18usize,
+                2usize,
+                0usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn p(&self) -> Result<UnionCRef<'a>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                18usize,
+                2usize,
+                1usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                18usize,
+                2usize,
+                1usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn q(&self) -> Result<FixedVectorRef<'a, u8, 10usize>, ssz::DecodeError> {
+            let offset = 8usize;
+            let end = offset + 10usize;
+            if end > self.bytes.len() {
+                return Err(ssz::DecodeError::InvalidByteLength {
+                    len: self.bytes.len(),
+                    expected: end,
+                });
+            }
+            let bytes = &self.bytes[offset..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+    }
+    impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ThetaRef<'a> {
+        fn tree_hash_type() -> tree_hash::TreeHashType {
+            tree_hash::TreeHashType::Container
+        }
+        fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+            unreachable!("Container should never be packed")
+        }
+        fn tree_hash_packing_factor() -> usize {
+            unreachable!("Container should never be packed")
+        }
+        fn tree_hash_root(&self) -> H::Output {
+            use tree_hash::TreeHash;
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+            let o = self.o().expect("valid view");
+            hasher.write(o.tree_hash_root().as_ref()).expect("write field");
+            let p = self.p().expect("valid view");
+            hasher.write(p.tree_hash_root().as_ref()).expect("write field");
+            let q = self.q().expect("valid view");
+            hasher.write(q.tree_hash_root().as_ref()).expect("write field");
+            hasher.finish().expect("finish hasher")
+        }
     }
     impl<'a> ssz::view::DecodeView<'a> for ThetaRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let mut builder = ssz::SszDecoderBuilder::new(bytes);
-            builder.register_type::<UnionB>()?;
-            builder.register_type::<UnionC>()?;
-            builder.register_type::<AliasVecA>()?;
-            let mut decoder = builder.build()?;
-            let o = decoder.decode_next_view()?;
-            let p = decoder.decode_next_view()?;
-            let q = decoder.decode_next_view()?;
-            Ok(Self { o, p, q })
+            if bytes.len() < 18usize {
+                return Err(ssz::DecodeError::InvalidByteLength {
+                    len: bytes.len(),
+                    expected: 18usize,
+                });
+            }
+            let mut prev_offset: Option<usize> = None;
+            for i in 0..2usize {
+                let offset = ssz::layout::read_variable_offset(
+                    bytes,
+                    18usize,
+                    2usize,
+                    i,
+                )?;
+                if i == 0 && offset != 18usize {
+                    return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
+                }
+                if let Some(prev) = prev_offset {
+                    if offset < prev {
+                        return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                    }
+                }
+                if offset > bytes.len() {
+                    return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                }
+                prev_offset = Some(offset);
+            }
+            Ok(Self { bytes })
         }
     }
     impl<'a> ThetaRef<'a> {
         pub fn to_owned(&self) -> Theta {
             Theta {
-                o: self.o.to_owned(),
-                p: self.p.to_owned(),
-                q: self.q.to_owned(),
+                o: self.o().expect("valid view").to_owned(),
+                p: self.p().expect("valid view").to_owned(),
+                q: self.q().expect("valid view").to_owned(),
             }
         }
     }
@@ -506,44 +1159,172 @@ pub mod test_1 {
         pub r: Optional<VariableList<AliasNested, 2usize>>,
         pub s: Optional<u8>,
     }
-    #[derive(TreeHash)]
-    #[tree_hash(struct_behaviour = "stable_container", max_fields = 42usize)]
+    #[derive(Debug, Copy, Clone)]
     pub struct IotaRef<'a> {
-        pub g: Optional<u8>,
-        pub h: Optional<VariableListRef<'a, u16, 8usize>>,
-        pub i: Optional<u8>,
-        pub j: Optional<u16>,
-        pub r: Optional<VariableListRef<'a, u16, 2usize>>,
-        pub s: Optional<u8>,
+        bytes: &'a [u8],
     }
-    impl<'a> DecodeView<'a> for IotaRef<'a> {
+    impl<'a> IotaRef<'a> {
+        pub fn g(&self) -> Result<Optional<u8>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                24usize,
+                6usize,
+                0usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                24usize,
+                6usize,
+                0usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn h(
+            &self,
+        ) -> Result<Optional<VariableListRef<'a, u16, 8usize>>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                24usize,
+                6usize,
+                1usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                24usize,
+                6usize,
+                1usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn i(&self) -> Result<Optional<u8>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                24usize,
+                6usize,
+                2usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                24usize,
+                6usize,
+                2usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn j(&self) -> Result<Optional<u16>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                24usize,
+                6usize,
+                3usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                24usize,
+                6usize,
+                3usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn r(
+            &self,
+        ) -> Result<Optional<VariableListRef<'a, u16, 2usize>>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                24usize,
+                6usize,
+                4usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                24usize,
+                6usize,
+                4usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn s(&self) -> Result<Optional<u8>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                24usize,
+                6usize,
+                5usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                24usize,
+                6usize,
+                5usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+    }
+    impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for IotaRef<'a> {
+        fn tree_hash_type() -> tree_hash::TreeHashType {
+            tree_hash::TreeHashType::StableContainer
+        }
+        fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+            unreachable!("StableContainer should never be packed")
+        }
+        fn tree_hash_packing_factor() -> usize {
+            unreachable!("StableContainer should never be packed")
+        }
+        fn tree_hash_root(&self) -> H::Output {
+            use tree_hash::TreeHash;
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(42usize);
+            let g = self.g().expect("valid view");
+            hasher.write(g.tree_hash_root().as_ref()).expect("write field");
+            let h = self.h().expect("valid view");
+            hasher.write(h.tree_hash_root().as_ref()).expect("write field");
+            let i = self.i().expect("valid view");
+            hasher.write(i.tree_hash_root().as_ref()).expect("write field");
+            let j = self.j().expect("valid view");
+            hasher.write(j.tree_hash_root().as_ref()).expect("write field");
+            let r = self.r().expect("valid view");
+            hasher.write(r.tree_hash_root().as_ref()).expect("write field");
+            let s = self.s().expect("valid view");
+            hasher.write(s.tree_hash_root().as_ref()).expect("write field");
+            hasher.finish().expect("finish hasher")
+        }
+    }
+    impl<'a> ssz::view::DecodeView<'a> for IotaRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let mut builder = SszDecoderBuilder::new(bytes);
-            builder.register_type::<Optional<u8>>()?;
-            builder.register_type::<Optional<VariableList<AliasUintAlias, 8usize>>>()?;
-            builder.register_type::<Optional<u8>>()?;
-            builder.register_type::<Optional<AliasNested>>()?;
-            builder.register_type::<Optional<VariableList<AliasNested, 2usize>>>()?;
-            builder.register_type::<Optional<u8>>()?;
-            let mut decoder = builder.build()?;
-            let g = decoder.decode_next_view()?;
-            let h = decoder.decode_next_view()?;
-            let i = decoder.decode_next_view()?;
-            let j = decoder.decode_next_view()?;
-            let r = decoder.decode_next_view()?;
-            let s = decoder.decode_next_view()?;
-            Ok(Self { g, h, i, j, r, s })
+            Ok(Self { bytes })
         }
     }
     impl<'a> IotaRef<'a> {
         pub fn to_owned(&self) -> Iota {
             Iota {
-                g: self.g.to_owned(),
-                h: self.h.to_owned(),
-                i: self.i.to_owned(),
-                j: self.j.to_owned(),
-                r: self.r.to_owned(),
-                s: self.s.to_owned(),
+                g: self.g().expect("valid view").to_owned(),
+                h: self.h().expect("valid view").to_owned(),
+                i: self.i().expect("valid view").to_owned(),
+                j: self.j().expect("valid view").to_owned(),
+                r: self.r().expect("valid view").to_owned(),
+                s: self.s().expect("valid view").to_owned(),
             }
         }
     }
@@ -555,32 +1336,122 @@ pub mod test_1 {
         pub u: Beta,
         pub v: BitVector<64usize>,
     }
-    #[derive(TreeHash)]
-    #[tree_hash(struct_behaviour = "container")]
+    #[derive(Debug, Copy, Clone)]
     pub struct KappaRef<'a> {
-        pub t: AlphaRef<'a>,
-        pub u: BetaRef<'a>,
-        pub v: BitVectorRef<'a, 64usize>,
+        bytes: &'a [u8],
+    }
+    impl<'a> KappaRef<'a> {
+        pub fn t(&self) -> Result<AlphaRef<'a>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                16usize,
+                2usize,
+                0usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                16usize,
+                2usize,
+                0usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn u(&self) -> Result<BetaRef<'a>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                16usize,
+                2usize,
+                1usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                16usize,
+                2usize,
+                1usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn v(&self) -> Result<BitVectorRef<'a, 64usize>, ssz::DecodeError> {
+            let offset = 8usize;
+            let end = offset + 8usize;
+            if end > self.bytes.len() {
+                return Err(ssz::DecodeError::InvalidByteLength {
+                    len: self.bytes.len(),
+                    expected: end,
+                });
+            }
+            let bytes = &self.bytes[offset..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+    }
+    impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for KappaRef<'a> {
+        fn tree_hash_type() -> tree_hash::TreeHashType {
+            tree_hash::TreeHashType::Container
+        }
+        fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+            unreachable!("Container should never be packed")
+        }
+        fn tree_hash_packing_factor() -> usize {
+            unreachable!("Container should never be packed")
+        }
+        fn tree_hash_root(&self) -> H::Output {
+            use tree_hash::TreeHash;
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+            let t = self.t().expect("valid view");
+            hasher.write(t.tree_hash_root().as_ref()).expect("write field");
+            let u = self.u().expect("valid view");
+            hasher.write(u.tree_hash_root().as_ref()).expect("write field");
+            let v = self.v().expect("valid view");
+            hasher.write(v.tree_hash_root().as_ref()).expect("write field");
+            hasher.finish().expect("finish hasher")
+        }
     }
     impl<'a> ssz::view::DecodeView<'a> for KappaRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let mut builder = ssz::SszDecoderBuilder::new(bytes);
-            builder.register_type::<Alpha>()?;
-            builder.register_type::<Beta>()?;
-            builder.register_type::<BitVector<64usize>>()?;
-            let mut decoder = builder.build()?;
-            let t = decoder.decode_next_view()?;
-            let u = decoder.decode_next_view()?;
-            let v = decoder.decode_next_view()?;
-            Ok(Self { t, u, v })
+            if bytes.len() < 16usize {
+                return Err(ssz::DecodeError::InvalidByteLength {
+                    len: bytes.len(),
+                    expected: 16usize,
+                });
+            }
+            let mut prev_offset: Option<usize> = None;
+            for i in 0..2usize {
+                let offset = ssz::layout::read_variable_offset(
+                    bytes,
+                    16usize,
+                    2usize,
+                    i,
+                )?;
+                if i == 0 && offset != 16usize {
+                    return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
+                }
+                if let Some(prev) = prev_offset {
+                    if offset < prev {
+                        return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                    }
+                }
+                if offset > bytes.len() {
+                    return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                }
+                prev_offset = Some(offset);
+            }
+            Ok(Self { bytes })
         }
     }
     impl<'a> KappaRef<'a> {
         pub fn to_owned(&self) -> Kappa {
             Kappa {
-                t: self.t.to_owned(),
-                u: self.u.to_owned(),
-                v: self.v.to_owned(),
+                t: self.t().expect("valid view").to_owned(),
+                u: self.u().expect("valid view").to_owned(),
+                v: self.v().expect("valid view").to_owned(),
             }
         }
     }
@@ -591,28 +1462,80 @@ pub mod test_1 {
         pub w: Optional<u16>,
         pub x: Optional<u8>,
     }
-    #[derive(TreeHash)]
-    #[tree_hash(struct_behaviour = "stable_container", max_fields = 4usize)]
+    #[derive(Debug, Copy, Clone)]
     pub struct LambdaRef<'a> {
-        pub w: Optional<u16>,
-        pub x: Optional<u8>,
+        bytes: &'a [u8],
     }
-    impl<'a> DecodeView<'a> for LambdaRef<'a> {
+    impl<'a> LambdaRef<'a> {
+        pub fn w(&self) -> Result<Optional<u16>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                8usize,
+                2usize,
+                0usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                8usize,
+                2usize,
+                0usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn x(&self) -> Result<Optional<u8>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                8usize,
+                2usize,
+                1usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                8usize,
+                2usize,
+                1usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+    }
+    impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for LambdaRef<'a> {
+        fn tree_hash_type() -> tree_hash::TreeHashType {
+            tree_hash::TreeHashType::StableContainer
+        }
+        fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+            unreachable!("StableContainer should never be packed")
+        }
+        fn tree_hash_packing_factor() -> usize {
+            unreachable!("StableContainer should never be packed")
+        }
+        fn tree_hash_root(&self) -> H::Output {
+            use tree_hash::TreeHash;
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(4usize);
+            let w = self.w().expect("valid view");
+            hasher.write(w.tree_hash_root().as_ref()).expect("write field");
+            let x = self.x().expect("valid view");
+            hasher.write(x.tree_hash_root().as_ref()).expect("write field");
+            hasher.finish().expect("finish hasher")
+        }
+    }
+    impl<'a> ssz::view::DecodeView<'a> for LambdaRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let mut builder = SszDecoderBuilder::new(bytes);
-            builder.register_type::<Optional<u16>>()?;
-            builder.register_type::<Optional<u8>>()?;
-            let mut decoder = builder.build()?;
-            let w = decoder.decode_next_view()?;
-            let x = decoder.decode_next_view()?;
-            Ok(Self { w, x })
+            Ok(Self { bytes })
         }
     }
     impl<'a> LambdaRef<'a> {
         pub fn to_owned(&self) -> Lambda {
             Lambda {
-                w: self.w.to_owned(),
-                x: self.x.to_owned(),
+                w: self.w().expect("valid view").to_owned(),
+                x: self.x().expect("valid view").to_owned(),
             }
         }
     }
@@ -623,28 +1546,107 @@ pub mod test_1 {
         pub y: Lambda,
         pub z: UnionA,
     }
-    #[derive(TreeHash)]
-    #[tree_hash(struct_behaviour = "container")]
+    #[derive(Debug, Copy, Clone)]
     pub struct MuRef<'a> {
-        pub y: LambdaRef<'a>,
-        pub z: UnionARef<'a>,
+        bytes: &'a [u8],
+    }
+    impl<'a> MuRef<'a> {
+        pub fn y(&self) -> Result<LambdaRef<'a>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                8usize,
+                2usize,
+                0usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                8usize,
+                2usize,
+                0usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn z(&self) -> Result<UnionARef<'a>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                8usize,
+                2usize,
+                1usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                8usize,
+                2usize,
+                1usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+    }
+    impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for MuRef<'a> {
+        fn tree_hash_type() -> tree_hash::TreeHashType {
+            tree_hash::TreeHashType::Container
+        }
+        fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+            unreachable!("Container should never be packed")
+        }
+        fn tree_hash_packing_factor() -> usize {
+            unreachable!("Container should never be packed")
+        }
+        fn tree_hash_root(&self) -> H::Output {
+            use tree_hash::TreeHash;
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+            let y = self.y().expect("valid view");
+            hasher.write(y.tree_hash_root().as_ref()).expect("write field");
+            let z = self.z().expect("valid view");
+            hasher.write(z.tree_hash_root().as_ref()).expect("write field");
+            hasher.finish().expect("finish hasher")
+        }
     }
     impl<'a> ssz::view::DecodeView<'a> for MuRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let mut builder = ssz::SszDecoderBuilder::new(bytes);
-            builder.register_type::<Lambda>()?;
-            builder.register_type::<UnionA>()?;
-            let mut decoder = builder.build()?;
-            let y = decoder.decode_next_view()?;
-            let z = decoder.decode_next_view()?;
-            Ok(Self { y, z })
+            if bytes.len() < 8usize {
+                return Err(ssz::DecodeError::InvalidByteLength {
+                    len: bytes.len(),
+                    expected: 8usize,
+                });
+            }
+            let mut prev_offset: Option<usize> = None;
+            for i in 0..2usize {
+                let offset = ssz::layout::read_variable_offset(
+                    bytes,
+                    8usize,
+                    2usize,
+                    i,
+                )?;
+                if i == 0 && offset != 8usize {
+                    return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
+                }
+                if let Some(prev) = prev_offset {
+                    if offset < prev {
+                        return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                    }
+                }
+                if offset > bytes.len() {
+                    return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                }
+                prev_offset = Some(offset);
+            }
+            Ok(Self { bytes })
         }
     }
     impl<'a> MuRef<'a> {
         pub fn to_owned(&self) -> Mu {
             Mu {
-                y: self.y.to_owned(),
-                z: self.z.to_owned(),
+                y: self.y().expect("valid view").to_owned(),
+                z: self.z().expect("valid view").to_owned(),
             }
         }
     }
@@ -658,36 +1660,144 @@ pub mod test_1 {
         pub bbb: BitAlias,
         pub test: Option<AliasMu>,
     }
-    #[derive(TreeHash)]
-    #[tree_hash(struct_behaviour = "container")]
+    #[derive(Debug, Copy, Clone)]
     pub struct NuRef<'a> {
-        pub zz: MuRef<'a>,
-        pub aaa: FixedVectorRef<'a, bool, 4usize>,
-        pub bbb: BitListRef<'a, 42usize>,
-        pub test: Option<MuRef<'a>>,
+        bytes: &'a [u8],
+    }
+    impl<'a> NuRef<'a> {
+        pub fn zz(&self) -> Result<MuRef<'a>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                16usize,
+                3usize,
+                0usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                16usize,
+                3usize,
+                0usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn aaa(&self) -> Result<FixedVectorRef<'a, bool, 4usize>, ssz::DecodeError> {
+            let offset = 4usize;
+            let end = offset + 4usize;
+            if end > self.bytes.len() {
+                return Err(ssz::DecodeError::InvalidByteLength {
+                    len: self.bytes.len(),
+                    expected: end,
+                });
+            }
+            let bytes = &self.bytes[offset..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn bbb(&self) -> Result<BitListRef<'a, 42usize>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                16usize,
+                3usize,
+                1usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                16usize,
+                3usize,
+                1usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+        pub fn test(&self) -> Result<Option<MuRef<'a>>, ssz::DecodeError> {
+            let start = ssz::layout::read_variable_offset(
+                self.bytes,
+                16usize,
+                3usize,
+                2usize,
+            )?;
+            let end = ssz::layout::read_variable_offset_or_end(
+                self.bytes,
+                16usize,
+                3usize,
+                2usize + 1,
+            )?;
+            if start > end || end > self.bytes.len() {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            }
+            let bytes = &self.bytes[start..end];
+            ssz::view::DecodeView::from_ssz_bytes(bytes)
+        }
+    }
+    impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for NuRef<'a> {
+        fn tree_hash_type() -> tree_hash::TreeHashType {
+            tree_hash::TreeHashType::Container
+        }
+        fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+            unreachable!("Container should never be packed")
+        }
+        fn tree_hash_packing_factor() -> usize {
+            unreachable!("Container should never be packed")
+        }
+        fn tree_hash_root(&self) -> H::Output {
+            use tree_hash::TreeHash;
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+            let zz = self.zz().expect("valid view");
+            hasher.write(zz.tree_hash_root().as_ref()).expect("write field");
+            let aaa = self.aaa().expect("valid view");
+            hasher.write(aaa.tree_hash_root().as_ref()).expect("write field");
+            let bbb = self.bbb().expect("valid view");
+            hasher.write(bbb.tree_hash_root().as_ref()).expect("write field");
+            let test = self.test().expect("valid view");
+            hasher.write(test.tree_hash_root().as_ref()).expect("write field");
+            hasher.finish().expect("finish hasher")
+        }
     }
     impl<'a> ssz::view::DecodeView<'a> for NuRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let mut builder = ssz::SszDecoderBuilder::new(bytes);
-            builder.register_type::<AliasMu>()?;
-            builder.register_type::<FixedVector<bool, 4usize>>()?;
-            builder.register_type::<BitAlias>()?;
-            builder.register_type::<Option<AliasMu>>()?;
-            let mut decoder = builder.build()?;
-            let zz = decoder.decode_next_view()?;
-            let aaa = decoder.decode_next_view()?;
-            let bbb = decoder.decode_next_view()?;
-            let test = decoder.decode_next_view()?;
-            Ok(Self { zz, aaa, bbb, test })
+            if bytes.len() < 16usize {
+                return Err(ssz::DecodeError::InvalidByteLength {
+                    len: bytes.len(),
+                    expected: 16usize,
+                });
+            }
+            let mut prev_offset: Option<usize> = None;
+            for i in 0..3usize {
+                let offset = ssz::layout::read_variable_offset(
+                    bytes,
+                    16usize,
+                    3usize,
+                    i,
+                )?;
+                if i == 0 && offset != 16usize {
+                    return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
+                }
+                if let Some(prev) = prev_offset {
+                    if offset < prev {
+                        return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                    }
+                }
+                if offset > bytes.len() {
+                    return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                }
+                prev_offset = Some(offset);
+            }
+            Ok(Self { bytes })
         }
     }
     impl<'a> NuRef<'a> {
         pub fn to_owned(&self) -> Nu {
             Nu {
-                zz: self.zz.to_owned(),
-                aaa: self.aaa.to_owned(),
-                bbb: self.bbb.to_owned(),
-                test: self.test.to_owned(),
+                zz: self.zz().expect("valid view").to_owned(),
+                aaa: self.aaa().expect("valid view").to_owned(),
+                bbb: self.bbb().expect("valid view").to_owned(),
+                test: self.test().expect("valid view").to_owned(),
             }
         }
     }
