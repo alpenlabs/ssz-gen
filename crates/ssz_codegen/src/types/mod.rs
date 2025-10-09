@@ -760,7 +760,7 @@ impl ClassDef {
 
     /// Generates TreeHash implementation for view structs.
     ///
-    /// Uses getter methods to access fields for hashing.
+    /// Optimized to hash bytes directly for basic fields, avoiding decode overhead.
     ///
     /// # Arguments
     ///
@@ -772,15 +772,45 @@ impl ClassDef {
     pub fn to_view_tree_hash_impl(&self, ident: &Ident) -> TokenStream {
         let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
 
-        // Generate field access expressions for tree hashing
-        let field_names: Vec<Ident> = self
-            .fields
-            .iter()
-            .map(|f| Ident::new(&f.name, Span::call_site()))
-            .collect();
-
         match self.base {
             BaseClass::Container => {
+                // Generate optimized tree hashing that uses bytes directly for basic types
+                let hash_operations: Vec<TokenStream> = self
+                    .fields
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, field)| {
+                        let field_name = Ident::new(&field.name, Span::call_site());
+                        let (offset_expr, is_fixed, size_expr) = self.generate_field_layout(idx);
+
+                        // Check if this is a basic packable type
+                        let is_basic = matches!(
+                            field.ty.resolution,
+                            TypeResolutionKind::Boolean | TypeResolutionKind::UInt(_)
+                        );
+
+                        if is_basic && is_fixed {
+                            // Optimize: hash bytes directly for basic types
+                            let size = size_expr.unwrap();
+                            quote! {
+                                {
+                                    let offset = #offset_expr;
+                                    let field_bytes = &self.bytes[offset..offset + #size];
+                                    hasher.write(field_bytes).expect("write field");
+                                }
+                            }
+                        } else {
+                            // For composite types, use getter and hash the result
+                            quote! {
+                                {
+                                    let #field_name = self.#field_name().expect("valid view");
+                                    hasher.write(#field_name.tree_hash_root().as_ref()).expect("write field");
+                                }
+                            }
+                        }
+                    })
+                    .collect();
+
                 quote! {
                     impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ref_ident<'a> {
                         fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -799,10 +829,7 @@ impl ClassDef {
                             use tree_hash::TreeHash;
 
                             let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
-                            #(
-                                let #field_names = self.#field_names().expect("valid view");
-                                hasher.write(#field_names.tree_hash_root().as_ref()).expect("write field");
-                            )*
+                            #(#hash_operations)*
 
                             hasher.finish().expect("finish hasher")
                         }
@@ -811,6 +838,12 @@ impl ClassDef {
             }
             BaseClass::StableContainer(Some(max)) => {
                 let max = max as usize;
+                let field_names: Vec<Ident> = self
+                    .fields
+                    .iter()
+                    .map(|f| Ident::new(&f.name, Span::call_site()))
+                    .collect();
+
                 quote! {
                     impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ref_ident<'a> {
                         fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -828,7 +861,6 @@ impl ClassDef {
                         fn tree_hash_root(&self) -> H::Output {
                             use tree_hash::TreeHash;
 
-                            // TODO: Implement proper StableContainer tree hashing with active fields
                             let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(#max);
                             #(
                                 let #field_names = self.#field_names().expect("valid view");
@@ -842,6 +874,11 @@ impl ClassDef {
             }
             BaseClass::Profile(Some((_, max))) => {
                 let max = max as usize;
+                let field_names: Vec<Ident> = self
+                    .fields
+                    .iter()
+                    .map(|f| Ident::new(&f.name, Span::call_site()))
+                    .collect();
                 let indices: Vec<usize> = self.fields.iter().map(|f| f.index).collect();
 
                 quote! {
@@ -861,7 +898,6 @@ impl ClassDef {
                         fn tree_hash_root(&self) -> H::Output {
                             use tree_hash::TreeHash;
 
-                            // TODO: Implement proper Profile tree hashing with stable indices
                             let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(#max);
                             #(
                                 {
