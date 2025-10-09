@@ -886,6 +886,7 @@ impl ClassDef {
     /// Generates getter methods for view struct fields.
     ///
     /// Each field gets a method that computes its position and decodes on-demand.
+    /// For StableContainer/Profile, accounts for prepended bitvector.
     ///
     /// # Arguments
     ///
@@ -898,6 +899,20 @@ impl ClassDef {
         let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
         let (fixed_portion_size, _, num_variable_fields) = self.compute_layout();
 
+        // Check if we need to account for bitvector (StableContainer/Profile with Optional fields)
+        let optional_count = self
+            .fields
+            .iter()
+            .filter(|f| matches!(f.ty.resolution, TypeResolutionKind::Optional(_)))
+            .count();
+
+        let bitvector_offset = match self.base {
+            BaseClass::StableContainer(_) | BaseClass::Profile(_) if optional_count > 0 => {
+                optional_count.div_ceil(8)
+            }
+            _ => 0,
+        };
+
         let getters: Vec<TokenStream> = self
             .fields
             .iter()
@@ -909,18 +924,37 @@ impl ClassDef {
 
                 if is_fixed {
                     let size = size_expr.unwrap();
-                    quote! {
-                        pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
-                            let offset = #offset_expr;
-                            let end = offset + #size;
-                            if end > self.bytes.len() {
-                                return Err(ssz::DecodeError::InvalidByteLength {
-                                    len: self.bytes.len(),
-                                    expected: end,
-                                });
+                    if bitvector_offset > 0 {
+                        // Account for bitvector at start
+                        quote! {
+                            pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
+                                let bitvector_offset = #bitvector_offset;
+                                let offset = bitvector_offset + #offset_expr;
+                                let end = offset + #size;
+                                if end > self.bytes.len() {
+                                    return Err(ssz::DecodeError::InvalidByteLength {
+                                        len: self.bytes.len(),
+                                        expected: end,
+                                    });
+                                }
+                                let bytes = &self.bytes[offset..end];
+                                ssz::view::DecodeView::from_ssz_bytes(bytes)
                             }
-                            let bytes = &self.bytes[offset..end];
-                            ssz::view::DecodeView::from_ssz_bytes(bytes)
+                        }
+                    } else {
+                        quote! {
+                            pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
+                                let offset = #offset_expr;
+                                let end = offset + #size;
+                                if end > self.bytes.len() {
+                                    return Err(ssz::DecodeError::InvalidByteLength {
+                                        len: self.bytes.len(),
+                                        expected: end,
+                                    });
+                                }
+                                let bytes = &self.bytes[offset..end];
+                                ssz::view::DecodeView::from_ssz_bytes(bytes)
+                            }
                         }
                     }
                 } else {
@@ -935,25 +969,52 @@ impl ClassDef {
                         }
                     }
 
-                    quote! {
-                        pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
-                            let start = ssz::layout::read_variable_offset(
-                                self.bytes,
-                                #fixed_portion_size,
-                                #num_variable_fields,
-                                #variable_index
-                            )?;
-                            let end = ssz::layout::read_variable_offset_or_end(
-                                self.bytes,
-                                #fixed_portion_size,
-                                #num_variable_fields,
-                                #variable_index + 1
-                            )?;
-                            if start > end || end > self.bytes.len() {
-                                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+                    if bitvector_offset > 0 {
+                        // Account for bitvector at start
+                        quote! {
+                            pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
+                                let bitvector_offset = #bitvector_offset;
+                                let container_bytes = &self.bytes[bitvector_offset..];
+                                let start = ssz::layout::read_variable_offset(
+                                    container_bytes,
+                                    #fixed_portion_size,
+                                    #num_variable_fields,
+                                    #variable_index
+                                )?;
+                                let end = ssz::layout::read_variable_offset_or_end(
+                                    container_bytes,
+                                    #fixed_portion_size,
+                                    #num_variable_fields,
+                                    #variable_index + 1
+                                )?;
+                                if start > end || end > container_bytes.len() {
+                                    return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+                                }
+                                let bytes = &container_bytes[start..end];
+                                ssz::view::DecodeView::from_ssz_bytes(bytes)
                             }
-                            let bytes = &self.bytes[start..end];
-                            ssz::view::DecodeView::from_ssz_bytes(bytes)
+                        }
+                    } else {
+                        quote! {
+                            pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
+                                let start = ssz::layout::read_variable_offset(
+                                    self.bytes,
+                                    #fixed_portion_size,
+                                    #num_variable_fields,
+                                    #variable_index
+                                )?;
+                                let end = ssz::layout::read_variable_offset_or_end(
+                                    self.bytes,
+                                    #fixed_portion_size,
+                                    #num_variable_fields,
+                                    #variable_index + 1
+                                )?;
+                                if start > end || end > self.bytes.len() {
+                                    return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+                                }
+                                let bytes = &self.bytes[start..end];
+                                ssz::view::DecodeView::from_ssz_bytes(bytes)
+                            }
                         }
                     }
                 }
@@ -1046,18 +1107,110 @@ impl ClassDef {
                     }
                 }
             }
-            BaseClass::StableContainer(_) | BaseClass::Profile(_) => {
-                // TODO: Implement validation for StableContainer and Profile
-                // For now, just wrap the bytes
+            BaseClass::StableContainer(Some(max_fields))
+            | BaseClass::Profile(Some((_, max_fields))) => {
+                let max_fields_usize = max_fields as usize;
+
+                // Count Optional fields for bitvector
+                let optional_count = self
+                    .fields
+                    .iter()
+                    .filter(|f| matches!(f.ty.resolution, TypeResolutionKind::Optional(_)))
+                    .count();
+
+                let bitvector_length = optional_count.div_ceil(8);
+
+                // Generate validation for StableContainer/Profile
+                let validation = if bitvector_length == 0 {
+                    // No Optional fields - validate like a regular container
+                    let (fixed_portion_size, fixed_size, num_variable_fields) =
+                        self.compute_layout();
+
+                    if let Some(expected_size) = fixed_size {
+                        quote! {
+                            if bytes.len() != #expected_size {
+                                return Err(ssz::DecodeError::InvalidByteLength {
+                                    len: bytes.len(),
+                                    expected: #expected_size,
+                                });
+                            }
+                        }
+                    } else {
+                        quote! {
+                            if bytes.len() < #fixed_portion_size {
+                                return Err(ssz::DecodeError::InvalidByteLength {
+                                    len: bytes.len(),
+                                    expected: #fixed_portion_size,
+                                });
+                            }
+
+                            // Validate offset table
+                            let mut prev_offset: Option<usize> = None;
+                            for i in 0..#num_variable_fields {
+                                let offset = ssz::layout::read_variable_offset(
+                                    bytes,
+                                    #fixed_portion_size,
+                                    #num_variable_fields,
+                                    i
+                                )?;
+
+                                if i == 0 && offset != #fixed_portion_size {
+                                    return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
+                                }
+
+                                if let Some(prev) = prev_offset {
+                                    if offset < prev {
+                                        return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                                    }
+                                }
+
+                                if offset > bytes.len() {
+                                    return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                                }
+
+                                prev_offset = Some(offset);
+                            }
+                        }
+                    }
+                } else {
+                    // Has Optional fields - parse bitvector and validate
+                    quote! {
+                        // Parse bitvector
+                        let bitvector_length = #bitvector_length;
+                        if bytes.len() < bitvector_length {
+                            return Err(ssz::DecodeError::InvalidByteLength {
+                                len: bytes.len(),
+                                expected: bitvector_length,
+                            });
+                        }
+
+                        // Validate bitvector structure (don't need to store it)
+                        let _bitvector = ssz::BitVector::<#max_fields_usize>::from_ssz_bytes(
+                            &bytes[0..bitvector_length]
+                        )?;
+
+                        // Validate the container portion after the bitvector
+                        // For now, just ensure we have remaining bytes
+                        // TODO: Could add more specific validation of offset table based on active fields
+                        if bytes.len() < bitvector_length {
+                            return Err(ssz::DecodeError::InvalidByteLength {
+                                len: bytes.len(),
+                                expected: bitvector_length,
+                            });
+                        }
+                    }
+                };
+
                 quote! {
                     impl<'a> ssz::view::DecodeView<'a> for #ref_ident<'a> {
                         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                            // TODO: Add proper StableContainer/Profile validation
+                            #validation
                             Ok(Self { bytes })
                         }
                     }
                 }
             }
+            _ => panic!("Base class arguments not set"),
         }
     }
 

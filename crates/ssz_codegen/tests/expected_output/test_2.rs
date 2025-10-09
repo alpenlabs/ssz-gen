@@ -19,43 +19,47 @@ pub mod tests {
             }
             impl<'a> AlphaRef<'a> {
                 pub fn a(&self) -> Result<Optional<u8>, ssz::DecodeError> {
+                    let bitvector_offset = 1usize;
+                    let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
-                        self.bytes,
+                        container_bytes,
                         8usize,
                         2usize,
                         0usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
+                        container_bytes,
                         8usize,
                         2usize,
                         0usize + 1,
                     )?;
-                    if start > end || end > self.bytes.len() {
+                    if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
-                    let bytes = &self.bytes[start..end];
+                    let bytes = &container_bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn b(
                     &self,
                 ) -> Result<Optional<BitListRef<'a, 32usize>>, ssz::DecodeError> {
+                    let bitvector_offset = 1usize;
+                    let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
-                        self.bytes,
+                        container_bytes,
                         8usize,
                         2usize,
                         1usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
+                        container_bytes,
                         8usize,
                         2usize,
                         1usize + 1,
                     )?;
-                    if start > end || end > self.bytes.len() {
+                    if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
-                    let bytes = &self.bytes[start..end];
+                    let bytes = &container_bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
@@ -82,6 +86,22 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for AlphaRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    let bitvector_length = 1usize;
+                    if bytes.len() < bitvector_length {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: bytes.len(),
+                            expected: bitvector_length,
+                        });
+                    }
+                    let _bitvector = ssz::BitVector::<
+                        2usize,
+                    >::from_ssz_bytes(&bytes[0..bitvector_length])?;
+                    if bytes.len() < bitvector_length {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: bytes.len(),
+                            expected: bitvector_length,
+                        });
+                    }
                     Ok(Self { bytes })
                 }
             }
@@ -108,81 +128,89 @@ pub mod tests {
             }
             impl<'a> InnerBaseRef<'a> {
                 pub fn x(&self) -> Result<Optional<u8>, ssz::DecodeError> {
+                    let bitvector_offset = 1usize;
+                    let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
-                        self.bytes,
+                        container_bytes,
                         16usize,
                         4usize,
                         0usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
+                        container_bytes,
                         16usize,
                         4usize,
                         0usize + 1,
                     )?;
-                    if start > end || end > self.bytes.len() {
+                    if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
-                    let bytes = &self.bytes[start..end];
+                    let bytes = &container_bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn y(&self) -> Result<Optional<BytesRef<'a>>, ssz::DecodeError> {
+                    let bitvector_offset = 1usize;
+                    let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
-                        self.bytes,
+                        container_bytes,
                         16usize,
                         4usize,
                         1usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
+                        container_bytes,
                         16usize,
                         4usize,
                         1usize + 1,
                     )?;
-                    if start > end || end > self.bytes.len() {
+                    if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
-                    let bytes = &self.bytes[start..end];
+                    let bytes = &container_bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn z(
                     &self,
                 ) -> Result<Optional<BitVectorRef<'a, 16usize>>, ssz::DecodeError> {
+                    let bitvector_offset = 1usize;
+                    let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
-                        self.bytes,
+                        container_bytes,
                         16usize,
                         4usize,
                         2usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
+                        container_bytes,
                         16usize,
                         4usize,
                         2usize + 1,
                     )?;
-                    if start > end || end > self.bytes.len() {
+                    if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
-                    let bytes = &self.bytes[start..end];
+                    let bytes = &container_bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn w(&self) -> Result<Optional<AlphaRef<'a>>, ssz::DecodeError> {
+                    let bitvector_offset = 1usize;
+                    let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
-                        self.bytes,
+                        container_bytes,
                         16usize,
                         4usize,
                         3usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
+                        container_bytes,
                         16usize,
                         4usize,
                         3usize + 1,
                     )?;
-                    if start > end || end > self.bytes.len() {
+                    if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
-                    let bytes = &self.bytes[start..end];
+                    let bytes = &container_bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
@@ -213,6 +241,22 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for InnerBaseRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    let bitvector_length = 1usize;
+                    if bytes.len() < bitvector_length {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: bytes.len(),
+                            expected: bitvector_length,
+                        });
+                    }
+                    let _bitvector = ssz::BitVector::<
+                        8usize,
+                    >::from_ssz_bytes(&bytes[0..bitvector_length])?;
+                    if bytes.len() < bitvector_length {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: bytes.len(),
+                            expected: bitvector_length,
+                        });
+                    }
                     Ok(Self { bytes })
                 }
             }
@@ -245,7 +289,8 @@ pub mod tests {
             }
             impl<'a> InnerProfile1Ref<'a> {
                 pub fn x(&self) -> Result<u8, ssz::DecodeError> {
-                    let offset = 0usize;
+                    let bitvector_offset = 1usize;
+                    let offset = bitvector_offset + 0usize;
                     let end = offset + 1usize;
                     if end > self.bytes.len() {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -257,62 +302,68 @@ pub mod tests {
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn y(&self) -> Result<Optional<BytesRef<'a>>, ssz::DecodeError> {
+                    let bitvector_offset = 1usize;
+                    let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
-                        self.bytes,
+                        container_bytes,
                         13usize,
                         3usize,
                         0usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
+                        container_bytes,
                         13usize,
                         3usize,
                         0usize + 1,
                     )?;
-                    if start > end || end > self.bytes.len() {
+                    if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
-                    let bytes = &self.bytes[start..end];
+                    let bytes = &container_bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn z(
                     &self,
                 ) -> Result<Optional<BitVectorRef<'a, 16usize>>, ssz::DecodeError> {
+                    let bitvector_offset = 1usize;
+                    let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
-                        self.bytes,
+                        container_bytes,
                         13usize,
                         3usize,
                         1usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
+                        container_bytes,
                         13usize,
                         3usize,
                         1usize + 1,
                     )?;
-                    if start > end || end > self.bytes.len() {
+                    if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
-                    let bytes = &self.bytes[start..end];
+                    let bytes = &container_bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn w(&self) -> Result<Optional<AlphaRef<'a>>, ssz::DecodeError> {
+                    let bitvector_offset = 1usize;
+                    let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
-                        self.bytes,
+                        container_bytes,
                         13usize,
                         3usize,
                         2usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
+                        container_bytes,
                         13usize,
                         3usize,
                         2usize + 1,
                     )?;
-                    if start > end || end > self.bytes.len() {
+                    if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
-                    let bytes = &self.bytes[start..end];
+                    let bytes = &container_bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
@@ -355,6 +406,22 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for InnerProfile1Ref<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    let bitvector_length = 1usize;
+                    if bytes.len() < bitvector_length {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: bytes.len(),
+                            expected: bitvector_length,
+                        });
+                    }
+                    let _bitvector = ssz::BitVector::<
+                        8usize,
+                    >::from_ssz_bytes(&bytes[0..bitvector_length])?;
+                    if bytes.len() < bitvector_length {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: bytes.len(),
+                            expected: bitvector_length,
+                        });
+                    }
                     Ok(Self { bytes })
                 }
             }
@@ -385,45 +452,50 @@ pub mod tests {
             }
             impl<'a> InnerProfile2Ref<'a> {
                 pub fn x(&self) -> Result<Optional<u8>, ssz::DecodeError> {
+                    let bitvector_offset = 1usize;
+                    let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
-                        self.bytes,
+                        container_bytes,
                         10usize,
                         2usize,
                         0usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
+                        container_bytes,
                         10usize,
                         2usize,
                         0usize + 1,
                     )?;
-                    if start > end || end > self.bytes.len() {
+                    if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
-                    let bytes = &self.bytes[start..end];
+                    let bytes = &container_bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn y(&self) -> Result<BytesRef<'a>, ssz::DecodeError> {
+                    let bitvector_offset = 1usize;
+                    let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
-                        self.bytes,
+                        container_bytes,
                         10usize,
                         2usize,
                         1usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
+                        container_bytes,
                         10usize,
                         2usize,
                         1usize + 1,
                     )?;
-                    if start > end || end > self.bytes.len() {
+                    if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
-                    let bytes = &self.bytes[start..end];
+                    let bytes = &container_bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn z(&self) -> Result<BitVectorRef<'a, 16usize>, ssz::DecodeError> {
-                    let offset = 8usize;
+                    let bitvector_offset = 1usize;
+                    let offset = bitvector_offset + 8usize;
                     let end = offset + 2usize;
                     if end > self.bytes.len() {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -469,6 +541,22 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for InnerProfile2Ref<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    let bitvector_length = 1usize;
+                    if bytes.len() < bitvector_length {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: bytes.len(),
+                            expected: bitvector_length,
+                        });
+                    }
+                    let _bitvector = ssz::BitVector::<
+                        8usize,
+                    >::from_ssz_bytes(&bytes[0..bitvector_length])?;
+                    if bytes.len() < bitvector_length {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: bytes.len(),
+                            expected: bitvector_length,
+                        });
+                    }
                     Ok(Self { bytes })
                 }
             }
@@ -496,7 +584,8 @@ pub mod tests {
             }
             impl<'a> AlphaProfileRef<'a> {
                 pub fn a(&self) -> Result<u8, ssz::DecodeError> {
-                    let offset = 0usize;
+                    let bitvector_offset = 1usize;
+                    let offset = bitvector_offset + 0usize;
                     let end = offset + 1usize;
                     if end > self.bytes.len() {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -510,22 +599,24 @@ pub mod tests {
                 pub fn b(
                     &self,
                 ) -> Result<Optional<BitListRef<'a, 32usize>>, ssz::DecodeError> {
+                    let bitvector_offset = 1usize;
+                    let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
-                        self.bytes,
+                        container_bytes,
                         5usize,
                         1usize,
                         0usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
+                        container_bytes,
                         5usize,
                         1usize,
                         0usize + 1,
                     )?;
-                    if start > end || end > self.bytes.len() {
+                    if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
-                    let bytes = &self.bytes[start..end];
+                    let bytes = &container_bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
@@ -558,6 +649,22 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for AlphaProfileRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    let bitvector_length = 1usize;
+                    if bytes.len() < bitvector_length {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: bytes.len(),
+                            expected: bitvector_length,
+                        });
+                    }
+                    let _bitvector = ssz::BitVector::<
+                        2usize,
+                    >::from_ssz_bytes(&bytes[0..bitvector_length])?;
+                    if bytes.len() < bitvector_length {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: bytes.len(),
+                            expected: bitvector_length,
+                        });
+                    }
                     Ok(Self { bytes })
                 }
             }
@@ -625,6 +732,33 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for InnerProfile3Ref<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    if bytes.len() < 4usize {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: bytes.len(),
+                            expected: 4usize,
+                        });
+                    }
+                    let mut prev_offset: Option<usize> = None;
+                    for i in 0..1usize {
+                        let offset = ssz::layout::read_variable_offset(
+                            bytes,
+                            4usize,
+                            1usize,
+                            i,
+                        )?;
+                        if i == 0 && offset != 4usize {
+                            return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
+                        }
+                        if let Some(prev) = prev_offset {
+                            if offset < prev {
+                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                            }
+                        }
+                        if offset > bytes.len() {
+                            return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                        }
+                        prev_offset = Some(offset);
+                    }
                     Ok(Self { bytes })
                 }
             }
@@ -710,6 +844,33 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for InnerProfile4Ref<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    if bytes.len() < 6usize {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: bytes.len(),
+                            expected: 6usize,
+                        });
+                    }
+                    let mut prev_offset: Option<usize> = None;
+                    for i in 0..1usize {
+                        let offset = ssz::layout::read_variable_offset(
+                            bytes,
+                            6usize,
+                            1usize,
+                            i,
+                        )?;
+                        if i == 0 && offset != 6usize {
+                            return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
+                        }
+                        if let Some(prev) = prev_offset {
+                            if offset < prev {
+                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                            }
+                        }
+                        if offset > bytes.len() {
+                            return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                        }
+                        prev_offset = Some(offset);
+                    }
                     Ok(Self { bytes })
                 }
             }
@@ -815,6 +976,33 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for InnerProfile5Ref<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    if bytes.len() < 7usize {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: bytes.len(),
+                            expected: 7usize,
+                        });
+                    }
+                    let mut prev_offset: Option<usize> = None;
+                    for i in 0..1usize {
+                        let offset = ssz::layout::read_variable_offset(
+                            bytes,
+                            7usize,
+                            1usize,
+                            i,
+                        )?;
+                        if i == 0 && offset != 7usize {
+                            return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
+                        }
+                        if let Some(prev) = prev_offset {
+                            if offset < prev {
+                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                            }
+                        }
+                        if offset > bytes.len() {
+                            return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                        }
+                        prev_offset = Some(offset);
+                    }
                     Ok(Self { bytes })
                 }
             }
@@ -842,41 +1030,45 @@ pub mod tests {
             }
             impl<'a> ProfileProfileRef<'a> {
                 pub fn x(&self) -> Result<Optional<u8>, ssz::DecodeError> {
+                    let bitvector_offset = 1usize;
+                    let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
-                        self.bytes,
+                        container_bytes,
                         8usize,
                         2usize,
                         0usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
+                        container_bytes,
                         8usize,
                         2usize,
                         0usize + 1,
                     )?;
-                    if start > end || end > self.bytes.len() {
+                    if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
-                    let bytes = &self.bytes[start..end];
+                    let bytes = &container_bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn w(&self) -> Result<AlphaProfileRef<'a>, ssz::DecodeError> {
+                    let bitvector_offset = 1usize;
+                    let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
-                        self.bytes,
+                        container_bytes,
                         8usize,
                         2usize,
                         1usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
+                        container_bytes,
                         8usize,
                         2usize,
                         1usize + 1,
                     )?;
-                    if start > end || end > self.bytes.len() {
+                    if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
-                    let bytes = &self.bytes[start..end];
+                    let bytes = &container_bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
@@ -909,6 +1101,22 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for ProfileProfileRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    let bitvector_length = 1usize;
+                    if bytes.len() < bitvector_length {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: bytes.len(),
+                            expected: bitvector_length,
+                        });
+                    }
+                    let _bitvector = ssz::BitVector::<
+                        8usize,
+                    >::from_ssz_bytes(&bytes[0..bitvector_length])?;
+                    if bytes.len() < bitvector_length {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: bytes.len(),
+                            expected: bitvector_length,
+                        });
+                    }
                     Ok(Self { bytes })
                 }
             }
@@ -939,157 +1147,173 @@ pub mod tests {
             }
             impl<'a> ContainerContainerRef<'a> {
                 pub fn x(&self) -> Result<Optional<u16>, ssz::DecodeError> {
+                    let bitvector_offset = 1usize;
+                    let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
-                        self.bytes,
+                        container_bytes,
                         32usize,
                         8usize,
                         0usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
+                        container_bytes,
                         32usize,
                         8usize,
                         0usize + 1,
                     )?;
-                    if start > end || end > self.bytes.len() {
+                    if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
-                    let bytes = &self.bytes[start..end];
+                    let bytes = &container_bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn y(&self) -> Result<Optional<BytesRef<'a>>, ssz::DecodeError> {
+                    let bitvector_offset = 1usize;
+                    let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
-                        self.bytes,
+                        container_bytes,
                         32usize,
                         8usize,
                         1usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
+                        container_bytes,
                         32usize,
                         8usize,
                         1usize + 1,
                     )?;
-                    if start > end || end > self.bytes.len() {
+                    if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
-                    let bytes = &self.bytes[start..end];
+                    let bytes = &container_bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn z(
                     &self,
                 ) -> Result<Optional<BitVectorRef<'a, 16usize>>, ssz::DecodeError> {
+                    let bitvector_offset = 1usize;
+                    let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
-                        self.bytes,
+                        container_bytes,
                         32usize,
                         8usize,
                         2usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
+                        container_bytes,
                         32usize,
                         8usize,
                         2usize + 1,
                     )?;
-                    if start > end || end > self.bytes.len() {
+                    if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
-                    let bytes = &self.bytes[start..end];
+                    let bytes = &container_bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn w(&self) -> Result<Optional<AlphaRef<'a>>, ssz::DecodeError> {
+                    let bitvector_offset = 1usize;
+                    let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
-                        self.bytes,
+                        container_bytes,
                         32usize,
                         8usize,
                         3usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
+                        container_bytes,
                         32usize,
                         8usize,
                         3usize + 1,
                     )?;
-                    if start > end || end > self.bytes.len() {
+                    if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
-                    let bytes = &self.bytes[start..end];
+                    let bytes = &container_bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn a(&self) -> Result<Optional<u8>, ssz::DecodeError> {
+                    let bitvector_offset = 1usize;
+                    let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
-                        self.bytes,
+                        container_bytes,
                         32usize,
                         8usize,
                         4usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
+                        container_bytes,
                         32usize,
                         8usize,
                         4usize + 1,
                     )?;
-                    if start > end || end > self.bytes.len() {
+                    if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
-                    let bytes = &self.bytes[start..end];
+                    let bytes = &container_bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn b(&self) -> Result<Optional<u8>, ssz::DecodeError> {
+                    let bitvector_offset = 1usize;
+                    let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
-                        self.bytes,
+                        container_bytes,
                         32usize,
                         8usize,
                         5usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
+                        container_bytes,
                         32usize,
                         8usize,
                         5usize + 1,
                     )?;
-                    if start > end || end > self.bytes.len() {
+                    if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
-                    let bytes = &self.bytes[start..end];
+                    let bytes = &container_bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn c(&self) -> Result<Optional<u8>, ssz::DecodeError> {
+                    let bitvector_offset = 1usize;
+                    let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
-                        self.bytes,
+                        container_bytes,
                         32usize,
                         8usize,
                         6usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
+                        container_bytes,
                         32usize,
                         8usize,
                         6usize + 1,
                     )?;
-                    if start > end || end > self.bytes.len() {
+                    if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
-                    let bytes = &self.bytes[start..end];
+                    let bytes = &container_bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn d(&self) -> Result<Optional<u8>, ssz::DecodeError> {
+                    let bitvector_offset = 1usize;
+                    let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
-                        self.bytes,
+                        container_bytes,
                         32usize,
                         8usize,
                         7usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
+                        container_bytes,
                         32usize,
                         8usize,
                         7usize + 1,
                     )?;
-                    if start > end || end > self.bytes.len() {
+                    if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
-                    let bytes = &self.bytes[start..end];
+                    let bytes = &container_bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
@@ -1128,6 +1352,22 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for ContainerContainerRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    let bitvector_length = 1usize;
+                    if bytes.len() < bitvector_length {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: bytes.len(),
+                            expected: bitvector_length,
+                        });
+                    }
+                    let _bitvector = ssz::BitVector::<
+                        8usize,
+                    >::from_ssz_bytes(&bytes[0..bitvector_length])?;
+                    if bytes.len() < bitvector_length {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: bytes.len(),
+                            expected: bitvector_length,
+                        });
+                    }
                     Ok(Self { bytes })
                 }
             }
