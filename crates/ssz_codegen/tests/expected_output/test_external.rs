@@ -235,6 +235,9 @@ pub mod tests {
                 pub field_a: external_ssz::A,
                 pub field_b: external_ssz::module_a::module_b::B,
             }
+            /**Zero-copy view over [`ExternalContainer`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
             #[derive(Debug, Copy, Clone)]
             pub struct ExternalContainerRef<'a> {
                 bytes: &'a [u8],

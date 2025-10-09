@@ -560,6 +560,9 @@ pub mod tests {
                 pub opt_complex: OptionalComplex,
                 pub opt_union: OptionalUnion,
             }
+            /**Zero-copy view over [`UnionEdgeCases`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
             #[derive(Debug, Copy, Clone)]
             pub struct UnionEdgeCasesRef<'a> {
                 bytes: &'a [u8],
@@ -789,6 +792,9 @@ pub mod tests {
                 pub union2: NestedUnion,
                 pub union3: OptionalSimple,
             }
+            /**Zero-copy view over [`AllUnions`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
             #[derive(Debug, Copy, Clone)]
             pub struct AllUnionsRef<'a> {
                 bytes: &'a [u8],
