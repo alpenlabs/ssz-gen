@@ -27,3 +27,9 @@ tree_hash.workspace = true
 [dev-dependencies]
 serde_json.workspace = true
 tree_hash_derive.workspace = true
+criterion.workspace = true
+rand.workspace = true
+
+[[bench]]
+name = "view_vs_owned"
+harness = false
