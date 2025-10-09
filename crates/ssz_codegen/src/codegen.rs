@@ -144,14 +144,17 @@ impl<'a> CircleBufferCodegen<'a> {
             // Generate owned struct
             self.tokens.push(parent_class_def.to_token_stream(&ident));
 
-            // Generate view struct
+            // Generate view struct (thin wrapper)
             self.tokens.push(parent_class_def.to_view_struct(&ident));
 
-            // Generate DecodeView implementation
+            // Generate getter methods for view struct
+            self.tokens.push(parent_class_def.to_view_getters(&ident));
+
+            // Generate DecodeView implementation (validation-only)
             self.tokens
                 .push(parent_class_def.to_view_decode_impl(&ident));
 
-            // Generate to_owned implementation
+            // Generate to_owned implementation (uses getters)
             self.tokens
                 .push(parent_class_def.to_view_to_owned_impl(&ident));
 
