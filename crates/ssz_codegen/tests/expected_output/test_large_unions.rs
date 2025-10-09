@@ -17,25 +17,172 @@ pub mod tests {
                 Selector4(u128),
                 Selector5(u256),
             }
-            #[derive(TreeHash)]
-            #[tree_hash(enum_behaviour = "union")]
-            pub enum BigUnionRef<'a> {
-                Selector0(u8),
-                Selector1(u16),
-                Selector2(u32),
-                Selector3(u64),
-                Selector4(u128),
-                Selector5(u256),
+            #[derive(Debug, Copy, Clone)]
+            pub struct BigUnionRef<'a> {
+                bytes: &'a [u8],
             }
             impl<'a> BigUnionRef<'a> {
+                pub fn selector(&self) -> u8 {
+                    self.bytes[0]
+                }
+                pub fn as_selector0(&self) -> Result<u8, ssz::DecodeError> {
+                    if self.selector() != 0u8 {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                "Wrong selector for BigUnion: expected 0".to_string(),
+                            ),
+                        );
+                    }
+                    ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
+                }
+                pub fn as_selector1(&self) -> Result<u16, ssz::DecodeError> {
+                    if self.selector() != 1u8 {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                "Wrong selector for BigUnion: expected 1".to_string(),
+                            ),
+                        );
+                    }
+                    ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
+                }
+                pub fn as_selector2(&self) -> Result<u32, ssz::DecodeError> {
+                    if self.selector() != 2u8 {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                "Wrong selector for BigUnion: expected 2".to_string(),
+                            ),
+                        );
+                    }
+                    ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
+                }
+                pub fn as_selector3(&self) -> Result<u64, ssz::DecodeError> {
+                    if self.selector() != 3u8 {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                "Wrong selector for BigUnion: expected 3".to_string(),
+                            ),
+                        );
+                    }
+                    ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
+                }
+                pub fn as_selector4(&self) -> Result<u128, ssz::DecodeError> {
+                    if self.selector() != 4u8 {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                "Wrong selector for BigUnion: expected 4".to_string(),
+                            ),
+                        );
+                    }
+                    ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
+                }
+                pub fn as_selector5(&self) -> Result<u256, ssz::DecodeError> {
+                    if self.selector() != 5u8 {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                "Wrong selector for BigUnion: expected 5".to_string(),
+                            ),
+                        );
+                    }
+                    ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
+                }
                 pub fn to_owned(&self) -> BigUnion {
-                    match self {
-                        BigUnionRef::Selector0(v) => BigUnion::Selector0(*v),
-                        BigUnionRef::Selector1(v) => BigUnion::Selector1(*v),
-                        BigUnionRef::Selector2(v) => BigUnion::Selector2(*v),
-                        BigUnionRef::Selector3(v) => BigUnion::Selector3(*v),
-                        BigUnionRef::Selector4(v) => BigUnion::Selector4(*v),
-                        BigUnionRef::Selector5(v) => BigUnion::Selector5(*v),
+                    match self.selector() {
+                        0u8 => {
+                            BigUnion::Selector0(
+                                self.as_selector0().expect("valid selector"),
+                            )
+                        }
+                        1u8 => {
+                            BigUnion::Selector1(
+                                self.as_selector1().expect("valid selector"),
+                            )
+                        }
+                        2u8 => {
+                            BigUnion::Selector2(
+                                self.as_selector2().expect("valid selector"),
+                            )
+                        }
+                        3u8 => {
+                            BigUnion::Selector3(
+                                self.as_selector3().expect("valid selector"),
+                            )
+                        }
+                        4u8 => {
+                            BigUnion::Selector4(
+                                self.as_selector4().expect("valid selector"),
+                            )
+                        }
+                        5u8 => {
+                            BigUnion::Selector5(
+                                self.as_selector5().expect("valid selector"),
+                            )
+                        }
+                        _ => panic!("Invalid union selector: {}", self.selector()),
+                    }
+                }
+            }
+            impl<'a> ssz::view::DecodeView<'a> for BigUnionRef<'a> {
+                fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    let (_, _) = ssz::split_union_bytes(bytes)?;
+                    Ok(Self { bytes })
+                }
+            }
+            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
+            for BigUnionRef<'a> {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Vector
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Union should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Union should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    match self.selector() {
+                        0u8 => {
+                            let value = self.as_selector0().expect("valid selector");
+                            tree_hash::mix_in_selector_with_hasher::<
+                                H,
+                            >(&value.tree_hash_root(), 0u8)
+                                .expect("valid selector")
+                        }
+                        1u8 => {
+                            let value = self.as_selector1().expect("valid selector");
+                            tree_hash::mix_in_selector_with_hasher::<
+                                H,
+                            >(&value.tree_hash_root(), 1u8)
+                                .expect("valid selector")
+                        }
+                        2u8 => {
+                            let value = self.as_selector2().expect("valid selector");
+                            tree_hash::mix_in_selector_with_hasher::<
+                                H,
+                            >(&value.tree_hash_root(), 2u8)
+                                .expect("valid selector")
+                        }
+                        3u8 => {
+                            let value = self.as_selector3().expect("valid selector");
+                            tree_hash::mix_in_selector_with_hasher::<
+                                H,
+                            >(&value.tree_hash_root(), 3u8)
+                                .expect("valid selector")
+                        }
+                        4u8 => {
+                            let value = self.as_selector4().expect("valid selector");
+                            tree_hash::mix_in_selector_with_hasher::<
+                                H,
+                            >(&value.tree_hash_root(), 4u8)
+                                .expect("valid selector")
+                        }
+                        5u8 => {
+                            let value = self.as_selector5().expect("valid selector");
+                            tree_hash::mix_in_selector_with_hasher::<
+                                H,
+                            >(&value.tree_hash_root(), 5u8)
+                                .expect("valid selector")
+                        }
+                        _ => panic!("Invalid union selector: {}", self.selector()),
                     }
                 }
             }
@@ -48,27 +195,132 @@ pub mod tests {
                 Selector2(FixedVector<u16, 3usize>),
                 Selector3(BitVector<8usize>),
             }
-            #[derive(TreeHash)]
-            #[tree_hash(enum_behaviour = "union")]
-            pub enum MixedUnionRef<'a> {
-                Selector0(u8),
-                Selector1(BytesRef<'a>),
-                Selector2(FixedVectorRef<'a, u16, 3usize>),
-                Selector3(BitVectorRef<'a, 8usize>),
+            #[derive(Debug, Copy, Clone)]
+            pub struct MixedUnionRef<'a> {
+                bytes: &'a [u8],
             }
             impl<'a> MixedUnionRef<'a> {
+                pub fn selector(&self) -> u8 {
+                    self.bytes[0]
+                }
+                pub fn as_selector0(&self) -> Result<u8, ssz::DecodeError> {
+                    if self.selector() != 0u8 {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                "Wrong selector for MixedUnion: expected 0".to_string(),
+                            ),
+                        );
+                    }
+                    ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
+                }
+                pub fn as_selector1(&self) -> Result<BytesRef<'a>, ssz::DecodeError> {
+                    if self.selector() != 1u8 {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                "Wrong selector for MixedUnion: expected 1".to_string(),
+                            ),
+                        );
+                    }
+                    ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
+                }
+                pub fn as_selector2(
+                    &self,
+                ) -> Result<FixedVectorRef<'a, u16, 3usize>, ssz::DecodeError> {
+                    if self.selector() != 2u8 {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                "Wrong selector for MixedUnion: expected 2".to_string(),
+                            ),
+                        );
+                    }
+                    ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
+                }
+                pub fn as_selector3(
+                    &self,
+                ) -> Result<BitVectorRef<'a, 8usize>, ssz::DecodeError> {
+                    if self.selector() != 3u8 {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                "Wrong selector for MixedUnion: expected 3".to_string(),
+                            ),
+                        );
+                    }
+                    ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
+                }
                 pub fn to_owned(&self) -> MixedUnion {
-                    match self {
-                        MixedUnionRef::Selector0(v) => MixedUnion::Selector0(*v),
-                        MixedUnionRef::Selector1(v) => {
-                            MixedUnion::Selector1(v.to_owned())
+                    match self.selector() {
+                        0u8 => {
+                            MixedUnion::Selector0(
+                                self.as_selector0().expect("valid selector"),
+                            )
                         }
-                        MixedUnionRef::Selector2(v) => {
-                            MixedUnion::Selector2(v.to_owned())
+                        1u8 => {
+                            MixedUnion::Selector1(
+                                self.as_selector1().expect("valid selector").to_owned(),
+                            )
                         }
-                        MixedUnionRef::Selector3(v) => {
-                            MixedUnion::Selector3(v.to_owned())
+                        2u8 => {
+                            MixedUnion::Selector2(
+                                self.as_selector2().expect("valid selector").to_owned(),
+                            )
                         }
+                        3u8 => {
+                            MixedUnion::Selector3(
+                                self.as_selector3().expect("valid selector").to_owned(),
+                            )
+                        }
+                        _ => panic!("Invalid union selector: {}", self.selector()),
+                    }
+                }
+            }
+            impl<'a> ssz::view::DecodeView<'a> for MixedUnionRef<'a> {
+                fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    let (_, _) = ssz::split_union_bytes(bytes)?;
+                    Ok(Self { bytes })
+                }
+            }
+            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
+            for MixedUnionRef<'a> {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Vector
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Union should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Union should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    match self.selector() {
+                        0u8 => {
+                            let value = self.as_selector0().expect("valid selector");
+                            tree_hash::mix_in_selector_with_hasher::<
+                                H,
+                            >(&value.tree_hash_root(), 0u8)
+                                .expect("valid selector")
+                        }
+                        1u8 => {
+                            let value = self.as_selector1().expect("valid selector");
+                            tree_hash::mix_in_selector_with_hasher::<
+                                H,
+                            >(&value.tree_hash_root(), 1u8)
+                                .expect("valid selector")
+                        }
+                        2u8 => {
+                            let value = self.as_selector2().expect("valid selector");
+                            tree_hash::mix_in_selector_with_hasher::<
+                                H,
+                            >(&value.tree_hash_root(), 2u8)
+                                .expect("valid selector")
+                        }
+                        3u8 => {
+                            let value = self.as_selector3().expect("valid selector");
+                            tree_hash::mix_in_selector_with_hasher::<
+                                H,
+                            >(&value.tree_hash_root(), 3u8)
+                                .expect("valid selector")
+                        }
+                        _ => panic!("Invalid union selector: {}", self.selector()),
                     }
                 }
             }
@@ -81,21 +333,128 @@ pub mod tests {
                 Selector2(u8),
                 Selector3(u8),
             }
-            #[derive(TreeHash)]
-            #[tree_hash(enum_behaviour = "union")]
-            pub enum SameTypeUnionRef<'a> {
-                Selector0(u8),
-                Selector1(u8),
-                Selector2(u8),
-                Selector3(u8),
+            #[derive(Debug, Copy, Clone)]
+            pub struct SameTypeUnionRef<'a> {
+                bytes: &'a [u8],
             }
             impl<'a> SameTypeUnionRef<'a> {
+                pub fn selector(&self) -> u8 {
+                    self.bytes[0]
+                }
+                pub fn as_selector0(&self) -> Result<u8, ssz::DecodeError> {
+                    if self.selector() != 0u8 {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                "Wrong selector for SameTypeUnion: expected 0".to_string(),
+                            ),
+                        );
+                    }
+                    ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
+                }
+                pub fn as_selector1(&self) -> Result<u8, ssz::DecodeError> {
+                    if self.selector() != 1u8 {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                "Wrong selector for SameTypeUnion: expected 1".to_string(),
+                            ),
+                        );
+                    }
+                    ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
+                }
+                pub fn as_selector2(&self) -> Result<u8, ssz::DecodeError> {
+                    if self.selector() != 2u8 {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                "Wrong selector for SameTypeUnion: expected 2".to_string(),
+                            ),
+                        );
+                    }
+                    ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
+                }
+                pub fn as_selector3(&self) -> Result<u8, ssz::DecodeError> {
+                    if self.selector() != 3u8 {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                "Wrong selector for SameTypeUnion: expected 3".to_string(),
+                            ),
+                        );
+                    }
+                    ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
+                }
                 pub fn to_owned(&self) -> SameTypeUnion {
-                    match self {
-                        SameTypeUnionRef::Selector0(v) => SameTypeUnion::Selector0(*v),
-                        SameTypeUnionRef::Selector1(v) => SameTypeUnion::Selector1(*v),
-                        SameTypeUnionRef::Selector2(v) => SameTypeUnion::Selector2(*v),
-                        SameTypeUnionRef::Selector3(v) => SameTypeUnion::Selector3(*v),
+                    match self.selector() {
+                        0u8 => {
+                            SameTypeUnion::Selector0(
+                                self.as_selector0().expect("valid selector"),
+                            )
+                        }
+                        1u8 => {
+                            SameTypeUnion::Selector1(
+                                self.as_selector1().expect("valid selector"),
+                            )
+                        }
+                        2u8 => {
+                            SameTypeUnion::Selector2(
+                                self.as_selector2().expect("valid selector"),
+                            )
+                        }
+                        3u8 => {
+                            SameTypeUnion::Selector3(
+                                self.as_selector3().expect("valid selector"),
+                            )
+                        }
+                        _ => panic!("Invalid union selector: {}", self.selector()),
+                    }
+                }
+            }
+            impl<'a> ssz::view::DecodeView<'a> for SameTypeUnionRef<'a> {
+                fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    let (_, _) = ssz::split_union_bytes(bytes)?;
+                    Ok(Self { bytes })
+                }
+            }
+            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
+            for SameTypeUnionRef<'a> {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Vector
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Union should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Union should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    match self.selector() {
+                        0u8 => {
+                            let value = self.as_selector0().expect("valid selector");
+                            tree_hash::mix_in_selector_with_hasher::<
+                                H,
+                            >(&value.tree_hash_root(), 0u8)
+                                .expect("valid selector")
+                        }
+                        1u8 => {
+                            let value = self.as_selector1().expect("valid selector");
+                            tree_hash::mix_in_selector_with_hasher::<
+                                H,
+                            >(&value.tree_hash_root(), 1u8)
+                                .expect("valid selector")
+                        }
+                        2u8 => {
+                            let value = self.as_selector2().expect("valid selector");
+                            tree_hash::mix_in_selector_with_hasher::<
+                                H,
+                            >(&value.tree_hash_root(), 2u8)
+                                .expect("valid selector")
+                        }
+                        3u8 => {
+                            let value = self.as_selector3().expect("valid selector");
+                            tree_hash::mix_in_selector_with_hasher::<
+                                H,
+                            >(&value.tree_hash_root(), 3u8)
+                                .expect("valid selector")
+                        }
+                        _ => panic!("Invalid union selector: {}", self.selector()),
                     }
                 }
             }
