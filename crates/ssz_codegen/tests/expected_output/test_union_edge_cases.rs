@@ -698,26 +698,42 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
-                    let simple = self.simple().expect("valid view");
-                    hasher.write(simple.tree_hash_root().as_ref()).expect("write field");
-                    let nested = self.nested().expect("valid view");
-                    hasher.write(nested.tree_hash_root().as_ref()).expect("write field");
-                    let complex = self.complex().expect("valid view");
-                    hasher
-                        .write(complex.tree_hash_root().as_ref())
-                        .expect("write field");
-                    let opt_simple = self.opt_simple().expect("valid view");
-                    hasher
-                        .write(opt_simple.tree_hash_root().as_ref())
-                        .expect("write field");
-                    let opt_complex = self.opt_complex().expect("valid view");
-                    hasher
-                        .write(opt_complex.tree_hash_root().as_ref())
-                        .expect("write field");
-                    let opt_union = self.opt_union().expect("valid view");
-                    hasher
-                        .write(opt_union.tree_hash_root().as_ref())
-                        .expect("write field");
+                    {
+                        let simple = self.simple().expect("valid view");
+                        hasher
+                            .write(simple.tree_hash_root().as_ref())
+                            .expect("write field");
+                    }
+                    {
+                        let nested = self.nested().expect("valid view");
+                        hasher
+                            .write(nested.tree_hash_root().as_ref())
+                            .expect("write field");
+                    }
+                    {
+                        let complex = self.complex().expect("valid view");
+                        hasher
+                            .write(complex.tree_hash_root().as_ref())
+                            .expect("write field");
+                    }
+                    {
+                        let opt_simple = self.opt_simple().expect("valid view");
+                        hasher
+                            .write(opt_simple.tree_hash_root().as_ref())
+                            .expect("write field");
+                    }
+                    {
+                        let opt_complex = self.opt_complex().expect("valid view");
+                        hasher
+                            .write(opt_complex.tree_hash_root().as_ref())
+                            .expect("write field");
+                    }
+                    {
+                        let opt_union = self.opt_union().expect("valid view");
+                        hasher
+                            .write(opt_union.tree_hash_root().as_ref())
+                            .expect("write field");
+                    }
                     hasher.finish().expect("finish hasher")
                 }
             }
@@ -850,12 +866,24 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
-                    let union1 = self.union1().expect("valid view");
-                    hasher.write(union1.tree_hash_root().as_ref()).expect("write field");
-                    let union2 = self.union2().expect("valid view");
-                    hasher.write(union2.tree_hash_root().as_ref()).expect("write field");
-                    let union3 = self.union3().expect("valid view");
-                    hasher.write(union3.tree_hash_root().as_ref()).expect("write field");
+                    {
+                        let union1 = self.union1().expect("valid view");
+                        hasher
+                            .write(union1.tree_hash_root().as_ref())
+                            .expect("write field");
+                    }
+                    {
+                        let union2 = self.union2().expect("valid view");
+                        hasher
+                            .write(union2.tree_hash_root().as_ref())
+                            .expect("write field");
+                    }
+                    {
+                        let union3 = self.union3().expect("valid view");
+                        hasher
+                            .write(union3.tree_hash_root().as_ref())
+                            .expect("write field");
+                    }
                     hasher.finish().expect("finish hasher")
                 }
             }

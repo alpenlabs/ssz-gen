@@ -295,14 +295,18 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
-                    let field_a = self.field_a().expect("valid view");
-                    hasher
-                        .write(field_a.tree_hash_root().as_ref())
-                        .expect("write field");
-                    let field_b = self.field_b().expect("valid view");
-                    hasher
-                        .write(field_b.tree_hash_root().as_ref())
-                        .expect("write field");
+                    {
+                        let field_a = self.field_a().expect("valid view");
+                        hasher
+                            .write(field_a.tree_hash_root().as_ref())
+                            .expect("write field");
+                    }
+                    {
+                        let field_b = self.field_b().expect("valid view");
+                        hasher
+                            .write(field_b.tree_hash_root().as_ref())
+                            .expect("write field");
+                    }
                     hasher.finish().expect("finish hasher")
                 }
             }

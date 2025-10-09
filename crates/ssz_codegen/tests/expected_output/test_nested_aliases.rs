@@ -128,14 +128,30 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
-                    let field1 = self.field1().expect("valid view");
-                    hasher.write(field1.tree_hash_root().as_ref()).expect("write field");
-                    let field2 = self.field2().expect("valid view");
-                    hasher.write(field2.tree_hash_root().as_ref()).expect("write field");
-                    let field3 = self.field3().expect("valid view");
-                    hasher.write(field3.tree_hash_root().as_ref()).expect("write field");
-                    let field4 = self.field4().expect("valid view");
-                    hasher.write(field4.tree_hash_root().as_ref()).expect("write field");
+                    {
+                        let field1 = self.field1().expect("valid view");
+                        hasher
+                            .write(field1.tree_hash_root().as_ref())
+                            .expect("write field");
+                    }
+                    {
+                        let field2 = self.field2().expect("valid view");
+                        hasher
+                            .write(field2.tree_hash_root().as_ref())
+                            .expect("write field");
+                    }
+                    {
+                        let field3 = self.field3().expect("valid view");
+                        hasher
+                            .write(field3.tree_hash_root().as_ref())
+                            .expect("write field");
+                    }
+                    {
+                        let field4 = self.field4().expect("valid view");
+                        hasher
+                            .write(field4.tree_hash_root().as_ref())
+                            .expect("write field");
+                    }
                     hasher.finish().expect("finish hasher")
                 }
             }

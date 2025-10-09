@@ -152,30 +152,42 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
-                    let tiny_list = self.tiny_list().expect("valid view");
-                    hasher
-                        .write(tiny_list.tree_hash_root().as_ref())
-                        .expect("write field");
-                    let std_list = self.std_list().expect("valid view");
-                    hasher
-                        .write(std_list.tree_hash_root().as_ref())
-                        .expect("write field");
-                    let large_list = self.large_list().expect("valid view");
-                    hasher
-                        .write(large_list.tree_hash_root().as_ref())
-                        .expect("write field");
-                    let tiny_vec = self.tiny_vec().expect("valid view");
-                    hasher
-                        .write(tiny_vec.tree_hash_root().as_ref())
-                        .expect("write field");
-                    let std_vec = self.std_vec().expect("valid view");
-                    hasher
-                        .write(std_vec.tree_hash_root().as_ref())
-                        .expect("write field");
-                    let large_vec = self.large_vec().expect("valid view");
-                    hasher
-                        .write(large_vec.tree_hash_root().as_ref())
-                        .expect("write field");
+                    {
+                        let tiny_list = self.tiny_list().expect("valid view");
+                        hasher
+                            .write(tiny_list.tree_hash_root().as_ref())
+                            .expect("write field");
+                    }
+                    {
+                        let std_list = self.std_list().expect("valid view");
+                        hasher
+                            .write(std_list.tree_hash_root().as_ref())
+                            .expect("write field");
+                    }
+                    {
+                        let large_list = self.large_list().expect("valid view");
+                        hasher
+                            .write(large_list.tree_hash_root().as_ref())
+                            .expect("write field");
+                    }
+                    {
+                        let tiny_vec = self.tiny_vec().expect("valid view");
+                        hasher
+                            .write(tiny_vec.tree_hash_root().as_ref())
+                            .expect("write field");
+                    }
+                    {
+                        let std_vec = self.std_vec().expect("valid view");
+                        hasher
+                            .write(std_vec.tree_hash_root().as_ref())
+                            .expect("write field");
+                    }
+                    {
+                        let large_vec = self.large_vec().expect("valid view");
+                        hasher
+                            .write(large_vec.tree_hash_root().as_ref())
+                            .expect("write field");
+                    }
                     hasher.finish().expect("finish hasher")
                 }
             }
