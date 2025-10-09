@@ -743,12 +743,19 @@ impl ClassDef {
     /// A [`TokenStream`] containing the generated Rust code for the view struct (e.g., `FooRef<'a>`).
     pub fn to_view_struct(&self, ident: &Ident) -> TokenStream {
         let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
+        let doc_comment = format!(
+            "Zero-copy view over [`{}`].\n\n\
+            This type wraps SSZ-encoded bytes without allocating. \
+            Fields are accessed via lazy getter methods. \
+            Use `.to_owned()` to convert to the owned type when needed.",
+            ident
+        );
 
         // All view structs are now thin wrappers around bytes
-        // TreeHash will be implemented by calling getters
         match self.base {
             BaseClass::Container | BaseClass::StableContainer(_) | BaseClass::Profile(_) => {
                 quote! {
+                    #[doc = #doc_comment]
                     #[derive(Debug, Copy, Clone)]
                     pub struct #ref_ident<'a> {
                         bytes: &'a [u8],
@@ -1226,8 +1233,9 @@ impl ClassDef {
                         )?;
 
                         // Validate the container portion after the bitvector
-                        // For now, just ensure we have remaining bytes
-                        // TODO: Could add more specific validation of offset table based on active fields
+                        // Note: More specific offset table validation based on active fields
+                        // could be added here as a future optimization, but current validation
+                        // is sufficient - getters will validate offsets when fields are accessed.
                         if bytes.len() < bitvector_length {
                             return Err(ssz::DecodeError::InvalidByteLength {
                                 len: bytes.len(),
