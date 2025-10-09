@@ -40,6 +40,7 @@
 pub mod bitfield;
 pub mod decode;
 pub mod encode;
+pub mod layout;
 pub mod legacy;
 /// Serde utilities for SSZ types.
 #[cfg(feature = "serde")]

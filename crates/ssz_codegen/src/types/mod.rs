@@ -184,19 +184,69 @@ impl TypeResolution {
         }
     }
 
-    /// Unwraps the BaseClass variant, panics if not a BaseClass
+    /// Unwraps the [`BaseClass`] variant, panics if not a [`BaseClass`].
     ///
     /// # Returns
     ///
-    /// The unwrapped BaseClass if this is a BaseClass variant
+    /// The unwrapped [`BaseClass`] if this is a [`BaseClass`] variant
     ///
     /// # Panics
     ///
-    /// Panics if the resolution is not a BaseClass
+    /// Panics if the resolution is not a [`BaseClass`].
     pub fn unwrap_base_class(self) -> BaseClass {
         match self.resolution {
             TypeResolutionKind::BaseClass(base_class) => base_class,
             _ => panic!("Expected type resolution to be a base class"),
+        }
+    }
+
+    /// Checks if this type is fixed-size in SSZ encoding.
+    ///
+    /// # Returns
+    ///
+    /// [`true`] if the type has a fixed size, [`false`] if variable-length.
+    pub fn is_fixed_size(&self) -> bool {
+        match &self.resolution {
+            TypeResolutionKind::Boolean => true,
+            TypeResolutionKind::UInt(_) => true,
+            TypeResolutionKind::Bytes(_) => true,
+            TypeResolutionKind::Bitvector(_) => true,
+            TypeResolutionKind::Vector(inner, _) => inner.is_fixed_size(),
+            TypeResolutionKind::List(_, _) => false,
+            TypeResolutionKind::Bitlist(_) => false,
+            TypeResolutionKind::Optional(_) => false,
+            TypeResolutionKind::Option(_) => false,
+            TypeResolutionKind::Union(_, _) => false,
+            TypeResolutionKind::Class(_) => false, // Containers can have variable fields
+            TypeResolutionKind::External => true,  // Assume external types are fixed
+            _ => false,
+        }
+    }
+
+    /// Returns the fixed size of this type in bytes (if it's fixed-size).
+    ///
+    /// # Returns
+    ///
+    /// `Some(size)` if the type is fixed-size, [`None`] otherwise
+    ///
+    /// # Panics
+    ///
+    /// Panics if called on a variable-size type.
+    pub fn fixed_size(&self) -> usize {
+        match &self.resolution {
+            TypeResolutionKind::Boolean => 1,
+            TypeResolutionKind::UInt(bits) => bits / 8,
+            TypeResolutionKind::Bytes(n) => *n,
+            TypeResolutionKind::Bitvector(bits) => (*bits as usize).div_ceil(8), // Round up to bytes
+            TypeResolutionKind::Vector(inner, count) => {
+                if inner.is_fixed_size() {
+                    inner.fixed_size() * (*count as usize)
+                } else {
+                    // Vector of variable-size items: offsets + data
+                    panic!("Cannot get fixed size of vector with variable-size items")
+                }
+            }
+            _ => panic!("Type {:?} is not fixed-size", self.resolution),
         }
     }
 
@@ -597,7 +647,92 @@ impl ClassDef {
         }
     }
 
+    /// Computes the SSZ layout for this container.
+    ///
+    /// This determines field offsets and whether the container is fixed or variable-size.
+    ///
+    /// # Returns
+    ///
+    /// A tuple of:
+    /// - fixed_portion_size: size in bytes of the fixed portion
+    /// - fixed_size: `Some(size)` if all fields are fixed-size, `None` otherwise
+    /// - num_variable_fields: count of variable-length fields
+    fn compute_layout(&self) -> (usize, Option<usize>, usize) {
+        let mut fixed_offset = 0usize;
+        let mut num_variable_fields = 0usize;
+        let mut has_variable_fields = false;
+
+        for field in &self.fields {
+            if field.ty.is_fixed_size() {
+                fixed_offset += field.ty.fixed_size();
+            } else {
+                has_variable_fields = true;
+                num_variable_fields += 1;
+                // Variable-length fields add an offset pointer to the fixed portion
+                fixed_offset += 4; // BYTES_PER_LENGTH_OFFSET
+            }
+        }
+
+        let fixed_size = if has_variable_fields {
+            None
+        } else {
+            Some(fixed_offset)
+        };
+
+        (fixed_offset, fixed_size, num_variable_fields)
+    }
+
+    /// Generates field layout information for a given field index.
+    ///
+    /// Returns (offset_expr, is_fixed, size_expr) where:
+    /// - offset_expr: TokenStream to compute the field's byte offset
+    /// - is_fixed: whether the field is at a fixed offset
+    /// - size_expr: TokenStream to compute the field's size (or None for variable fields)
+    fn generate_field_layout(
+        &self,
+        field_index: usize,
+    ) -> (TokenStream, bool, Option<TokenStream>) {
+        let field = &self.fields[field_index];
+
+        // Calculate the offset based on preceding fields
+        let mut offset = 0usize;
+        let mut variable_index = 0usize;
+
+        for (i, f) in self.fields.iter().enumerate() {
+            if i == field_index {
+                break;
+            }
+            if f.ty.is_fixed_size() {
+                offset += f.ty.fixed_size();
+            } else {
+                variable_index += 1;
+                offset += 4; // BYTES_PER_LENGTH_OFFSET
+            }
+        }
+
+        if field.ty.is_fixed_size() {
+            let size = field.ty.fixed_size();
+            (quote! { #offset }, true, Some(quote! { #size }))
+        } else {
+            let (fixed_portion_size, _, num_variable_fields) = self.compute_layout();
+            (
+                quote! {
+                    ssz::layout::read_variable_offset(
+                        self.bytes,
+                        #fixed_portion_size,
+                        #num_variable_fields,
+                        #variable_index
+                    )?
+                },
+                false,
+                None,
+            )
+        }
+    }
+
     /// Generates the view struct definition for zero-copy decoding.
+    ///
+    /// Creates a thin wrapper around `&[u8]` instead of eagerly decoded fields.
     ///
     /// # Arguments
     ///
@@ -609,61 +744,107 @@ impl ClassDef {
     pub fn to_view_struct(&self, ident: &Ident) -> TokenStream {
         let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
 
-        // Generate view field tokens
-        let view_field_tokens: Vec<TokenStream> = self
+        // All view structs are now thin wrappers around bytes
+        // TreeHash will be implemented by calling getters
+        match self.base {
+            BaseClass::Container | BaseClass::StableContainer(_) | BaseClass::Profile(_) => {
+                quote! {
+                    #[derive(Debug, Copy, Clone)]
+                    pub struct #ref_ident<'a> {
+                        bytes: &'a [u8],
+                    }
+                }
+            }
+        }
+    }
+
+    /// Generates getter methods for view struct fields.
+    ///
+    /// Each field gets a method that computes its position and decodes on-demand.
+    ///
+    /// # Arguments
+    ///
+    /// * `ident` - The base identifier for the class (e.g., `Foo`)
+    ///
+    /// # Returns
+    ///
+    /// A [`TokenStream`] containing the impl block with getter methods.
+    pub fn to_view_getters(&self, ident: &Ident) -> TokenStream {
+        let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
+        let (fixed_portion_size, _, num_variable_fields) = self.compute_layout();
+
+        let getters: Vec<TokenStream> = self
             .fields
             .iter()
-            .map(|field| {
+            .enumerate()
+            .map(|(idx, field)| {
                 let field_name = Ident::new(&field.name, Span::call_site());
                 let view_ty = field.ty.to_view_type();
-                quote! { pub #field_name: #view_ty }
+                let (offset_expr, is_fixed, size_expr) = self.generate_field_layout(idx);
+
+                if is_fixed {
+                    let size = size_expr.unwrap();
+                    quote! {
+                        pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
+                            let offset = #offset_expr;
+                            let end = offset + #size;
+                            if end > self.bytes.len() {
+                                return Err(ssz::DecodeError::InvalidByteLength {
+                                    len: self.bytes.len(),
+                                    expected: end,
+                                });
+                            }
+                            let bytes = &self.bytes[offset..end];
+                            ssz::view::DecodeView::from_ssz_bytes(bytes)
+                        }
+                    }
+                } else {
+                    // Variable-length field
+                    let mut variable_index = 0usize;
+                    for (i, f) in self.fields.iter().enumerate() {
+                        if i == idx {
+                            break;
+                        }
+                        if !f.ty.is_fixed_size() {
+                            variable_index += 1;
+                        }
+                    }
+
+                    quote! {
+                        pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
+                            let start = ssz::layout::read_variable_offset(
+                                self.bytes,
+                                #fixed_portion_size,
+                                #num_variable_fields,
+                                #variable_index
+                            )?;
+                            let end = ssz::layout::read_variable_offset_or_end(
+                                self.bytes,
+                                #fixed_portion_size,
+                                #num_variable_fields,
+                                #variable_index + 1
+                            )?;
+                            if start > end || end > self.bytes.len() {
+                                return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+                            }
+                            let bytes = &self.bytes[start..end];
+                            ssz::view::DecodeView::from_ssz_bytes(bytes)
+                        }
+                    }
+                }
             })
             .collect();
 
-        match self.base {
-            BaseClass::Container => {
-                quote! {
-                    #[derive(TreeHash)]
-                    #[tree_hash(struct_behaviour="container")]
-                    pub struct #ref_ident<'a> {
-                        #(#view_field_tokens),*
-                    }
-                }
+        quote! {
+            impl<'a> #ref_ident<'a> {
+                #(#getters)*
             }
-            BaseClass::StableContainer(Some(max)) => {
-                let max = max as usize;
-                quote! {
-                    #[derive(TreeHash)]
-                    #[tree_hash(struct_behaviour="stable_container", max_fields=#max)]
-                    pub struct #ref_ident<'a> {
-                        #(#view_field_tokens),*
-                    }
-                }
-            }
-            BaseClass::Profile(Some((_, max))) => {
-                let max = max as usize;
-                let index = self
-                    .fields
-                    .iter()
-                    .map(|field| field.index)
-                    .collect::<Vec<_>>();
-
-                quote! {
-                    #[derive(TreeHash)]
-                    #[tree_hash(struct_behaviour="profile", max_fields=#max)]
-                    pub struct #ref_ident<'a> {
-                        #(
-                            #[tree_hash(stable_index = #index)]
-                            #view_field_tokens
-                        ),*
-                    }
-                }
-            }
-            _ => panic!("Base class arguments not set"),
         }
     }
 
     /// Generates the [`DecodeView`](ssz::view::DecodeView) implementation for the view struct
+    ///
+    /// Now performs validation-only construction - no eager field decoding.
     ///
     /// # Arguments
     ///
@@ -674,64 +855,80 @@ impl ClassDef {
     /// A [`TokenStream`] containing the [`DecodeView`](ssz::view::DecodeView) implementation
     pub fn to_view_decode_impl(&self, ident: &Ident) -> TokenStream {
         let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
-
-        // Generate field decode calls
-        let field_decodes: Vec<TokenStream> = self
-            .fields
-            .iter()
-            .map(|field| {
-                let field_name = Ident::new(&field.name, Span::call_site());
-                quote! {
-                    let #field_name = decoder.decode_next_view()?;
-                }
-            })
-            .collect();
-
-        let field_names: Vec<Ident> = self
-            .fields
-            .iter()
-            .map(|field| Ident::new(&field.name, Span::call_site()))
-            .collect();
-
-        // Generate type registration for the builder
-        let type_registrations: Vec<TokenStream> = self
-            .fields
-            .iter()
-            .map(|field| {
-                let owned_ty = field.ty.unwrap_type();
-                quote! {
-                    builder.register_type::<#owned_ty>()?;
-                }
-            })
-            .collect();
+        let (fixed_portion_size, fixed_size, num_variable_fields) = self.compute_layout();
 
         match self.base {
             BaseClass::Container => {
+                // Generate validation code based on whether container is fixed or variable size
+                let validation = if let Some(expected_size) = fixed_size {
+                    // Fixed-size container: just check length
+                    quote! {
+                        if bytes.len() != #expected_size {
+                            return Err(ssz::DecodeError::InvalidByteLength {
+                                len: bytes.len(),
+                                expected: #expected_size,
+                            });
+                        }
+                    }
+                } else {
+                    // Variable-size container: validate offset table
+                    quote! {
+                        if bytes.len() < #fixed_portion_size {
+                            return Err(ssz::DecodeError::InvalidByteLength {
+                                len: bytes.len(),
+                                expected: #fixed_portion_size,
+                            });
+                        }
+
+                        // Validate offset table
+                        let mut prev_offset: Option<usize> = None;
+                        for i in 0..#num_variable_fields {
+                            let offset = ssz::layout::read_variable_offset(
+                                bytes,
+                                #fixed_portion_size,
+                                #num_variable_fields,
+                                i
+                            )?;
+
+                            // First offset should point to start of variable portion
+                            if i == 0 && offset != #fixed_portion_size {
+                                return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
+                            }
+
+                            // Offsets must not decrease
+                            if let Some(prev) = prev_offset {
+                                if offset < prev {
+                                    return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                                }
+                            }
+
+                            // Offset must not exceed container length
+                            if offset > bytes.len() {
+                                return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                            }
+
+                            prev_offset = Some(offset);
+                        }
+                    }
+                };
+
                 quote! {
                     impl<'a> ssz::view::DecodeView<'a> for #ref_ident<'a> {
                         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                            let mut builder = ssz::SszDecoderBuilder::new(bytes);
-                            #(#type_registrations)*
-                            let mut decoder = builder.build()?;
-                            #(#field_decodes)*
-                            Ok(Self {
-                                #(#field_names),*
-                            })
+                            #validation
+                            Ok(Self { bytes })
                         }
                     }
                 }
             }
             BaseClass::StableContainer(_) | BaseClass::Profile(_) => {
+                // TODO: Implement validation for StableContainer and Profile
+                // For now, just wrap the bytes
                 quote! {
-                    impl<'a> DecodeView<'a> for #ref_ident<'a> {
+                    impl<'a> ssz::view::DecodeView<'a> for #ref_ident<'a> {
                         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                            let mut builder = SszDecoderBuilder::new(bytes);
-                            #(#type_registrations)*
-                            let mut decoder = builder.build()?;
-                            #(#field_decodes)*
-                            Ok(Self {
-                                #(#field_names),*
-                            })
+                            // TODO: Add proper StableContainer/Profile validation
+                            Ok(Self { bytes })
                         }
                     }
                 }
@@ -740,6 +937,8 @@ impl ClassDef {
     }
 
     /// Generates the to_owned implementation for converting view to owned
+    ///
+    /// Now uses getter methods instead of direct field access.
     ///
     /// # Arguments
     ///
@@ -751,22 +950,27 @@ impl ClassDef {
     pub fn to_view_to_owned_impl(&self, ident: &Ident) -> TokenStream {
         let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
 
-        // Generate field conversions
+        // Generate field conversions using getter methods
         let field_conversions: Vec<TokenStream> = self
             .fields
             .iter()
             .map(|field| {
                 let field_name = Ident::new(&field.name, Span::call_site());
 
-                // Determine if we need to call to_owned() or clone() for the field
+                // All fields now use getter methods and expect()
+                // We expect because if the view was constructed successfully, getters should work
                 match &field.ty.resolution {
                     TypeResolutionKind::Boolean | TypeResolutionKind::UInt(_) => {
-                        // Primitives can be copied directly
-                        quote! { #field_name: self.#field_name }
+                        // Primitives can be copied directly from getter
+                        quote! {
+                            #field_name: self.#field_name().expect("valid view")
+                        }
                     }
                     _ => {
-                        // For complex types, call to_owned()
-                        quote! { #field_name: self.#field_name.to_owned() }
+                        // For complex types, call getter and then to_owned()
+                        quote! {
+                            #field_name: self.#field_name().expect("valid view").to_owned()
+                        }
                     }
                 }
             })
