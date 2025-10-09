@@ -633,6 +633,9 @@ pub struct Alpha {
     pub b: u16,
     pub c: AliasVecB,
 }
+/**Zero-copy view over [`Alpha`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
 #[derive(Debug, Copy, Clone)]
 pub struct AlphaRef<'a> {
     bytes: &'a [u8],
@@ -733,6 +736,9 @@ pub struct Beta {
     pub e: u8,
     pub f: AliasUintAlias,
 }
+/**Zero-copy view over [`Beta`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
 #[derive(Debug, Copy, Clone)]
 pub struct BetaRef<'a> {
     bytes: &'a [u8],
@@ -855,6 +861,9 @@ pub struct Gamma {
     pub g: Optional<u8>,
     pub h: Optional<VariableList<AliasUintAlias, 8usize>>,
 }
+/**Zero-copy view over [`Gamma`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
 #[derive(Debug, Copy, Clone)]
 pub struct GammaRef<'a> {
     bytes: &'a [u8],
@@ -961,6 +970,9 @@ pub struct Delta {
     pub z: bool,
     pub w: u8,
 }
+/**Zero-copy view over [`Delta`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
 #[derive(Debug, Copy, Clone)]
 pub struct DeltaRef<'a> {
     bytes: &'a [u8],
@@ -1045,6 +1057,9 @@ pub struct Epsilon {
     pub i: Optional<u8>,
     pub j: Optional<AliasNested>,
 }
+/**Zero-copy view over [`Epsilon`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
 #[derive(Debug, Copy, Clone)]
 pub struct EpsilonRef<'a> {
     bytes: &'a [u8],
@@ -1199,6 +1214,9 @@ pub struct Zeta {
     pub u: Optional<FixedVector<u8, 16usize>>,
     pub v: Optional<AliasListAlias>,
 }
+/**Zero-copy view over [`Zeta`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
 #[derive(Debug, Copy, Clone)]
 pub struct ZetaRef<'a> {
     bytes: &'a [u8],
@@ -1306,6 +1324,9 @@ pub struct TestType {
     pub ddd: u8,
     pub eee: VariableList<u16, 3usize>,
 }
+/**Zero-copy view over [`TestType`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
 #[derive(Debug, Copy, Clone)]
 pub struct TestTypeRef<'a> {
     bytes: &'a [u8],
@@ -1429,6 +1450,9 @@ pub struct Eta {
     pub m: TestType,
     pub n: FirstUnion,
 }
+/**Zero-copy view over [`Eta`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
 #[derive(Debug, Copy, Clone)]
 pub struct EtaRef<'a> {
     bytes: &'a [u8],
@@ -1564,6 +1588,9 @@ pub struct Theta {
     pub p: UnionC,
     pub q: AliasVecA,
 }
+/**Zero-copy view over [`Theta`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
 #[derive(Debug, Copy, Clone)]
 pub struct ThetaRef<'a> {
     bytes: &'a [u8],
@@ -1695,6 +1722,9 @@ pub struct Iota {
     pub r: Optional<VariableList<AliasNested, 2usize>>,
     pub s: Optional<u8>,
 }
+/**Zero-copy view over [`Iota`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
 #[derive(Debug, Copy, Clone)]
 pub struct IotaRef<'a> {
     bytes: &'a [u8],
@@ -1900,6 +1930,9 @@ pub struct Kappa {
     pub u: Beta,
     pub v: BitVector<64usize>,
 }
+/**Zero-copy view over [`Kappa`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
 #[derive(Debug, Copy, Clone)]
 pub struct KappaRef<'a> {
     bytes: &'a [u8],
@@ -2027,6 +2060,9 @@ pub struct Lambda {
     pub w: Optional<u16>,
     pub x: Optional<u8>,
 }
+/**Zero-copy view over [`Lambda`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
 #[derive(Debug, Copy, Clone)]
 pub struct LambdaRef<'a> {
     bytes: &'a [u8],
@@ -2131,6 +2167,9 @@ pub struct Mu {
     pub y: Lambda,
     pub z: UnionA,
 }
+/**Zero-copy view over [`Mu`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
 #[derive(Debug, Copy, Clone)]
 pub struct MuRef<'a> {
     bytes: &'a [u8],
@@ -2244,6 +2283,9 @@ pub struct Nu {
     pub bbb: BitAlias,
     pub test: Option<AliasMu>,
 }
+/**Zero-copy view over [`Nu`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
 #[derive(Debug, Copy, Clone)]
 pub struct NuRef<'a> {
     bytes: &'a [u8],

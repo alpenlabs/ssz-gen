@@ -13,6 +13,9 @@ pub mod tests {
                 pub a: Optional<u8>,
                 pub b: Optional<BitList<32usize>>,
             }
+            /**Zero-copy view over [`Alpha`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
             #[derive(Debug, Copy, Clone)]
             pub struct AlphaRef<'a> {
                 bytes: &'a [u8],
@@ -122,6 +125,9 @@ pub mod tests {
                 pub z: Optional<BitVector<16usize>>,
                 pub w: Optional<Alpha>,
             }
+            /**Zero-copy view over [`InnerBase`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
             #[derive(Debug, Copy, Clone)]
             pub struct InnerBaseRef<'a> {
                 bytes: &'a [u8],
@@ -283,6 +289,9 @@ pub mod tests {
                 #[tree_hash(stable_index = 3usize)]
                 pub w: Optional<Alpha>,
             }
+            /**Zero-copy view over [`InnerProfile1`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
             #[derive(Debug, Copy, Clone)]
             pub struct InnerProfile1Ref<'a> {
                 bytes: &'a [u8],
@@ -446,6 +455,9 @@ pub mod tests {
                 #[tree_hash(stable_index = 2usize)]
                 pub z: BitVector<16usize>,
             }
+            /**Zero-copy view over [`InnerProfile2`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
             #[derive(Debug, Copy, Clone)]
             pub struct InnerProfile2Ref<'a> {
                 bytes: &'a [u8],
@@ -578,6 +590,9 @@ pub mod tests {
                 #[tree_hash(stable_index = 1usize)]
                 pub b: Optional<BitList<32usize>>,
             }
+            /**Zero-copy view over [`AlphaProfile`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
             #[derive(Debug, Copy, Clone)]
             pub struct AlphaProfileRef<'a> {
                 bytes: &'a [u8],
@@ -683,6 +698,9 @@ pub mod tests {
                 #[tree_hash(stable_index = 3usize)]
                 pub w: AlphaProfile,
             }
+            /**Zero-copy view over [`InnerProfile3`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
             #[derive(Debug, Copy, Clone)]
             pub struct InnerProfile3Ref<'a> {
                 bytes: &'a [u8],
@@ -778,6 +796,9 @@ pub mod tests {
                 #[tree_hash(stable_index = 2usize)]
                 pub z: BitVector<16usize>,
             }
+            /**Zero-copy view over [`InnerProfile4`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
             #[derive(Debug, Copy, Clone)]
             pub struct InnerProfile4Ref<'a> {
                 bytes: &'a [u8],
@@ -893,6 +914,9 @@ pub mod tests {
                 #[tree_hash(stable_index = 3usize)]
                 pub w: Alpha,
             }
+            /**Zero-copy view over [`InnerProfile5`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
             #[derive(Debug, Copy, Clone)]
             pub struct InnerProfile5Ref<'a> {
                 bytes: &'a [u8],
@@ -1024,6 +1048,9 @@ pub mod tests {
                 #[tree_hash(stable_index = 3usize)]
                 pub w: AlphaProfile,
             }
+            /**Zero-copy view over [`ProfileProfile`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
             #[derive(Debug, Copy, Clone)]
             pub struct ProfileProfileRef<'a> {
                 bytes: &'a [u8],
@@ -1141,6 +1168,9 @@ pub mod tests {
                 pub c: Optional<u8>,
                 pub d: Optional<u8>,
             }
+            /**Zero-copy view over [`ContainerContainer`].
+
+This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
             #[derive(Debug, Copy, Clone)]
             pub struct ContainerContainerRef<'a> {
                 bytes: &'a [u8],
