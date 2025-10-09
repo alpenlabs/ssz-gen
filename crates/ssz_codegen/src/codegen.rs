@@ -150,6 +150,10 @@ impl<'a> CircleBufferCodegen<'a> {
             // Generate getter methods for view struct
             self.tokens.push(parent_class_def.to_view_getters(&ident));
 
+            // Generate TreeHash implementation for view struct
+            self.tokens
+                .push(parent_class_def.to_view_tree_hash_impl(&ident));
+
             // Generate DecodeView implementation (validation-only)
             self.tokens
                 .push(parent_class_def.to_view_decode_impl(&ident));

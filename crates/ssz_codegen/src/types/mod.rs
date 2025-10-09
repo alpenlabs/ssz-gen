@@ -218,7 +218,7 @@ impl TypeResolution {
             TypeResolutionKind::Option(_) => false,
             TypeResolutionKind::Union(_, _) => false,
             TypeResolutionKind::Class(_) => false, // Containers can have variable fields
-            TypeResolutionKind::External => true,  // Assume external types are fixed
+            TypeResolutionKind::External => false, // External types: unknown layout, treat as variable
             _ => false,
         }
     }
@@ -755,6 +755,131 @@ impl ClassDef {
                     }
                 }
             }
+        }
+    }
+
+    /// Generates TreeHash implementation for view structs.
+    ///
+    /// Uses getter methods to access fields for hashing.
+    ///
+    /// # Arguments
+    ///
+    /// * `ident` - The base identifier for the class (e.g., `Foo`)
+    ///
+    /// # Returns
+    ///
+    /// A [`TokenStream`] containing the TreeHash implementation.
+    pub fn to_view_tree_hash_impl(&self, ident: &Ident) -> TokenStream {
+        let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
+
+        // Generate field access expressions for tree hashing
+        let field_names: Vec<Ident> = self
+            .fields
+            .iter()
+            .map(|f| Ident::new(&f.name, Span::call_site()))
+            .collect();
+
+        match self.base {
+            BaseClass::Container => {
+                quote! {
+                    impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ref_ident<'a> {
+                        fn tree_hash_type() -> tree_hash::TreeHashType {
+                            tree_hash::TreeHashType::Container
+                        }
+
+                        fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                            unreachable!("Container should never be packed")
+                        }
+
+                        fn tree_hash_packing_factor() -> usize {
+                            unreachable!("Container should never be packed")
+                        }
+
+                        fn tree_hash_root(&self) -> H::Output {
+                            use tree_hash::TreeHash;
+
+                            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                            #(
+                                let #field_names = self.#field_names().expect("valid view");
+                                hasher.write(#field_names.tree_hash_root().as_ref()).expect("write field");
+                            )*
+
+                            hasher.finish().expect("finish hasher")
+                        }
+                    }
+                }
+            }
+            BaseClass::StableContainer(Some(max)) => {
+                let max = max as usize;
+                quote! {
+                    impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ref_ident<'a> {
+                        fn tree_hash_type() -> tree_hash::TreeHashType {
+                            tree_hash::TreeHashType::StableContainer
+                        }
+
+                        fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                            unreachable!("StableContainer should never be packed")
+                        }
+
+                        fn tree_hash_packing_factor() -> usize {
+                            unreachable!("StableContainer should never be packed")
+                        }
+
+                        fn tree_hash_root(&self) -> H::Output {
+                            use tree_hash::TreeHash;
+
+                            // TODO: Implement proper StableContainer tree hashing with active fields
+                            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(#max);
+                            #(
+                                let #field_names = self.#field_names().expect("valid view");
+                                hasher.write(#field_names.tree_hash_root().as_ref()).expect("write field");
+                            )*
+
+                            hasher.finish().expect("finish hasher")
+                        }
+                    }
+                }
+            }
+            BaseClass::Profile(Some((_, max))) => {
+                let max = max as usize;
+                let indices: Vec<usize> = self.fields.iter().map(|f| f.index).collect();
+
+                quote! {
+                    impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ref_ident<'a> {
+                        fn tree_hash_type() -> tree_hash::TreeHashType {
+                            tree_hash::TreeHashType::Container
+                        }
+
+                        fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                            unreachable!("Profile should never be packed")
+                        }
+
+                        fn tree_hash_packing_factor() -> usize {
+                            unreachable!("Profile should never be packed")
+                        }
+
+                        fn tree_hash_root(&self) -> H::Output {
+                            use tree_hash::TreeHash;
+
+                            // TODO: Implement proper Profile tree hashing with stable indices
+                            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(#max);
+                            #(
+                                {
+                                    let #field_names = self.#field_names().expect("valid view");
+                                    // Skip to the stable index
+                                    for _ in 0..#indices {
+                                        // Placeholder for proper index handling
+                                    }
+                                    hasher.write(#field_names.tree_hash_root().as_ref()).expect("write field");
+                                }
+                            )*
+
+                            hasher.finish().expect("finish hasher")
+                        }
+                    }
+                }
+            }
+            _ => panic!("Base class arguments not set"),
         }
     }
 
