@@ -543,12 +543,24 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
-                    let big = self.big().expect("valid view");
-                    hasher.write(big.tree_hash_root().as_ref()).expect("write field");
-                    let same = self.same().expect("valid view");
-                    hasher.write(same.tree_hash_root().as_ref()).expect("write field");
-                    let mixed = self.mixed().expect("valid view");
-                    hasher.write(mixed.tree_hash_root().as_ref()).expect("write field");
+                    {
+                        let big = self.big().expect("valid view");
+                        hasher
+                            .write(big.tree_hash_root().as_ref())
+                            .expect("write field");
+                    }
+                    {
+                        let same = self.same().expect("valid view");
+                        hasher
+                            .write(same.tree_hash_root().as_ref())
+                            .expect("write field");
+                    }
+                    {
+                        let mixed = self.mixed().expect("valid view");
+                        hasher
+                            .write(mixed.tree_hash_root().as_ref())
+                            .expect("write field");
+                    }
                     hasher.finish().expect("finish hasher")
                 }
             }
