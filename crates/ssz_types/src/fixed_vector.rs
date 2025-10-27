@@ -3,7 +3,9 @@
 
 use crate::Error;
 use crate::tree_hash::vec_tree_hash_root;
+#[cfg(feature = "serde")]
 use serde::Deserialize;
+#[cfg(feature = "serde")]
 use serde_derive::Serialize;
 use std::ops::{Deref, DerefMut, Index, IndexMut};
 use std::slice::SliceIndex;
@@ -42,8 +44,9 @@ use std::slice::SliceIndex;
 /// let long: FixedVector<_, 5> = FixedVector::from(base);
 /// assert_eq!(&long[..], &[1, 2, 3, 4, 0]);
 /// ```
-#[derive(Debug, Clone, Serialize)]
-#[serde(transparent)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct FixedVector<T, const N: usize> {
     vec: Vec<T>,
 }
@@ -338,6 +341,7 @@ where
     }
 }
 
+#[cfg(feature = "serde")]
 impl<'de, T, const N: usize> Deserialize<'de> for FixedVector<T, N>
 where
     T: Deserialize<'de>,
@@ -575,7 +579,10 @@ mod test {
         assert_eq!(hashset.len(), 2);
     }
     #[test]
+    #[cfg(feature = "serde")]
     fn serde_invalid_length() {
+        use serde_json;
+
         let json = serde_json::json!([1, 2, 3, 4, 5]);
         let result: Result<FixedVector<u64, 4>, _> = serde_json::from_value(json);
         assert!(result.is_err());

@@ -22,14 +22,17 @@ name = "ssz"
 ssz_derive.workspace = true
 serde_json.workspace = true
 ssz_primitives = { workspace = true, features = ["rand"] }
+serde.workspace = true
 
 [dependencies]
 arbitrary = { workspace = true, optional = true }
-hex.workspace = true
+hex = { workspace = true, optional = true }
 itertools.workspace = true
-serde.workspace = true
+serde = { workspace = true, optional = true }
 smallvec.workspace = true
 ssz_primitives.workspace = true
 
 [features]
+default = []
 arbitrary = ["dep:arbitrary"]
+serde = ["dep:serde", "dep:hex"]
