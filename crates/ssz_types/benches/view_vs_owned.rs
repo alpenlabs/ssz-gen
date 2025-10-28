@@ -18,12 +18,14 @@
     reason = "criterion macros are annoying clippy"
 )]
 
-use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
-use ssz::view::DecodeView;
-use ssz::{Decode, Encode};
-use ssz_types::view::{FixedVectorRef, VariableListRef};
-use ssz_types::{FixedVector, VariableList};
 use std::hint::black_box;
+
+use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
+use ssz::{Decode, Encode, view::DecodeView};
+use ssz_types::{
+    FixedVector, VariableList,
+    view::{FixedVectorRef, VariableListRef},
+};
 use tree_hash::{Sha256Hasher, TreeHash};
 
 // Helper to generate `Vec<u64>` test data.

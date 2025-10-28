@@ -3,9 +3,11 @@
 
 //! SSZ decoding module
 
-use super::*;
-use smallvec::{SmallVec, smallvec};
 use std::cmp::Ordering;
+
+use smallvec::{SmallVec, smallvec};
+
+use super::*;
 
 type SmallVec8<T> = SmallVec<[T; 8]>;
 
@@ -80,8 +82,8 @@ pub enum DecodeError {
 /// - `offset`: the offset bytes (e.g., result of `read_offset(..)`).
 /// - `previous_offset`: unless this is the first offset in the SSZ object, the value of the
 ///   previously-read offset. Used to ensure offsets are not decreasing.
-/// - `num_bytes`: the total number of bytes in the SSZ object. Used to ensure the offset is not
-///   out of bounds.
+/// - `num_bytes`: the total number of bytes in the SSZ object. Used to ensure the offset is not out
+///   of bounds.
 /// - `num_fixed_bytes`: the number of fixed-bytes in the struct, if it is known. Used to ensure
 ///   that the first offset doesn't skip any variable bytes.
 ///
@@ -293,8 +295,8 @@ impl<'a> SszDecoderBuilder<'a> {
 /// ## Example
 ///
 /// ```rust
-/// use ssz_derive::{Encode, Decode};
 /// use ssz::{Decode, Encode, SszDecoder, SszDecoderBuilder};
+/// use ssz_derive::{Decode, Encode};
 ///
 /// #[derive(PartialEq, Debug, Encode, Decode)]
 /// struct Foo {
@@ -305,7 +307,7 @@ impl<'a> SszDecoderBuilder<'a> {
 /// fn ssz_decoding_example() {
 ///     let foo = Foo {
 ///         a: 42,
-///         b: vec![1, 3, 3, 7]
+///         b: vec![1, 3, 3, 7],
 ///     };
 ///
 ///     let bytes = foo.as_ssz_bytes();
@@ -324,7 +326,6 @@ impl<'a> SszDecoderBuilder<'a> {
 ///
 ///     assert_eq!(foo, decoded_foo);
 /// }
-///
 /// ```
 #[derive(Debug)]
 pub struct SszDecoder<'a> {
@@ -357,8 +358,10 @@ impl<'a> SszDecoder<'a> {
     /// # Example
     ///
     /// ```rust
-    /// use ssz::{SszDecoderBuilder, Decode};
-    /// use ssz::view::{DecodeView, BytesRef};
+    /// use ssz::{
+    ///     Decode, SszDecoderBuilder,
+    ///     view::{BytesRef, DecodeView},
+    /// };
     ///
     /// # fn example() -> Result<(), ssz::DecodeError> {
     /// let bytes = vec![0x01, 0x02, 0x03];

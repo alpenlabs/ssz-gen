@@ -16,13 +16,11 @@ mod merkleize_standard;
 
 use std::sync::LazyLock;
 
+use digest::Digest;
 pub use merkle_hasher::{Error, MerkleHasher};
 pub use merkleize_padded::merkleize_padded_with_hasher;
 pub use merkleize_standard::merkleize_standard_with_hasher;
-
-use digest::Digest;
 use sha2 as _;
-
 use smallvec::SmallVec;
 
 /// Number of bytes in a chunk
@@ -197,7 +195,8 @@ pub fn hash_fixed_with_digest<D: Digest + Default>(data: &[u8]) -> [u8; 32] {
 
 /// Convenience method for `MerkleHasher` which also provides some fast-paths for small trees.
 ///
-/// `minimum_leaf_count` will only be used if it is greater than or equal to the minimum number of leaves that can be created from `bytes`.
+/// `minimum_leaf_count` will only be used if it is greater than or equal to the minimum number of
+/// leaves that can be created from `bytes`.
 pub fn merkle_root_with_hasher<H: TreeHashDigest>(
     bytes: &[u8],
     minimum_leaf_count: usize,
@@ -370,10 +369,11 @@ macro_rules! tree_hash_ssz_encoding_as_list {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use ssz_derive as _;
     use ssz_primitives as _;
     use tree_hash_derive as _;
+
+    use super::*;
 
     #[test]
     fn mix_length() {

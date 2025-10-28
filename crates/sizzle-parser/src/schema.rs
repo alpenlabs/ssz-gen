@@ -168,7 +168,8 @@ pub(crate) fn conv_module_to_schema<'a>(
                     };
 
                     if ident_targets.is_external() {
-                        // Treat all external types as non-const (we have no way of getting the value)
+                        // Treat all external types as non-const (we have no way of getting the
+                        // value)
                         resolver.decl_user_type(name.clone())?;
                         idents.insert(name.clone(), IdentTarget::Ty(TypeData {}));
                         aliases.push(AliasDef {

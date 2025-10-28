@@ -2,7 +2,10 @@
 // Original source licensed under the Apache License 2.0
 
 #![feature(generic_const_exprs)]
-#![allow(incomplete_features, reason = "we need generic const exprs for BitVectorRef")]
+#![allow(
+    incomplete_features,
+    reason = "we need generic const exprs for BitVectorRef"
+)]
 
 //! Provides encoding (serialization) and decoding (deserialization) in the SimpleSerialize (SSZ)
 //! format designed for use in Ethereum 2.0.
@@ -32,7 +35,8 @@
 //! # let ssz_bytes = vec![0u8; 8];
 //! // Zero-copy view - validates structure but doesn't allocate
 //! let view = MyContainerRef::from_ssz_bytes(&ssz_bytes)?;
-//! let field = view.field_a()?;  // Lazy field access
+//! let field = view.field_a()?; // Lazy field access
+//!
 //! # Ok(())
 //! # }
 //! ```
@@ -40,8 +44,8 @@
 //! **Use owned types only when you need to modify data:**
 //!
 //! ```rust
-//! use ssz_derive::{Encode, Decode};
 //! use ssz::{Decode, Encode};
+//! use ssz_derive::{Decode, Encode};
 //!
 //! #[derive(PartialEq, Debug, Encode, Decode)]
 //! struct Foo {
@@ -52,7 +56,7 @@
 //! fn ssz_encode_decode_example() {
 //!     let foo = Foo {
 //!         a: 42,
-//!         b: vec![1, 3, 3, 7]
+//!         b: vec![1, 3, 3, 7],
 //!     };
 //!
 //!     let ssz_bytes: Vec<u8> = foo.as_ssz_bytes();

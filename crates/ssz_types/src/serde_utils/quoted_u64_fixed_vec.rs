@@ -2,17 +2,18 @@
 //!
 //! E.g., `FixedVector::from(vec![0, 1, 2])` serializes as `["0", "1", "2"]`.
 //!
-//! Quotes can be optional during decoding. If `N` does not equal the length deserialization will fail.
+//! Quotes can be optional during decoding. If `N` does not equal the length deserialization will
+//! fail.
 
 // The (de)serialisation functions for variable lists are now sufficiently general that we can
 // implement fixed vector (de)serialisation in terms of them.
-pub use crate::serde_utils::quoted_u64_var_list::deserialize;
-pub use crate::serde_utils::quoted_u64_var_list::serialize;
+pub use crate::serde_utils::quoted_u64_var_list::{deserialize, serialize};
 
 #[cfg(test)]
 mod test {
-    use crate::FixedVector;
     use serde_derive::{Deserialize, Serialize};
+
+    use crate::FixedVector;
 
     #[derive(Debug, Serialize, Deserialize)]
     struct Obj {

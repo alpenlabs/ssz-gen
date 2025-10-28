@@ -6,8 +6,7 @@
 //! ## Example
 //!
 //! ```rust
-//! use ssz::Encode;
-//! use ssz::view::DecodeView;
+//! use ssz::{Encode, view::DecodeView};
 //! use ssz_types::view::VariableListRef;
 //!
 //! // Encode a list of u64 values
@@ -26,11 +25,14 @@
 //! assert_eq!(&owned[..], &values[..]);
 //! ```
 
-use crate::{Error, FixedVector, VariableList};
-use ssz::DecodeError;
-use ssz::view::{DecodeView, ListRef, SszTypeInfo, VectorRef};
+use ssz::{
+    DecodeError,
+    view::{DecodeView, ListRef, SszTypeInfo, VectorRef},
+};
 use ssz_primitives::{FixedBytes, U128, U256};
 use tree_hash::{PackedEncoding, TreeHash, TreeHashDigest, TreeHashType};
+
+use crate::{Error, FixedVector, VariableList};
 
 /// A zero-copy reference to a [`VariableList<T, N>`](VariableList).
 ///
@@ -40,10 +42,8 @@ use tree_hash::{PackedEncoding, TreeHash, TreeHashDigest, TreeHashType};
 /// ## Example
 ///
 /// ```rust
-/// use ssz::Encode;
-/// use ssz::view::DecodeView;
-/// use ssz_types::view::VariableListRef;
-/// use ssz_types::VariableList;
+/// use ssz::{Encode, view::DecodeView};
+/// use ssz_types::{VariableList, view::VariableListRef};
 ///
 /// // Encode a variable list
 /// let list: VariableList<u64, 10> = vec![1, 2, 3].into();
@@ -194,7 +194,6 @@ where
     }
 }
 
-
 /// A zero-copy reference to a [`FixedVector<T, N>`](FixedVector).
 ///
 /// This type provides a borrowed view over an SSZ-encoded fixed-length vector without
@@ -203,10 +202,8 @@ where
 /// ## Example
 ///
 /// ```rust
-/// use ssz::Encode;
-/// use ssz::view::DecodeView;
-/// use ssz_types::view::FixedVectorRef;
-/// use ssz_types::FixedVector;
+/// use ssz::{Encode, view::DecodeView};
+/// use ssz_types::{FixedVector, view::FixedVectorRef};
 ///
 /// // Encode a fixed vector
 /// let vec: FixedVector<u64, 4> = vec![1, 2, 3, 4].into();
@@ -387,8 +384,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use ssz::{Decode, Encode};
+
+    use super::*;
 
     #[test]
     fn variable_list_ref_basic() {

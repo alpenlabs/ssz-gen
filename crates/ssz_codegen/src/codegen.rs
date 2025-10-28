@@ -1,5 +1,12 @@
 //! Code generation module for converting SSZ schemas into Rust code.
 
+use std::{cell::RefCell, collections::HashMap, path::PathBuf};
+
+use proc_macro2::{Span, TokenStream};
+use quote::quote;
+use sizzle_parser::{AliasDef as ParserAliasDef, ClassDef as ParserClassDef, SszSchema, tysys::Ty};
+use syn::{Ident, parse_quote};
+
 use crate::{
     ModuleGeneration,
     types::{
@@ -7,11 +14,6 @@ use crate::{
         resolver::TypeResolver,
     },
 };
-use proc_macro2::{Span, TokenStream};
-use quote::quote;
-use sizzle_parser::{AliasDef as ParserAliasDef, ClassDef as ParserClassDef, SszSchema, tysys::Ty};
-use std::{cell::RefCell, collections::HashMap, path::PathBuf};
-use syn::{Ident, parse_quote};
 
 /// Represents either an alias or class definition from the SSZ schema.
 #[derive(Debug)]
@@ -335,7 +337,8 @@ impl<'a> CircleBufferCodegen<'a> {
             _ => panic!("Expected profile to inherit from a stable container"),
         };
 
-        // If it's imported, we need to get the original stable container's definition from another module
+        // If it's imported, we need to get the original stable container's definition from another
+        // module
         let resolvers = type_resolver.resolvers.borrow();
         let stable_container_def = if let Some(parent_path) = parent_path {
             let resolver = resolvers.get(parent_path).unwrap();

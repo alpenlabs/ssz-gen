@@ -5,10 +5,11 @@
 
 #![allow(unused_crate_dependencies)]
 
-use ssz::Encode;
-use ssz::view::DecodeView;
-use ssz_types::view::{FixedVectorRef, VariableListRef};
-use ssz_types::{FixedVector, VariableList};
+use ssz::{Encode, view::DecodeView};
+use ssz_types::{
+    FixedVector, VariableList,
+    view::{FixedVectorRef, VariableListRef},
+};
 use tree_hash::{Sha256Hasher, TreeHash};
 
 #[test]

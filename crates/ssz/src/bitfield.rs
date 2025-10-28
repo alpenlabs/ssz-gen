@@ -3,15 +3,17 @@
 
 //! Bitfield implementation
 
-#[cfg(feature = "serde")]
-use crate::serde_utils::hex::{PrefixedHexVisitor, encode as hex_encode};
-use crate::{Decode, DecodeError, Encode};
 use core::marker::PhantomData;
+
 #[cfg(feature = "serde")]
 use serde::de::{Deserialize, Deserializer};
 #[cfg(feature = "serde")]
 use serde::ser::{Serialize, Serializer};
 use smallvec::{SmallVec, ToSmallVec, smallvec};
+
+#[cfg(feature = "serde")]
+use crate::serde_utils::hex::{PrefixedHexVisitor, encode as hex_encode};
+use crate::{Decode, DecodeError, Encode};
 
 pub(crate) mod bitvector_dynamic;
 
@@ -115,7 +117,6 @@ pub type BitVector<const N: usize> = Bitfield<Fixed<N>>;
 /// assert_eq!(bitvector.len(), 8); // `BitVector` length is fixed at the type-level.
 /// assert!(bitvector.set(7, true).is_ok());  // Setting inside the capacity is permitted.
 /// assert!(bitvector.set(9, true).is_err());  // Setting outside the capacity is not.
-///
 /// ```
 ///
 /// ## Note
@@ -164,8 +165,8 @@ impl<const N: usize> Bitfield<Variable<N>> {
     ///
     /// ## Example
     /// ```
-    /// use ssz::BitList;
     /// use smallvec::SmallVec;
+    /// use ssz::BitList;
     ///
     /// type BitList8 = BitList<8>;
     ///
@@ -307,14 +308,17 @@ impl<const N: usize> Bitfield<Fixed<N>> {
     ///
     /// ## Example
     /// ```
-    /// use ssz::BitVector;
     /// use smallvec::SmallVec;
+    /// use ssz::BitVector;
     ///
     /// type BitVector4 = BitVector<4>;
     ///
-    /// assert_eq!(BitVector4::new().into_bytes(), SmallVec::from_buf([0b0000_0000]));
+    /// assert_eq!(
+    ///     BitVector4::new().into_bytes(),
+    ///     SmallVec::from_buf([0b0000_0000])
+    /// );
     /// ```
-    pub fn into_bytes(self) -> SmallVec<[u8; SMALLVEC_LEN]> {
+    pub fn into_bytes(self) -> BitfieldSmallVec {
         self.into_raw_bytes()
     }
 

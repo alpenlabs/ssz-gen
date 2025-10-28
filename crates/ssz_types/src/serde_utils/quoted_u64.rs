@@ -7,10 +7,10 @@
 //!
 //! Quotes can be optional during decoding.
 
+use std::{convert::TryFrom, marker::PhantomData};
+
 use serde::{Deserializer, Serializer};
 use serde_derive::{Deserialize, Serialize};
-use std::convert::TryFrom;
-use std::marker::PhantomData;
 
 macro_rules! define_mod {
     ($int: ty) => {
@@ -74,8 +74,8 @@ macro_rules! define_mod {
 
         /// Wrapper type for requiring quotes on a `$int`-like type.
         ///
-        /// Unlike using `serde(with = "quoted_$int::require_quotes")` this is composable, and can be nested
-        /// inside types like `Option`, `Result` and `Vec`.
+        /// Unlike using `serde(with = "quoted_$int::require_quotes")` this is composable, and can
+        /// be nested inside types like `Option`, `Result` and `Vec`.
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
         #[serde(transparent)]
         pub struct Quoted<T>

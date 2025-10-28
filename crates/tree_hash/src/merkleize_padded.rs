@@ -28,8 +28,8 @@ use crate::{TreeHashDigest, hash_fixed_with_digest, hash32_concat};
 /// This algorithm has two interesting memory usage properties:
 ///
 /// 1. The maximum memory footprint is roughly `O(V / 2)` memory, where `V` is the number of leaf
-///    chunks with values (i.e., leaves that are not padding). The means adding padding nodes to
-///    the tree does not increase the memory footprint.
+///    chunks with values (i.e., leaves that are not padding). The means adding padding nodes to the
+///    tree does not increase the memory footprint.
 /// 2. At each height of the tree half of the memory is freed until only a single chunk is stored.
 /// 3. The input `bytes` are not copied into another list before processing.
 ///
@@ -129,8 +129,8 @@ pub fn merkleize_padded_with_hasher<H: TreeHashDigest>(
             let (left, right) = match (chunks.get(i * 2), chunks.get(i * 2 + 1)) {
                 (Ok(left), Ok(right)) => (left, right),
                 (Ok(left), Err(_)) => (left, H::get_zero_hash_slice(height)),
-                // Deriving `parent_nodes` from `chunks.len()` has ensured that we never encounter the
-                // scenario where we expect two nodes but there are none.
+                // Deriving `parent_nodes` from `chunks.len()` has ensured that we never encounter
+                // the scenario where we expect two nodes but there are none.
                 (Err(_), Err(_)) => unreachable!("Parent must have one child"),
                 // `chunks` is a contiguous array so it is impossible for an index to be missing
                 // when a higher index is present.
@@ -224,9 +224,7 @@ fn next_even_number(n: usize) -> usize {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::Hash256;
-    use crate::Sha256Hasher;
-    use crate::ZERO_HASHES_MAX_INDEX;
+    use crate::{Hash256, Sha256Hasher, ZERO_HASHES_MAX_INDEX};
 
     fn reference_root(bytes: &[u8]) -> Hash256 {
         crate::merkleize_standard_with_hasher::<Sha256Hasher>(bytes)
@@ -306,8 +304,9 @@ mod test {
     }
 
     mod random_value {
-        use super::*;
         use rand::RngCore;
+
+        use super::*;
 
         fn random_bytes(bytes: usize) -> Vec<u8> {
             let mut bytes = Vec::with_capacity(bytes);

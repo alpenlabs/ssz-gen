@@ -37,7 +37,6 @@
 //! assert_eq!(example.bit_list.len(), 4);
 //! assert_eq!(&example.variable_list[..], &[0, 1]);
 //! assert_eq!(&example.fixed_vector[..], &[2, 3, 0, 0, 0, 0, 0, 0]);
-//!
 //! ```
 
 #[macro_use]
@@ -49,19 +48,17 @@ mod tree_hash;
 mod variable_list;
 pub mod view;
 
-#[cfg(any(test, doctest))]
-use serde_json as _;
-
+#[cfg(test)]
+use criterion as _;
 pub use fixed_vector::FixedVector;
 pub use optional::Optional;
+#[cfg(test)]
+use rand as _;
+#[cfg(any(test, doctest))]
+use serde_json as _;
 pub use ssz::{BitList, BitVector, Bitfield};
 pub use ssz_primitives::{FixedBytes, Hash256, U128, U256};
 pub use variable_list::VariableList;
-
-#[cfg(test)]
-use criterion as _;
-#[cfg(test)]
-use rand as _;
 
 pub mod length {
     //! Length types for SSZ.

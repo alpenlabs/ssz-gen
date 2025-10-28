@@ -205,9 +205,10 @@ impl<'a, T: arbitrary::Arbitrary<'a>> arbitrary::Arbitrary<'a> for Optional<T> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use ssz::*;
     use tree_hash::TreeHash;
+
+    use super::*;
 
     #[test]
     fn new() {

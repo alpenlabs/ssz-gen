@@ -3,10 +3,13 @@
 
 //! TryFromIter trait definition and implementations
 
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    convert::Infallible,
+    fmt::Debug,
+};
+
 use smallvec::SmallVec;
-use std::collections::{BTreeMap, BTreeSet};
-use std::convert::Infallible;
-use std::fmt::Debug;
 
 /// Partial variant of `std::iter::FromIterator`.
 ///

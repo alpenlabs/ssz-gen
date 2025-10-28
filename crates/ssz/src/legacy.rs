@@ -12,8 +12,8 @@
 //! ## Example
 //!
 //! ```rust
-//! use ssz_derive::{Encode, Decode};
 //! use ssz::four_byte_option_impl;
+//! use ssz_derive::{Decode, Encode};
 //!
 //! four_byte_option_impl!(impl_for_u64, u64);
 //!
@@ -26,7 +26,8 @@
 
 use crate::*;
 
-/// A macro to implement the `Encode` and `Decode` traits for `Option<T>` where `T: Encode + Decode`.
+/// A macro to implement the `Encode` and `Decode` traits for `Option<T>` where `T: Encode +
+/// Decode`.
 #[macro_export]
 macro_rules! four_byte_option_impl {
     ($mod_name: ident, $type: ty) => {
@@ -38,9 +39,10 @@ macro_rules! four_byte_option_impl {
             pub mod encode {
                 //! SSZ encoding implementation for `Option<T>`
 
-                use super::*;
                 #[allow(unused_imports)]
                 use ssz::*;
+
+                use super::*;
 
                 /// Returns true if the SSZ encoding of `Option<T>` is a fixed length.
                 pub fn is_ssz_fixed_len() -> bool {
@@ -91,9 +93,10 @@ macro_rules! four_byte_option_impl {
             pub mod decode {
                 //! SSZ decoding implementation for `Option<T>`
 
-                use super::*;
                 #[allow(unused_imports)]
                 use ssz::*;
+
+                use super::*;
 
                 /// Returns true if the SSZ encoding of `Option<T>` is a fixed length.
                 pub fn is_ssz_fixed_len() -> bool {
@@ -145,9 +148,10 @@ pub fn read_four_byte_union_selector(bytes: &[u8]) -> Result<usize, DecodeError>
 
 #[cfg(test)]
 mod test {
+    use ssz_derive::{Decode, Encode};
+
     use super::*;
     use crate as ssz;
-    use ssz_derive::{Decode, Encode};
 
     type VecU16 = Vec<u16>;
 

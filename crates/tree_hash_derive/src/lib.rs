@@ -4,10 +4,11 @@
 //! Provides procedural derive macros for the `tree_hash::TreeHash` trait of `tree_hash` crate.
 
 #![recursion_limit = "256"]
+use std::convert::TryInto;
+
 use darling::{FromDeriveInput, FromMeta};
 use proc_macro::TokenStream;
 use quote::quote;
-use std::convert::TryInto;
 use syn::{DataEnum, DataStruct, DeriveInput, Expr, Ident, parse_macro_input};
 
 /// The highest possible union selector value (higher values are reserved for backwards compatible

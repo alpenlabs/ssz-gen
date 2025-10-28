@@ -7,18 +7,18 @@
 //! - Track and generate union types
 //! - Manage custom type definitions
 
-use crate::types::TypeResolutionKind;
+use std::{cell::RefCell, collections::HashMap, path::PathBuf, rc::Rc};
 
-use super::{BaseClass, ClassDef, ClassDefinition, TypeDefinition, TypeResolution};
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use sizzle_parser::Identifier;
-use sizzle_parser::tysys::{Ty, TyExpr};
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::rc::Rc;
+use sizzle_parser::{
+    Identifier,
+    tysys::{Ty, TyExpr},
+};
 use syn::{Ident, parse_quote};
+
+use super::{BaseClass, ClassDef, ClassDefinition, TypeDefinition, TypeResolution};
+use crate::types::TypeResolutionKind;
 
 /// Converts a primitive type name into a Rust syn::Type
 ///
@@ -163,7 +163,8 @@ impl<'a> TypeResolver<'a> {
             return self.resolve_imported_type(path, name);
         }
 
-        // Check if the type is a base class (Container, StableContainer, Profile or aliases to them)
+        // Check if the type is a base class (Container, StableContainer, Profile or aliases to
+        // them)
         let base_class = self.resolve_base_class(ty);
         if let Some(base_class) = base_class {
             return base_class;
@@ -367,7 +368,8 @@ impl<'a> TypeResolver<'a> {
                     let ident = alias_ident.unwrap().clone();
                     let ident_str = ident.to_string();
 
-                    // Generate the enum variants Selector0, Selector1, etc. and insert the union into our union tracker
+                    // Generate the enum variants Selector0, Selector1, etc. and insert the union
+                    // into our union tracker
                     let variants: Vec<syn::Variant> = args
                         .iter()
                         .enumerate()
@@ -719,7 +721,8 @@ impl<'a> TypeResolver<'a> {
             self.base_classes
                 .insert(alias_str.clone(), base_class.clone());
 
-            // Add the base class as an empty version of the base class itself for inheritance purposes
+            // Add the base class as an empty version of the base class itself for inheritance
+            // purposes
             let class_def = match &base_class {
                 BaseClass::Container => ClassDefinition::Custom(ClassDef {
                     base: BaseClass::Container,

@@ -3,15 +3,19 @@
 
 //! SSZ decoding implementations for different types
 
-use super::*;
-use crate::decode::try_from_iter::{TryCollect, TryFromIter};
 use core::num::NonZeroUsize;
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    iter::{self, FromIterator},
+    sync::Arc,
+};
+
 use itertools::process_results;
 use smallvec::SmallVec;
 use ssz_primitives::{FixedBytes, U128, U256};
-use std::collections::{BTreeMap, BTreeSet};
-use std::iter::{self, FromIterator};
-use std::sync::Arc;
+
+use super::*;
+use crate::decode::try_from_iter::{TryCollect, TryFromIter};
 
 // SSZ Decode implementations for primitive types from ssz_primitives
 // These leverage the existing [u8; N] implementation for consistency
@@ -493,8 +497,9 @@ pub fn decode_list_of_variable_length_items<T: Decode, Container: TryFromIter<T>
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use ssz_primitives::Hash256;
+
+    use super::*;
 
     // Note: decoding of valid bytes is generally tested "indirectly" in the `/tests` dir, by
     // encoding then decoding the element.

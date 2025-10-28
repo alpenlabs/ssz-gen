@@ -1,8 +1,9 @@
 //! The types used in the SSZ codegen
 
+use std::collections::HashMap;
+
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use std::collections::HashMap;
 use syn::{Ident, Path, Type, TypePath, parse_quote};
 
 use crate::types::resolver::TypeResolver;
@@ -218,7 +219,8 @@ impl TypeResolution {
             TypeResolutionKind::Option(_) => false,
             TypeResolutionKind::Union(_, _) => false,
             TypeResolutionKind::Class(_) => false, // Containers can have variable fields
-            TypeResolutionKind::External => false, // External types: unknown layout, treat as variable
+            TypeResolutionKind::External => false, /* External types: unknown layout, treat as */
+            // variable
             _ => false,
         }
     }
@@ -237,7 +239,8 @@ impl TypeResolution {
             TypeResolutionKind::Boolean => 1,
             TypeResolutionKind::UInt(bits) => bits / 8,
             TypeResolutionKind::Bytes(n) => *n,
-            TypeResolutionKind::Bitvector(bits) => (*bits as usize).div_ceil(8), // Round up to bytes
+            TypeResolutionKind::Bitvector(bits) => (*bits as usize).div_ceil(8), /* Round up to */
+            // bytes
             TypeResolutionKind::Vector(inner, count) => {
                 if inner.is_fixed_size() {
                     inner.fixed_size() * (*count as usize)
@@ -341,13 +344,15 @@ impl TypeResolution {
                 original_inner_ty.check_field_compatibility_for_profile(other, resolver)
             }
 
-            // Bitlist[N] / Bitvector[N] field types are compatible if they share the same capacity N
+            // Bitlist[N] / Bitvector[N] field types are compatible if they share the same capacity
+            // N
             (TypeResolutionKind::Bitvector(original_cap), TypeResolutionKind::Bitlist(new_cap))
             | (TypeResolutionKind::Bitlist(original_cap), TypeResolutionKind::Bitvector(new_cap)) => {
                 original_cap == new_cap
             }
 
-            // List[T, N] / Vector[T, N] field types are compatible if T is compatible and if they also share the same capacity N
+            // List[T, N] / Vector[T, N] field types are compatible if T is compatible and if they
+            // also share the same capacity N
             (
                 TypeResolutionKind::List(original_ty, original_cap),
                 TypeResolutionKind::Vector(new_ty, new_cap),
@@ -374,14 +379,16 @@ impl TypeResolution {
                 match (&original_class_def.base, &new_class_def.base) {
                     (BaseClass::StableContainer(_), BaseClass::StableContainer(_)) => {
                         // Make sure they share the same capacity N
-                        // Make sure they share all their fields in the same order and all their fields are compatible
+                        // Make sure they share all their fields in the same order and all their
+                        // fields are compatible
                         original_class_def.check_capacity_compatibility(new_class_def)
                             && original_class_def.check_field_compatibility(new_class_def, resolver)
                     }
                     (BaseClass::Container, BaseClass::StableContainer(_))
                     | (BaseClass::StableContainer(_), BaseClass::Container)
                     | (BaseClass::Container, BaseClass::Container) => {
-                        // Make sure they share all their fields in the same order and all their fields are compatible
+                        // Make sure they share all their fields in the same order and all their
+                        // fields are compatible
                         original_class_def.check_field_compatibility(new_class_def, resolver)
                     }
                     (
@@ -392,7 +399,8 @@ impl TypeResolution {
                         BaseClass::StableContainer(_),
                         BaseClass::Profile(Some((stable_container_name, _))),
                     ) => {
-                        // Get the original stable container definition the profile class was inheriting from
+                        // Get the original stable container definition the profile class was
+                        // inheriting from
                         let original_stable_container_def =
                             match resolver.classes.get(stable_container_name).unwrap() {
                                 ClassDefinition::Custom(class_def) => class_def,
@@ -409,7 +417,8 @@ impl TypeResolution {
                         };
 
                         // Make sure the stable containers share the same capacity N
-                        // Make sure the stable containers share all their fields in the same order and all their fields are compatible
+                        // Make sure the stable containers share all their fields in the same order
+                        // and all their fields are compatible
                         original_stable_container_def
                             .check_capacity_compatibility(stable_container_def)
                             && original_stable_container_def
@@ -419,7 +428,8 @@ impl TypeResolution {
                         BaseClass::Profile(Some((original_stable_container_name, _))),
                         BaseClass::Profile(Some((new_stable_container_name, _))),
                     ) => {
-                        // Get the original stable container definitions the profile classes are inheriting from
+                        // Get the original stable container definitions the profile classes are
+                        // inheriting from
                         let original_stable_container_def = match resolver
                             .classes
                             .get(original_stable_container_name)
@@ -439,8 +449,10 @@ impl TypeResolution {
                             };
 
                         // Make sure the stable containers share the same capacity N
-                        // Make sure the stable containers share all their fields in the same order and all their fields are compatible
-                        // Make sure the profile classes share all their fields in the same order and all their fields are compatible
+                        // Make sure the stable containers share all their fields in the same order
+                        // and all their fields are compatible Make sure the
+                        // profile classes share all their fields in the same order and all their
+                        // fields are compatible
                         original_stable_container_def
                             .check_capacity_compatibility(new_stable_container_def)
                             && original_stable_container_def
@@ -499,7 +511,8 @@ impl BaseClass {
 #[derive(Clone, Debug)]
 pub struct ClassFieldDef {
     /// Index of the field
-    /// Useful for Profile classes since during merkleization, we need the original index of the field
+    /// Useful for Profile classes since during merkleization, we need the original index of the
+    /// field
     pub index: usize,
     /// The name of the field
     pub name: String,
@@ -548,7 +561,8 @@ impl ClassDef {
         self.base.is_profile()
     }
 
-    /// Checks if the capacity of the two StableContainer classes is compatible by checking if they are equal
+    /// Checks if the capacity of the two StableContainer classes is compatible by checking if they
+    /// are equal
     ///
     /// # Arguments
     ///
@@ -569,7 +583,8 @@ impl ClassDef {
         self_cap == new_cap
     }
 
-    /// Checks if the fields of the two classes are compatible by checking order and type compatibility
+    /// Checks if the fields of the two classes are compatible by checking order and type
+    /// compatibility
     ///
     /// # Arguments
     ///
@@ -740,7 +755,8 @@ impl ClassDef {
     ///
     /// # Returns
     ///
-    /// A [`TokenStream`] containing the generated Rust code for the view struct (e.g., `FooRef<'a>`).
+    /// A [`TokenStream`] containing the generated Rust code for the view struct (e.g.,
+    /// `FooRef<'a>`).
     pub fn to_view_struct(&self, ident: &Ident) -> TokenStream {
         let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
         let doc_comment = format!(

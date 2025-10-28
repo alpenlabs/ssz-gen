@@ -3,13 +3,17 @@
 
 //! Tree hash implementations for different types
 
-use super::*;
-use ssz::view::{
-    BitListRef, BitVectorRef, BytesRef, DecodeView, FixedBytesRef, ListRef, UnionRef, VectorRef,
-};
-use ssz::{Bitfield, Fixed, Variable};
-use ssz_primitives::{FixedBytes, U128, U256};
 use std::sync::Arc;
+
+use ssz::{
+    Bitfield, Fixed, Variable,
+    view::{
+        BitListRef, BitVectorRef, BytesRef, DecodeView, FixedBytesRef, ListRef, UnionRef, VectorRef,
+    },
+};
+use ssz_primitives::{FixedBytes, U128, U256};
+
+use super::*;
 
 fn int_to_hasher_output<H: TreeHashDigest>(int: u64) -> H::Output {
     let mut bytes = vec![0; H::HASH_SIZE];
@@ -504,8 +508,9 @@ impl<'a, const N: usize, H: TreeHashDigest> TreeHash<H> for BitListRef<'a, N> {
 }
 #[cfg(test)]
 mod test {
-    use super::*;
     use ssz::{BitList, BitVector};
+
+    use super::*;
 
     #[test]
     fn bool() {

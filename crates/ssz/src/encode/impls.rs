@@ -3,12 +3,16 @@
 
 //! SSZ encoding implementations for different types
 
-use super::*;
 use core::num::NonZeroUsize;
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    sync::Arc,
+};
+
 use smallvec::SmallVec;
 use ssz_primitives::{FixedBytes, U128, U256};
-use std::collections::{BTreeMap, BTreeSet};
-use std::sync::Arc;
+
+use super::*;
 
 // SSZ Encode implementations for primitive types from ssz_primitives
 // These leverage the existing [u8; N] implementation for consistency

@@ -1,18 +1,18 @@
 //! Tests for the ssz_codegen crate.
 
+use std::fs;
+
 use prettyplease as _;
 use proc_macro2 as _;
 use quote as _;
 use sizzle_parser as _;
 use ssz as _;
+use ssz_codegen::{ModuleGeneration, build_ssz_files};
 use ssz_derive as _;
 use ssz_types as _;
 use syn as _;
 use tree_hash as _;
 use tree_hash_derive as _;
-
-use ssz_codegen::{ModuleGeneration, build_ssz_files};
-use std::fs;
 
 #[test]
 fn test_basic_codegen() {

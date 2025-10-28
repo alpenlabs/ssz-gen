@@ -60,8 +60,8 @@ pub trait Encode {
 /// Use `SszEncoder` to produce identical output to `foo.as_ssz_bytes()`:
 ///
 /// ```rust
-/// use ssz_derive::{Encode, Decode};
 /// use ssz::{Decode, Encode, SszEncoder};
+/// use ssz_derive::{Decode, Encode};
 ///
 /// #[derive(PartialEq, Debug, Encode, Decode)]
 /// struct Foo {
@@ -72,7 +72,7 @@ pub trait Encode {
 /// fn ssz_encode_example() {
 ///     let foo = Foo {
 ///         a: 42,
-///         b: vec![1, 3, 3, 7]
+///         b: vec![1, 3, 3, 7],
 ///     };
 ///
 ///     let mut buf: Vec<u8> = vec![];
@@ -87,7 +87,6 @@ pub trait Encode {
 ///
 ///     assert_eq!(foo.as_ssz_bytes(), buf);
 /// }
-///
 /// ```
 #[derive(Debug)]
 pub struct SszEncoder<'a> {
