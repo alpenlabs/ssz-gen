@@ -1,6 +1,9 @@
 // Modified in 2025 from the original version
 // Original source licensed under the Apache License 2.0
 
+#![feature(generic_const_exprs)]
+#![allow(incomplete_features, reason = "we need generic const exprs for BitVectorRef")]
+
 //! Provides encoding (serialization) and decoding (deserialization) in the SimpleSerialize (SSZ)
 //! format designed for use in Ethereum 2.0.
 //!

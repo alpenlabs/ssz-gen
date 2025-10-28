@@ -22,7 +22,6 @@
 //! ```
 
 use core::marker::PhantomData;
-use std::cmp;
 
 use ssz_primitives::{FixedBytes, U128, U256};
 
@@ -637,9 +636,23 @@ impl<'a, VRef> DecodeView<'a> for UnionRef<'a, VRef> {
     }
 }
 
+/// Helper const function to compute the number of bytes needed for N bits.
+///
+/// This function is public because it's used in type signatures with `generic_const_exprs`.
+pub const fn bytes_for_bits(bits: usize) -> usize {
+    if bits == 0 {
+        1
+    } else {
+        bits.div_ceil(8)
+    }
+}
+
 /// A reference to a fixed-length bitvector in SSZ encoding.
 ///
 /// This is the zero-copy equivalent of [`BitVector<N>`](crate::BitVector).
+///
+/// Note: Uses the unstable `generic_const_exprs` feature to compute the array size
+/// from the bit count at compile time: `&[u8; bytes_for_bits(N)]`
 ///
 /// ## Example
 ///
@@ -654,14 +667,22 @@ impl<'a, VRef> DecodeView<'a> for UnionRef<'a, VRef> {
 /// assert_eq!(view.get(1).unwrap(), false);
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct BitVectorRef<'a, const N: usize> {
-    /// The underlying byte slice.
-    bytes: &'a [u8],
+pub struct BitVectorRef<'a, const N: usize>
+where
+    [(); bytes_for_bits(N)]:,
+{
+    /// The underlying byte array reference.
+    /// Size is computed from N bits: `bytes_for_bits(N)` = `(N + 7) / 8` (or 1 if N == 0).
+    /// Public to allow external crates (like tree_hash) to access when using generic_const_exprs.
+    pub bytes: &'a [u8; bytes_for_bits(N)],
 }
 
-impl<'a, const N: usize> BitVectorRef<'a, N> {
-    /// Returns the underlying byte slice.
-    pub const fn as_bytes(&self) -> &'a [u8] {
+impl<'a, const N: usize> BitVectorRef<'a, N>
+where
+    [(); bytes_for_bits(N)]:,
+{
+    /// Returns the underlying byte array.
+    pub const fn as_bytes(&self) -> &'a [u8; bytes_for_bits(N)] {
         self.bytes
     }
 
@@ -676,7 +697,7 @@ impl<'a, const N: usize> BitVectorRef<'a, N> {
     }
 
     /// Gets the value of the bit at the specified index.
-    pub const fn get(&self, index: usize) -> Result<bool, DecodeError> {
+    pub fn get(&self, index: usize) -> Result<bool, DecodeError> {
         if index >= N {
             return Err(DecodeError::OutOfBoundsByte { i: index });
         }
@@ -687,7 +708,7 @@ impl<'a, const N: usize> BitVectorRef<'a, N> {
     }
 
     /// Returns an iterator over the bits.
-    pub const fn iter(&self) -> BitVectorRefIter<'a, N> {
+    pub fn iter(&self) -> BitVectorRefIter<'a, N> {
         BitVectorRefIter {
             bitvector: *self,
             index: 0,
@@ -696,20 +717,23 @@ impl<'a, const N: usize> BitVectorRef<'a, N> {
 
     /// Converts this view to an owned [`BitVector<N>`].
     pub fn to_owned(&self) -> BitVector<N> {
-        BitVector::<N>::from_ssz_bytes(self.bytes).expect("BitVectorRef is always valid")
+        BitVector::<N>::from_ssz_bytes(self.bytes.as_slice()).expect("BitVectorRef is always valid")
     }
 }
 
-impl<'a, const N: usize> DecodeView<'a> for BitVectorRef<'a, N> {
+impl<'a, const N: usize> DecodeView<'a> for BitVectorRef<'a, N>
+where
+    [(); bytes_for_bits(N)]:,
+{
     /// Decodes the bitvector from the given bytes.
     fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, DecodeError> {
-        let expected_bytes = bytes_for_bit_len(N);
-        if bytes.len() != expected_bytes {
-            return Err(DecodeError::InvalidByteLength {
-                len: bytes.len(),
-                expected: expected_bytes,
-            });
-        }
+        let expected_bytes = bytes_for_bits(N);
+        
+        // Convert to fixed-size array reference
+        let bytes: &'a [u8; bytes_for_bits(N)] = bytes.try_into().map_err(|_| DecodeError::InvalidByteLength {
+            len: bytes.len(),
+            expected: expected_bytes,
+        })?;
 
         // Validate that excess bits are zero
         if N > 0 {
@@ -731,7 +755,10 @@ impl<'a, const N: usize> DecodeView<'a> for BitVectorRef<'a, N> {
 
 /// Iterator over bits in a [`BitVectorRef`].
 #[derive(Debug, Clone)]
-pub struct BitVectorRefIter<'a, const N: usize> {
+pub struct BitVectorRefIter<'a, const N: usize>
+where
+    [(); bytes_for_bits(N)]:,
+{
     /// The underlying bitvector.
     bitvector: BitVectorRef<'a, N>,
 
@@ -739,7 +766,10 @@ pub struct BitVectorRefIter<'a, const N: usize> {
     index: usize,
 }
 
-impl<'a, const N: usize> Iterator for BitVectorRefIter<'a, N> {
+impl<'a, const N: usize> Iterator for BitVectorRefIter<'a, N>
+where
+    [(); bytes_for_bits(N)]:,
+{
     type Item = bool;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -757,7 +787,10 @@ impl<'a, const N: usize> Iterator for BitVectorRefIter<'a, N> {
     }
 }
 
-impl<'a, const N: usize> ExactSizeIterator for BitVectorRefIter<'a, N> {
+impl<'a, const N: usize> ExactSizeIterator for BitVectorRefIter<'a, N>
+where
+    [(); bytes_for_bits(N)]:,
+{
     fn len(&self) -> usize {
         N.saturating_sub(self.index)
     }
@@ -915,13 +948,6 @@ impl<'a, const N: usize> ExactSizeIterator for BitListRefIter<'a, N> {
     fn len(&self) -> usize {
         self.bitlist.bit_len.saturating_sub(self.index)
     }
-}
-
-/// Returns the minimum required bytes to represent a given number of bits.
-///
-/// `bit_len == 0` requires a single byte.
-fn bytes_for_bit_len(bit_len: usize) -> usize {
-    cmp::max(1, bit_len.div_ceil(8))
 }
 
 // DecodeView implementations for primitive types
