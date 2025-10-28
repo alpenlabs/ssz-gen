@@ -28,7 +28,7 @@
 
 use crate::{Error, FixedVector, VariableList};
 use ssz::DecodeError;
-use ssz::view::{DecodeView, ListRef, VectorRef};
+use ssz::view::{DecodeView, ListRef, SszTypeInfo, VectorRef};
 use ssz_primitives::{FixedBytes, U128, U256};
 use tree_hash::{PackedEncoding, TreeHash, TreeHashDigest, TreeHashType};
 
@@ -69,14 +69,12 @@ pub struct VariableListRef<'a, TRef, const N: usize> {
     inner: ListRef<'a, TRef>,
 }
 
-impl<'a, TRef, const N: usize> VariableListRef<'a, TRef, N> {
+impl<'a, TRef: SszTypeInfo, const N: usize> VariableListRef<'a, TRef, N> {
     /// Creates a new `VariableListRef` from raw SSZ bytes.
     ///
     /// - `bytes`: the SSZ-encoded list bytes.
-    /// - `is_fixed_len`: whether items have fixed length.
-    /// - `item_size`: for fixed-length items, the size of each item.
-    pub fn new(bytes: &'a [u8], is_fixed_len: bool, item_size: usize) -> Result<Self, DecodeError> {
-        let inner = ListRef::new(bytes, is_fixed_len, item_size)?;
+    pub fn new(bytes: &'a [u8]) -> Result<Self, DecodeError> {
+        let inner = ListRef::new(bytes)?;
 
         // Validate that the list doesn't exceed the maximum length
         if inner.len() > N {
@@ -123,7 +121,7 @@ impl<'a, TRef, const N: usize> VariableListRef<'a, TRef, N> {
 
 impl<'a, TRef, const N: usize> VariableListRef<'a, TRef, N>
 where
-    TRef: DecodeView<'a>,
+    TRef: DecodeView<'a> + SszTypeInfo,
 {
     /// Converts this view to an owned [`VariableList<T, N>`](VariableList).
     ///
@@ -186,81 +184,16 @@ impl ToOwnedSsz<U128> for U128 {
     }
 }
 
-impl<'a, TRef: DecodeView<'a> + SszFixedLen, const N: usize> DecodeView<'a>
+impl<'a, TRef: DecodeView<'a> + SszTypeInfo, const N: usize> DecodeView<'a>
     for VariableListRef<'a, TRef, N>
 where
     TRef: 'a,
 {
     fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, DecodeError> {
-        // Determine if items are fixed-length
-        let is_fixed_len = TRef::is_ssz_fixed_len();
-        let item_size = if is_fixed_len {
-            TRef::ssz_fixed_len()
-        } else {
-            0
-        };
-
-        // For empty lists, ListRef validation requires a non-zero item_size if is_fixed_len is true
-        // Since there are no items, we use a placeholder value
-        let (effective_is_fixed, effective_size) = if bytes.is_empty() {
-            (true, 1) // Use fixed-length with size 1 as placeholder
-        } else {
-            (is_fixed_len, item_size)
-        };
-
-        Self::new(bytes, effective_is_fixed, effective_size)
+        Self::new(bytes)
     }
 }
 
-// Helper trait to determine fixed-length status for DecodeView types
-trait SszFixedLen {
-    fn is_ssz_fixed_len() -> bool;
-    fn ssz_fixed_len() -> usize;
-}
-
-macro_rules! impl_ssz_fixed_len_primitive {
-    ($($t:ty, $size:expr),*) => {
-        $(
-            impl SszFixedLen for $t {
-                fn is_ssz_fixed_len() -> bool {
-                    true
-                }
-                fn ssz_fixed_len() -> usize {
-                    $size
-                }
-            }
-        )*
-    };
-}
-
-impl_ssz_fixed_len_primitive!(u8, 1, u16, 2, u32, 4, u64, 8, u128, 16, usize, 8, bool, 1);
-
-impl<const N: usize> SszFixedLen for FixedBytes<N> {
-    fn is_ssz_fixed_len() -> bool {
-        true
-    }
-    fn ssz_fixed_len() -> usize {
-        N
-    }
-}
-
-impl SszFixedLen for U256 {
-    fn is_ssz_fixed_len() -> bool {
-        true
-    }
-    fn ssz_fixed_len() -> usize {
-        32
-    }
-}
-
-impl SszFixedLen for U128 {
-    fn is_ssz_fixed_len() -> bool {
-        true
-    }
-    fn ssz_fixed_len() -> usize {
-        16
-    }
-}
 
 /// A zero-copy reference to a [`FixedVector<T, N>`](FixedVector).
 ///
@@ -297,15 +230,13 @@ pub struct FixedVectorRef<'a, TRef, const N: usize> {
     inner: VectorRef<'a, TRef, N>,
 }
 
-impl<'a, TRef, const N: usize> FixedVectorRef<'a, TRef, N> {
+impl<'a, TRef: SszTypeInfo, const N: usize> FixedVectorRef<'a, TRef, N> {
     /// Creates a new [`FixedVectorRef`] from raw SSZ bytes.
     ///
     /// - `bytes`: the SSZ-encoded vector bytes.
-    /// - `is_fixed_len`: whether items have fixed length.
-    /// - `item_size`: for fixed-length items, the size of each item.
-    pub fn new(bytes: &'a [u8], is_fixed_len: bool, item_size: usize) -> Result<Self, DecodeError> {
+    pub fn new(bytes: &'a [u8]) -> Result<Self, DecodeError> {
         Ok(Self {
-            inner: VectorRef::new(bytes, is_fixed_len, item_size)?,
+            inner: VectorRef::new(bytes)?,
         })
     }
 
@@ -343,7 +274,7 @@ impl<'a, TRef, const N: usize> FixedVectorRef<'a, TRef, N> {
 
 impl<'a, TRef, const N: usize> FixedVectorRef<'a, TRef, N>
 where
-    TRef: DecodeView<'a>,
+    TRef: DecodeView<'a> + SszTypeInfo,
 {
     /// Converts this view to an owned [`FixedVector<T, N>`](FixedVector).
     ///
@@ -363,27 +294,19 @@ where
     }
 }
 
-impl<'a, TRef: DecodeView<'a> + SszFixedLen, const N: usize> DecodeView<'a>
+impl<'a, TRef: DecodeView<'a> + SszTypeInfo, const N: usize> DecodeView<'a>
     for FixedVectorRef<'a, TRef, N>
 where
     TRef: 'a,
 {
     fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, DecodeError> {
-        // Determine if items are fixed-length
-        let is_fixed_len = TRef::is_ssz_fixed_len();
-        let item_size = if is_fixed_len {
-            TRef::ssz_fixed_len()
-        } else {
-            0
-        };
-
-        Self::new(bytes, is_fixed_len, item_size)
+        Self::new(bytes)
     }
 }
 
 impl<'a, TRef, const N: usize, H> TreeHash<H> for VariableListRef<'a, TRef, N>
 where
-    TRef: DecodeView<'a> + TreeHash<H>,
+    TRef: DecodeView<'a> + TreeHash<H> + SszTypeInfo,
     H: TreeHashDigest,
 {
     fn tree_hash_type() -> TreeHashType {
@@ -442,7 +365,7 @@ where
 
 impl<'a, TRef, const N: usize, H> TreeHash<H> for FixedVectorRef<'a, TRef, N>
 where
-    TRef: DecodeView<'a> + TreeHash<H>,
+    TRef: DecodeView<'a> + TreeHash<H> + SszTypeInfo,
     H: TreeHashDigest,
 {
     fn tree_hash_type() -> TreeHashType {

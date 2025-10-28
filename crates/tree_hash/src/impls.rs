@@ -291,7 +291,7 @@ impl<'a, H: TreeHashDigest> TreeHash<H> for BytesRef<'a> {
 // TreeHash implementation for ListRef
 impl<'a, TRef, H> TreeHash<H> for ListRef<'a, TRef>
 where
-    TRef: DecodeView<'a> + TreeHash<H>,
+    TRef: DecodeView<'a> + TreeHash<H> + ssz::view::SszTypeInfo,
     H: TreeHashDigest,
 {
     fn tree_hash_type() -> TreeHashType {
@@ -336,7 +336,7 @@ where
 /// Helper function to hash composite items in a [`ListRef`].
 fn tree_hash_composite_list_items<'a, TRef, H>(list: &ListRef<'a, TRef>) -> H::Output
 where
-    TRef: DecodeView<'a> + TreeHash<H>,
+    TRef: DecodeView<'a> + TreeHash<H> + ssz::view::SszTypeInfo,
     H: TreeHashDigest,
 {
     let num_items = list.len();
@@ -364,7 +364,7 @@ where
 /// TreeHash implementation for [`VectorRef`].
 impl<'a, TRef, const N: usize, H> TreeHash<H> for VectorRef<'a, TRef, N>
 where
-    TRef: DecodeView<'a> + TreeHash<H>,
+    TRef: DecodeView<'a> + TreeHash<H> + ssz::view::SszTypeInfo,
     H: TreeHashDigest,
 {
     fn tree_hash_type() -> TreeHashType {
@@ -404,7 +404,7 @@ fn tree_hash_composite_vector_items<'a, TRef, H, const N: usize>(
     vector: &VectorRef<'a, TRef, N>,
 ) -> H::Output
 where
-    TRef: DecodeView<'a> + TreeHash<H>,
+    TRef: DecodeView<'a> + TreeHash<H> + ssz::view::SszTypeInfo,
     H: TreeHashDigest,
 {
     if N == 0 {
@@ -455,12 +455,18 @@ where
     }
 }
 
-impl<'a, const N: usize, H: TreeHashDigest> TreeHash<H> for BitVectorRef<'a, N> {
+impl<'a, const N: usize, H: TreeHashDigest> TreeHash<H> for BitVectorRef<'a, N>
+where
+    [(); ssz::view::bytes_for_bits(N)]:,
+{
     fn tree_hash_type() -> TreeHashType {
         TreeHashType::Vector
     }
 
-    fn tree_hash_packed_encoding(&self) -> PackedEncoding {
+    fn tree_hash_packed_encoding(&self) -> PackedEncoding
+    where
+        [(); ssz::view::bytes_for_bits(N)]:,
+    {
         unreachable!("BitVector should never be packed.")
     }
 
@@ -468,9 +474,12 @@ impl<'a, const N: usize, H: TreeHashDigest> TreeHash<H> for BitVectorRef<'a, N> 
         unreachable!("BitVector should never be packed.")
     }
 
-    fn tree_hash_root(&self) -> H::Output {
-        // Directly hash the bytes without converting to owned BitVector
-        merkle_root_with_hasher::<H>(self.as_bytes(), 0)
+    fn tree_hash_root(&self) -> H::Output
+    where
+        [(); ssz::view::bytes_for_bits(N)]:,
+    {
+        // Convert the fixed-size array to a slice
+        merkle_root_with_hasher::<H>(self.bytes.as_slice(), 0)
     }
 }
 

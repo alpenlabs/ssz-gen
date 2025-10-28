@@ -30,6 +30,18 @@ use crate::{
     decode::sanitize_offset, read_offset, split_union_bytes,
 };
 
+/// Provides compile-time SSZ type information for view types.
+///
+/// This trait allows determining whether a type is fixed-length and its size
+/// at compile time, enabling zero-overhead abstractions for collections.
+pub trait SszTypeInfo {
+    /// Returns whether this type has a fixed SSZ length.
+    fn is_ssz_fixed_len() -> bool;
+    
+    /// Returns the fixed SSZ length in bytes, or 0 if variable-length.
+    fn ssz_fixed_len() -> usize;
+}
+
 /// Zero-copy SSZ decoding that constructs borrowed views over input bytes.
 ///
 /// Unlike [`Decode`] which constructs owned values, [`DecodeView`] constructs reference-backed
@@ -109,14 +121,21 @@ impl<'a, const N: usize> FixedBytesRef<'a, N> {
 
 impl<'a, const N: usize> DecodeView<'a> for FixedBytesRef<'a, N> {
     fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, DecodeError> {
-        if bytes.len() != N {
-            Err(DecodeError::InvalidByteLength {
-                len: bytes.len(),
-                expected: N,
-            })
-        } else {
-            Ok(Self { bytes })
-        }
+        let bytes: &'a [u8; N] = bytes.try_into().map_err(|_| DecodeError::InvalidByteLength {
+            len: bytes.len(),
+            expected: N,
+        })?;
+        Ok(Self { bytes })
+    }
+}
+
+impl<'a, const N: usize> SszTypeInfo for FixedBytesRef<'a, N> {
+    fn is_ssz_fixed_len() -> bool {
+        true
+    }
+    
+    fn ssz_fixed_len() -> usize {
+        N
     }
 }
 
@@ -173,6 +192,16 @@ impl<'a> DecodeView<'a> for BytesRef<'a> {
     }
 }
 
+impl<'a> SszTypeInfo for BytesRef<'a> {
+    fn is_ssz_fixed_len() -> bool {
+        false
+    }
+    
+    fn ssz_fixed_len() -> usize {
+        0
+    }
+}
+
 /// A reference to a variable-length list in SSZ encoding.
 ///
 /// This is the zero-copy equivalent of [`Vec<T>`] or `VariableList<T, N>`.
@@ -193,8 +222,8 @@ impl<'a> DecodeView<'a> for BytesRef<'a> {
 ///     v.ssz_append(&mut encoded);
 /// }
 ///
-/// // Create a view over the encoded bytes (fixed-length items, 8 bytes each)
-/// let view = ListRef::<u64>::new(&encoded, true, 8).unwrap();
+/// // Create a view over the encoded bytes
+/// let view = ListRef::<u64>::from_ssz_bytes(&encoded).unwrap();
 /// assert_eq!(view.len(), 4);
 /// ```
 #[derive(Debug, Copy, Clone)]
@@ -202,33 +231,24 @@ pub struct ListRef<'a, TRef> {
     /// The underlying byte slice.
     bytes: &'a [u8],
 
-    /// Whether items have fixed length.
-    is_fixed_len: bool,
-
-    /// For fixed-length items, the size of each item.
-    item_size: usize,
-
     /// The type of the items.
     _marker: PhantomData<TRef>,
 }
 
-impl<'a, TRef> ListRef<'a, TRef> {
-    /// Create a new [`ListRef`] from raw bytes and item metadata.
+impl<'a, TRef: SszTypeInfo> ListRef<'a, TRef> {
+    /// Create a new [`ListRef`] from raw bytes.
     ///
     /// - `bytes`: the SSZ-encoded list bytes.
-    /// - `is_fixed_len`: whether items have fixed length.
-    /// - `item_size`: for fixed-length items, the size of each item.
-    pub const fn new(
-        bytes: &'a [u8],
-        is_fixed_len: bool,
-        item_size: usize,
-    ) -> Result<Self, DecodeError> {
+    pub fn new(bytes: &'a [u8]) -> Result<Self, DecodeError> {
+        let is_fixed_len = TRef::is_ssz_fixed_len();
+        let item_size = TRef::ssz_fixed_len();
+        
         if is_fixed_len {
             // For fixed-length items, validate that bytes length is a multiple of item_size
             if item_size == 0 {
                 return Err(DecodeError::ZeroLengthItem);
             }
-            if !bytes.len().is_multiple_of(item_size) {
+            if !bytes.is_empty() && !bytes.len().is_multiple_of(item_size) {
                 return Err(DecodeError::InvalidByteLength {
                     len: bytes.len(),
                     expected: (bytes.len() / item_size) * item_size,
@@ -247,8 +267,6 @@ impl<'a, TRef> ListRef<'a, TRef> {
         }
         Ok(Self {
             bytes,
-            is_fixed_len,
-            item_size,
             _marker: PhantomData,
         })
     }
@@ -258,8 +276,10 @@ impl<'a, TRef> ListRef<'a, TRef> {
         if self.bytes.is_empty() {
             return 0;
         }
-        if self.is_fixed_len {
-            self.bytes.len() / self.item_size
+        let is_fixed_len = TRef::is_ssz_fixed_len();
+        if is_fixed_len {
+            let item_size = TRef::ssz_fixed_len();
+            self.bytes.len() / item_size
         } else {
             // Count offsets in the fixed portion
             let first_offset = read_offset(self.bytes).unwrap_or(0);
@@ -281,7 +301,7 @@ impl<'a, TRef> ListRef<'a, TRef> {
     }
 }
 
-impl<'a, TRef> ListRef<'a, TRef> {
+impl<'a, TRef: SszTypeInfo> ListRef<'a, TRef> {
     /// Returns an [`Iterator`] over the list items.
     ///
     /// Each item is decoded lazily as the iterator advances.
@@ -292,8 +312,6 @@ impl<'a, TRef> ListRef<'a, TRef> {
         ListRefIter {
             list: ListRef {
                 bytes: self.bytes,
-                is_fixed_len: self.is_fixed_len,
-                item_size: self.item_size,
                 _marker: PhantomData,
             },
             index: 0,
@@ -311,7 +329,7 @@ pub struct ListRefIter<'a, TRef> {
     index: usize,
 }
 
-impl<'a, TRef: DecodeView<'a>> Iterator for ListRefIter<'a, TRef> {
+impl<'a, TRef: DecodeView<'a> + SszTypeInfo> Iterator for ListRefIter<'a, TRef> {
     type Item = Result<TRef, DecodeError>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -319,10 +337,12 @@ impl<'a, TRef: DecodeView<'a>> Iterator for ListRefIter<'a, TRef> {
             return None;
         }
 
-        let result = if self.list.is_fixed_len {
+        let is_fixed_len = TRef::is_ssz_fixed_len();
+        let result = if is_fixed_len {
             // Fixed-length items: direct indexing
-            let start = self.index * self.list.item_size;
-            let end = start + self.list.item_size;
+            let item_size = TRef::ssz_fixed_len();
+            let start = self.index * item_size;
+            let end = start + item_size;
             let item_bytes = &self.list.bytes[start..end];
             TRef::from_ssz_bytes(item_bytes)
         } else {
@@ -394,7 +414,7 @@ impl<'a, TRef: DecodeView<'a>> Iterator for ListRefIter<'a, TRef> {
     }
 }
 
-impl<'a, TRef: DecodeView<'a>> ExactSizeIterator for ListRefIter<'a, TRef> {
+impl<'a, TRef: DecodeView<'a> + SszTypeInfo> ExactSizeIterator for ListRefIter<'a, TRef> {
     fn len(&self) -> usize {
         self.list.len().saturating_sub(self.index)
     }
@@ -417,8 +437,8 @@ impl<'a, TRef: DecodeView<'a>> ExactSizeIterator for ListRefIter<'a, TRef> {
 ///     v.ssz_append(&mut encoded);
 /// }
 ///
-/// // Create a view over the encoded bytes (fixed-length items, 8 bytes each)
-/// let view = VectorRef::<u64, 4>::new(&encoded, true, 8).unwrap();
+/// // Create a view over the encoded bytes
+/// let view = VectorRef::<u64, 4>::from_ssz_bytes(&encoded).unwrap();
 /// assert_eq!(view.len(), 4);
 /// ```
 #[derive(Debug, Copy, Clone)]
@@ -426,19 +446,16 @@ pub struct VectorRef<'a, TRef, const N: usize> {
     /// The underlying byte slice.
     bytes: &'a [u8],
 
-    /// Whether items have fixed length.
-    is_fixed_len: bool,
-
-    /// For fixed-length items, the size of each item.
-    item_size: usize,
-
     /// The type of the items.
     _marker: PhantomData<TRef>,
 }
 
-impl<'a, TRef, const N: usize> VectorRef<'a, TRef, N> {
-    /// Create a new [`VectorRef`] from raw bytes and item metadata.
-    pub fn new(bytes: &'a [u8], is_fixed_len: bool, item_size: usize) -> Result<Self, DecodeError> {
+impl<'a, TRef: SszTypeInfo, const N: usize> VectorRef<'a, TRef, N> {
+    /// Create a new [`VectorRef`] from raw bytes.
+    pub fn new(bytes: &'a [u8]) -> Result<Self, DecodeError> {
+        let is_fixed_len = TRef::is_ssz_fixed_len();
+        let item_size = TRef::ssz_fixed_len();
+        
         if is_fixed_len {
             if item_size == 0 {
                 return Err(DecodeError::ZeroLengthItem);
@@ -467,8 +484,6 @@ impl<'a, TRef, const N: usize> VectorRef<'a, TRef, N> {
         }
         Ok(Self {
             bytes,
-            is_fixed_len,
-            item_size,
             _marker: PhantomData,
         })
     }
@@ -489,7 +504,7 @@ impl<'a, TRef, const N: usize> VectorRef<'a, TRef, N> {
     }
 }
 
-impl<'a, TRef, const N: usize> VectorRef<'a, TRef, N> {
+impl<'a, TRef: SszTypeInfo, const N: usize> VectorRef<'a, TRef, N> {
     /// Returns an [`Iterator`] over the vector items.
     pub fn iter(&self) -> VectorRefIter<'a, TRef, N>
     where
@@ -498,8 +513,6 @@ impl<'a, TRef, const N: usize> VectorRef<'a, TRef, N> {
         VectorRefIter {
             vector: VectorRef {
                 bytes: self.bytes,
-                is_fixed_len: self.is_fixed_len,
-                item_size: self.item_size,
                 _marker: PhantomData,
             },
             index: 0,
@@ -515,9 +528,11 @@ impl<'a, TRef, const N: usize> VectorRef<'a, TRef, N> {
             return Err(DecodeError::OutOfBoundsByte { i: index });
         }
 
-        if self.is_fixed_len {
-            let start = index * self.item_size;
-            let end = start + self.item_size;
+        let is_fixed_len = TRef::is_ssz_fixed_len();
+        if is_fixed_len {
+            let item_size = TRef::ssz_fixed_len();
+            let start = index * item_size;
+            let end = start + item_size;
             let item_bytes = &self.bytes[start..end];
             TRef::from_ssz_bytes(item_bytes)
         } else {
@@ -554,7 +569,7 @@ pub struct VectorRefIter<'a, TRef, const N: usize> {
     index: usize,
 }
 
-impl<'a, TRef: DecodeView<'a>, const N: usize> Iterator for VectorRefIter<'a, TRef, N> {
+impl<'a, TRef: DecodeView<'a> + SszTypeInfo, const N: usize> Iterator for VectorRefIter<'a, TRef, N> {
     type Item = Result<TRef, DecodeError>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -572,7 +587,7 @@ impl<'a, TRef: DecodeView<'a>, const N: usize> Iterator for VectorRefIter<'a, TR
     }
 }
 
-impl<'a, TRef: DecodeView<'a>, const N: usize> ExactSizeIterator for VectorRefIter<'a, TRef, N> {
+impl<'a, TRef: DecodeView<'a> + SszTypeInfo, const N: usize> ExactSizeIterator for VectorRefIter<'a, TRef, N> {
     fn len(&self) -> usize {
         N.saturating_sub(self.index)
     }
@@ -750,6 +765,19 @@ where
         }
 
         Ok(Self { bytes })
+    }
+}
+
+impl<'a, const N: usize> SszTypeInfo for BitVectorRef<'a, N>
+where
+    [(); bytes_for_bits(N)]:,
+{
+    fn is_ssz_fixed_len() -> bool {
+        true
+    }
+    
+    fn ssz_fixed_len() -> usize {
+        bytes_for_bits(N)
     }
 }
 
@@ -954,27 +982,47 @@ impl<'a, const N: usize> ExactSizeIterator for BitListRefIter<'a, N> {
 // These types are cheap to copy, so we just decode them into values
 
 macro_rules! impl_decode_view_for_primitive {
-    ($type:ty) => {
+    ($type:ty, $size:expr) => {
         impl<'a> DecodeView<'a> for $type {
             fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, DecodeError> {
                 crate::Decode::from_ssz_bytes(bytes)
             }
         }
+        
+        impl SszTypeInfo for $type {
+            fn is_ssz_fixed_len() -> bool {
+                true
+            }
+            
+            fn ssz_fixed_len() -> usize {
+                $size
+            }
+        }
     };
 }
 
-impl_decode_view_for_primitive!(u8);
-impl_decode_view_for_primitive!(u16);
-impl_decode_view_for_primitive!(u32);
-impl_decode_view_for_primitive!(u64);
-impl_decode_view_for_primitive!(u128);
-impl_decode_view_for_primitive!(usize);
-impl_decode_view_for_primitive!(bool);
+impl_decode_view_for_primitive!(u8, 1);
+impl_decode_view_for_primitive!(u16, 2);
+impl_decode_view_for_primitive!(u32, 4);
+impl_decode_view_for_primitive!(u64, 8);
+impl_decode_view_for_primitive!(u128, 16);
+impl_decode_view_for_primitive!(usize, 8);
+impl_decode_view_for_primitive!(bool, 1);
 
 // Implement DecodeView for ssz_primitives types
 impl<'a, const N: usize> DecodeView<'a> for FixedBytes<N> {
     fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, DecodeError> {
         Decode::from_ssz_bytes(bytes)
+    }
+}
+
+impl<const N: usize> SszTypeInfo for FixedBytes<N> {
+    fn is_ssz_fixed_len() -> bool {
+        true
+    }
+    
+    fn ssz_fixed_len() -> usize {
+        N
     }
 }
 
@@ -984,9 +1032,29 @@ impl<'a> DecodeView<'a> for U256 {
     }
 }
 
+impl SszTypeInfo for U256 {
+    fn is_ssz_fixed_len() -> bool {
+        true
+    }
+    
+    fn ssz_fixed_len() -> usize {
+        32
+    }
+}
+
 impl<'a> DecodeView<'a> for U128 {
     fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, DecodeError> {
         Decode::from_ssz_bytes(bytes)
+    }
+}
+
+impl SszTypeInfo for U128 {
+    fn is_ssz_fixed_len() -> bool {
+        true
+    }
+    
+    fn ssz_fixed_len() -> usize {
+        16
     }
 }
 
@@ -1046,7 +1114,7 @@ mod tests {
         let values = vec![1u64, 2, 3, 4];
         let encoded = encode_list(&values);
 
-        let view = ListRef::<u64>::new(&encoded, true, 8).unwrap();
+        let view = ListRef::<u64>::new(&encoded).unwrap();
         assert_eq!(view.len(), 4);
         assert!(!view.is_empty());
 
@@ -1057,7 +1125,7 @@ mod tests {
     #[test]
     fn list_ref_empty() {
         let bytes: &[u8] = &[];
-        let view = ListRef::<u64>::new(bytes, true, 8).unwrap();
+        let view = ListRef::<u64>::new(bytes).unwrap();
         assert_eq!(view.len(), 0);
         assert!(view.is_empty());
     }
@@ -1068,7 +1136,7 @@ mod tests {
         let values = [1u64, 2, 3, 4];
         let encoded = encode_list(&values);
 
-        let view = VectorRef::<u64, 4>::new(&encoded, true, 8).unwrap();
+        let view = VectorRef::<u64, 4>::new(&encoded).unwrap();
         assert_eq!(view.len(), 4);
         assert!(!view.is_empty());
 
@@ -1225,7 +1293,7 @@ mod tests {
         encoded.extend_from_slice(&items[1]);
         encoded.extend_from_slice(&items[2]);
 
-        let view = ListRef::<BytesRef<'_>>::new(&encoded, false, 0).unwrap();
+        let view = ListRef::<BytesRef<'_>>::new(&encoded).unwrap();
         assert_eq!(view.len(), 3);
 
         let decoded: Vec<Vec<u8>> = view.iter().map(|r| r.unwrap().to_owned()).collect();
@@ -1238,7 +1306,7 @@ mod tests {
         let values = [1u64, 2, 3]; // Only 3 items
         let encoded = encode_list(&values);
 
-        let result = VectorRef::<u64, 4>::new(&encoded, true, 8);
+        let result = VectorRef::<u64, 4>::new(&encoded);
         assert!(result.is_err());
     }
 
@@ -1332,7 +1400,7 @@ mod tests {
     fn list_ref_iterator_exact_size() {
         let values = vec![1u64, 2, 3, 4, 5];
         let encoded = encode_list(&values);
-        let view = ListRef::<u64>::new(&encoded, true, 8).unwrap();
+        let view = ListRef::<u64>::new(&encoded).unwrap();
 
         let mut iter = view.iter();
         assert_eq!(iter.len(), 5);
@@ -1349,7 +1417,7 @@ mod tests {
     fn vector_ref_iterator_exact_size() {
         let values = [1u64, 2, 3];
         let encoded = encode_list(&values);
-        let view = VectorRef::<u64, 3>::new(&encoded, true, 8).unwrap();
+        let view = VectorRef::<u64, 3>::new(&encoded).unwrap();
 
         let mut iter = view.iter();
         assert_eq!(iter.len(), 3);
