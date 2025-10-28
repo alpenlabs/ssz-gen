@@ -82,13 +82,13 @@ pub trait DecodeView<'a>: Sized {
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FixedBytesRef<'a, const N: usize> {
-    /// The underlying byte slice.
-    bytes: &'a [u8],
+    /// The underlying byte array reference.
+    bytes: &'a [u8; N],
 }
 
 impl<'a, const N: usize> FixedBytesRef<'a, N> {
     /// Returns the underlying byte slice.
-    pub const fn as_bytes(&self) -> &'a [u8] {
+    pub const fn as_bytes(&self) -> &'a [u8; N] {
         self.bytes
     }
 
@@ -104,9 +104,7 @@ impl<'a, const N: usize> FixedBytesRef<'a, N> {
 
     /// Converts this view to an owned array.
     pub const fn to_owned(&self) -> [u8; N] {
-        let mut arr = [0u8; N];
-        arr.copy_from_slice(self.bytes);
-        arr
+        *self.bytes
     }
 }
 
