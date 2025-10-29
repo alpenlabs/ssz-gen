@@ -24,6 +24,7 @@ These libraries have been modified to add `StableContainer` support and other en
 - Union types
 - Constants and type aliases
 - Built-in type aliases (`byte`, `bit`, `null`, `BytesX`)
+- **Configurable trait derivation** - Specify additional Rust derive macros using decorators
 
 ## Usage
 
@@ -71,6 +72,29 @@ In order to use `ssz-gen`:
         // Use SSZ encoding/decoding, tree hashing, etc.
     }
     ```
+
+## Configurable Trait Derivation
+
+You can specify additional Rust derive macros for your SSZ types using Python-style decorators:
+
+```python
+# Module-level derives (applies to all types in the file)
+@module_derive(Clone, Debug)
+
+# Per-type derives (overrides module-level for this specific type)
+@derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)
+class MyContainer(Container):
+    x: uint8
+    y: uint16
+
+# This class will use module-level derives: Clone, Debug
+class AnotherContainer(Container):
+    z: uint32
+```
+
+**Note**: The required SSZ derives (`Encode`, `Decode`, `TreeHash`) are always included automatically.
+
+See [`examples/derive_example.ssz`](examples/derive_example.ssz) for a complete example.
 
 ## Contributing
 

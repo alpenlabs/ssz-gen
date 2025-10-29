@@ -120,6 +120,30 @@ alias = Union[uint8, alias_union]
 
 The variants within the enum are named `Selector{index}`.
 
+### Decorators and Comments
+You can use Python-style decorators to configure trait derivation and comments for documentation:
+
+```python
+# Comments start with # and are ignored by the parser
+@module_derive(Clone, Debug)  # Module-level derives for all types
+
+@derive(Clone, Debug, PartialEq, Eq)  # Per-type derives (overrides module-level)
+class MyContainer(Container):
+    x: uint8
+    y: uint16
+```
+
+**Decorator syntax:**
+- `@module_derive(...)` - Applies derives to all types in the file
+- `@derive(...)` - Applies derives to a specific type (overrides module-level)
+- `#` - Comments (entire line is ignored)
+
+**Derive merging behavior:**
+- Required SSZ derives (`Encode`, `Decode`, `TreeHash`) are always included
+- Module-level derives apply to all types unless overridden
+- Per-type derives completely override module-level derives (not additive)
+- Duplicates are removed while preserving order
+
 ### Imports
 You can import definitions from other files using `import FILE` or `IMPORT FILE as IDENT` or from other crates using `IMPORT CRATE.MODULE`. To import from other crates the crate must be provided to `build_ssz_files` in the `crates` argument.
 - In case of importing from local files:

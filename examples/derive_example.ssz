@@ -1,0 +1,40 @@
+# Example SSZ file demonstrating configurable trait derivation
+# This file shows how to use decorators to specify additional Rust derive macros
+
+# Module-level derives (applies to all types in this file)
+@module_derive(Clone, Debug)
+
+# Constants
+MAX_SIZE = 100
+DEFAULT_VALUE = 42
+
+# Type aliases
+UserId = uint64
+UserName = Vector[uint8, 32]
+
+# Container with module-level derives only (will get Clone, Debug)
+class User(Container):
+    id: UserId
+    name: UserName
+    is_active: boolean
+
+# Container with per-type derives (overrides module-level)
+@derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)
+class Message(Container):
+    sender_id: UserId
+    content: Vector[uint8, 256]
+    timestamp: uint64
+
+# Stable container with custom derives
+@derive(Clone, Debug, PartialEq, Eq)
+class MessageHistory(StableContainer[MAX_SIZE]):
+    messages: Optional[List[Message, 10]]
+    last_updated: Optional[uint64]
+
+# Union type (unions don't support custom derives via decorators)
+MessageType = Union[uint8, uint16, uint32]
+
+# This container will use module-level derives: Clone, Debug
+class Config(Container):
+    max_users: uint32
+    timeout_seconds: uint16

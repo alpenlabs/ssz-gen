@@ -9,9 +9,30 @@ It supports:
   * with only typed fields, but without default values
   * with(out) doc comments **(planned)**
   * without methods
-  * without decorators
+  * with decorators for trait derivation (`@derive(...)`, `@module_derive(...)`)
 * type alias assignments
 * integer constant assignments
+* comments (lines starting with `#`)
+
+## Decorator Syntax
+
+The parser supports Python-style decorators for configuring trait derivation:
+
+```python
+# Module-level derives (applies to all types in the file)
+@module_derive(Clone, Debug)
+
+# Per-type derives (overrides module-level for this specific type)
+@derive(Clone, Debug, PartialEq, Eq)
+class MyContainer(Container):
+    x: uint8
+    y: uint16
+```
+
+**Supported decorators:**
+- `@module_derive(...)` - Module-level derives for all types
+- `@derive(...)` - Per-type derives (overrides module-level)
+- `#` - Comments (entire line is ignored)
 
 ## Design
 
