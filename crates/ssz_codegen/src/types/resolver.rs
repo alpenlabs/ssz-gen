@@ -7,18 +7,18 @@
 //! - Track and generate union types
 //! - Manage custom type definitions
 
-use crate::types::TypeResolutionKind;
+use std::{cell::RefCell, collections::HashMap, path::PathBuf, rc::Rc};
+
+use proc_macro2::{Span, TokenStream};
+use quote::quote;
+use sizzle_parser::{
+    Identifier,
+    tysys::{Ty, TyExpr},
+};
+use syn::{Ident, parse_quote};
 
 use super::{BaseClass, ClassDef, ClassDefinition, TypeDefinition, TypeResolution};
-use proc_macro2::TokenStream;
-use quote::quote;
-use sizzle_parser::Identifier;
-use sizzle_parser::tysys::{Ty, TyExpr};
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::rc::Rc;
-use syn::parse_quote;
+use crate::types::TypeResolutionKind;
 
 /// Converts a primitive type name into a Rust syn::Type
 ///
@@ -163,7 +163,8 @@ impl<'a> TypeResolver<'a> {
             return self.resolve_imported_type(path, name);
         }
 
-        // Check if the type is a base class (Container, StableContainer, Profile or aliases to them)
+        // Check if the type is a base class (Container, StableContainer, Profile or aliases to
+        // them)
         let base_class = self.resolve_base_class(ty);
         if let Some(base_class) = base_class {
             return base_class;
@@ -327,93 +328,264 @@ impl<'a> TypeResolver<'a> {
         alias_ident: Option<&syn::Ident>,
     ) -> TypeResolution {
         let mut resolved_ty = None;
-        let resolution =
-            match def {
-                TypeDefinition::Boolean => TypeResolutionKind::Boolean,
-                TypeDefinition::UInt(size) => TypeResolutionKind::UInt(*size),
-                TypeDefinition::Vector => {
-                    let size = match args[1].resolution {
-                        TypeResolutionKind::Constant(size) => size,
-                        _ => panic!("Expected constant value for vector size"),
-                    };
-                    TypeResolutionKind::Vector(Box::new(args[0].clone()), size)
-                }
-                TypeDefinition::List => {
-                    let size = match args[1].resolution {
-                        TypeResolutionKind::Constant(size) => size,
-                        _ => panic!("Expected constant value for list size"),
-                    };
-                    TypeResolutionKind::List(Box::new(args[0].clone()), size)
-                }
-                TypeDefinition::Bitvector => {
-                    let size = match args[0].resolution {
-                        TypeResolutionKind::Constant(size) => size,
-                        _ => panic!("Expected constant value for bitvector size"),
-                    };
-                    TypeResolutionKind::Bitvector(size)
-                }
-                TypeDefinition::Bitlist => {
-                    let size = match args[0].resolution {
-                        TypeResolutionKind::Constant(size) => size,
-                        _ => panic!("Expected constant value for bitlist size"),
-                    };
-                    TypeResolutionKind::Bitlist(size)
-                }
-                TypeDefinition::Optional => TypeResolutionKind::Optional(Box::new(args[0].clone())),
-                TypeDefinition::Union => {
-                    // Special case for Union[None, T]
-                    if args.len() == 2 && args[0].resolution == TypeResolutionKind::None {
-                        TypeResolutionKind::Option(Box::new(args[1].clone()))
-                    } else {
-                        let ident = alias_ident.unwrap().clone();
-                        let ident_str = ident.to_string();
+        let resolution = match def {
+            TypeDefinition::Boolean => TypeResolutionKind::Boolean,
+            TypeDefinition::UInt(size) => TypeResolutionKind::UInt(*size),
+            TypeDefinition::Vector => {
+                let size = match args[1].resolution {
+                    TypeResolutionKind::Constant(size) => size,
+                    _ => panic!("Expected constant value for vector size"),
+                };
+                TypeResolutionKind::Vector(Box::new(args[0].clone()), size)
+            }
+            TypeDefinition::List => {
+                let size = match args[1].resolution {
+                    TypeResolutionKind::Constant(size) => size,
+                    _ => panic!("Expected constant value for list size"),
+                };
+                TypeResolutionKind::List(Box::new(args[0].clone()), size)
+            }
+            TypeDefinition::Bitvector => {
+                let size = match args[0].resolution {
+                    TypeResolutionKind::Constant(size) => size,
+                    _ => panic!("Expected constant value for bitvector size"),
+                };
+                TypeResolutionKind::Bitvector(size)
+            }
+            TypeDefinition::Bitlist => {
+                let size = match args[0].resolution {
+                    TypeResolutionKind::Constant(size) => size,
+                    _ => panic!("Expected constant value for bitlist size"),
+                };
+                TypeResolutionKind::Bitlist(size)
+            }
+            TypeDefinition::Optional => TypeResolutionKind::Optional(Box::new(args[0].clone())),
+            TypeDefinition::Union => {
+                // Special case for Union[None, T]
+                if args.len() == 2 && args[0].resolution == TypeResolutionKind::None {
+                    TypeResolutionKind::Option(Box::new(args[1].clone()))
+                } else {
+                    let ident = alias_ident.unwrap().clone();
+                    let ident_str = ident.to_string();
 
-                        // Generate the enum variants Selector0, Selector1, etc. and insert the union into our union tracker
-                        let variants: Vec<syn::Variant> = args
-                    .iter()
-                    .enumerate()
-                    .map(|(i, ty)| {
-                        let ident = syn::Ident::new(
-                            &format!("Selector{i}"),
-                            proc_macro2::Span::call_site(),
-                        );
-                        match ty.resolution {
-                            TypeResolutionKind::None => {
-                                if i == 0 {
-                                    parse_quote!(#ident)
-                                } else {
-                                    panic!("None is only allowed as the first variant in a Union")
+                    // Generate the enum variants Selector0, Selector1, etc. and insert the union
+                    // into our union tracker
+                    let variants: Vec<syn::Variant> = args
+                        .iter()
+                        .enumerate()
+                        .map(|(i, ty)| {
+                            let ident = syn::Ident::new(
+                                &format!("Selector{i}"),
+                                proc_macro2::Span::call_site(),
+                            );
+                            match ty.resolution {
+                                TypeResolutionKind::None => {
+                                    if i == 0 {
+                                        parse_quote!(#ident)
+                                    } else {
+                                        panic!(
+                                            "None is only allowed as the first variant in a Union"
+                                        )
+                                    }
+                                }
+                                _ => {
+                                    let ty = ty.unwrap_type();
+                                    parse_quote!(#ident(#ty))
                                 }
                             }
-                            _ => {
-                                let ty = ty.unwrap_type();
-                                parse_quote!(#ident(#ty))
+                        })
+                        .collect::<Vec<_>>();
+
+                    // Generate owned union enum
+                    self.union_tracker.borrow_mut().insert(
+                        ident_str.clone(),
+                        quote! {
+                            #[derive(Encode, Decode, TreeHash)]
+                            #[ssz(enum_behaviour="union")]
+                            #[tree_hash(enum_behaviour="union")]
+                            pub enum #ident {
+                            #(#variants),*
                             }
-                        }
-                    })
-                    .collect::<Vec<_>>();
+                        },
+                    );
 
-                        self.union_tracker.borrow_mut().insert(
-                            ident_str.clone(),
-                            quote! {
-                                #[derive(Encode, Decode, TreeHash)]
-                                #[ssz(enum_behaviour="union")]
-                                #[tree_hash(enum_behaviour="union")]
-                                pub enum #ident {
-                                #(#variants),*
+                    let ref_ident = Ident::new(&format!("{}Ref", ident_str), Span::call_site());
+
+                    // Generate selector methods for lazy variant access
+                    let selector_methods: Vec<TokenStream> = args
+                        .iter()
+                        .enumerate()
+                        .map(|(i, ty)| {
+                            let method_name = Ident::new(&format!("as_selector{i}"), Span::call_site());
+                            let selector_value = i as u8;
+                            let error_msg = format!("Wrong selector for {}: expected {}", ident_str, i);
+
+                            match ty.resolution {
+                                TypeResolutionKind::None => {
+                                    // Unit variant
+                                    quote! {
+                                        pub fn #method_name(&self) -> Result<(), ssz::DecodeError> {
+                                            if self.selector() != #selector_value {
+                                                return Err(ssz::DecodeError::BytesInvalid(
+                                                    #error_msg.to_string()
+                                                ));
+                                            }
+                                            Ok(())
+                                        }
+                                    }
                                 }
-                            },
-                        );
+                                _ => {
+                                    let view_ty = ty.to_view_type();
+                                    quote! {
+                                        pub fn #method_name(&self) -> Result<#view_ty, ssz::DecodeError> {
+                                            if self.selector() != #selector_value {
+                                                return Err(ssz::DecodeError::BytesInvalid(
+                                                    #error_msg.to_string()
+                                                ));
+                                            }
+                                            ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
+                                        }
+                                    }
+                                }
+                            }
+                        })
+                        .collect();
 
-                        TypeResolutionKind::Union(ident_str, args)
-                    }
+                    // Generate to_owned dispatch based on selector
+                    let to_owned_arms: Vec<TokenStream> = args
+                        .iter()
+                        .enumerate()
+                        .map(|(i, ty)| {
+                            let selector_value = i as u8;
+                            let variant_ident =
+                                Ident::new(&format!("Selector{i}"), Span::call_site());
+                            let method_name =
+                                Ident::new(&format!("as_selector{i}"), Span::call_site());
+
+                            match ty.resolution {
+                                TypeResolutionKind::None => {
+                                    quote! {
+                                        #selector_value => {
+                                            self.#method_name().expect("valid selector");
+                                            #ident::#variant_ident
+                                        }
+                                    }
+                                }
+                                TypeResolutionKind::Boolean | TypeResolutionKind::UInt(_) => {
+                                    quote! {
+                                        #selector_value => #ident::#variant_ident(
+                                            self.#method_name().expect("valid selector")
+                                        )
+                                    }
+                                }
+                                _ => {
+                                    quote! {
+                                        #selector_value => #ident::#variant_ident(
+                                            self.#method_name().expect("valid selector").to_owned()
+                                        )
+                                    }
+                                }
+                            }
+                        })
+                        .collect();
+
+                    // Generate TreeHash implementation for lazy union
+                    let tree_hash_arms: Vec<TokenStream> = args
+                        .iter()
+                        .enumerate()
+                        .map(|(i, ty)| {
+                            let selector_value = i as u8;
+                            let method_name = Ident::new(&format!("as_selector{i}"), Span::call_site());
+
+                            match ty.resolution {
+                                TypeResolutionKind::None => {
+                                    quote! {
+                                        #selector_value => {
+                                            tree_hash::mix_in_selector_with_hasher::<H>(
+                                                &tree_hash::Hash256::ZERO,
+                                                #selector_value
+                                            ).expect("valid selector")
+                                        }
+                                    }
+                                }
+                                _ => {
+                                    quote! {
+                                        #selector_value => {
+                                            let value = self.#method_name().expect("valid selector");
+                                            tree_hash::mix_in_selector_with_hasher::<H>(
+                                                &value.tree_hash_root(),
+                                                #selector_value
+                                            ).expect("valid selector")
+                                        }
+                                    }
+                                }
+                            }
+                        })
+                        .collect();
+
+                    // Store the view union as thin wrapper with lazy access
+                    self.union_tracker.borrow_mut().insert(
+                        format!("{}Ref", ident_str),
+                        quote! {
+                            #[derive(Debug, Copy, Clone)]
+                            pub struct #ref_ident<'a> {
+                                bytes: &'a [u8],
+                            }
+
+                            impl<'a> #ref_ident<'a> {
+                                pub fn selector(&self) -> u8 {
+                                    self.bytes[0]
+                                }
+
+                                #(#selector_methods)*
+
+                                pub fn to_owned(&self) -> #ident {
+                                    match self.selector() {
+                                        #(#to_owned_arms,)*
+                                        _ => panic!("Invalid union selector: {}", self.selector()),
+                                    }
+                                }
+                            }
+
+                            impl<'a> ssz::view::DecodeView<'a> for #ref_ident<'a> {
+                                fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                                    let (_, _) = ssz::split_union_bytes(bytes)?;
+                                    Ok(Self { bytes })
+                                }
+                            }
+
+                            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ref_ident<'a> {
+                                fn tree_hash_type() -> tree_hash::TreeHashType {
+                                    tree_hash::TreeHashType::Vector
+                                }
+
+                                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                                    unreachable!("Union should never be packed")
+                                }
+
+                                fn tree_hash_packing_factor() -> usize {
+                                    unreachable!("Union should never be packed")
+                                }
+
+                                fn tree_hash_root(&self) -> H::Output {
+                                    match self.selector() {
+                                        #(#tree_hash_arms,)*
+                                        _ => panic!("Invalid union selector: {}", self.selector()),
+                                    }
+                                }
+                            }
+                        },
+                    );
+
+                    TypeResolutionKind::Union(ident_str, args)
                 }
-                TypeDefinition::Bytes(size) => TypeResolutionKind::Bytes(*size),
-                TypeDefinition::CustomType(res) => {
-                    resolved_ty = res.ty.clone();
-                    res.resolution.clone()
-                }
-            };
+            }
+            TypeDefinition::Bytes(size) => TypeResolutionKind::Bytes(*size),
+            TypeDefinition::CustomType(res) => {
+                resolved_ty = res.ty.clone();
+                res.resolution.clone()
+            }
+        };
 
         TypeResolution {
             ty: resolved_ty,
@@ -549,7 +721,8 @@ impl<'a> TypeResolver<'a> {
             self.base_classes
                 .insert(alias_str.clone(), base_class.clone());
 
-            // Add the base class as an empty version of the base class itself for inheritance purposes
+            // Add the base class as an empty version of the base class itself for inheritance
+            // purposes
             let class_def = match &base_class {
                 BaseClass::Container => ClassDefinition::Custom(ClassDef {
                     base: BaseClass::Container,

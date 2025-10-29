@@ -12,10 +12,9 @@ use itertools as _;
 use serde as _;
 use serde_json as _;
 use smallvec as _;
+use ssz::{Decode, Encode};
 use ssz_derive as _;
 use ssz_primitives as _;
-
-use ssz::{Decode, Encode};
 
 fn main() {
     let vec: Vec<u64> = vec![4242; 8196];

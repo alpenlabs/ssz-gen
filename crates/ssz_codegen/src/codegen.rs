@@ -1,5 +1,12 @@
 //! Code generation module for converting SSZ schemas into Rust code.
 
+use std::{cell::RefCell, collections::HashMap, path::PathBuf};
+
+use proc_macro2::{Span, TokenStream};
+use quote::quote;
+use sizzle_parser::{AliasDef as ParserAliasDef, ClassDef as ParserClassDef, SszSchema, tysys::Ty};
+use syn::{Ident, parse_quote};
+
 use crate::{
     ModuleGeneration,
     types::{
@@ -7,11 +14,6 @@ use crate::{
         resolver::TypeResolver,
     },
 };
-use proc_macro2::TokenStream;
-use quote::quote;
-use sizzle_parser::{AliasDef as ParserAliasDef, ClassDef as ParserClassDef, SszSchema, tysys::Ty};
-use std::{cell::RefCell, collections::HashMap, path::PathBuf};
-use syn::parse_quote;
 
 /// Represents either an alias or class definition from the SSZ schema.
 #[derive(Debug)]
@@ -71,7 +73,7 @@ impl<'a> CircleBufferCodegen<'a> {
         alias: &ParserAliasDef,
         type_resolver: &mut TypeResolver<'_>,
     ) -> bool {
-        let ident = syn::Ident::new(&alias.name().0, proc_macro2::Span::call_site());
+        let ident = Ident::new(&alias.name().0, Span::call_site());
 
         let type_def = type_resolver.resolve_type_and_add(alias.ty(), &ident);
         if type_def.is_unresolved() {
@@ -115,7 +117,7 @@ impl<'a> CircleBufferCodegen<'a> {
         class: &ParserClassDef,
         type_resolver: &mut TypeResolver<'_>,
     ) -> bool {
-        let ident = syn::Ident::new(&class.name().0, proc_macro2::Span::call_site());
+        let ident = Ident::new(&class.name().0, Span::call_site());
 
         let parent_ty = class.parent_ty();
         let parent_path = match parent_ty {
@@ -141,7 +143,27 @@ impl<'a> CircleBufferCodegen<'a> {
         };
 
         if success {
+            // Generate owned struct
             self.tokens.push(parent_class_def.to_token_stream(&ident));
+
+            // Generate view struct (thin wrapper)
+            self.tokens.push(parent_class_def.to_view_struct(&ident));
+
+            // Generate getter methods for view struct
+            self.tokens.push(parent_class_def.to_view_getters(&ident));
+
+            // Generate TreeHash implementation for view struct
+            self.tokens
+                .push(parent_class_def.to_view_tree_hash_impl(&ident));
+
+            // Generate DecodeView implementation (validation-only)
+            self.tokens
+                .push(parent_class_def.to_view_decode_impl(&ident));
+
+            // Generate to_owned implementation (uses getters)
+            self.tokens
+                .push(parent_class_def.to_view_to_owned_impl(&ident));
+
             type_resolver.add_class(&ident, parent_class_def);
             return true;
         }
@@ -245,7 +267,7 @@ impl<'a> CircleBufferCodegen<'a> {
             }
 
             // Resolve the field type
-            let field_ident = syn::Ident::new(&field.name().0, proc_macro2::Span::call_site());
+            let field_ident = Ident::new(&field.name().0, Span::call_site());
 
             let field_ty = field.ty();
             let field_type = type_resolver.resolve_type(field_ty, None);
@@ -315,7 +337,8 @@ impl<'a> CircleBufferCodegen<'a> {
             _ => panic!("Expected profile to inherit from a stable container"),
         };
 
-        // If it's imported, we need to get the original stable container's definition from another module
+        // If it's imported, we need to get the original stable container's definition from another
+        // module
         let resolvers = type_resolver.resolvers.borrow();
         let stable_container_def = if let Some(parent_path) = parent_path {
             let resolver = resolvers.get(parent_path).unwrap();
@@ -363,7 +386,7 @@ impl<'a> CircleBufferCodegen<'a> {
             }
             curr_index = original_field_index;
 
-            let field_ident = syn::Ident::new(&field.name().0, proc_macro2::Span::call_site());
+            let field_ident = Ident::new(&field.name().0, Span::call_site());
             let field_ty = field.ty();
             let field_type = type_resolver.resolve_type(field_ty, None);
             if field_type.is_unresolved() {
@@ -420,7 +443,7 @@ fn generate_module_code(
 ) -> TokenStream {
     let path = PathBuf::from(&node.path);
     let module_name = path.file_name().unwrap().to_string_lossy();
-    let module_ident = syn::Ident::new(&module_name, proc_macro2::Span::call_site());
+    let module_ident = Ident::new(&module_name, Span::call_site());
 
     // Get the code for this module if it exists
     let module_code = module_tokens.get(&path).cloned();
@@ -461,6 +484,7 @@ fn single_module_rust_code(schema_map: &HashMap<&PathBuf, TokenStream>) -> Token
         use ssz_derive::{Encode, Decode};
         use tree_hash::TreeHashDigest;
         use tree_hash_derive::TreeHash;
+        use ssz::view::*;
 
         #(#all_tokens)*
     }
@@ -476,7 +500,7 @@ fn flat_modules_rust_code(schema_map: &HashMap<&PathBuf, TokenStream>) -> TokenS
 
     for path in paths {
         let module_name = path.file_stem().unwrap_or_default().to_string_lossy();
-        let module_ident = syn::Ident::new(&module_name, proc_macro2::Span::call_site());
+        let module_ident = Ident::new(&module_name, Span::call_site());
 
         if let Some(content_tokens) = schema_map.get(path) {
             modules.push(quote! {
@@ -485,6 +509,7 @@ fn flat_modules_rust_code(schema_map: &HashMap<&PathBuf, TokenStream>) -> TokenS
                     use ssz_derive::{Encode, Decode};
                     use tree_hash::TreeHashDigest;
                     use tree_hash_derive::TreeHash;
+                    use ssz::view::*;
 
                     #content_tokens
                 }
@@ -578,7 +603,7 @@ pub fn schema_map_to_rust_code(
             .constants()
             .iter()
             .map(|constant| {
-                let ident = syn::Ident::new(&constant.name().0, proc_macro2::Span::call_site());
+                let ident = Ident::new(&constant.name().0, Span::call_site());
                 let value = constant.value().eval();
                 type_resolver.add_constant(&ident, value);
 
@@ -621,6 +646,7 @@ pub fn schema_map_to_rust_code(
                 use ssz_derive::{Encode, Decode};
                 use tree_hash::TreeHashDigest;
                 use tree_hash_derive::TreeHash;
+                use ssz::view::*;
 
                 #content_tokens
             },

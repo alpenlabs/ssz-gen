@@ -144,7 +144,8 @@ pub(crate) struct TypeResolver<'a> {
     /// Map of module paths to their respective resolvers.
     cross_module_types: &'a CrossModuleTypeMap<'a>,
 
-    // TODO some way to express types that can be inherited from and types that can only be used as a member
+    // TODO some way to express types that can be inherited from and types that can only be used as
+    // a member
     /// Constants in the module scope.
     idents: HashMap<Identifier, IdentTarget>,
 
@@ -618,14 +619,13 @@ impl<'a> TypeResolver<'a> {
 mod tests {
     use std::collections::HashMap;
 
+    use super::{CrossModuleTypeMap, TypeResolver};
     use crate::{
         Identifier,
         ast::{ComplexTySpec, TyArgSpec, TyExprSpec},
         builtins,
         tysys::ConstValue,
     };
-
-    use super::{CrossModuleTypeMap, TypeResolver};
 
     fn make_ident(s: &str) -> Identifier {
         Identifier::try_from(s.to_owned()).expect("test: make ident")

@@ -261,13 +261,12 @@ pub(crate) fn parse_tokens_to_toktrs(tokens: &[SrcToken]) -> Result<Vec<SrcToktr
 
 #[cfg(test)]
 mod tests {
+    use super::parse_tokens_to_toktrs;
     use crate::{
         Identifier,
         src_pos::SrcPos,
         token::{SrcToken, parse_char_array_to_tokens},
     };
-
-    use super::parse_tokens_to_toktrs;
 
     #[test]
     fn test_parse_simple() {

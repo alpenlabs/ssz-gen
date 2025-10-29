@@ -1,10 +1,10 @@
 //! File reading module for reading SSZ files.
 
-use std::collections::HashMap;
-use std::fs;
-use std::io;
-use std::path::Path;
-use std::path::PathBuf;
+use std::{
+    collections::HashMap,
+    fs, io,
+    path::{Path, PathBuf},
+};
 
 /// Reads specified SSZ entry point files and returns a mapping of file paths to their contents.
 ///
@@ -15,8 +15,8 @@ use std::path::PathBuf;
 ///
 /// # Returns
 ///
-/// A `Result` containing a `HashMap` where keys are file paths as strings and values are file contents as strings.
-/// Returns an `io::Error` if reading any file fails.
+/// A `Result` containing a `HashMap` where keys are file paths as strings and values are file
+/// contents as strings. Returns an `io::Error` if reading any file fails.
 ///
 /// # Example
 ///

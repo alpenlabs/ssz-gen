@@ -85,7 +85,8 @@ impl PosTbl {
         self.get_srcpos(idx).expect("srcpos: out of bounds")
     }
 
-    /// Gets the source position for the end of the source string, panicking if the source string is empty.
+    /// Gets the source position for the end of the source string, panicking if the source string is
+    /// empty.
     pub fn expect_end(&self) -> SrcPos {
         let last_lcp = *self.chars.last().expect("srcpos: empty");
         SrcPos::new(self.chars.len() as i32, last_lcp)

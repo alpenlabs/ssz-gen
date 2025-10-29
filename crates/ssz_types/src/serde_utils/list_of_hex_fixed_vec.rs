@@ -2,9 +2,10 @@
 // Original source licensed under the Apache License 2.0
 
 //! Serialize `VariableList<FixedVector<u8, M>, N>` as list of 0x-prefixed hex string.
-use crate::{FixedVector, VariableList};
 use serde::{Deserializer, Serializer, ser::SerializeSeq};
 use serde_derive::{Deserialize, Serialize};
+
+use crate::{FixedVector, VariableList};
 
 /// A wrapper for a `FixedVector<u8, N>`
 #[derive(Deserialize, Debug)]

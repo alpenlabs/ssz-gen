@@ -1,19 +1,17 @@
 //! # SSZ Codegen
 //!
-//! A codegen tool that parses simplified Python SSZ (Simple Serialize) definitions using `sizzle-parser`
-//! and generates Rust code for it utilizing `ssz_derive`'s derive macros.
+//! A codegen tool that parses simplified Python SSZ (Simple Serialize) definitions using
+//! `sizzle-parser` and generates Rust code for it utilizing `ssz_derive`'s derive macros.
+
+use std::{error, fs, path::Path};
 
 use prettyplease as _;
+use sizzle_parser::parse_str_schema;
 use ssz as _;
 use ssz_derive as _;
 use ssz_types as _;
 use tree_hash as _;
 use tree_hash_derive as _;
-
-use sizzle_parser::parse_str_schema;
-use std::error;
-use std::fs;
-use std::path::Path;
 
 /// Controls how modules are generated in the output.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -38,14 +36,16 @@ pub mod types;
 /// This function:
 /// 1. Reads all Pythonic SSZ definition files from the input directory
 /// 2. Generates Rust code for each file separately
-/// 3. Writes the generated code to the output directory, with the same file name but with a .rs extension
+/// 3. Writes the generated code to the output directory, with the same file name but with a .rs
+///    extension
 /// 4. Outputs Cargo instructions to rerun the build script when any input file changes
 ///
 /// # Arguments
 ///
 /// * `entry_points` - Paths to the entrypoint SSZ definition files
 /// * `base_dir` - Path to the base directory of the SSZ definition files
-/// * `crates` - A slice of strings representing the external crates you want to import in your ssz schema
+/// * `crates` - A slice of strings representing the external crates you want to import in your ssz
+///   schema
 /// * `output_file_path` - Path where the generated Rust code files will be written
 /// * `module_generation` - Module generation strategy.
 ///

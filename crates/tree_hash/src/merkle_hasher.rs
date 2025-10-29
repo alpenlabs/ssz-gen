@@ -1,9 +1,11 @@
 // Modified in 2025 from the original version
 // Original source licensed under the Apache License 2.0
 
-use crate::TreeHashDigest;
-use smallvec::{SmallVec, smallvec};
 use std::mem;
+
+use smallvec::{SmallVec, smallvec};
+
+use crate::TreeHashDigest;
 
 type SmallVec8<T> = SmallVec<[T; 8]>;
 
@@ -131,7 +133,6 @@ impl<H: TreeHashDigest> std::fmt::Debug for HalfNode<H> {
 ///        / \ / \
 ///       L  L L  L
 /// ```
-///
 #[derive(Debug)]
 pub struct MerkleHasher<H: TreeHashDigest> {
     /// Stores the nodes that are half-complete and awaiting a right node.
@@ -377,14 +378,14 @@ impl<H: TreeHashDigest> MerkleHasher<H> {
 
 #[cfg(test)]
 mod test {
-    use ssz_primitives::U256;
+    use ssz_primitives::{Hash256, U256};
 
     use super::*;
     use crate::{Sha256Hasher, merkleize_padded_with_hasher};
-    use ssz_primitives::Hash256;
 
-    /// This test is just to ensure that the stack size of the `HalfNode` remains the same. We choose
-    /// our smallvec size based upon this, so it's good to know if it suddenly changes in size.
+    /// This test is just to ensure that the stack size of the `HalfNode` remains the same. We
+    /// choose our smallvec size based upon this, so it's good to know if it suddenly changes in
+    /// size.
     #[test]
     fn context_size() {
         assert_eq!(

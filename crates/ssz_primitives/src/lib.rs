@@ -6,11 +6,11 @@
 //! This module provides primitive types that were previously imported from alloy-primitives,
 //! now implemented locally to remove the ethereum-specific dependency.
 
-use ruint::Uint;
 use std::str::FromStr;
 
 #[cfg(feature = "rand")]
 use rand::RngCore;
+use ruint::Uint;
 
 /// A 256-bit unsigned integer type.
 pub type U256 = Uint<256, 4>;

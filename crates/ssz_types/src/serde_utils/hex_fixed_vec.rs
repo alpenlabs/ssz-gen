@@ -3,9 +3,10 @@
 
 //! Serde utilities for `FixedVector`
 
-use crate::FixedVector;
 use serde::{Deserializer, Serializer};
 use ssz::serde_utils::hex::{self, PrefixedHexVisitor};
+
+use crate::FixedVector;
 
 /// Serialize a `FixedVector` as a hex string.
 pub fn serialize<S, const U: usize>(

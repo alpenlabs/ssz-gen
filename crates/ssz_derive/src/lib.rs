@@ -10,10 +10,11 @@
 //! The following struct/enum attributes are available:
 //!
 //! - `#[ssz(enum_behaviour = "tag")]`: encodes and decodes an `enum` with 0 fields per variant
-//! - `#[ssz(enum_behaviour = "union")]`: encodes and decodes an `enum` with a one-byte variant selector.
+//! - `#[ssz(enum_behaviour = "union")]`: encodes and decodes an `enum` with a one-byte variant
+//!   selector.
 //! - `#[ssz(enum_behaviour = "transparent")]`: allows encoding an `enum` by serializing only the
-//!   value whilst ignoring outermost the `enum`.  decodes by attempting to decode each variant
-//!   in order and the first one that is successful is returned.
+//!   value whilst ignoring outermost the `enum`.  decodes by attempting to decode each variant in
+//!   order and the first one that is successful is returned.
 //! - `#[ssz(struct_behaviour = "container")]`: encodes and decodes the `struct` as an SSZ
 //!   "container".
 //! - `#[ssz(struct_behaviour = "transparent")]`: encodes and decodes a `struct` with exactly one
@@ -22,25 +23,25 @@
 //! The following field attributes are available:
 //!
 //! - `#[ssz(with = "module")]`: uses the methods in `module` to implement `ssz::Encode` and
-//!   `ssz::Decode`. This is useful when it's not possible to create an `impl` for that type
-//!   (e.g. the type is defined in another crate).
+//!   `ssz::Decode`. This is useful when it's not possible to create an `impl` for that type (e.g.
+//!   the type is defined in another crate).
 //! - `#[ssz(skip_serializing)]`: this field will not be included in the serialized SSZ vector.
-//! - `#[ssz(skip_deserializing)]`: this field will not be expected in the serialized
-//!   SSZ vector and it will be initialized from a `Default` implementation.
+//! - `#[ssz(skip_deserializing)]`: this field will not be expected in the serialized SSZ vector and
+//!   it will be initialized from a `Default` implementation.
 //!
 //! ## Examples
 //!
 //! ### Structs
 //!
 //! ```rust
-//! use ssz::{Encode, Decode};
-//! use ssz_derive::{Encode, Decode};
+//! use ssz::{Decode, Encode};
+//! use ssz_derive::{Decode, Encode};
 //!
 //! /// Represented as an SSZ "list" wrapped in an SSZ "container".
 //! #[derive(Debug, PartialEq, Encode, Decode)]
-//! #[ssz(struct_behaviour = "container")]   // "container" is the default behaviour
+//! #[ssz(struct_behaviour = "container")] // "container" is the default behaviour
 //! struct TypicalStruct {
-//!     foo: Vec<u8>
+//!     foo: Vec<u8>,
 //! }
 //!
 //! assert_eq!(
@@ -57,13 +58,10 @@
 //! #[derive(Encode, Decode)]
 //! #[ssz(struct_behaviour = "transparent")]
 //! struct WrapperStruct {
-//!     foo: Vec<u8>
+//!     foo: Vec<u8>,
 //! }
 //!
-//! assert_eq!(
-//!     WrapperStruct { foo: vec![42] }.as_ssz_bytes(),
-//!     vec![42]
-//! );
+//! assert_eq!(WrapperStruct { foo: vec![42] }.as_ssz_bytes(), vec![42]);
 //!
 //! /// Represented as an SSZ "list" *without* an SSZ "container". The `bar` byte is ignored.
 //! #[derive(Debug, PartialEq, Encode, Decode)]
@@ -75,12 +73,19 @@
 //! }
 //!
 //! assert_eq!(
-//!     WrapperStructSkippedField { foo: vec![42], bar: 99 }.as_ssz_bytes(),
+//!     WrapperStructSkippedField {
+//!         foo: vec![42],
+//!         bar: 99
+//!     }
+//!     .as_ssz_bytes(),
 //!     vec![42]
 //! );
 //! assert_eq!(
 //!     WrapperStructSkippedField::from_ssz_bytes(&[42]).unwrap(),
-//!     WrapperStructSkippedField { foo: vec![42], bar: 0 }
+//!     WrapperStructSkippedField {
+//!         foo: vec![42],
+//!         bar: 0
+//!     }
 //! );
 //!
 //! /// Represented as an SSZ "list" *without* an SSZ "container".
@@ -88,20 +93,14 @@
 //! #[ssz(struct_behaviour = "transparent")]
 //! struct NewType(Vec<u8>);
 //!
-//! assert_eq!(
-//!     NewType(vec![42]).as_ssz_bytes(),
-//!     vec![42]
-//! );
+//! assert_eq!(NewType(vec![42]).as_ssz_bytes(), vec![42]);
 //!
 //! /// Represented as an SSZ "list" *without* an SSZ "container". The `bar` byte is ignored.
 //! #[derive(Debug, PartialEq, Encode, Decode)]
 //! #[ssz(struct_behaviour = "transparent")]
 //! struct NewTypeSkippedField(Vec<u8>, #[ssz(skip_serializing, skip_deserializing)] u8);
 //!
-//! assert_eq!(
-//!     NewTypeSkippedField(vec![42], 99).as_ssz_bytes(),
-//!     vec![42]
-//! );
+//! assert_eq!(NewTypeSkippedField(vec![42], 99).as_ssz_bytes(), vec![42]);
 //! assert_eq!(
 //!     NewTypeSkippedField::from_ssz_bytes(&[42]).unwrap(),
 //!     NewTypeSkippedField(vec![42], 0)
@@ -111,8 +110,8 @@
 //! ### Enums
 //!
 //! ```rust
-//! use ssz::{Encode, Decode};
-//! use ssz_derive::{Encode, Decode};
+//! use ssz::{Decode, Encode};
+//! use ssz_derive::{Decode, Encode};
 //!
 //! /// Represented as an SSZ "union".
 //! #[derive(Debug, PartialEq, Encode, Decode)]
@@ -122,10 +121,7 @@
 //!     Bar(Vec<u8>),
 //! }
 //!
-//! assert_eq!(
-//!     UnionEnum::Foo(42).as_ssz_bytes(),
-//!     vec![0, 42]
-//! );
+//! assert_eq!(UnionEnum::Foo(42).as_ssz_bytes(), vec![0, 42]);
 //! assert_eq!(
 //!     UnionEnum::from_ssz_bytes(&[1, 42, 42]).unwrap(),
 //!     UnionEnum::Bar(vec![42, 42]),
@@ -139,10 +135,7 @@
 //!     Bar(Vec<u8>),
 //! }
 //!
-//! assert_eq!(
-//!     TransparentEnum::Foo(42).as_ssz_bytes(),
-//!     vec![42]
-//! );
+//! assert_eq!(TransparentEnum::Foo(42).as_ssz_bytes(), vec![42]);
 //! assert_eq!(
 //!     TransparentEnum::Bar(vec![42, 42]).as_ssz_bytes(),
 //!     vec![42, 42]
@@ -159,20 +152,15 @@
 //!     Foo,
 //!     Bar,
 //! }
-//! assert_eq!(
-//!    TagEnum::Foo.as_ssz_bytes(),
-//!    vec![0]
-//! );
-//! assert_eq!(
-//!    TagEnum::from_ssz_bytes(&[1]).unwrap(),
-//!    TagEnum::Bar,
-//! );
+//! assert_eq!(TagEnum::Foo.as_ssz_bytes(), vec![0]);
+//! assert_eq!(TagEnum::from_ssz_bytes(&[1]).unwrap(), TagEnum::Bar,);
 //! ```
+
+use std::convert::TryInto;
 
 use darling::{FromDeriveInput, FromMeta};
 use proc_macro::TokenStream;
 use quote::quote;
-use std::convert::TryInto;
 use syn::{DataEnum, DataStruct, DeriveInput, Ident, Index, parse_macro_input};
 
 /// The highest possible union selector value (higher values are reserved for backwards compatible

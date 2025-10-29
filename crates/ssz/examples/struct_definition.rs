@@ -10,10 +10,9 @@ use itertools as _;
 use serde as _;
 use serde_json as _;
 use smallvec as _;
+use ssz::{Decode, DecodeError, Encode, SszDecoderBuilder, SszEncoder};
 use ssz_derive as _;
 use ssz_primitives as _;
-
-use ssz::{Decode, DecodeError, Encode, SszDecoderBuilder, SszEncoder};
 
 /// A struct with 3 fields
 #[derive(Debug, PartialEq)]

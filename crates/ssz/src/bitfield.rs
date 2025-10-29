@@ -3,15 +3,17 @@
 
 //! Bitfield implementation
 
-#[cfg(feature = "serde")]
-use crate::serde_utils::hex::{PrefixedHexVisitor, encode as hex_encode};
-use crate::{Decode, DecodeError, Encode};
 use core::marker::PhantomData;
+
 #[cfg(feature = "serde")]
 use serde::de::{Deserialize, Deserializer};
 #[cfg(feature = "serde")]
 use serde::ser::{Serialize, Serializer};
 use smallvec::{SmallVec, ToSmallVec, smallvec};
+
+#[cfg(feature = "serde")]
+use crate::serde_utils::hex::{PrefixedHexVisitor, encode as hex_encode};
+use crate::{Decode, DecodeError, Encode};
 
 pub(crate) mod bitvector_dynamic;
 
@@ -44,6 +46,9 @@ pub enum Error {
 /// length of attestation bitfields is roughly `N // 32 slots // 64 committes //
 /// 8 bits`.
 pub(crate) const SMALLVEC_LEN: usize = 128;
+
+/// Type alias for the [`SmallVec`] used in bitfields to avoid `const` evaluation cycles.
+pub(crate) type BitfieldSmallVec = SmallVec<[u8; 128]>;
 
 /// A marker trait applied to `Variable` and `Fixed` that defines the behaviour of a `Bitfield`.
 pub trait BitfieldBehaviour: Clone {}
@@ -112,7 +117,6 @@ pub type BitVector<const N: usize> = Bitfield<Fixed<N>>;
 /// assert_eq!(bitvector.len(), 8); // `BitVector` length is fixed at the type-level.
 /// assert!(bitvector.set(7, true).is_ok());  // Setting inside the capacity is permitted.
 /// assert!(bitvector.set(9, true).is_err());  // Setting outside the capacity is not.
-///
 /// ```
 ///
 /// ## Note
@@ -122,7 +126,7 @@ pub type BitVector<const N: usize> = Bitfield<Fixed<N>>;
 /// bit-index. E.g., `smallvec![0b0000_0001, 0b0000_0010]` has bits `0, 9` set.
 #[derive(Clone, Debug)]
 pub struct Bitfield<T> {
-    bytes: SmallVec<[u8; SMALLVEC_LEN]>,
+    bytes: BitfieldSmallVec,
     len: usize,
     _phantom: PhantomData<T>,
 }
@@ -161,8 +165,8 @@ impl<const N: usize> Bitfield<Variable<N>> {
     ///
     /// ## Example
     /// ```
-    /// use ssz::BitList;
     /// use smallvec::SmallVec;
+    /// use ssz::BitList;
     ///
     /// type BitList8 = BitList<8>;
     ///
@@ -170,7 +174,7 @@ impl<const N: usize> Bitfield<Variable<N>> {
     ///
     /// assert_eq!(b.into_bytes(), SmallVec::from_buf([0b0001_0000]));
     /// ```
-    pub fn into_bytes(self) -> SmallVec<[u8; SMALLVEC_LEN]> {
+    pub fn into_bytes(self) -> BitfieldSmallVec {
         let len = self.len();
         let mut bytes = self.bytes;
 
@@ -195,7 +199,7 @@ impl<const N: usize> Bitfield<Variable<N>> {
     /// produces (SSZ).
     ///
     /// Returns `None` if `bytes` are not a valid encoding.
-    pub fn from_bytes(bytes: SmallVec<[u8; SMALLVEC_LEN]>) -> Result<Self, Error> {
+    pub fn from_bytes(bytes: BitfieldSmallVec) -> Result<Self, Error> {
         let bytes_len = bytes.len();
         let mut initial_bitfield: Bitfield<Variable<N>> = {
             let num_bits = bytes.len() * 8;
@@ -304,14 +308,17 @@ impl<const N: usize> Bitfield<Fixed<N>> {
     ///
     /// ## Example
     /// ```
-    /// use ssz::BitVector;
     /// use smallvec::SmallVec;
+    /// use ssz::BitVector;
     ///
     /// type BitVector4 = BitVector<4>;
     ///
-    /// assert_eq!(BitVector4::new().into_bytes(), SmallVec::from_buf([0b0000_0000]));
+    /// assert_eq!(
+    ///     BitVector4::new().into_bytes(),
+    ///     SmallVec::from_buf([0b0000_0000])
+    /// );
     /// ```
-    pub fn into_bytes(self) -> SmallVec<[u8; SMALLVEC_LEN]> {
+    pub fn into_bytes(self) -> BitfieldSmallVec {
         self.into_raw_bytes()
     }
 
@@ -319,7 +326,7 @@ impl<const N: usize> Bitfield<Fixed<N>> {
     /// produces (SSZ).
     ///
     /// Returns `None` if `bytes` are not a valid encoding.
-    pub fn from_bytes(bytes: SmallVec<[u8; SMALLVEC_LEN]>) -> Result<Self, Error> {
+    pub fn from_bytes(bytes: BitfieldSmallVec) -> Result<Self, Error> {
         Self::from_raw_bytes(bytes, Self::capacity())
     }
 
@@ -423,7 +430,7 @@ impl<T: BitfieldBehaviour> Bitfield<T> {
     }
 
     /// Returns the underlying bytes representation of the bitfield.
-    pub fn into_raw_bytes(self) -> SmallVec<[u8; SMALLVEC_LEN]> {
+    pub fn into_raw_bytes(self) -> BitfieldSmallVec {
         self.bytes
     }
 
@@ -440,7 +447,7 @@ impl<T: BitfieldBehaviour> Bitfield<T> {
     /// - `bytes` is not the minimal required bytes to represent a bitfield of `bit_len` bits.
     /// - `bit_len` is not a multiple of 8 and `bytes` contains set bits that are higher than, or
     ///   equal to `bit_len`.
-    fn from_raw_bytes(bytes: SmallVec<[u8; SMALLVEC_LEN]>, bit_len: usize) -> Result<Self, Error> {
+    fn from_raw_bytes(bytes: BitfieldSmallVec, bit_len: usize) -> Result<Self, Error> {
         if bit_len == 0 {
             if bytes.len() == 1 && bytes[0] == 0 {
                 // A bitfield with `bit_len` 0 can only be represented by a single zero byte.
@@ -1165,7 +1172,7 @@ mod bitlist {
     macro_rules! bytevec {
         ($($x : expr),* $(,)*) => {
             {
-                let __smallvec: SmallVec<[u8; SMALLVEC_LEN]> = smallvec!($($x),*);
+                let __smallvec: BitfieldSmallVec = smallvec!($($x),*);
                 __smallvec
             }
         };

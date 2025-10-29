@@ -3,6 +3,8 @@
 
 //! Tests for the SSZ crate
 
+use std::num::NonZeroUsize;
+
 #[cfg(feature = "arbitrary")]
 use arbitrary as _;
 use hex as _;
@@ -10,18 +12,20 @@ use itertools as _;
 use serde as _;
 use serde_json as _;
 use smallvec as _;
-
 use ssz::{Decode, DecodeError, Encode};
 use ssz_derive::{Decode, Encode};
 use ssz_primitives::{U128, U256};
-use std::num::NonZeroUsize;
 
 mod round_trip {
-    use super::*;
+    use std::{
+        collections::{BTreeMap, BTreeSet},
+        iter::FromIterator,
+        sync::Arc,
+    };
+
     use ssz_primitives::Hash256;
-    use std::collections::{BTreeMap, BTreeSet};
-    use std::iter::FromIterator;
-    use std::sync::Arc;
+
+    use super::*;
 
     fn round_trip<T: Encode + Decode + std::fmt::Debug + PartialEq>(items: Vec<T>) {
         assert_eq!(
@@ -528,8 +532,9 @@ mod round_trip {
 
 /// Decode tests that are expected to fail.
 mod decode_fail {
-    use super::*;
     use ssz_primitives::Hash256;
+
+    use super::*;
 
     #[test]
     fn non_zero_usize() {

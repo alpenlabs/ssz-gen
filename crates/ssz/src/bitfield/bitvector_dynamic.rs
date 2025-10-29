@@ -2,6 +2,14 @@
 // Original source licensed under the Apache License 2.0
 
 //! Provides `Bitfield<Dynamic>` (BitVectorDynamic)
+use core::marker::PhantomData;
+
+#[cfg(feature = "serde")]
+use serde::de::{Deserialize, Deserializer};
+#[cfg(feature = "serde")]
+use serde::ser::{Serialize, Serializer};
+use smallvec::{SmallVec, ToSmallVec, smallvec};
+
 /// for encoding and decoding bitvectors that have a dynamic length.
 #[cfg(feature = "serde")]
 use crate::serde_utils::hex::{PrefixedHexVisitor, encode as hex_encode};
@@ -9,12 +17,6 @@ use crate::{
     Decode, DecodeError, Encode,
     bitfield::{Bitfield, BitfieldBehaviour, Error, SMALLVEC_LEN, bytes_for_bit_len},
 };
-use core::marker::PhantomData;
-#[cfg(feature = "serde")]
-use serde::de::{Deserialize, Deserializer};
-#[cfg(feature = "serde")]
-use serde::ser::{Serialize, Serializer};
-use smallvec::{SmallVec, ToSmallVec, smallvec};
 
 /// A marker struct used to declare dynamic length behaviour on a Bitfield.
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -492,8 +494,9 @@ mod roundtrip_tests {
     #[test]
     #[cfg(feature = "serde")]
     fn test_serde_roundtrip() -> Result<(), Error> {
-        use serde_json::de::Deserializer as json_deserializer;
-        use serde_json::ser::Serializer as json_serializer;
+        use serde_json::{
+            de::Deserializer as json_deserializer, ser::Serializer as json_serializer,
+        };
 
         // Create a test BitVectorDynamic
         let mut b = BitVectorDynamic::new(16)?;

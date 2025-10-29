@@ -3,15 +3,14 @@
 
 //! SSZ derive tests
 
+use std::{fmt::Debug, marker::PhantomData};
+
 use darling as _;
 use quote as _;
-use syn as _;
-
 use ssz::{Decode, DecodeError, Encode};
 use ssz_derive::{Decode, Encode};
 use ssz_types::{BitVector, Optional, VariableList};
-use std::fmt::Debug;
-use std::marker::PhantomData;
+use syn as _;
 
 fn assert_encode<T: Encode>(item: &T, bytes: &[u8]) {
     assert_eq!(item.as_ssz_bytes(), bytes);

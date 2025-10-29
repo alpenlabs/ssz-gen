@@ -1,8 +1,9 @@
 // Modified in 2025 from the original version
 // Original source licensed under the Apache License 2.0
 
-use serde::de::{self, Visitor};
 use std::fmt;
+
+use serde::de::{self, Visitor};
 
 /// Encode `data` as a 0x-prefixed hex string.
 pub fn encode<T: AsRef<[u8]>>(data: T) -> String {

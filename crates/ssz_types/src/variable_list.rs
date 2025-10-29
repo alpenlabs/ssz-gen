@@ -1,14 +1,17 @@
 // Modified in 2025 from the original version
 // Original source licensed under the Apache License 2.0
 
-use crate::Error;
-use crate::tree_hash::vec_tree_hash_root;
+use std::{
+    ops::{Deref, DerefMut, Index, IndexMut},
+    slice::SliceIndex,
+};
+
 #[cfg(feature = "serde")]
 use serde::Deserialize;
 #[cfg(feature = "serde")]
 use serde_derive::Serialize;
-use std::ops::{Deref, DerefMut, Index, IndexMut};
-use std::slice::SliceIndex;
+
+use crate::{Error, tree_hash::vec_tree_hash_root};
 
 /// Emulates a SSZ `List`.
 ///
@@ -340,11 +343,13 @@ impl<'a, T: arbitrary::Arbitrary<'a>, const N: usize> arbitrary::Arbitrary<'a>
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use ssz::*;
     use std::collections::HashSet;
+
+    use ssz::*;
     use tree_hash::{TreeHash, merkle_root_with_hasher};
     use tree_hash_derive::TreeHash;
+
+    use super::*;
 
     #[test]
     fn new() {

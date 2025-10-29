@@ -2,9 +2,10 @@
 // Original source licensed under the Apache License 2.0
 
 //! Serialize `VariableList<u8, N>` as 0x-prefixed hex string.
-use crate::VariableList;
 use serde::{Deserializer, Serializer};
 use ssz::serde_utils::hex::{self, PrefixedHexVisitor};
+
+use crate::VariableList;
 
 /// Serialize a `VariableList<u8, N>` as a 0x-prefixed hex string.
 pub fn serialize<S, const N: usize>(

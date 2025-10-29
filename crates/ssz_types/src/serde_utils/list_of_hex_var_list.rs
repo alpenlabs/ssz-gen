@@ -2,9 +2,10 @@
 // Original source licensed under the Apache License 2.0
 
 //! Serialize `VaraibleList<VariableList<u8, M>, N>` as list of 0x-prefixed hex string.
-use crate::VariableList;
 use serde::{Deserializer, Serializer, ser::SerializeSeq};
 use serde_derive::{Deserialize, Serialize};
+
+use crate::VariableList;
 
 /// A wrapper for a `VariableList<u8, N>`
 #[derive(Deserialize, Debug)]

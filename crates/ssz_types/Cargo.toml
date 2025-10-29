@@ -28,7 +28,13 @@ tree_hash.workspace = true
 serde_json.workspace = true
 tree_hash_derive.workspace = true
 ssz = { workspace = true, features = ["serde"] }
+criterion.workspace = true
+rand.workspace = true
 
 [features]
 default = []
 serde = ["dep:serde", "dep:serde_derive", "dep:itertools", "ssz/serde"]
+
+[[bench]]
+name = "view_vs_owned"
+harness = false

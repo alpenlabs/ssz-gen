@@ -5,15 +5,16 @@
 //!
 //! E.g., `VariableList::from(vec![0, 1, 2])` serializes as `["0", "1", "2"]`.
 //!
-//! Quotes can be optional during decoding. If the length of the `Vec` is greater than `N`, deserialization fails.
+//! Quotes can be optional during decoding. If the length of the `Vec` is greater than `N`,
+//! deserialization fails.
+
+use std::{iter, marker::PhantomData};
+
+use itertools::process_results;
+use serde::{Deserializer, Serializer, de::Error, ser::SerializeSeq};
+use ssz::TryFromIter;
 
 use crate::serde_utils::quoted_u64_vec::QuotedIntWrapper;
-use itertools::process_results;
-use serde::ser::SerializeSeq;
-use serde::{Deserializer, Serializer, de::Error};
-use ssz::TryFromIter;
-use std::iter;
-use std::marker::PhantomData;
 
 /// Visitor for deserializing quoted or unquoted integers
 #[derive(Debug)]
@@ -70,8 +71,9 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::VariableList;
     use serde_derive::{Deserialize, Serialize};
+
+    use crate::VariableList;
 
     #[derive(Debug, Serialize, Deserialize)]
     struct Obj {
