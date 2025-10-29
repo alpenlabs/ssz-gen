@@ -1,3 +1,4 @@
+#![allow(unused_imports, reason = "ssz-gen generated code")]
 pub mod tests {
     pub mod input {
         pub mod test_external {

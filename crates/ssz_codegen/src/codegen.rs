@@ -562,6 +562,7 @@ fn module_tokens_to_rust_code(schema_map: &HashMap<&PathBuf, TokenStream>) -> To
         .collect();
 
     quote! {
+        #![allow(unused_imports, reason = "ssz-gen generated code")]
         #(#module_code)*
     }
 }
@@ -617,6 +618,10 @@ pub fn schema_map_to_rust_code(
         let mut unions: Vec<_> = union_tracker.iter().collect();
         // Sort unions by key to ensure deterministic output
         unions.sort_by_key(|(key, _)| *key);
+
+        // Check if module has content before consuming the iterators
+        let has_content = !unions.is_empty() || !constants.is_empty() || !tokens.is_empty();
+
         let unions = unions.into_iter().map(|(_, ty)| {
             quote! {
                 #ty
@@ -635,18 +640,28 @@ pub fn schema_map_to_rust_code(
         module_content_tokens.insert(path, content_tokens.clone());
 
         // Store full module with imports for other modes
-        module_tokens.insert(
-            path,
-            quote! {
-                #![allow(unused_imports, reason = "ssz-gen generated code")]
-                use ssz_types::*;
-                use ssz_derive::{Encode, Decode};
-                use tree_hash::TreeHashDigest;
-                use tree_hash_derive::TreeHash;
+        // Only add allow attribute if the module has content
+        if has_content {
+            module_tokens.insert(
+                path,
+                quote! {
+                    #![allow(unused_imports, reason = "ssz-gen generated code")]
+                    use ssz_types::*;
+                    use ssz_derive::{Encode, Decode};
+                    use tree_hash::TreeHashDigest;
+                    use tree_hash_derive::TreeHash;
 
-                #content_tokens
-            },
-        );
+                    #content_tokens
+                },
+            );
+        } else {
+            module_tokens.insert(
+                path,
+                quote! {
+                    #content_tokens
+                },
+            );
+        }
 
         drop(union_tracker);
         resolvers.borrow_mut().insert(path.clone(), type_resolver);
