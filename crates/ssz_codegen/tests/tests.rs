@@ -355,3 +355,21 @@ fn test_nested_modules_is_default() {
     // They should be identical
     assert_eq!(default_output.trim(), explicit_output.trim());
 }
+
+#[test]
+fn test_derives() {
+    build_ssz_files(
+        &["test_derives.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_derives.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types");
+
+    let expected_output = fs::read_to_string("tests/expected_output/test_derives.rs")
+        .expect("Failed to read expected output");
+    let actual_output =
+        fs::read_to_string("tests/output/test_derives.rs").expect("Failed to read actual output");
+    assert_eq!(expected_output, actual_output);
+}

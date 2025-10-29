@@ -36,6 +36,8 @@ pub enum TaggedToktr<T> {
     Newline(T),
     /// `null` keyword.
     Null(T),
+    /// A decorator token (e.g., @derive(...))
+    Decorator(T, String),
 
     // Identifiers.
     /// An identifier.
@@ -71,6 +73,7 @@ impl<T> TaggedToktr<T> {
             Self::Dot(t) => t,
             Self::Newline(t) => t,
             Self::Null(t) => t,
+            Self::Decorator(t, _) => t,
             Self::Identifier(t, _) => t,
             Self::IntegerLiteral(t, _) => t,
             Self::Shl(t) => t,
@@ -223,6 +226,7 @@ pub(crate) fn parse_tokens_to_toktrs(tokens: &[SrcToken]) -> Result<Vec<SrcToktr
             TaggedToken::Comma(sp) => TaggedToktr::Comma(*sp),
             TaggedToken::Dot(sp) => TaggedToktr::Dot(*sp),
             TaggedToken::Newline(sp) => TaggedToktr::Newline(*sp),
+            TaggedToken::Decorator(sp, content) => TaggedToktr::Decorator(*sp, content.clone()),
             TaggedToken::Identifier(sp, ident) => TaggedToktr::Identifier(*sp, ident.clone()),
             TaggedToken::IntegerLiteral(sp, v) => TaggedToktr::IntegerLiteral(*sp, *v),
             TaggedToken::Shl(sp) => TaggedToktr::Shl(*sp),

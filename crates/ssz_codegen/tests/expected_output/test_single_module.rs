@@ -1,3 +1,4 @@
+#![allow(unused_imports, reason = "ssz-gen generated code")]
 use ssz_types::*;
 use ssz_derive::{Encode, Decode};
 use tree_hash::TreeHashDigest;

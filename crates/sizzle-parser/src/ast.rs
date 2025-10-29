@@ -21,7 +21,7 @@ pub(crate) type Modules = HashMap<PathBuf, Module>;
 #[derive(Clone, Debug)]
 pub(crate) enum Module {
     External,
-    Internal(Vec<ModuleEntry>),
+    Internal(Vec<ModuleEntry>, Vec<String>), // entries, module_derives
 }
 
 impl Module {
@@ -30,7 +30,7 @@ impl Module {
     }
 
     pub(crate) fn new_internal(entry: Vec<ModuleEntry>) -> Self {
-        Self::Internal(entry)
+        Self::Internal(entry, Vec::new())
     }
 
     pub(crate) fn is_external(&self) -> bool {
@@ -40,14 +40,21 @@ impl Module {
     pub(crate) fn entries(&self) -> &[ModuleEntry] {
         match self {
             Self::External => &[],
-            Self::Internal(entries) => entries,
+            Self::Internal(entries, _) => entries,
         }
     }
 
     pub(crate) fn mut_entries(&mut self) -> &mut Vec<ModuleEntry> {
         match self {
             Self::External => panic!("external module has no entries"),
-            Self::Internal(entries) => entries,
+            Self::Internal(entries, _) => entries,
+        }
+    }
+
+    pub(crate) fn module_derives(&self) -> &[String] {
+        match self {
+            Self::External => &[],
+            Self::Internal(_, module_derives) => module_derives,
         }
     }
 }
@@ -121,6 +128,7 @@ pub(crate) struct ClassDefEntry {
     name: Identifier,
     parent_ty: TyExprSpec,
     fields: Vec<FieldDef>,
+    derives: Vec<String>,
 }
 
 impl ClassDefEntry {
@@ -129,6 +137,21 @@ impl ClassDefEntry {
             name,
             parent_ty,
             fields,
+            derives: Vec::new(),
+        }
+    }
+
+    pub(crate) fn new_with_derives(
+        name: Identifier,
+        parent_ty: TyExprSpec,
+        fields: Vec<FieldDef>,
+        derives: Vec<String>,
+    ) -> Self {
+        Self {
+            name,
+            parent_ty,
+            fields,
+            derives,
         }
     }
 
@@ -142,6 +165,10 @@ impl ClassDefEntry {
 
     pub(crate) fn fields(&self) -> &[FieldDef] {
         &self.fields
+    }
+
+    pub(crate) fn derives(&self) -> &[String] {
+        &self.derives
     }
 }
 
@@ -380,6 +407,7 @@ pub(crate) fn parse_module_from_toktrs<P: AsRef<Path>>(
     let path = path.as_ref();
     let mut gob = Gobbler::new(toktrs);
     let mut import_map = HashMap::new();
+    let mut module_derives = Vec::new();
 
     while let Some(cur) = gob.get() {
         match cur {
@@ -411,7 +439,48 @@ pub(crate) fn parse_module_from_toktrs<P: AsRef<Path>>(
                     .push(ModuleEntry::Class(cd));
             }
 
+            // Handle decorators
+            TaggedToktr::Decorator(_, content) => {
+                let decorator_content = content.trim();
+                if decorator_content.starts_with("@module_derive(")
+                    && decorator_content.ends_with(")")
+                {
+                    // Parse module-level derives
+                    let derives_str = &decorator_content[15..decorator_content.len() - 1]; // Remove "@module_derive(" and ")"
+                    let derives: Vec<String> = derives_str
+                        .split(',')
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .collect();
+                    module_derives.extend(derives);
+                    gob.gobble_one();
+                } else {
+                    // This is a per-class decorator, don't consume it
+                    // Let parse_class handle it
+                    let cd = parse_class(&mut gob, &import_map)?;
+                    module_manager
+                        .get_module_mut(path)
+                        .unwrap()
+                        .mut_entries()
+                        .push(ModuleEntry::Class(cd));
+                }
+            }
+
             t => return Err(ParseError::UnexpectedToken(*t.tag())),
+        }
+    }
+
+    // Update the module with module-level derives
+    if !module_derives.is_empty()
+        && let Some(module) = module_manager.get_module_mut(path)
+    {
+        match module {
+            Module::Internal(_, existing_derives) => {
+                existing_derives.extend(module_derives);
+            }
+            Module::External => {
+                // This shouldn't happen for internal modules
+            }
         }
     }
 
@@ -488,12 +557,46 @@ fn parse_assign_expr(
     Ok(expr)
 }
 
+/// Parses decorators before a class definition
+fn parse_class_decorators(gob: &mut Gobbler<'_, SrcToktr>) -> Result<Vec<String>, ParseError> {
+    let mut derives = Vec::new();
+
+    // Look ahead to see if there are decorators before the class
+    while let Some(cur) = gob.get() {
+        match cur {
+            TaggedToktr::Decorator(_, content) => {
+                let decorator_content = content.trim();
+                if decorator_content.starts_with("@derive(") && decorator_content.ends_with(")") {
+                    // Parse class-level derives
+                    let derives_str = &decorator_content[8..decorator_content.len() - 1]; // Remove "@derive(" and ")"
+                    let class_derives: Vec<String> = derives_str
+                        .split(',')
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .collect();
+                    derives.extend(class_derives);
+                }
+                gob.gobble_one();
+            }
+            TaggedToktr::Newline(_) => {
+                gob.gobble_one();
+            }
+            _ => break, // Not a decorator, stop looking
+        }
+    }
+
+    Ok(derives)
+}
+
 /// Parses a class definition out of a gobbler.
 fn parse_class(
     gob: &mut Gobbler<'_, SrcToktr>,
     import_map: &HashMap<Identifier, PathBuf>,
 ) -> Result<ClassDefEntry, ParseError> {
     use TaggedToktr::*;
+
+    // First, look for decorators before the class
+    let derives = parse_class_decorators(gob)?;
 
     let sp = *gob.get_expect().tag();
 
@@ -524,7 +627,11 @@ fn parse_class(
             let fields = parse_class_body(&mut body_gob, import_map)?;
             gob.gobble_one();
 
-            let cd = ClassDefEntry::new(name, parent_ty, fields);
+            let cd = if derives.is_empty() {
+                ClassDefEntry::new(name, parent_ty, fields)
+            } else {
+                ClassDefEntry::new_with_derives(name, parent_ty, fields, derives)
+            };
             Ok(cd)
         }
 

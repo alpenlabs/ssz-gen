@@ -68,6 +68,8 @@ pub enum TaggedToken<T> {
     Indent(T),
     /// `deindent` token.
     Deindent(T),
+    /// A decorator token (e.g., @derive(...))
+    Decorator(T, String),
 }
 
 impl<T> TaggedToken<T> {
@@ -93,6 +95,7 @@ impl<T> TaggedToken<T> {
             Self::Indent(t) => t,
             Self::Deindent(t) => t,
             Self::Null(t) => t,
+            Self::Decorator(t, _) => t,
         }
     }
 
@@ -118,6 +121,7 @@ impl<T> TaggedToken<T> {
             Self::Indent(_) => Token::Indent(()),
             Self::Deindent(_) => Token::Deindent(()),
             Self::Null(_) => Token::Null(()),
+            Self::Decorator(_, content) => Token::Decorator((), content.clone()),
         }
     }
 }
@@ -324,6 +328,20 @@ pub(crate) fn parse_char_array_to_tokens(s: &[char]) -> Result<Vec<SrcToken>, To
             ']' => builder.push_token(SrcToken::CloseBracket(sp)),
             '(' => builder.push_token(SrcToken::OpenParen(sp)),
             ')' => builder.push_token(SrcToken::CloseParen(sp)),
+            '@' => {
+                // Parse decorator until newline
+                let j = find_satisfying_range(s, i + 1, |c| c != '\n');
+                let decorator_content = s[i..j].iter().collect::<String>();
+                builder.push_token(SrcToken::Decorator(sp, decorator_content));
+                i = j;
+                continue;
+            }
+            '#' => {
+                // Skip comment to end of line
+                let j = find_satisfying_range(s, i + 1, |c| c != '\n');
+                i = j;
+                continue;
+            }
 
             '<' => {
                 if let Some(next) = next {

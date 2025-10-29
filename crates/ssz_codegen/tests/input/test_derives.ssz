@@ -1,0 +1,39 @@
+# Test file for derive configuration
+
+# Module-level derives (applies to all types in this file)
+@module_derive(Clone, Debug)
+
+# Test constants
+VAL_X = 42
+VAL_Y = 64
+
+# Test aliases
+AliasUintAlias = uint16
+AliasVecA = Vector[uint8, 10]
+
+# Test class with module-level derives only
+class Alpha(Container):
+    a: uint8
+    b: uint16
+    c: AliasVecA
+
+# Test class with per-type derives (overrides module-level)
+@derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)
+class Beta(Container):
+    d: AliasUintAlias
+    e: uint8
+    f: AliasVecA
+
+# Test stable container with custom derives
+@derive(Clone, Debug, PartialEq, Eq)
+class Gamma(StableContainer[VAL_X]):
+    g: Optional[uint8]
+    h: Optional[List[AliasUintAlias, 8]]
+
+# Test union (unions don't support custom derives via decorators)
+TestUnion = Union[uint8, uint16, AliasUintAlias]
+
+# Test class without any custom derives (uses module-level)
+class Delta(Container):
+    z: boolean
+    w: uint8

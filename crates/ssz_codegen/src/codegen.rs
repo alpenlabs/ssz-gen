@@ -31,6 +31,8 @@ struct CircleBufferCodegen<'a> {
     items: Vec<AliasOrClass<'a>>,
     /// Generated token streams for each processed item
     tokens: Vec<TokenStream>,
+    /// Module-level derives to apply to all classes
+    module_derives: Vec<String>,
 }
 
 impl<'a> CircleBufferCodegen<'a> {
@@ -40,11 +42,16 @@ impl<'a> CircleBufferCodegen<'a> {
     ///
     /// * `aliases` - The alias definitions to process
     /// * `classes` - The class definitions to process
+    /// * `module_derives` - Module-level derives to apply to all classes
     ///
     /// # Returns
     ///
     /// A new CircleBufferCodegen instance
-    fn new(aliases: &'a [ParserAliasDef], classes: &'a [ParserClassDef]) -> Self {
+    fn new(
+        aliases: &'a [ParserAliasDef],
+        classes: &'a [ParserClassDef],
+        module_derives: Vec<String>,
+    ) -> Self {
         let items: Vec<AliasOrClass<'a>> = aliases
             .iter()
             .map(AliasOrClass::Alias)
@@ -53,6 +60,7 @@ impl<'a> CircleBufferCodegen<'a> {
         Self {
             items,
             tokens: Vec::new(),
+            module_derives,
         }
     }
 
@@ -141,6 +149,13 @@ impl<'a> CircleBufferCodegen<'a> {
         };
 
         if success {
+            // Merge module-level derives with per-type derives
+            // If per-type derives are specified, use those instead of module-level
+            if class.derives().is_empty() {
+                parent_class_def.derives = self.module_derives.clone();
+            } else {
+                parent_class_def.derives = class.derives().to_vec();
+            }
             self.tokens.push(parent_class_def.to_token_stream(&ident));
             type_resolver.add_class(&ident, parent_class_def);
             return true;
@@ -457,6 +472,7 @@ fn single_module_rust_code(schema_map: &HashMap<&PathBuf, TokenStream>) -> Token
     }
 
     quote! {
+        #![allow(unused_imports, reason = "ssz-gen generated code")]
         use ssz_types::*;
         use ssz_derive::{Encode, Decode};
         use tree_hash::TreeHashDigest;
@@ -481,6 +497,7 @@ fn flat_modules_rust_code(schema_map: &HashMap<&PathBuf, TokenStream>) -> TokenS
         if let Some(content_tokens) = schema_map.get(path) {
             modules.push(quote! {
                 pub mod #module_ident {
+                    #![allow(unused_imports, reason = "ssz-gen generated code")]
                     use ssz_types::*;
                     use ssz_derive::{Encode, Decode};
                     use tree_hash::TreeHashDigest;
@@ -589,7 +606,11 @@ pub fn schema_map_to_rust_code(
             .collect::<Vec<_>>();
 
         // Aliases and Classes can reference each other so we need to process them together
-        let codegen = CircleBufferCodegen::new(schema.aliases(), schema.classes());
+        let codegen = CircleBufferCodegen::new(
+            schema.aliases(),
+            schema.classes(),
+            schema.module_derives().to_vec(),
+        );
         let tokens = codegen.process(&mut type_resolver);
 
         let union_tracker = type_resolver.union_tracker.borrow();
@@ -617,6 +638,7 @@ pub fn schema_map_to_rust_code(
         module_tokens.insert(
             path,
             quote! {
+                #![allow(unused_imports, reason = "ssz-gen generated code")]
                 use ssz_types::*;
                 use ssz_derive::{Encode, Decode};
                 use tree_hash::TreeHashDigest;

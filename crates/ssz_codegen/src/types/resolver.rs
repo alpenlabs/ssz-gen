@@ -466,6 +466,7 @@ impl<'a> TypeResolver<'a> {
                 fields: vec![],
                 field_tokens: vec![],
                 field_index: HashMap::new(),
+                derives: vec![],
             },
             ClassDefinition::StableContainer => {
                 let max = match args.first() {
@@ -480,6 +481,7 @@ impl<'a> TypeResolver<'a> {
                     fields: vec![],
                     field_tokens: vec![],
                     field_index: HashMap::new(),
+                    derives: vec![],
                 }
             }
             ClassDefinition::Profile => {
@@ -503,6 +505,7 @@ impl<'a> TypeResolver<'a> {
                         fields: class_def.fields,
                         field_tokens: class_def.field_tokens,
                         field_index: class_def.field_index,
+                        derives: class_def.derives,
                     }
                 } else {
                     panic!("Expected profile to inherit from a stable container");
@@ -556,12 +559,14 @@ impl<'a> TypeResolver<'a> {
                     fields: vec![],
                     field_tokens: vec![],
                     field_index: HashMap::new(),
+                    derives: vec![],
                 }),
                 BaseClass::StableContainer(Some(max)) => ClassDefinition::Custom(ClassDef {
                     base: BaseClass::StableContainer(Some(*max)),
                     fields: vec![],
                     field_tokens: vec![],
                     field_index: HashMap::new(),
+                    derives: vec![],
                 }),
                 BaseClass::Profile(Some((name, max))) => {
                     let resolvers = self.resolvers.borrow();
@@ -577,6 +582,7 @@ impl<'a> TypeResolver<'a> {
                         fields: resolved_def.fields,
                         field_tokens: resolved_def.field_tokens,
                         field_index: resolved_def.field_index,
+                        derives: resolved_def.derives,
                     })
                 }
                 _ => panic!(

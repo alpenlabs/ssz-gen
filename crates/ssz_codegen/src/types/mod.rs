@@ -8,6 +8,8 @@ use syn::parse_quote;
 use crate::types::resolver::TypeResolver;
 pub mod resolver;
 
+const DEFAULT_DERIVES: &[&str] = &["Encode", "Decode", "TreeHash"];
+
 /// Converts a primitive type name into a Rust syn::Type
 ///
 /// # Arguments
@@ -407,6 +409,8 @@ pub struct ClassDef {
     pub fields: Vec<ClassFieldDef>,
     /// Token streams for each field
     pub field_tokens: Vec<TokenStream>,
+    /// Custom derives for this class
+    pub derives: Vec<String>,
 }
 
 impl ClassDef {
@@ -479,6 +483,29 @@ impl ClassDef {
             })
     }
 
+    /// Builds the derive list for this class, including required SSZ derives and custom derives
+    fn build_derive_list(&self) -> TokenStream {
+        let mut all_derives = DEFAULT_DERIVES.to_vec();
+        all_derives.extend(self.derives.iter().map(|s| s.as_str()));
+
+        // Remove duplicates while preserving order
+        let mut unique_derives = Vec::new();
+        for derive in all_derives {
+            if !unique_derives.contains(&derive) {
+                unique_derives.push(derive);
+            }
+        }
+
+        let derive_idents: Vec<syn::Ident> = unique_derives
+            .iter()
+            .map(|s| syn::Ident::new(s, proc_macro2::Span::call_site()))
+            .collect();
+
+        quote! {
+            #[derive(#(#derive_idents),*)]
+        }
+    }
+
     /// Converts the class definition to a token stream with the given identifier
     ///
     /// # Arguments
@@ -490,10 +517,12 @@ impl ClassDef {
     /// A TokenStream containing the generated Rust code for the class
     pub fn to_token_stream(&self, ident: &syn::Ident) -> TokenStream {
         let field_tokens = &self.field_tokens;
+        let derive_attr = self.build_derive_list();
+
         match self.base {
             BaseClass::Container => {
                 quote! {
-                    #[derive(Encode, Decode, TreeHash)]
+                    #derive_attr
                     #[ssz(struct_behaviour="container")]
                     #[tree_hash(struct_behaviour="container")]
                     pub struct #ident {
@@ -504,7 +533,7 @@ impl ClassDef {
             BaseClass::StableContainer(Some(max)) => {
                 let max = max as usize;
                 quote! {
-                    #[derive(Encode, Decode, TreeHash)]
+                    #derive_attr
                     #[ssz(struct_behaviour="stable_container", max_fields=#max)]
                     #[tree_hash(struct_behaviour="stable_container", max_fields=#max)]
                     pub struct #ident {
@@ -521,7 +550,7 @@ impl ClassDef {
                     .collect::<Vec<_>>();
 
                 quote! {
-                    #[derive(Encode, Decode, TreeHash)]
+                    #derive_attr
                     #[ssz(struct_behaviour="profile")]
                     #[tree_hash(struct_behaviour="profile", max_fields=#max)]
                     pub struct #ident {

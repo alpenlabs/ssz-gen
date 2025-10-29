@@ -1,6 +1,7 @@
 pub mod tests {
     pub mod input {
         pub mod test_common {
+            #![allow(unused_imports, reason = "ssz-gen generated code")]
             use ssz_types::*;
             use ssz_derive::{Encode, Decode};
             use tree_hash::TreeHashDigest;
@@ -25,6 +26,7 @@ pub mod tests {
             }
         }
         pub mod test_import_1 {
+            #![allow(unused_imports, reason = "ssz-gen generated code")]
             use ssz_types::*;
             use ssz_derive::{Encode, Decode};
             use tree_hash::TreeHashDigest;
@@ -60,6 +62,7 @@ pub mod tests {
             }
         }
         pub mod test_import_2 {
+            #![allow(unused_imports, reason = "ssz-gen generated code")]
             use ssz_types::*;
             use ssz_derive::{Encode, Decode};
             use tree_hash::TreeHashDigest;

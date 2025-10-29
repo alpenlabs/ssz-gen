@@ -42,6 +42,7 @@ pub struct SszSchema {
     constants: Vec<ConstDef>,
     classes: Vec<ClassDef>,
     aliases: Vec<AliasDef>,
+    module_derives: Vec<String>,
 }
 
 impl SszSchema {
@@ -58,6 +59,11 @@ impl SszSchema {
     /// All aliases in the schema.
     pub fn aliases(&self) -> &[AliasDef] {
         &self.aliases
+    }
+
+    /// Module-level derives for the schema.
+    pub fn module_derives(&self) -> &[String] {
+        &self.module_derives
     }
 }
 
@@ -83,6 +89,7 @@ pub struct ClassDef {
     name: Identifier,
     parent_ty: Ty,
     fields: Vec<ClassFieldDef>,
+    derives: Vec<String>,
 }
 
 impl ClassDef {
@@ -99,6 +106,11 @@ impl ClassDef {
     /// Fields of the class.
     pub fn fields(&self) -> &[ClassFieldDef] {
         &self.fields
+    }
+
+    /// Derives for the class.
+    pub fn derives(&self) -> &[String] {
+        &self.derives
     }
 }
 
@@ -300,6 +312,7 @@ pub(crate) fn conv_module_to_schema<'a>(
         classes,
         constants,
         aliases,
+        module_derives: m.module_derives().to_vec(),
     };
 
     Ok((schema, idents))
@@ -328,6 +341,7 @@ fn conv_classdef<'a>(
         name: def.name().clone(),
         parent_ty: resolv.resolve_spec_as_ty(def.parent_ty())?,
         fields,
+        derives: def.derives().to_vec(),
     })
 }
 
