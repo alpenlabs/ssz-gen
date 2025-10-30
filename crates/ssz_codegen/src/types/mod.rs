@@ -6,7 +6,7 @@ use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{Ident, Path, Type, TypePath, parse_quote};
 
-use crate::types::resolver::TypeResolver;
+use crate::{derive_config::DeriveConfig, types::resolver::TypeResolver};
 pub mod resolver;
 
 /// Converts a primitive type name into a Rust [`Type`].
@@ -614,12 +614,14 @@ impl ClassDef {
     /// # Returns
     ///
     /// A TokenStream containing the generated Rust code for the class
-    pub fn to_token_stream(&self, ident: &Ident) -> TokenStream {
+    pub fn to_token_stream(&self, ident: &Ident, derive_cfg: &DeriveConfig) -> TokenStream {
         let field_tokens = &self.field_tokens;
+        let type_name = ident.to_string();
+        let owned_derive = derive_cfg.owned_derive_attr(&type_name);
         match self.base {
             BaseClass::Container => {
                 quote! {
-                    #[derive(Encode, Decode, TreeHash)]
+                    #owned_derive
                     #[ssz(struct_behaviour="container")]
                     #[tree_hash(struct_behaviour="container")]
                     pub struct #ident {
@@ -630,7 +632,7 @@ impl ClassDef {
             BaseClass::StableContainer(Some(max)) => {
                 let max = max as usize;
                 quote! {
-                    #[derive(Encode, Decode, TreeHash)]
+                    #owned_derive
                     #[ssz(struct_behaviour="stable_container", max_fields=#max)]
                     #[tree_hash(struct_behaviour="stable_container", max_fields=#max)]
                     pub struct #ident {
@@ -647,7 +649,7 @@ impl ClassDef {
                     .collect::<Vec<_>>();
 
                 quote! {
-                    #[derive(Encode, Decode, TreeHash)]
+                    #owned_derive
                     #[ssz(struct_behaviour="profile")]
                     #[tree_hash(struct_behaviour="profile", max_fields=#max)]
                     pub struct #ident {
@@ -757,7 +759,7 @@ impl ClassDef {
     ///
     /// A [`TokenStream`] containing the generated Rust code for the view struct (e.g.,
     /// `FooRef<'a>`).
-    pub fn to_view_struct(&self, ident: &Ident) -> TokenStream {
+    pub fn to_view_struct(&self, ident: &Ident, derive_cfg: &DeriveConfig) -> TokenStream {
         let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
         let doc_comment = format!(
             "Zero-copy view over [`{}`].\n\n\
@@ -766,13 +768,15 @@ impl ClassDef {
             Use `.to_owned()` to convert to the owned type when needed.",
             ident
         );
+        let type_name = ident.to_string();
+        let view_derive = derive_cfg.view_derive_attr(&type_name);
 
         // All view structs are now thin wrappers around bytes
         match self.base {
             BaseClass::Container | BaseClass::StableContainer(_) | BaseClass::Profile(_) => {
                 quote! {
                     #[doc = #doc_comment]
-                    #[derive(Debug, Copy, Clone)]
+                    #view_derive
                     pub struct #ref_ident<'a> {
                         bytes: &'a [u8],
                     }

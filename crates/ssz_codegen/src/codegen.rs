@@ -9,6 +9,7 @@ use syn::{Ident, parse_quote};
 
 use crate::{
     ModuleGeneration,
+    derive_config::DeriveConfig,
     types::{
         BaseClass, ClassDef, ClassDefinition, ClassFieldDef, TypeResolutionKind,
         resolver::TypeResolver,
@@ -33,6 +34,8 @@ struct CircleBufferCodegen<'a> {
     items: Vec<AliasOrClass<'a>>,
     /// Generated token streams for each processed item
     tokens: Vec<TokenStream>,
+    /// Derive configuration used during generation
+    derive_cfg: &'a DeriveConfig,
 }
 
 impl<'a> CircleBufferCodegen<'a> {
@@ -46,7 +49,11 @@ impl<'a> CircleBufferCodegen<'a> {
     /// # Returns
     ///
     /// A new CircleBufferCodegen instance
-    fn new(aliases: &'a [ParserAliasDef], classes: &'a [ParserClassDef]) -> Self {
+    fn new(
+        aliases: &'a [ParserAliasDef],
+        classes: &'a [ParserClassDef],
+        derive_cfg: &'a DeriveConfig,
+    ) -> Self {
         let items: Vec<AliasOrClass<'a>> = aliases
             .iter()
             .map(AliasOrClass::Alias)
@@ -55,6 +62,7 @@ impl<'a> CircleBufferCodegen<'a> {
         Self {
             items,
             tokens: Vec::new(),
+            derive_cfg,
         }
     }
 
@@ -144,10 +152,12 @@ impl<'a> CircleBufferCodegen<'a> {
 
         if success {
             // Generate owned struct
-            self.tokens.push(parent_class_def.to_token_stream(&ident));
+            self.tokens
+                .push(parent_class_def.to_token_stream(&ident, self.derive_cfg));
 
             // Generate view struct (thin wrapper)
-            self.tokens.push(parent_class_def.to_view_struct(&ident));
+            self.tokens
+                .push(parent_class_def.to_view_struct(&ident, self.derive_cfg));
 
             // Generate getter methods for view struct
             self.tokens.push(parent_class_def.to_view_getters(&ident));
@@ -458,6 +468,7 @@ fn generate_module_code(
     // Combine the module's own code with its children's modules
     quote! {
         pub mod #module_ident {
+            #![allow(unused_imports, reason = "generated code using ssz-gen")]
             #module_code
 
             #(#child_modules)*
@@ -480,6 +491,7 @@ fn single_module_rust_code(schema_map: &HashMap<&PathBuf, TokenStream>) -> Token
     }
 
     quote! {
+        #![allow(unused_imports, reason = "generated code using ssz-gen")]
         use ssz_types::*;
         use ssz_derive::{Encode, Decode};
         use tree_hash::TreeHashDigest;
@@ -505,6 +517,7 @@ fn flat_modules_rust_code(schema_map: &HashMap<&PathBuf, TokenStream>) -> TokenS
         if let Some(content_tokens) = schema_map.get(path) {
             modules.push(quote! {
                 pub mod #module_ident {
+                    #![allow(unused_imports, reason = "generated code using ssz-gen")]
                     use ssz_types::*;
                     use ssz_derive::{Encode, Decode};
                     use tree_hash::TreeHashDigest;
@@ -589,6 +602,7 @@ pub fn schema_map_to_rust_code(
     parsing_order: &[PathBuf],
     schema_map: &HashMap<PathBuf, SszSchema>,
     module_generation: ModuleGeneration,
+    derive_cfg: &DeriveConfig,
 ) -> TokenStream {
     let mut module_tokens = HashMap::new();
     let mut module_content_tokens = HashMap::new(); // Content without imports for `SingleModule`
@@ -614,7 +628,7 @@ pub fn schema_map_to_rust_code(
             .collect::<Vec<_>>();
 
         // Aliases and Classes can reference each other so we need to process them together
-        let codegen = CircleBufferCodegen::new(schema.aliases(), schema.classes());
+        let codegen = CircleBufferCodegen::new(schema.aliases(), schema.classes(), derive_cfg);
         let tokens = codegen.process(&mut type_resolver);
 
         let union_tracker = type_resolver.union_tracker.borrow();
