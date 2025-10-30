@@ -1,6 +1,9 @@
 pub mod tests {
+    #![allow(unused_imports, reason = "generated code using ssz-gen")]
     pub mod input {
+        #![allow(unused_imports, reason = "generated code using ssz-gen")]
         pub mod test_common {
+            #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
             use ssz_derive::{Encode, Decode};
             use tree_hash::TreeHashDigest;
@@ -98,7 +101,17 @@ pub mod tests {
             pub type AliasUint8 = u8;
             pub type AliasAliasUint8 = AliasUint8;
             pub type AliasUnion = Option<u8>;
-            #[derive(Encode, Decode, TreeHash)]
+            #[derive(
+                Clone,
+                Debug,
+                PartialEq,
+                Eq,
+                PartialOrd,
+                Ord,
+                Encode,
+                Decode,
+                TreeHash
+            )]
             #[ssz(struct_behaviour = "stable_container", max_fields = 5usize)]
             #[tree_hash(struct_behaviour = "stable_container", max_fields = 5usize)]
             pub struct StableContainerClass {
@@ -108,7 +121,7 @@ pub mod tests {
             /**Zero-copy view over [`StableContainerClass`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
             pub struct StableContainerClassRef<'a> {
                 bytes: &'a [u8],
             }
@@ -208,6 +221,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
             }
         }
         pub mod test_import_1 {
+            #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
             use ssz_derive::{Encode, Decode};
             use tree_hash::TreeHashDigest;
@@ -337,7 +351,17 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
             pub type AliasUint8 = crate::tests::input::test_common::AliasUint8;
             pub type AliasAliasUint8 = crate::tests::input::test_common::AliasAliasUint8;
             pub type AliasUnion = crate::tests::input::test_common::AliasUnion;
-            #[derive(Encode, Decode, TreeHash)]
+            #[derive(
+                Clone,
+                Debug,
+                PartialEq,
+                Eq,
+                PartialOrd,
+                Ord,
+                Encode,
+                Decode,
+                TreeHash
+            )]
             #[ssz(struct_behaviour = "stable_container", max_fields = 5usize)]
             #[tree_hash(struct_behaviour = "stable_container", max_fields = 5usize)]
             pub struct StableContainerClass {
@@ -346,7 +370,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
             /**Zero-copy view over [`StableContainerClass`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
             pub struct StableContainerClassRef<'a> {
                 bytes: &'a [u8],
             }
@@ -422,12 +446,23 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
             }
         }
         pub mod test_import_2 {
+            #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
             use ssz_derive::{Encode, Decode};
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
-            #[derive(Encode, Decode, TreeHash)]
+            #[derive(
+                Clone,
+                Debug,
+                PartialEq,
+                Eq,
+                PartialOrd,
+                Ord,
+                Encode,
+                Decode,
+                TreeHash
+            )]
             #[ssz(struct_behaviour = "profile")]
             #[tree_hash(struct_behaviour = "profile", max_fields = 5usize)]
             pub struct ProfileInehritance {
@@ -439,7 +474,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
             /**Zero-copy view over [`ProfileInehritance`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
             pub struct ProfileInehritanceRef<'a> {
                 bytes: &'a [u8],
             }

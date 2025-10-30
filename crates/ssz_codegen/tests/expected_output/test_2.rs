@@ -1,12 +1,25 @@
 pub mod tests {
+    #![allow(unused_imports, reason = "generated code using ssz-gen")]
     pub mod input {
+        #![allow(unused_imports, reason = "generated code using ssz-gen")]
         pub mod test_2 {
+            #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
             use ssz_derive::{Encode, Decode};
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
-            #[derive(Encode, Decode, TreeHash)]
+            #[derive(
+                Clone,
+                Debug,
+                PartialEq,
+                Eq,
+                PartialOrd,
+                Ord,
+                Encode,
+                Decode,
+                TreeHash
+            )]
             #[ssz(struct_behaviour = "stable_container", max_fields = 2usize)]
             #[tree_hash(struct_behaviour = "stable_container", max_fields = 2usize)]
             pub struct Alpha {
@@ -16,7 +29,7 @@ pub mod tests {
             /**Zero-copy view over [`Alpha`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
             pub struct AlphaRef<'a> {
                 bytes: &'a [u8],
             }
@@ -116,7 +129,17 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     }
                 }
             }
-            #[derive(Encode, Decode, TreeHash)]
+            #[derive(
+                Clone,
+                Debug,
+                PartialEq,
+                Eq,
+                PartialOrd,
+                Ord,
+                Encode,
+                Decode,
+                TreeHash
+            )]
             #[ssz(struct_behaviour = "stable_container", max_fields = 8usize)]
             #[tree_hash(struct_behaviour = "stable_container", max_fields = 8usize)]
             pub struct InnerBase {
@@ -128,7 +151,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
             /**Zero-copy view over [`InnerBase`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
             pub struct InnerBaseRef<'a> {
                 bytes: &'a [u8],
             }
@@ -276,7 +299,17 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     }
                 }
             }
-            #[derive(Encode, Decode, TreeHash)]
+            #[derive(
+                Clone,
+                Debug,
+                PartialEq,
+                Eq,
+                PartialOrd,
+                Ord,
+                Encode,
+                Decode,
+                TreeHash
+            )]
             #[ssz(struct_behaviour = "profile")]
             #[tree_hash(struct_behaviour = "profile", max_fields = 8usize)]
             pub struct InnerProfile1 {
@@ -292,7 +325,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
             /**Zero-copy view over [`InnerProfile1`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
             pub struct InnerProfile1Ref<'a> {
                 bytes: &'a [u8],
             }
@@ -444,7 +477,17 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     }
                 }
             }
-            #[derive(Encode, Decode, TreeHash)]
+            #[derive(
+                Clone,
+                Debug,
+                PartialEq,
+                Eq,
+                PartialOrd,
+                Ord,
+                Encode,
+                Decode,
+                TreeHash
+            )]
             #[ssz(struct_behaviour = "profile")]
             #[tree_hash(struct_behaviour = "profile", max_fields = 8usize)]
             pub struct InnerProfile2 {
@@ -458,7 +501,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
             /**Zero-copy view over [`InnerProfile2`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
             pub struct InnerProfile2Ref<'a> {
                 bytes: &'a [u8],
             }
@@ -581,7 +624,17 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     }
                 }
             }
-            #[derive(Encode, Decode, TreeHash)]
+            #[derive(
+                Clone,
+                Debug,
+                PartialEq,
+                Eq,
+                PartialOrd,
+                Ord,
+                Encode,
+                Decode,
+                TreeHash
+            )]
             #[ssz(struct_behaviour = "profile")]
             #[tree_hash(struct_behaviour = "profile", max_fields = 2usize)]
             pub struct AlphaProfile {
@@ -593,7 +646,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
             /**Zero-copy view over [`AlphaProfile`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
             pub struct AlphaProfileRef<'a> {
                 bytes: &'a [u8],
             }
@@ -691,7 +744,17 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     }
                 }
             }
-            #[derive(Encode, Decode, TreeHash)]
+            #[derive(
+                Clone,
+                Debug,
+                PartialEq,
+                Eq,
+                PartialOrd,
+                Ord,
+                Encode,
+                Decode,
+                TreeHash
+            )]
             #[ssz(struct_behaviour = "profile")]
             #[tree_hash(struct_behaviour = "profile", max_fields = 8usize)]
             pub struct InnerProfile3 {
@@ -701,7 +764,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
             /**Zero-copy view over [`InnerProfile3`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
             pub struct InnerProfile3Ref<'a> {
                 bytes: &'a [u8],
             }
@@ -787,7 +850,17 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     }
                 }
             }
-            #[derive(Encode, Decode, TreeHash)]
+            #[derive(
+                Clone,
+                Debug,
+                PartialEq,
+                Eq,
+                PartialOrd,
+                Ord,
+                Encode,
+                Decode,
+                TreeHash
+            )]
             #[ssz(struct_behaviour = "profile")]
             #[tree_hash(struct_behaviour = "profile", max_fields = 8usize)]
             pub struct InnerProfile4 {
@@ -799,7 +872,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
             /**Zero-copy view over [`InnerProfile4`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
             pub struct InnerProfile4Ref<'a> {
                 bytes: &'a [u8],
             }
@@ -903,7 +976,17 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     }
                 }
             }
-            #[derive(Encode, Decode, TreeHash)]
+            #[derive(
+                Clone,
+                Debug,
+                PartialEq,
+                Eq,
+                PartialOrd,
+                Ord,
+                Encode,
+                Decode,
+                TreeHash
+            )]
             #[ssz(struct_behaviour = "profile")]
             #[tree_hash(struct_behaviour = "profile", max_fields = 8usize)]
             pub struct InnerProfile5 {
@@ -917,7 +1000,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
             /**Zero-copy view over [`InnerProfile5`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
             pub struct InnerProfile5Ref<'a> {
                 bytes: &'a [u8],
             }
@@ -1039,7 +1122,17 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     }
                 }
             }
-            #[derive(Encode, Decode, TreeHash)]
+            #[derive(
+                Clone,
+                Debug,
+                PartialEq,
+                Eq,
+                PartialOrd,
+                Ord,
+                Encode,
+                Decode,
+                TreeHash
+            )]
             #[ssz(struct_behaviour = "profile")]
             #[tree_hash(struct_behaviour = "profile", max_fields = 8usize)]
             pub struct ProfileProfile {
@@ -1051,7 +1144,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
             /**Zero-copy view over [`ProfileProfile`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
             pub struct ProfileProfileRef<'a> {
                 bytes: &'a [u8],
             }
@@ -1155,7 +1248,17 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     }
                 }
             }
-            #[derive(Encode, Decode, TreeHash)]
+            #[derive(
+                Clone,
+                Debug,
+                PartialEq,
+                Eq,
+                PartialOrd,
+                Ord,
+                Encode,
+                Decode,
+                TreeHash
+            )]
             #[ssz(struct_behaviour = "stable_container", max_fields = 8usize)]
             #[tree_hash(struct_behaviour = "stable_container", max_fields = 8usize)]
             pub struct ContainerContainer {
@@ -1171,7 +1274,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
             /**Zero-copy view over [`ContainerContainer`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
             pub struct ContainerContainerRef<'a> {
                 bytes: &'a [u8],
             }
