@@ -1,0 +1,5 @@
+[derives]
+default = ["Debug"]
+
+[derives.types]
+Alpha = ["Eq"]
