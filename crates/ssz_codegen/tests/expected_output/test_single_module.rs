@@ -1,3 +1,4 @@
+#![allow(unused_imports, reason = "generated code using ssz-gen")]
 use ssz_types::*;
 use ssz_derive::{Encode, Decode};
 use tree_hash::TreeHashDigest;
@@ -625,7 +626,7 @@ pub type AliasListAlias = VariableList<u8, 5usize>;
 pub type AliasNested = AliasUintAlias;
 pub type BitAlias = BitList<42usize>;
 pub type UnionE = UnionD;
-#[derive(Encode, Decode, TreeHash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Encode, Decode, TreeHash)]
 #[ssz(struct_behaviour = "container")]
 #[tree_hash(struct_behaviour = "container")]
 pub struct Alpha {
@@ -636,7 +637,7 @@ pub struct Alpha {
 /**Zero-copy view over [`Alpha`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
 pub struct AlphaRef<'a> {
     bytes: &'a [u8],
 }
@@ -728,7 +729,7 @@ impl<'a> AlphaRef<'a> {
         }
     }
 }
-#[derive(Encode, Decode, TreeHash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Encode, Decode, TreeHash)]
 #[ssz(struct_behaviour = "container")]
 #[tree_hash(struct_behaviour = "container")]
 pub struct Beta {
@@ -739,7 +740,7 @@ pub struct Beta {
 /**Zero-copy view over [`Beta`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
 pub struct BetaRef<'a> {
     bytes: &'a [u8],
 }
@@ -854,7 +855,7 @@ impl<'a> BetaRef<'a> {
         }
     }
 }
-#[derive(Encode, Decode, TreeHash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Encode, Decode, TreeHash)]
 #[ssz(struct_behaviour = "stable_container", max_fields = 42usize)]
 #[tree_hash(struct_behaviour = "stable_container", max_fields = 42usize)]
 pub struct Gamma {
@@ -864,7 +865,7 @@ pub struct Gamma {
 /**Zero-copy view over [`Gamma`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
 pub struct GammaRef<'a> {
     bytes: &'a [u8],
 }
@@ -963,7 +964,7 @@ impl<'a> GammaRef<'a> {
         }
     }
 }
-#[derive(Encode, Decode, TreeHash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Encode, Decode, TreeHash)]
 #[ssz(struct_behaviour = "container")]
 #[tree_hash(struct_behaviour = "container")]
 pub struct Delta {
@@ -973,7 +974,7 @@ pub struct Delta {
 /**Zero-copy view over [`Delta`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
 pub struct DeltaRef<'a> {
     bytes: &'a [u8],
 }
@@ -1048,7 +1049,7 @@ impl<'a> DeltaRef<'a> {
         }
     }
 }
-#[derive(Encode, Decode, TreeHash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Encode, Decode, TreeHash)]
 #[ssz(struct_behaviour = "stable_container", max_fields = 42usize)]
 #[tree_hash(struct_behaviour = "stable_container", max_fields = 42usize)]
 pub struct Epsilon {
@@ -1060,7 +1061,7 @@ pub struct Epsilon {
 /**Zero-copy view over [`Epsilon`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
 pub struct EpsilonRef<'a> {
     bytes: &'a [u8],
 }
@@ -1207,7 +1208,7 @@ impl<'a> EpsilonRef<'a> {
         }
     }
 }
-#[derive(Encode, Decode, TreeHash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Encode, Decode, TreeHash)]
 #[ssz(struct_behaviour = "stable_container", max_fields = 128usize)]
 #[tree_hash(struct_behaviour = "stable_container", max_fields = 128usize)]
 pub struct Zeta {
@@ -1217,7 +1218,7 @@ pub struct Zeta {
 /**Zero-copy view over [`Zeta`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
 pub struct ZetaRef<'a> {
     bytes: &'a [u8],
 }
@@ -1316,7 +1317,7 @@ impl<'a> ZetaRef<'a> {
         }
     }
 }
-#[derive(Encode, Decode, TreeHash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Encode, Decode, TreeHash)]
 #[ssz(struct_behaviour = "container")]
 #[tree_hash(struct_behaviour = "container")]
 pub struct TestType {
@@ -1327,7 +1328,7 @@ pub struct TestType {
 /**Zero-copy view over [`TestType`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
 pub struct TestTypeRef<'a> {
     bytes: &'a [u8],
 }
@@ -1442,7 +1443,7 @@ impl<'a> TestTypeRef<'a> {
         }
     }
 }
-#[derive(Encode, Decode, TreeHash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Encode, Decode, TreeHash)]
 #[ssz(struct_behaviour = "container")]
 #[tree_hash(struct_behaviour = "container")]
 pub struct Eta {
@@ -1453,7 +1454,7 @@ pub struct Eta {
 /**Zero-copy view over [`Eta`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
 pub struct EtaRef<'a> {
     bytes: &'a [u8],
 }
@@ -1580,7 +1581,7 @@ impl<'a> EtaRef<'a> {
         }
     }
 }
-#[derive(Encode, Decode, TreeHash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Encode, Decode, TreeHash)]
 #[ssz(struct_behaviour = "container")]
 #[tree_hash(struct_behaviour = "container")]
 pub struct Theta {
@@ -1591,7 +1592,7 @@ pub struct Theta {
 /**Zero-copy view over [`Theta`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
 pub struct ThetaRef<'a> {
     bytes: &'a [u8],
 }
@@ -1711,7 +1712,7 @@ impl<'a> ThetaRef<'a> {
         }
     }
 }
-#[derive(Encode, Decode, TreeHash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Encode, Decode, TreeHash)]
 #[ssz(struct_behaviour = "stable_container", max_fields = 42usize)]
 #[tree_hash(struct_behaviour = "stable_container", max_fields = 42usize)]
 pub struct Iota {
@@ -1725,7 +1726,7 @@ pub struct Iota {
 /**Zero-copy view over [`Iota`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
 pub struct IotaRef<'a> {
     bytes: &'a [u8],
 }
@@ -1922,7 +1923,7 @@ impl<'a> IotaRef<'a> {
         }
     }
 }
-#[derive(Encode, Decode, TreeHash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Encode, Decode, TreeHash)]
 #[ssz(struct_behaviour = "container")]
 #[tree_hash(struct_behaviour = "container")]
 pub struct Kappa {
@@ -1933,7 +1934,7 @@ pub struct Kappa {
 /**Zero-copy view over [`Kappa`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
 pub struct KappaRef<'a> {
     bytes: &'a [u8],
 }
@@ -2053,7 +2054,7 @@ impl<'a> KappaRef<'a> {
         }
     }
 }
-#[derive(Encode, Decode, TreeHash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Encode, Decode, TreeHash)]
 #[ssz(struct_behaviour = "stable_container", max_fields = 4usize)]
 #[tree_hash(struct_behaviour = "stable_container", max_fields = 4usize)]
 pub struct Lambda {
@@ -2063,7 +2064,7 @@ pub struct Lambda {
 /**Zero-copy view over [`Lambda`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
 pub struct LambdaRef<'a> {
     bytes: &'a [u8],
 }
@@ -2160,7 +2161,7 @@ impl<'a> LambdaRef<'a> {
         }
     }
 }
-#[derive(Encode, Decode, TreeHash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Encode, Decode, TreeHash)]
 #[ssz(struct_behaviour = "container")]
 #[tree_hash(struct_behaviour = "container")]
 pub struct Mu {
@@ -2170,7 +2171,7 @@ pub struct Mu {
 /**Zero-copy view over [`Mu`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
 pub struct MuRef<'a> {
     bytes: &'a [u8],
 }
@@ -2274,7 +2275,7 @@ impl<'a> MuRef<'a> {
     }
 }
 pub type AliasMu = Mu;
-#[derive(Encode, Decode, TreeHash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Encode, Decode, TreeHash)]
 #[ssz(struct_behaviour = "container")]
 #[tree_hash(struct_behaviour = "container")]
 pub struct Nu {
@@ -2286,7 +2287,7 @@ pub struct Nu {
 /**Zero-copy view over [`Nu`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
 pub struct NuRef<'a> {
     bytes: &'a [u8],
 }

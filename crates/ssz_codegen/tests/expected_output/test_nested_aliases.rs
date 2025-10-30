@@ -1,6 +1,9 @@
 pub mod tests {
+    #![allow(unused_imports, reason = "generated code using ssz-gen")]
     pub mod input {
+        #![allow(unused_imports, reason = "generated code using ssz-gen")]
         pub mod test_nested_aliases {
+            #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
             use ssz_derive::{Encode, Decode};
             use tree_hash::TreeHashDigest;
@@ -16,7 +19,17 @@ pub mod tests {
             pub type E = FixedVector<D, 5usize>;
             pub type F = VariableList<A, 10usize>;
             pub type G = FixedVector<F, 10usize>;
-            #[derive(Encode, Decode, TreeHash)]
+            #[derive(
+                Clone,
+                Debug,
+                PartialEq,
+                Eq,
+                PartialOrd,
+                Ord,
+                Encode,
+                Decode,
+                TreeHash
+            )]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct NestedAliasContainer {
@@ -28,7 +41,7 @@ pub mod tests {
             /**Zero-copy view over [`NestedAliasContainer`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
             pub struct NestedAliasContainerRef<'a> {
                 bytes: &'a [u8],
             }

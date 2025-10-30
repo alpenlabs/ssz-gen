@@ -5,13 +5,20 @@
 
 use std::{error, fs, path::Path};
 
-use prettyplease as _;
+use prettyplease::unparse;
+#[cfg(any(test, doctest))]
+use serde as _;
 use sizzle_parser::parse_str_schema;
 use ssz as _;
 use ssz_derive as _;
 use ssz_types as _;
+use syn::parse_str;
+#[cfg(any(test, doctest))]
+use toml as _;
 use tree_hash as _;
 use tree_hash_derive as _;
+
+use crate::derive_config::DeriveConfig;
 
 /// Controls how modules are generated in the output.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -28,6 +35,7 @@ pub enum ModuleGeneration {
 }
 
 pub mod codegen;
+pub mod derive_config;
 pub mod files;
 pub mod types;
 
@@ -77,8 +85,54 @@ pub fn build_ssz_files(
     println!("cargo:rerun-if-changed={base_dir}");
     let (parsing_order, schema_map) = parse_str_schema(&files, crates)?;
     let generation_mode = module_generation;
-    let rust_code = codegen::schema_map_to_rust_code(&parsing_order, &schema_map, generation_mode);
+    let rust_code = codegen::schema_map_to_rust_code(
+        &parsing_order,
+        &schema_map,
+        generation_mode,
+        &derive_config::DeriveConfig::default_defaults(),
+    );
     let pretty_rust_code = prettyplease::unparse(&syn::parse_str(&rust_code.to_string())?);
+    let output_path = Path::new(output_file_path);
+    if let Some(parent) = output_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(output_path, pretty_rust_code)?;
+    Ok(())
+}
+
+/// Same as `build_ssz_files` but allows specifying a derive configuration and/or TOML file.
+pub fn build_ssz_files_with_derives(
+    entry_points: &[&str],
+    base_dir: &str,
+    crates: &[&str],
+    output_file_path: &str,
+    module_generation: ModuleGeneration,
+    derives: Option<DeriveConfig>,
+    derives_toml_path: Option<&str>,
+) -> Result<(), Box<dyn error::Error>> {
+    let files = files::read_entrypoint_ssz(entry_points, base_dir)?;
+    println!("cargo:rerun-if-changed={base_dir}");
+    if let Some(path) = derives_toml_path {
+        println!("cargo:rerun-if-changed={path}");
+    }
+
+    let (parsing_order, schema_map) = parse_str_schema(&files, crates)?;
+
+    // Load config: start with defaults, merge optional in-memory, then TOML (replacing fields)
+    let mut cfg = DeriveConfig::default_defaults();
+    if let Some(user_cfg) = derives {
+        cfg = user_cfg;
+    }
+    if let Some(toml_path) = derives_toml_path
+        && let Ok(content) = fs::read_to_string(toml_path)
+        && let Ok(file_cfg) = DeriveConfig::from_toml_str(&content)
+    {
+        cfg = file_cfg; // per-type entries already replace semantics
+    }
+
+    let rust_code =
+        codegen::schema_map_to_rust_code(&parsing_order, &schema_map, module_generation, &cfg);
+    let pretty_rust_code = unparse(&parse_str(&rust_code.to_string())?);
     let output_path = Path::new(output_file_path);
     if let Some(parent) = output_path.parent() {
         fs::create_dir_all(parent)?;

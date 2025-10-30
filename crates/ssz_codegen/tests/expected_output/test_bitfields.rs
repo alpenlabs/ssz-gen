@@ -1,6 +1,9 @@
 pub mod tests {
+    #![allow(unused_imports, reason = "generated code using ssz-gen")]
     pub mod input {
+        #![allow(unused_imports, reason = "generated code using ssz-gen")]
         pub mod test_bitfields {
+            #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
             use ssz_derive::{Encode, Decode};
             use tree_hash::TreeHashDigest;
@@ -16,7 +19,17 @@ pub mod tests {
             pub type TinyBitvector = BitVector<1usize>;
             pub type StandardBitvector = BitVector<64usize>;
             pub type LargeBitvector = BitVector<128usize>;
-            #[derive(Encode, Decode, TreeHash)]
+            #[derive(
+                Clone,
+                Debug,
+                PartialEq,
+                Eq,
+                PartialOrd,
+                Ord,
+                Encode,
+                Decode,
+                TreeHash
+            )]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct BitfieldContainer {
@@ -30,7 +43,7 @@ pub mod tests {
             /**Zero-copy view over [`BitfieldContainer`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
             pub struct BitfieldContainerRef<'a> {
                 bytes: &'a [u8],
             }

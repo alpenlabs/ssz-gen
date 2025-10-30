@@ -1,6 +1,9 @@
 pub mod tests {
+    #![allow(unused_imports, reason = "generated code using ssz-gen")]
     pub mod input {
+        #![allow(unused_imports, reason = "generated code using ssz-gen")]
         pub mod test_external {
+            #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
             use ssz_derive::{Encode, Decode};
             use tree_hash::TreeHashDigest;
@@ -228,7 +231,17 @@ pub mod tests {
             }
             pub type TestA = external_ssz::A;
             pub type TestB = external_ssz::module_a::module_b::B;
-            #[derive(Encode, Decode, TreeHash)]
+            #[derive(
+                Clone,
+                Debug,
+                PartialEq,
+                Eq,
+                PartialOrd,
+                Ord,
+                Encode,
+                Decode,
+                TreeHash
+            )]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct ExternalContainer {
@@ -238,7 +251,7 @@ pub mod tests {
             /**Zero-copy view over [`ExternalContainer`].
 
 This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
             pub struct ExternalContainerRef<'a> {
                 bytes: &'a [u8],
             }

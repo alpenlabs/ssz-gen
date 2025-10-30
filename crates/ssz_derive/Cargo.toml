@@ -20,9 +20,9 @@ name = "ssz_derive"
 proc-macro = true
 
 [dependencies]
-syn.workspace = true
-quote.workspace = true
 darling.workspace = true
+quote.workspace = true
+syn.workspace = true
 
 [dev-dependencies]
 ssz.workspace = true

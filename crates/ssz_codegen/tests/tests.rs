@@ -5,12 +5,14 @@ use std::fs;
 use prettyplease as _;
 use proc_macro2 as _;
 use quote as _;
+use serde as _;
 use sizzle_parser as _;
 use ssz as _;
-use ssz_codegen::{ModuleGeneration, build_ssz_files};
+use ssz_codegen::{ModuleGeneration, build_ssz_files, build_ssz_files_with_derives};
 use ssz_derive as _;
 use ssz_types as _;
 use syn as _;
+use toml as _;
 use tree_hash as _;
 use tree_hash_derive as _;
 
@@ -354,4 +356,91 @@ fn test_nested_modules_is_default() {
 
     // They should be identical
     assert_eq!(default_output.trim(), explicit_output.trim());
+}
+
+#[test]
+fn test_allow_attribute_and_default_derives() {
+    let out_path = "tests/output/test_derives_default.rs";
+    build_ssz_files(
+        &["test_1.ssz"],
+        "tests/input",
+        &[],
+        out_path,
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types");
+
+    let output = fs::read_to_string(out_path).expect("read output");
+    assert!(
+        output.contains("#![allow(unused_imports, reason = \"generated code using ssz-gen\")]")
+    );
+    // Owned derives should include Clone and SSZ required derives somewhere
+    assert!(output.contains("Clone"));
+    assert!(output.contains("Encode") && output.contains("Decode") && output.contains("TreeHash"));
+    // View derives should include Copy and Clone on a Ref struct (scan near AlphaRef)
+    let lines = output.lines().collect::<Vec<_>>();
+    let mut ref_idx = None;
+    for (i, line) in lines.iter().enumerate() {
+        if line.contains("struct AlphaRef") {
+            ref_idx = Some(i);
+            break;
+        }
+    }
+    let ref_idx = ref_idx.expect("AlphaRef not found");
+    let mut found_attr = false;
+    for line in lines.iter().take(ref_idx).skip(ref_idx.saturating_sub(8)) {
+        if line.contains("#[derive(") {
+            assert!(line.contains("Copy") && line.contains("Clone"));
+            found_attr = true;
+            break;
+        }
+    }
+    assert!(found_attr, "derive attribute not found above AlphaRef")
+}
+
+#[test]
+fn test_derives_toml_override() {
+    let out_path = "tests/output/test_derives_toml.rs";
+    build_ssz_files_with_derives(
+        &["test_1.ssz"],
+        "tests/input",
+        &[],
+        out_path,
+        ModuleGeneration::NestedModules,
+        None,
+        Some("tests/derives.toml"),
+    )
+    .expect("Failed to generate SSZ types with derives config");
+
+    let output = fs::read_to_string(out_path).expect("read output");
+    // Find the derive attribute above Alpha, allowing for multi-line derives
+    let lines = output.lines().collect::<Vec<_>>();
+    let mut alpha_idx = None;
+    for (i, line) in lines.iter().enumerate() {
+        if line.contains("pub struct Alpha ") || line.contains("pub struct Alpha{") {
+            alpha_idx = Some(i);
+            break;
+        }
+    }
+    let idx = alpha_idx.expect("Alpha struct not found");
+    let mut derive_found = false;
+    let mut derive_text = String::new();
+    for line in lines.iter().take(idx).skip(idx.saturating_sub(8)) {
+        if line.contains("#[derive(") {
+            derive_text = line.to_string();
+            derive_found = true;
+            break;
+        }
+    }
+    assert!(derive_found, "derive attribute not found above Alpha");
+    // Per-type override for Alpha is ["Eq"], owned must still include Clone + SSZ derives
+    assert!(derive_text.contains("Eq"));
+    assert!(derive_text.contains("Clone"));
+    assert!(
+        derive_text.contains("Encode")
+            && derive_text.contains("Decode")
+            && derive_text.contains("TreeHash")
+    );
+    // And should not contain Debug (since per-type replaces default)
+    assert!(!derive_text.contains("Debug"));
 }
