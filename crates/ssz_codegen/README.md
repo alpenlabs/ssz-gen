@@ -38,6 +38,38 @@ class Alpha(Container):
     c: Vector[uint8, 10]
 ```
 
+### Comments
+
+The parser supports three types of comments:
+
+- **Doc comments** (`###`): Documentation comments preserved in the generated code
+  ```python
+  ### This is a doc comment for the class
+  ### It can span multiple lines
+  class Point(Container):
+      ### X coordinate of the point
+      x: uint32
+      ### Y coordinate of the point
+      y: uint32
+  ```
+
+- **Pragma comments** (`#~#`): Special directive comments (available via AST/schema, not currently emitted in generated code)
+  ```python
+  #~# some-directive value
+  class Point(Container):
+      #~# field-pragma
+      x: uint32
+  ```
+
+- **Regular comments** (`#`): Standard comments that are discarded during parsing
+  ```python
+  # This comment is ignored
+  class Point(Container):
+      x: uint32
+  ```
+
+Doc comments appearing before class definitions or field definitions are attached to those elements and preserved through the parsing pipeline. Multiple consecutive doc comment lines are merged with newlines preserved. Doc comments are emitted in the generated Rust code as `///` comments with 80-character line wrapping.
+
 ### Inheritance
 ```python
 class Foo(StableContainer[5]):

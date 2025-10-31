@@ -56,6 +56,18 @@ pub enum TaggedToktr<T> {
     ParenBlock(T, Box<NodeData<T>>),
     /// An indent block.
     IndentBlock(T, Box<NodeData<T>>),
+
+    // Comments
+    /// Regular comment (discarded during conversion).
+    Comment(T, String),
+    /// Doc comment (merged with consecutive lines).
+    DocComment(T, String),
+    /// Pragma comment (with whitespace trimmed).
+    PragmaComment(T, String),
+
+    // Misc
+    /// Docstring (triple-quoted string).
+    DocString(T, String),
 }
 
 impl<T> TaggedToktr<T> {
@@ -78,6 +90,10 @@ impl<T> TaggedToktr<T> {
             Self::BracketBlock(t, _) => t,
             Self::ParenBlock(t, _) => t,
             Self::IndentBlock(t, _) => t,
+            Self::Comment(t, _) => t,
+            Self::DocComment(t, _) => t,
+            Self::PragmaComment(t, _) => t,
+            Self::DocString(t, _) => t,
         }
     }
 
@@ -227,6 +243,54 @@ pub(crate) fn parse_tokens_to_toktrs(tokens: &[SrcToken]) -> Result<Vec<SrcToktr
             TaggedToken::IntegerLiteral(sp, v) => TaggedToktr::IntegerLiteral(*sp, *v),
             TaggedToken::Shl(sp) => TaggedToktr::Shl(*sp),
             TaggedToken::Mul(sp) => TaggedToktr::Mul(*sp),
+            TaggedToken::Comment(sp, text) => TaggedToktr::Comment(*sp, text.clone()),
+            TaggedToken::DocComment(sp, text) => {
+                // Merge consecutive doc comments, but don't skip newlines
+                let mut merged = text.clone();
+                let mut j = i + 1;
+                let sp_start = *sp;
+                let mut last_doc_idx = i; // Track the index of the last DocComment we merged
+                let mut newlines_found = 0;
+
+                // Look ahead for consecutive doc comments (possibly with newlines between)
+                while j < tokens.len() {
+                    match &tokens[j] {
+                        TaggedToken::Newline(_) => {
+                            newlines_found += 1;
+                            j += 1;
+                            continue;
+                        }
+                        TaggedToken::DocComment(_, text) => {
+                            // Separate the two doc comments with newlines
+                            // If there are newlines between them, preserve them; otherwise just one
+                            let num_separators = if newlines_found > 0 {
+                                newlines_found
+                            } else {
+                                1
+                            };
+                            for _ in 0..num_separators {
+                                merged.push('\n');
+                            }
+                            newlines_found = 0;
+                            merged.push_str(text);
+                            last_doc_idx = j; // Update to this DocComment's index
+                            j += 1;
+                        }
+                        _ => break,
+                    }
+                }
+
+                // Skip past all merged doc comments, but leave newlines to be processed normally
+                if last_doc_idx > i {
+                    i = last_doc_idx; // Skip to the last DocComment
+                }
+                TaggedToktr::DocComment(sp_start, merged)
+            }
+            TaggedToken::PragmaComment(sp, text) => {
+                // Trim leading/trailing whitespace from pragma comments
+                let trimmed = text.trim().to_owned();
+                TaggedToktr::PragmaComment(*sp, trimmed)
+            }
 
             TaggedToken::OpenBracket(sp) => {
                 builder.push_block(BlockType::Bracket, *sp);

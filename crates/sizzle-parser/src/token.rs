@@ -68,6 +68,14 @@ pub enum TaggedToken<T> {
     Indent(T),
     /// `deindent` token.
     Deindent(T),
+
+    // Comments
+    /// Regular comment (discarded during conversion).
+    Comment(T, String),
+    /// Doc comment (merged with consecutive lines).
+    DocComment(T, String),
+    /// Pragma comment (with whitespace trimmed).
+    PragmaComment(T, String),
 }
 
 impl<T> TaggedToken<T> {
@@ -93,6 +101,9 @@ impl<T> TaggedToken<T> {
             Self::Indent(t) => t,
             Self::Deindent(t) => t,
             Self::Null(t) => t,
+            Self::Comment(t, _) => t,
+            Self::DocComment(t, _) => t,
+            Self::PragmaComment(t, _) => t,
         }
     }
 
@@ -118,6 +129,9 @@ impl<T> TaggedToken<T> {
             Self::Indent(_) => Token::Indent(()),
             Self::Deindent(_) => Token::Deindent(()),
             Self::Null(_) => Token::Null(()),
+            Self::Comment(_, text) => Token::Comment((), text.clone()),
+            Self::DocComment(_, text) => Token::DocComment((), text.clone()),
+            Self::PragmaComment(_, text) => Token::PragmaComment((), text.clone()),
         }
     }
 }
@@ -262,6 +276,15 @@ fn is_all_tabs<'c>(iter: impl IntoIterator<Item = &'c char>) -> bool {
     iter.into_iter().all(|c| *c == '\t')
 }
 
+enum CommentType {
+    /// Regular `#` comment.
+    Regular,
+    /// Doc comment `###`.
+    Doc,
+    /// Pragma comment `#~#`.
+    Pragma,
+}
+
 pub(crate) fn parse_char_array_to_tokens(s: &[char]) -> Result<Vec<SrcToken>, TokenError> {
     let sp_tbl = PosTbl::generate(s.iter().copied());
 
@@ -362,6 +385,58 @@ pub(crate) fn parse_char_array_to_tokens(s: &[char]) -> Result<Vec<SrcToken>, To
                     .parse::<u64>()
                     .map_err(|_| TokenError::InvalidInt(arr))?;
                 builder.push_token(SrcToken::IntegerLiteral(sp, v));
+                i = j;
+                continue;
+            }
+
+            '#' => {
+                // Determine comment type based on prefix
+                let comment_type = if i + 2 < s.len() && s[i + 1] == '#' && s[i + 2] == '#' {
+                    // Doc comment: ###
+                    CommentType::Doc
+                } else if i + 2 < s.len() && s[i + 1] == '~' && s[i + 2] == '#' {
+                    // Pragma comment: #~#
+                    CommentType::Pragma
+                } else {
+                    // Regular comment: #
+                    CommentType::Regular
+                };
+
+                // Find the end of the comment (until newline or end of input)
+                // Skip the comment prefix characters first
+                let start = match comment_type {
+                    CommentType::Doc => {
+                        // Skip ###
+                        i + 3
+                    }
+                    CommentType::Pragma => {
+                        // Skip #~#
+                        i + 3
+                    }
+                    CommentType::Regular => {
+                        // Just #
+                        i + 1
+                    }
+                };
+                // Now find the end of the comment text
+                let mut j = start;
+                while j < s.len() && s[j] != '\n' {
+                    j += 1;
+                }
+
+                let comment_text: String = s[start..j].iter().collect();
+
+                match comment_type {
+                    CommentType::Doc => {
+                        builder.push_token(SrcToken::DocComment(sp, comment_text));
+                    }
+                    CommentType::Pragma => {
+                        builder.push_token(SrcToken::PragmaComment(sp, comment_text));
+                    }
+                    CommentType::Regular => {
+                        builder.push_token(SrcToken::Comment(sp, comment_text));
+                    }
+                }
                 i = j;
                 continue;
             }

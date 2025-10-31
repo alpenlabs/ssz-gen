@@ -757,6 +757,73 @@ impl ClassDef {
     ///
     /// # Returns
     ///
+    /// Formats a doc comment string into `///` lines with 80-character wrapping.
+    /// The 80-character limit includes the `/// ` prefix.
+    fn format_doc_comment(text: &str) -> TokenStream {
+        if text.trim().is_empty() {
+            return quote! {};
+        }
+
+        const MAX_LINE_LENGTH: usize = 80;
+        const PREFIX_LENGTH: usize = 4; // "/// "
+
+        let mut lines = Vec::new();
+        let mut current_line = String::new();
+
+        // Split by newlines first to preserve paragraph breaks
+        for paragraph in text.split('\n') {
+            let trimmed = paragraph.trim();
+            if trimmed.is_empty() {
+                // Empty line - add as blank doc comment
+                if !current_line.is_empty() {
+                    lines.push(format!("/// {}", current_line.trim()));
+                    current_line.clear();
+                }
+                lines.push("///".to_string());
+                continue;
+            }
+
+            // Word-wrap within paragraph
+            for word in trimmed.split_whitespace() {
+                let test_line = if current_line.is_empty() {
+                    word.to_string()
+                } else {
+                    format!("{} {}", current_line, word)
+                };
+
+                // Check if line with prefix fits within 80 chars
+                if test_line.len() + PREFIX_LENGTH <= MAX_LINE_LENGTH {
+                    current_line = test_line;
+                } else {
+                    if !current_line.is_empty() {
+                        lines.push(format!("/// {}", current_line.trim()));
+                    }
+                    current_line = word.to_string();
+                    // If a single word is too long, we still need to add it
+                    if current_line.len() + PREFIX_LENGTH > MAX_LINE_LENGTH {
+                        lines.push(format!("/// {}", current_line.trim()));
+                        current_line.clear();
+                    }
+                }
+            }
+        }
+
+        // Add remaining line
+        if !current_line.is_empty() {
+            lines.push(format!("/// {}", current_line.trim()));
+        }
+
+        // Parse each line as a doc comment
+        let doc_lines: Vec<TokenStream> = lines
+            .iter()
+            .map(|line| syn::parse_str::<TokenStream>(line).unwrap_or_else(|_| quote! {}))
+            .collect();
+
+        quote! {
+            #(#doc_lines)*
+        }
+    }
+
     /// A [`TokenStream`] containing the generated Rust code for the view struct (e.g.,
     /// `FooRef<'a>`).
     pub fn to_view_struct(&self, ident: &Ident, derive_cfg: &DeriveConfig) -> TokenStream {
@@ -768,6 +835,7 @@ impl ClassDef {
             Use `.to_owned()` to convert to the owned type when needed.",
             ident
         );
+        let doc_comments = Self::format_doc_comment(&doc_comment);
         let type_name = ident.to_string();
         let view_derive = derive_cfg.view_derive_attr(&type_name);
 
@@ -775,7 +843,7 @@ impl ClassDef {
         match self.base {
             BaseClass::Container | BaseClass::StableContainer(_) | BaseClass::Profile(_) => {
                 quote! {
-                    #[doc = #doc_comment]
+                    #doc_comments
                     #view_derive
                     pub struct #ref_ident<'a> {
                         bytes: &'a [u8],

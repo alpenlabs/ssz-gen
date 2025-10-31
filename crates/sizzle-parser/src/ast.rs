@@ -17,6 +17,43 @@ use crate::{
 
 pub(crate) type Modules = HashMap<PathBuf, Module>;
 
+/// Manages buffering of comments to attach to AST structures
+#[derive(Default)]
+struct CommentBuffer {
+    doc_comment: Option<String>,
+    pragmas: Vec<String>,
+}
+
+impl CommentBuffer {
+    fn new() -> Self {
+        Self {
+            doc_comment: None,
+            pragmas: Vec::new(),
+        }
+    }
+
+    fn set_doc_comment(&mut self, doc_comment: Option<String>) {
+        self.doc_comment = doc_comment;
+    }
+
+    fn add_pragma(&mut self, pragma: String) {
+        self.pragmas.push(pragma);
+    }
+
+    fn take_doc_comment(&mut self) -> Option<String> {
+        self.doc_comment.take()
+    }
+
+    fn take_pragmas(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.pragmas)
+    }
+
+    fn clear(&mut self) {
+        self.doc_comment = None;
+        self.pragmas.clear();
+    }
+}
+
 /// A module file containing a list of definitions.
 #[derive(Clone, Debug)]
 pub(crate) enum Module {
@@ -120,14 +157,25 @@ pub(crate) enum AssignExpr {
 pub(crate) struct ClassDefEntry {
     name: Identifier,
     parent_ty: TyExprSpec,
+    doc: Option<String>,
+    doc_comment: Option<String>,
+    pragmas: Vec<String>,
     fields: Vec<FieldDef>,
 }
 
 impl ClassDefEntry {
-    pub(crate) fn new(name: Identifier, parent_ty: TyExprSpec, fields: Vec<FieldDef>) -> Self {
+    pub(crate) fn new(
+        name: Identifier,
+        parent_ty: TyExprSpec,
+        doc: Option<String>,
+        fields: Vec<FieldDef>,
+    ) -> Self {
         Self {
             name,
             parent_ty,
+            doc,
+            doc_comment: None,
+            pragmas: Vec::new(),
             fields,
         }
     }
@@ -140,6 +188,26 @@ impl ClassDefEntry {
         &self.parent_ty
     }
 
+    pub(crate) fn doc(&self) -> Option<&str> {
+        self.doc.as_ref().map(|s| s.as_ref())
+    }
+
+    pub(crate) fn doc_comment(&self) -> Option<&str> {
+        self.doc_comment.as_ref().map(|s| s.as_ref())
+    }
+
+    pub(crate) fn pragmas(&self) -> &[String] {
+        &self.pragmas
+    }
+
+    pub(crate) fn set_doc_comment(&mut self, doc_comment: Option<String>) {
+        self.doc_comment = doc_comment;
+    }
+
+    pub(crate) fn set_pragmas(&mut self, pragmas: Vec<String>) {
+        self.pragmas = pragmas;
+    }
+
     pub(crate) fn fields(&self) -> &[FieldDef] {
         &self.fields
     }
@@ -150,11 +218,18 @@ impl ClassDefEntry {
 pub(crate) struct FieldDef {
     name: Identifier,
     ty: TyExprSpec,
+    doc_comment: Option<String>,
+    pragmas: Vec<String>,
 }
 
 impl FieldDef {
     pub(crate) fn new(name: Identifier, ty: TyExprSpec) -> Self {
-        Self { name, ty }
+        Self {
+            name,
+            ty,
+            doc_comment: None,
+            pragmas: Vec::new(),
+        }
     }
 
     pub(crate) fn name(&self) -> &Identifier {
@@ -163,6 +238,22 @@ impl FieldDef {
 
     pub(crate) fn ty(&self) -> &TyExprSpec {
         &self.ty
+    }
+
+    pub(crate) fn doc_comment(&self) -> Option<&str> {
+        self.doc_comment.as_ref().map(|s| s.as_ref())
+    }
+
+    pub(crate) fn pragmas(&self) -> &[String] {
+        &self.pragmas
+    }
+
+    pub(crate) fn set_doc_comment(&mut self, doc_comment: Option<String>) {
+        self.doc_comment = doc_comment;
+    }
+
+    pub(crate) fn add_pragma(&mut self, pragma: String) {
+        self.pragmas.push(pragma);
     }
 }
 
@@ -292,6 +383,9 @@ pub enum ParseError {
     #[error("unexpected token at {0}")]
     UnexpectedToken(SrcPos),
 
+    #[error("multiple docstrings in def")]
+    MultipleDocStrings,
+
     #[error("unexpected end of input")]
     UnexpectedEnd,
 
@@ -381,18 +475,40 @@ pub(crate) fn parse_module_from_toktrs<P: AsRef<Path>>(
     let mut gob = Gobbler::new(toktrs);
     let mut import_map = HashMap::new();
 
+    let mut comment_buffer = CommentBuffer::new();
+
     while let Some(cur) = gob.get() {
         match cur {
             // Discard newlines.
-            TaggedToktr::Newline(_) => gob.gobble_one(),
+            TaggedToktr::Newline(_) => {
+                gob.gobble_one();
+                // Clear comment buffer on newline unless we're about to parse a class
+                // (comments should be right before what they document)
+            }
+
+            // Discard regular comments
+            TaggedToktr::Comment(_, _) => gob.gobble_one(),
+
+            // Collect doc comments and pragmas
+            TaggedToktr::DocComment(_, text) => {
+                comment_buffer.set_doc_comment(Some(text.clone()));
+                gob.gobble_one();
+            }
+
+            TaggedToktr::PragmaComment(_, text) => {
+                comment_buffer.add_pragma(text.clone());
+                gob.gobble_one();
+            }
 
             // Lines that start with "import" are imports.
             TaggedToktr::Import(_) => {
+                comment_buffer.clear(); // Clear comments before imports
                 parse_import(&mut gob, path, module_manager, &mut import_map)?;
             }
 
             // Lines that start with identifiers are probably assignments.
             TaggedToktr::Identifier(_, _) => {
+                comment_buffer.clear(); // Clear comments before assignments
                 let cd = parse_assignment(&mut gob, &import_map)?;
                 module_manager
                     .get_module_mut(path)
@@ -403,7 +519,16 @@ pub(crate) fn parse_module_from_toktrs<P: AsRef<Path>>(
 
             // Lines that start with "class" are always classes.
             TaggedToktr::Class(_) => {
-                let cd = parse_class(&mut gob, &import_map)?;
+                // Comments should have been collected into comment_buffer
+                let mut cd = parse_class(&mut gob, &import_map)?;
+                // Attach collected comments to the class
+                if let Some(doc) = comment_buffer.take_doc_comment() {
+                    cd.set_doc_comment(Some(doc));
+                }
+                let pragmas = comment_buffer.take_pragmas();
+                if !pragmas.is_empty() {
+                    cd.set_pragmas(pragmas);
+                }
                 module_manager
                     .get_module_mut(path)
                     .unwrap()
@@ -497,6 +622,13 @@ fn parse_class(
 
     let sp = *gob.get_expect().tag();
 
+    // Collect comments before the class definition
+    let mut comment_buffer = CommentBuffer::new();
+
+    // Look backwards for doc comments and pragmas (but we're parsing forward, so we'll handle this
+    // differently) For now, we'll collect comments from the current position backwards
+    // conceptually but in practice, comments should be collected before we reach this function
+    // Let's collect them after the class keyword is found
     match gob.view() {
         [
             Class(_),
@@ -521,10 +653,18 @@ fn parse_class(
             };
 
             let mut body_gob = Gobbler::new(body_data.children());
-            let fields = parse_class_body(&mut body_gob, import_map)?;
+            let body = parse_class_body(&mut body_gob, import_map)?;
             gob.gobble_one();
 
-            let cd = ClassDefEntry::new(name, parent_ty, fields);
+            let mut cd = ClassDefEntry::new(name, parent_ty, body.doc, body.fields);
+            // Attach comments if any were collected
+            if let Some(doc) = comment_buffer.take_doc_comment() {
+                cd.set_doc_comment(Some(doc));
+            }
+            let pragmas = comment_buffer.take_pragmas();
+            if !pragmas.is_empty() {
+                cd.set_pragmas(pragmas);
+            }
             Ok(cd)
         }
 
@@ -673,17 +813,61 @@ fn parse_ty_arg(
     }
 }
 
+struct ClassBody {
+    doc: Option<String>,
+    fields: Vec<FieldDef>,
+}
+
 /// Parses a class body out of a gobbler.  The entries must be the full gobbler.
 fn parse_class_body(
     gob: &mut Gobbler<'_, SrcToktr>,
     import_map: &HashMap<Identifier, PathBuf>,
-) -> Result<Vec<FieldDef>, ParseError> {
+) -> Result<ClassBody, ParseError> {
     use TaggedToktr::*;
 
+    let mut doc = None;
     let mut fields = Vec::new();
+    let mut comment_buffer = CommentBuffer::new();
 
     while gob.has_entry() {
+        // Collect comments before the field definition
+        match gob.get() {
+            Some(DocComment(_, text)) => {
+                comment_buffer.set_doc_comment(Some(text.clone()));
+                gob.gobble_one();
+                continue;
+            }
+            Some(PragmaComment(_, text)) => {
+                comment_buffer.add_pragma(text.clone());
+                gob.gobble_one();
+                continue;
+            }
+            Some(Comment(_, text)) => {
+                // Indented comments in class body: check if pragma, otherwise treat as doc comment
+                let trimmed = text.trim_start();
+                if trimmed.starts_with("pragma") {
+                    comment_buffer.add_pragma(trimmed.to_owned());
+                } else {
+                    comment_buffer.set_doc_comment(Some(text.clone()));
+                }
+                gob.gobble_one();
+                continue;
+            }
+            Some(Newline(_)) => {
+                gob.gobble_one();
+                continue;
+            }
+            _ => {}
+        }
+
         match gob.gobble_slice_up_to(is_toktr_newline) {
+            Some([DocString(_, d)]) => {
+                if doc.is_some() {
+                    return Err(ParseError::MultipleDocStrings);
+                }
+                doc = Some(d.clone());
+            }
+
             Some(
                 [
                     Identifier(_, fname),
@@ -695,7 +879,17 @@ fn parse_class_body(
                 let mut arg_gob = Gobbler::new(tyarg_data.children());
                 let ty_args = parse_ty_args(&mut arg_gob, import_map)?;
                 let ty = TyExprSpec::Complex(ComplexTySpec::new(tyname.clone(), ty_args));
-                fields.push(FieldDef::new(fname.clone(), ty));
+                let mut field = FieldDef::new(fname.clone(), ty);
+                // Attach comments to the field
+                if let Some(field_doc) = comment_buffer.take_doc_comment() {
+                    field.set_doc_comment(Some(field_doc));
+                }
+                let pragmas = comment_buffer.take_pragmas();
+                for pragma in pragmas {
+                    field.add_pragma(pragma);
+                }
+                fields.push(field);
+                comment_buffer.clear();
             }
 
             Some(
@@ -712,24 +906,49 @@ fn parse_class_body(
                     module_path.clone(),
                     second_ident.clone(),
                 ));
-                fields.push(FieldDef::new(fname.clone(), ty));
+                let mut field = FieldDef::new(fname.clone(), ty);
+                // Attach comments to the field
+                if let Some(field_doc) = comment_buffer.take_doc_comment() {
+                    field.set_doc_comment(Some(field_doc));
+                }
+                let pragmas = comment_buffer.take_pragmas();
+                for pragma in pragmas {
+                    field.add_pragma(pragma);
+                }
+                fields.push(field);
+                comment_buffer.clear();
             }
 
             Some([Identifier(_, fname), Colon(_), Identifier(_, tyname)]) => {
                 let ty = TyExprSpec::Simple(tyname.clone());
-                fields.push(FieldDef::new(fname.clone(), ty));
+                let mut field = FieldDef::new(fname.clone(), ty);
+                // Attach comments to the field
+                if let Some(field_doc) = comment_buffer.take_doc_comment() {
+                    field.set_doc_comment(Some(field_doc));
+                }
+                let pragmas = comment_buffer.take_pragmas();
+                for pragma in pragmas {
+                    field.add_pragma(pragma);
+                }
+                fields.push(field);
+                comment_buffer.clear();
             }
 
             Some([t, ..]) => return Err(ParseError::UnexpectedToken(*t.tag())),
 
-            _ => return Err(ParseError::UnexpectedEnd),
+            _ => {
+                // Ignore extra newlines and comments that don't precede a field
+                comment_buffer.clear();
+                gob.gobble_until(is_toktr_not_newline);
+                continue;
+            }
         }
 
         // Ignore extra newlines.
         gob.gobble_until(is_toktr_not_newline);
     }
 
-    Ok(fields)
+    Ok(ClassBody { doc, fields })
 }
 
 /// Parses import statements by reading the imported module and parsing it
@@ -966,5 +1185,169 @@ class Foo(test.A):
         parse_module_from_toktrs(&tt, Path::new("tests/non_existent"), &mut module_manager)
             .expect("test: parse toktrs");
         eprintln!("module {module_manager:#?}");
+    }
+
+    #[test]
+    fn test_ast_parse_class_with_doc_comment() {
+        let s = r"
+### This is a doc comment for the class
+class Point(Container):
+    x: int32
+    y: int32
+";
+
+        let arr = s.chars().collect::<Vec<_>>();
+
+        let toks = parse_char_array_to_tokens(&arr).expect("test: tokenize string");
+        let tt = parse_tokens_to_toktrs(&toks).expect("test: treeize tokens");
+
+        let mut module_manager = ModuleManager::new(&[]);
+        module_manager.add_module(Path::new(""), false);
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
+            .expect("test: parse toktrs");
+
+        let entries = module_manager
+            .get_module_mut(Path::new(""))
+            .unwrap()
+            .mut_entries();
+
+        if let crate::ast::ModuleEntry::Class(class_def) = &entries[0] {
+            assert!(class_def.doc_comment().is_some());
+            assert_eq!(
+                class_def.doc_comment().unwrap(),
+                " This is a doc comment for the class"
+            );
+        } else {
+            panic!("Expected Class entry");
+        }
+    }
+
+    #[test]
+    fn test_ast_parse_class_with_pragma() {
+        let s = r"
+#~# some-directive value
+class Point(Container):
+    x: int32
+    y: int32
+";
+
+        let arr = s.chars().collect::<Vec<_>>();
+
+        let toks = parse_char_array_to_tokens(&arr).expect("test: tokenize string");
+        let tt = parse_tokens_to_toktrs(&toks).expect("test: treeize tokens");
+
+        let mut module_manager = ModuleManager::new(&[]);
+        module_manager.add_module(Path::new(""), false);
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
+            .expect("test: parse toktrs");
+
+        let entries = module_manager
+            .get_module_mut(Path::new(""))
+            .unwrap()
+            .mut_entries();
+
+        if let crate::ast::ModuleEntry::Class(class_def) = &entries[0] {
+            let pragmas = class_def.pragmas();
+            assert_eq!(pragmas.len(), 1);
+            // Pragma comments are trimmed, so leading space is removed
+            assert_eq!(pragmas[0], "some-directive value");
+        } else {
+            panic!("Expected Class entry");
+        }
+    }
+
+    // Note: Docstring parsing tests are skipped until docstring tokenization is implemented
+    // The docstring functionality in the AST is ready, but tokenizer support for """..."""
+    // docstrings needs to be added first.
+
+    // #[test]
+    // fn test_ast_parse_class_with_docstring() {
+    //     // Test will be enabled once docstring tokenization is implemented
+    // }
+
+    // #[test]
+    // fn test_ast_parse_class_multiple_docstrings_error() {
+    //     // Test will be enabled once docstring tokenization is implemented
+    // }
+
+    #[test]
+    fn test_ast_parse_field_with_comments() {
+        let s = r"
+class Point(Container):
+    ### This is a doc comment for the field
+    x: int32
+    #~# field-pragma
+    y: int32
+";
+
+        let arr = s.chars().collect::<Vec<_>>();
+
+        let toks = parse_char_array_to_tokens(&arr).expect("test: tokenize string");
+        let tt = parse_tokens_to_toktrs(&toks).expect("test: treeize tokens");
+
+        let mut module_manager = ModuleManager::new(&[]);
+        module_manager.add_module(Path::new(""), false);
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
+            .expect("test: parse toktrs");
+
+        let entries = module_manager
+            .get_module_mut(Path::new(""))
+            .unwrap()
+            .mut_entries();
+
+        if let crate::ast::ModuleEntry::Class(class_def) = &entries[0] {
+            let fields = class_def.fields();
+            assert_eq!(fields.len(), 2);
+
+            // Check first field has doc comment
+            assert!(fields[0].doc_comment().is_some());
+            assert_eq!(
+                fields[0].doc_comment().unwrap(),
+                " This is a doc comment for the field"
+            );
+
+            // Check second field has pragma
+            let pragmas = fields[1].pragmas();
+            assert_eq!(pragmas.len(), 1);
+            // Pragma comments are trimmed
+            assert_eq!(pragmas[0], "field-pragma");
+        } else {
+            panic!("Expected Class entry");
+        }
+    }
+
+    #[test]
+    fn test_ast_parse_class_with_multiline_doc_comment() {
+        let s = r"
+### First line of doc comment
+### Second line of doc comment
+class Point(Container):
+    x: int32
+    y: int32
+";
+
+        let arr = s.chars().collect::<Vec<_>>();
+
+        let toks = parse_char_array_to_tokens(&arr).expect("test: tokenize string");
+        let tt = parse_tokens_to_toktrs(&toks).expect("test: treeize tokens");
+
+        let mut module_manager = ModuleManager::new(&[]);
+        module_manager.add_module(Path::new(""), false);
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
+            .expect("test: parse toktrs");
+
+        let entries = module_manager
+            .get_module_mut(Path::new(""))
+            .unwrap()
+            .mut_entries();
+
+        if let crate::ast::ModuleEntry::Class(class_def) = &entries[0] {
+            let doc_comment = class_def.doc_comment().expect("Expected doc comment");
+            // Should contain both lines merged with newline
+            assert!(doc_comment.contains("First line"));
+            assert!(doc_comment.contains("Second line"));
+        } else {
+            panic!("Expected Class entry");
+        }
     }
 }

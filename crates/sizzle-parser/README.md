@@ -7,11 +7,41 @@ It supports:
 
 * `class` defs
   * with only typed fields, but without default values
-  * with(out) doc comments **(planned)**
+  * with doc comments and pragmas
   * without methods
   * without decorators
 * type alias assignments
 * integer constant assignments
+
+## Comments
+
+The parser supports three types of comments:
+
+- **Doc comments** (`###`): Documentation comments that are preserved and attached to classes or fields
+  ```python
+  ### This is a doc comment for the class
+  ### It can span multiple lines
+  class Point(Container):
+      ### X coordinate
+      x: uint32
+  ```
+
+- **Pragma comments** (`#~#`): Special directive comments
+  ```python
+  #~# some-directive value
+  class Point(Container):
+      #~# field-pragma
+      x: uint32
+  ```
+
+- **Regular comments** (`#`): Standard comments that are discarded during parsing
+  ```python
+  # This comment is ignored
+  class Point(Container):
+      x: uint32
+  ```
+
+Doc comments and pragmas appearing before a class definition are attached to the class. Similarly, comments appearing before field definitions within a class body are attached to those fields.
 
 ## Design
 
