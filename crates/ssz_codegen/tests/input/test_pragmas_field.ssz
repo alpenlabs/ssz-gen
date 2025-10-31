@@ -1,0 +1,7 @@
+### Test field-level pragmas
+class FieldPragmaContainer(Container):
+    normal_field: uint8
+    #~# field_attr: #[serde(rename = "custom_field_name")]
+    pragma_field: uint16
+    #~# field_attr: #[cfg(test)]
+    multi_pragma_field: uint32

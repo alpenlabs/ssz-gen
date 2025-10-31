@@ -462,3 +462,256 @@ fn test_comments() {
         fs::read_to_string("tests/output/test_comments.rs").expect("Failed to read actual output");
     assert_eq!(expected_output, actual_output);
 }
+
+// Pragma tests
+
+#[test]
+fn test_pragmas_basic() {
+    build_ssz_files(
+        &["test_pragmas_basic.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_pragmas_basic.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types with basic pragmas");
+
+    let expected_output = fs::read_to_string("tests/expected_output/test_pragmas_basic.rs")
+        .expect("Failed to read expected output");
+    let actual_output =
+        fs::read_to_string("tests/output/test_pragmas_basic.rs").expect("Failed to read actual output");
+    assert_eq!(expected_output, actual_output);
+}
+
+#[test]
+fn test_pragmas_multiple() {
+    // Test that multiple pragmas don't break codegen
+    build_ssz_files(
+        &["test_pragmas_multiple.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_pragmas_multiple.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types with multiple pragmas");
+
+    let expected_output = fs::read_to_string("tests/expected_output/test_pragmas_multiple.rs")
+        .expect("Failed to read expected output");
+    let actual_output =
+        fs::read_to_string("tests/output/test_pragmas_multiple.rs").expect("Failed to read actual output");
+    assert_eq!(expected_output, actual_output);
+}
+
+#[test]
+fn test_pragmas_field() {
+    // Test that field-level pragmas don't break codegen
+    build_ssz_files(
+        &["test_pragmas_field.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_pragmas_field.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types with field pragmas");
+
+    let expected_output = fs::read_to_string("tests/expected_output/test_pragmas_field.rs")
+        .expect("Failed to read expected output");
+    let actual_output =
+        fs::read_to_string("tests/output/test_pragmas_field.rs").expect("Failed to read actual output");
+    assert_eq!(expected_output, actual_output);
+}
+
+#[test]
+fn test_pragmas_inheritance() {
+    // Test that pragmas work with inheritance
+    build_ssz_files(
+        &["test_pragmas_inheritance.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_pragmas_inheritance.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types with pragmas and inheritance");
+
+    let expected_output = fs::read_to_string("tests/expected_output/test_pragmas_inheritance.rs")
+        .expect("Failed to read expected output");
+    let actual_output =
+        fs::read_to_string("tests/output/test_pragmas_inheritance.rs").expect("Failed to read actual output");
+    assert_eq!(expected_output, actual_output);
+}
+
+#[test]
+fn test_pragmas_empty() {
+    // Test edge case: empty pragmas don't break codegen
+    build_ssz_files(
+        &["test_pragmas_empty.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_pragmas_empty.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types with empty pragmas");
+
+    let expected_output = fs::read_to_string("tests/expected_output/test_pragmas_empty.rs")
+        .expect("Failed to read expected output");
+    let actual_output =
+        fs::read_to_string("tests/output/test_pragmas_empty.rs").expect("Failed to read actual output");
+    assert_eq!(expected_output, actual_output);
+}
+
+#[test]
+fn test_pragmas_schema_parsing() {
+    // Test that pragmas are correctly parsed and stored in the schema
+    use std::collections::HashMap;
+
+    use sizzle_parser::parse_str_schema;
+
+    let input = r"
+#~# class-pragma: value1
+#~# another-class-pragma: value2
+class TestContainer(Container):
+    #~# field-pragma: field-value
+    x: uint32
+    #~# another-field-pragma
+    y: uint16
+";
+
+    let files = HashMap::from([(std::path::Path::new("").to_path_buf(), input.to_string())]);
+    let (_, schema_map) =
+        parse_str_schema(&files, &[]).expect("Failed to parse schema with pragmas");
+
+    let schema = schema_map.values().next().expect("Should have one schema");
+    let classes = schema.classes();
+    assert_eq!(classes.len(), 1, "Should have one class");
+
+    let class = &classes[0];
+    assert_eq!(class.name().0, "TestContainer");
+
+    // Verify class-level pragmas are stored
+    let pragmas = class.pragmas();
+    assert_eq!(pragmas.len(), 2, "Should have 2 class pragmas");
+    assert!(pragmas.iter().any(|p| p.contains("class-pragma")));
+    assert!(pragmas.iter().any(|p| p.contains("another-class-pragma")));
+
+    // Verify field-level pragmas are stored
+    let fields = class.fields();
+    assert_eq!(fields.len(), 2);
+
+    // First field should have pragma
+    let field1_pragmas = fields[0].pragmas();
+    assert_eq!(field1_pragmas.len(), 1);
+    assert!(field1_pragmas[0].contains("field-pragma"));
+
+    // Second field should have pragma
+    let field2_pragmas = fields[1].pragmas();
+    assert_eq!(field2_pragmas.len(), 1);
+    assert!(field2_pragmas[0].contains("another-field-pragma"));
+}
+
+#[test]
+fn test_pragmas_with_stable_container() {
+    // Test pragmas with StableContainer
+    use std::collections::HashMap;
+
+    use sizzle_parser::parse_str_schema;
+
+    let input = r"
+#~# stable-container-pragma: value
+class StableTest(StableContainer[5]):
+    a: Optional[uint8]
+    b: Optional[uint16]
+";
+
+    let files = HashMap::from([(std::path::Path::new("").to_path_buf(), input.to_string())]);
+    let (_, schema_map) =
+        parse_str_schema(&files, &[]).expect("Failed to parse stable container with pragmas");
+
+    let schema = schema_map.values().next().expect("Should have one schema");
+    let classes = schema.classes();
+    assert_eq!(classes.len(), 1);
+
+    let class = &classes[0];
+    let pragmas = class.pragmas();
+    assert_eq!(pragmas.len(), 1);
+    assert!(pragmas[0].contains("stable-container-pragma"));
+
+    // Verify it generates correctly
+    build_ssz_files(
+        &["test_pragmas_basic.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_pragmas_basic.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("StableContainer with pragmas should generate");
+}
+
+#[test]
+fn test_pragmas_multiple_consecutive() {
+    // Test multiple consecutive pragma lines
+    use std::collections::HashMap;
+
+    use sizzle_parser::parse_str_schema;
+
+    let input = r"
+#~# pragma1: value1
+#~# pragma2: value2
+#~# pragma3: value3
+class MultiPragma(Container):
+    x: uint8
+";
+
+    let files = HashMap::from([(std::path::Path::new("").to_path_buf(), input.to_string())]);
+    let (_, schema_map) =
+        parse_str_schema(&files, &[]).expect("Failed to parse multiple consecutive pragmas");
+
+    let schema = schema_map.values().next().expect("Should have one schema");
+    let classes = schema.classes();
+    assert_eq!(classes.len(), 1);
+
+    let class = &classes[0];
+    let pragmas = class.pragmas();
+    assert_eq!(pragmas.len(), 3, "Should have 3 pragmas");
+    assert!(pragmas.iter().any(|p| p.contains("pragma1")));
+    assert!(pragmas.iter().any(|p| p.contains("pragma2")));
+    assert!(pragmas.iter().any(|p| p.contains("pragma3")));
+}
+
+#[test]
+fn test_pragmas_with_doc_comments() {
+    // Test that pragmas work alongside doc comments
+    use std::collections::HashMap;
+
+    use sizzle_parser::parse_str_schema;
+
+    let input = r"
+### This is a doc comment
+#~# pragma: directive-value
+class DocAndPragma(Container):
+    ### Field doc comment
+    #~# field-pragma: field-value
+    x: uint32
+";
+
+    let files = HashMap::from([(std::path::Path::new("").to_path_buf(), input.to_string())]);
+    let (_, schema_map) =
+        parse_str_schema(&files, &[]).expect("Failed to parse with doc comments and pragmas");
+
+    let schema = schema_map.values().next().expect("Should have one schema");
+    let classes = schema.classes();
+    assert_eq!(classes.len(), 1);
+
+    let class = &classes[0];
+
+    // Should have both doc comment and pragmas
+    assert!(class.doc_comment().is_some());
+    assert!(!class.pragmas().is_empty());
+    assert!(class.pragmas()[0].contains("pragma"));
+
+    // Field should have both
+    let fields = class.fields();
+    assert_eq!(fields.len(), 1);
+    assert!(fields[0].doc_comment().is_some());
+    assert!(!fields[0].pragmas().is_empty());
+    assert!(fields[0].pragmas()[0].contains("field-pragma"));
+}
