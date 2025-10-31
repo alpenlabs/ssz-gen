@@ -76,6 +76,10 @@ pub enum TaggedToken<T> {
     DocComment(T, String),
     /// Pragma comment (with whitespace trimmed).
     PragmaComment(T, String),
+
+    // Docstrings
+    /// Docstring (triple-quoted string """...").
+    DocString(T, String),
 }
 
 impl<T> TaggedToken<T> {
@@ -104,6 +108,7 @@ impl<T> TaggedToken<T> {
             Self::Comment(t, _) => t,
             Self::DocComment(t, _) => t,
             Self::PragmaComment(t, _) => t,
+            Self::DocString(t, _) => t,
         }
     }
 
@@ -132,6 +137,7 @@ impl<T> TaggedToken<T> {
             Self::Comment(_, text) => Token::Comment((), text.clone()),
             Self::DocComment(_, text) => Token::DocComment((), text.clone()),
             Self::PragmaComment(_, text) => Token::PragmaComment((), text.clone()),
+            Self::DocString(_, text) => Token::DocString((), text.clone()),
         }
     }
 }
@@ -439,6 +445,40 @@ pub(crate) fn parse_char_array_to_tokens(s: &[char]) -> Result<Vec<SrcToken>, To
                 }
                 i = j;
                 continue;
+            }
+
+            '"' => {
+                // Check if this is a triple-quoted docstring (""")
+                if i + 2 < s.len() && s[i + 1] == '"' && s[i + 2] == '"' {
+                    // Skip the opening """
+                    i += 3;
+
+                    // Find the closing """
+                    let mut found_closing = false;
+                    let mut j = i;
+                    while j + 2 < s.len() {
+                        if s[j] == '"' && s[j + 1] == '"' && s[j + 2] == '"' {
+                            found_closing = true;
+                            break;
+                        }
+                        j += 1;
+                    }
+
+                    if !found_closing {
+                        return Err(TokenError::UnexpectedEnd);
+                    }
+
+                    // Extract the docstring content (without the closing """)
+                    let doc_text: String = s[i..j].iter().collect();
+                    builder.push_token(SrcToken::DocString(sp, doc_text));
+
+                    // Move past the closing """
+                    i = j + 3;
+                    continue;
+                } else {
+                    // Single quote - not supported for docstrings, only """
+                    return Err(TokenError::UnexpectedChar('"', i));
+                }
             }
 
             _ => return Err(TokenError::UnexpectedChar(cur, i)),

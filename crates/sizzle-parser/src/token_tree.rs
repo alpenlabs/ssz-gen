@@ -9,6 +9,58 @@ use crate::{
     token::{SrcToken, TaggedToken},
 };
 
+/// Cleans up a docstring by removing leading/trailing newlines and common indentation.
+fn cleanup_docstring(text: &str) -> String {
+    if text.is_empty() {
+        return String::new();
+    }
+
+    // Split into lines and find the minimum indentation (excluding first and last empty lines)
+    let lines: Vec<&str> = text.lines().collect();
+    if lines.is_empty() {
+        return String::new();
+    }
+
+    // Find the first non-empty line to determine base indentation
+    let first_non_empty = lines.iter().position(|l| !l.trim().is_empty());
+    let last_non_empty = lines.iter().rposition(|l| !l.trim().is_empty());
+
+    if let (Some(first_idx), Some(last_idx)) = (first_non_empty, last_non_empty) {
+        // Find minimum indentation among non-empty lines
+        let min_indent = lines[first_idx..=last_idx]
+            .iter()
+            .filter_map(|line| {
+                if line.trim().is_empty() {
+                    None
+                } else {
+                    Some(line.len() - line.trim_start().len())
+                }
+            })
+            .min()
+            .unwrap_or(0);
+
+        // Remove leading empty lines, dedent, and remove trailing empty lines
+        let cleaned_lines: Vec<String> = lines[first_idx..=last_idx]
+            .iter()
+            .map(|line| {
+                if line.trim().is_empty() {
+                    String::new()
+                } else {
+                    // Remove the common indentation
+                    let trimmed_start = line.len() - line.trim_start().len();
+                    let indent_to_remove = trimmed_start.min(min_indent);
+                    line[indent_to_remove..].to_string()
+                }
+            })
+            .collect();
+
+        cleaned_lines.join("\n")
+    } else {
+        // All lines are empty
+        String::new()
+    }
+}
+
 /// Token tree with an empty tag value.
 pub type Toktr = TaggedToktr<()>;
 
@@ -290,6 +342,11 @@ pub(crate) fn parse_tokens_to_toktrs(tokens: &[SrcToken]) -> Result<Vec<SrcToktr
                 // Trim leading/trailing whitespace from pragma comments
                 let trimmed = text.trim().to_owned();
                 TaggedToktr::PragmaComment(*sp, trimmed)
+            }
+            TaggedToken::DocString(sp, text) => {
+                // Clean up docstring: remove leading/trailing newlines and common indentation
+                let cleaned = cleanup_docstring(text);
+                TaggedToktr::DocString(*sp, cleaned)
             }
 
             TaggedToken::OpenBracket(sp) => {

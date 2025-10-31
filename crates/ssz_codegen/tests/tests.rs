@@ -463,6 +463,41 @@ fn test_comments() {
     assert_eq!(expected_output, actual_output);
 }
 
+#[test]
+fn test_docstrings() {
+    build_ssz_files(
+        &["test_docstrings.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_docstrings.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types with docstrings");
+
+    let expected_output = fs::read_to_string("tests/expected_output/test_docstrings.rs")
+        .expect("Failed to read expected output");
+    let actual_output = fs::read_to_string("tests/output/test_docstrings.rs")
+        .expect("Failed to read actual output");
+    assert_eq!(expected_output, actual_output);
+}
+
+#[test]
+fn test_docstrings_with_comments_merge() {
+    build_ssz_files(
+        &["test_docstrings.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_docstrings.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types with docstrings");
+
+    let output = fs::read_to_string("tests/output/test_docstrings.rs")
+        .expect("Failed to read generated output");
+
+    assert!(!output.is_empty(), "Generated output should not be empty");
+}
+
 // Pragma tests
 
 #[test]
@@ -478,8 +513,8 @@ fn test_pragmas_basic() {
 
     let expected_output = fs::read_to_string("tests/expected_output/test_pragmas_basic.rs")
         .expect("Failed to read expected output");
-    let actual_output =
-        fs::read_to_string("tests/output/test_pragmas_basic.rs").expect("Failed to read actual output");
+    let actual_output = fs::read_to_string("tests/output/test_pragmas_basic.rs")
+        .expect("Failed to read actual output");
     assert_eq!(expected_output, actual_output);
 }
 
@@ -497,8 +532,8 @@ fn test_pragmas_multiple() {
 
     let expected_output = fs::read_to_string("tests/expected_output/test_pragmas_multiple.rs")
         .expect("Failed to read expected output");
-    let actual_output =
-        fs::read_to_string("tests/output/test_pragmas_multiple.rs").expect("Failed to read actual output");
+    let actual_output = fs::read_to_string("tests/output/test_pragmas_multiple.rs")
+        .expect("Failed to read actual output");
     assert_eq!(expected_output, actual_output);
 }
 
@@ -516,8 +551,8 @@ fn test_pragmas_field() {
 
     let expected_output = fs::read_to_string("tests/expected_output/test_pragmas_field.rs")
         .expect("Failed to read expected output");
-    let actual_output =
-        fs::read_to_string("tests/output/test_pragmas_field.rs").expect("Failed to read actual output");
+    let actual_output = fs::read_to_string("tests/output/test_pragmas_field.rs")
+        .expect("Failed to read actual output");
     assert_eq!(expected_output, actual_output);
 }
 
@@ -535,8 +570,8 @@ fn test_pragmas_inheritance() {
 
     let expected_output = fs::read_to_string("tests/expected_output/test_pragmas_inheritance.rs")
         .expect("Failed to read expected output");
-    let actual_output =
-        fs::read_to_string("tests/output/test_pragmas_inheritance.rs").expect("Failed to read actual output");
+    let actual_output = fs::read_to_string("tests/output/test_pragmas_inheritance.rs")
+        .expect("Failed to read actual output");
     assert_eq!(expected_output, actual_output);
 }
 
@@ -554,8 +589,8 @@ fn test_pragmas_empty() {
 
     let expected_output = fs::read_to_string("tests/expected_output/test_pragmas_empty.rs")
         .expect("Failed to read expected output");
-    let actual_output =
-        fs::read_to_string("tests/output/test_pragmas_empty.rs").expect("Failed to read actual output");
+    let actual_output = fs::read_to_string("tests/output/test_pragmas_empty.rs")
+        .expect("Failed to read actual output");
     assert_eq!(expected_output, actual_output);
 }
 

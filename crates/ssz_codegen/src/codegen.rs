@@ -139,9 +139,10 @@ impl<'a> CircleBufferCodegen<'a> {
 
         let mut parent_class_def = parent_class.unwrap();
 
-        // Copy pragmas and doc comment from the class definition
+        // Copy pragmas and doc comments from the class definition
         parent_class_def.pragmas = class.pragmas().to_vec();
         parent_class_def.doc_comment = class.doc_comment().map(|s| s.to_string());
+        parent_class_def.doc = class.doc().map(|s| s.to_string());
 
         let success = match parent_class_def.base {
             BaseClass::Container | BaseClass::StableContainer(_) => {

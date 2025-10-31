@@ -1,0 +1,23 @@
+class Foo(Container):
+    """
+    This is a foo.
+    """
+
+### This is a doc comment
+class PointWithBoth(Container):
+    """
+    This is a docstring that should come first.
+    """
+    ### X coordinate
+    x: uint32
+    ### Y coordinate
+    y: uint32
+
+### This should come after the docstring
+class TestMerge(Container):
+    """
+    First comes the docstring.
+    It has multiple lines.
+    """
+    field: uint8
+
