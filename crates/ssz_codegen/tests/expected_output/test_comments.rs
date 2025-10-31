@@ -9,6 +9,7 @@ pub mod tests {
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
+            /// This is a doc comment for the Point class It can span multiple lines
             #[derive(
                 Clone,
                 Debug,
@@ -23,7 +24,9 @@ pub mod tests {
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct Point {
+                /// X coordinate of the point
                 pub x: u32,
+                /// Y coordinate of the point
                 pub y: u32,
                 pub z: u32,
             }
@@ -126,6 +129,7 @@ pub mod tests {
                     }
                 }
             }
+            /// A container for coordinates
             #[derive(
                 Clone,
                 Debug,
@@ -140,7 +144,9 @@ pub mod tests {
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct CoordinateContainer {
+                /// Latitude coordinate
                 pub lat: u64,
+                /// Longitude coordinate
                 pub lon: u64,
             }
             /// Zero-copy view over [`CoordinateContainer`].

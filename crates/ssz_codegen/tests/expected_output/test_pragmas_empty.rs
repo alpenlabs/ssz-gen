@@ -9,6 +9,7 @@ pub mod tests {
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
+            /// Test empty pragmas (edge case)
             #[derive(
                 Clone,
                 Debug,

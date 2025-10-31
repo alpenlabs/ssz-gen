@@ -139,8 +139,9 @@ impl<'a> CircleBufferCodegen<'a> {
 
         let mut parent_class_def = parent_class.unwrap();
 
-        // Copy pragmas from the class definition
+        // Copy pragmas and doc comment from the class definition
         parent_class_def.pragmas = class.pragmas().to_vec();
+        parent_class_def.doc_comment = class.doc_comment().map(|s| s.to_string());
 
         let success = match parent_class_def.base {
             BaseClass::Container | BaseClass::StableContainer(_) => {
@@ -313,14 +314,27 @@ impl<'a> CircleBufferCodegen<'a> {
                     name: field.name().0.to_string(),
                     ty: field_type,
                     pragmas: field.pragmas().to_vec(),
+                    doc_comment: field.doc_comment().map(|s| s.to_string()),
                 };
 
-                // Build field token with pragma attributes
+                // Build field token with pragma attributes and doc comment
                 let field_pragmas = crate::pragma::ParsedPragma::parse(field.pragmas());
+                let field_doc = if let Some(doc) = &new_field.doc_comment {
+                    ClassDef::format_doc_comment(doc)
+                } else {
+                    quote! {}
+                };
+                let has_field_doc = new_field.doc_comment.is_some();
                 let field_attr_tokens = if !field_pragmas.field_attrs.is_empty() {
                     let attrs = &field_pragmas.field_attrs;
                     quote! {
+                        #field_doc
                         #(#attrs)*
+                        pub #field_ident: #field_ty
+                    }
+                } else if has_field_doc {
+                    quote! {
+                        #field_doc
                         pub #field_ident: #field_ty
                     }
                 } else {
@@ -433,14 +447,27 @@ impl<'a> CircleBufferCodegen<'a> {
                     name: field.name().0.to_string(),
                     ty: field_type,
                     pragmas: field.pragmas().to_vec(),
+                    doc_comment: field.doc_comment().map(|s| s.to_string()),
                 };
 
-                // Build field token with pragma attributes
+                // Build field token with pragma attributes and doc comment
                 let field_pragmas = crate::pragma::ParsedPragma::parse(field.pragmas());
+                let field_doc = if let Some(doc) = &new_field.doc_comment {
+                    ClassDef::format_doc_comment(doc)
+                } else {
+                    quote! {}
+                };
+                let has_field_doc = new_field.doc_comment.is_some();
                 let field_attr_tokens = if !field_pragmas.field_attrs.is_empty() {
                     let attrs = &field_pragmas.field_attrs;
                     quote! {
+                        #field_doc
                         #(#attrs)*
+                        pub #field_ident: #field_ty
+                    }
+                } else if has_field_doc {
+                    quote! {
+                        #field_doc
                         pub #field_ident: #field_ty
                     }
                 } else {

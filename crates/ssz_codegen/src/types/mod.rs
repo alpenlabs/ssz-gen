@@ -520,6 +520,8 @@ pub struct ClassFieldDef {
     pub ty: TypeResolution,
     /// Pragma comments for the field
     pub pragmas: Vec<String>,
+    /// Doc comment for the field
+    pub doc_comment: Option<String>,
 }
 
 /// Definition of a class with its base type and fields
@@ -535,6 +537,8 @@ pub struct ClassDef {
     pub field_tokens: Vec<TokenStream>,
     /// Pragma comments for the class
     pub pragmas: Vec<String>,
+    /// Doc comment for the class
+    pub doc_comment: Option<String>,
 }
 
 impl ClassDef {
@@ -620,14 +624,14 @@ impl ClassDef {
     /// A TokenStream containing the generated Rust code for the class
     pub fn to_token_stream(&self, ident: &Ident, derive_cfg: &DeriveConfig) -> TokenStream {
         use crate::pragma::ParsedPragma;
-
+        
         let field_tokens = &self.field_tokens;
         let type_name = ident.to_string();
-
+        
         // Parse pragmas
         let pragmas = ParsedPragma::parse(&self.pragmas);
         let owned_derive = derive_cfg.owned_derive_attr_with_pragmas(&type_name, &pragmas);
-
+        
         // Build struct-level attributes from pragmas
         let struct_attrs = if !pragmas.struct_attrs.is_empty() {
             let attrs = &pragmas.struct_attrs;
@@ -637,10 +641,18 @@ impl ClassDef {
         } else {
             quote! {}
         };
-
+        
+        // Format doc comment for the struct
+        let doc_comments = if let Some(doc) = &self.doc_comment {
+            Self::format_doc_comment(doc)
+        } else {
+            quote! {}
+        };
+        
         match self.base {
             BaseClass::Container => {
                 quote! {
+                    #doc_comments
                     #owned_derive
                     #struct_attrs
                     #[ssz(struct_behaviour="container")]
@@ -653,6 +665,7 @@ impl ClassDef {
             BaseClass::StableContainer(Some(max)) => {
                 let max = max as usize;
                 quote! {
+                    #doc_comments
                     #owned_derive
                     #struct_attrs
                     #[ssz(struct_behaviour="stable_container", max_fields=#max)]
@@ -671,6 +684,7 @@ impl ClassDef {
                     .collect::<Vec<_>>();
 
                 quote! {
+                    #doc_comments
                     #owned_derive
                     #struct_attrs
                     #[ssz(struct_behaviour="profile")]
@@ -782,7 +796,7 @@ impl ClassDef {
     ///
     /// Formats a doc comment string into `///` lines with 80-character wrapping.
     /// The 80-character limit includes the `/// ` prefix.
-    fn format_doc_comment(text: &str) -> TokenStream {
+    pub fn format_doc_comment(text: &str) -> TokenStream {
         if text.trim().is_empty() {
             return quote! {};
         }

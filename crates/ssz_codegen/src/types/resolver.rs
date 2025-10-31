@@ -639,6 +639,7 @@ impl<'a> TypeResolver<'a> {
                 field_tokens: vec![],
                 field_index: HashMap::new(),
                 pragmas: vec![],
+                doc_comment: None,
             },
             ClassDefinition::StableContainer => {
                 let max = match args.first() {
@@ -654,6 +655,7 @@ impl<'a> TypeResolver<'a> {
                     field_tokens: vec![],
                     field_index: HashMap::new(),
                     pragmas: vec![],
+                    doc_comment: None,
                 }
             }
             ClassDefinition::Profile => {
@@ -678,6 +680,7 @@ impl<'a> TypeResolver<'a> {
                         field_tokens: class_def.field_tokens,
                         field_index: class_def.field_index,
                         pragmas: class_def.pragmas,
+                        doc_comment: class_def.doc_comment,
                     }
                 } else {
                     panic!("Expected profile to inherit from a stable container");
@@ -727,20 +730,22 @@ impl<'a> TypeResolver<'a> {
             // Add the base class as an empty version of the base class itself for inheritance
             // purposes
             let class_def = match &base_class {
-                BaseClass::Container => ClassDefinition::Custom(ClassDef {
-                    base: BaseClass::Container,
-                    fields: vec![],
-                    field_tokens: vec![],
-                    field_index: HashMap::new(),
-                    pragmas: vec![],
-                }),
-                BaseClass::StableContainer(Some(max)) => ClassDefinition::Custom(ClassDef {
-                    base: BaseClass::StableContainer(Some(*max)),
-                    fields: vec![],
-                    field_tokens: vec![],
-                    field_index: HashMap::new(),
-                    pragmas: vec![],
-                }),
+            BaseClass::Container => ClassDefinition::Custom(ClassDef {
+                base: BaseClass::Container,
+                fields: vec![],
+                field_tokens: vec![],
+                field_index: HashMap::new(),
+                pragmas: vec![],
+                doc_comment: None,
+            }),
+            BaseClass::StableContainer(Some(max)) => ClassDefinition::Custom(ClassDef {
+                base: BaseClass::StableContainer(Some(*max)),
+                fields: vec![],
+                field_tokens: vec![],
+                field_index: HashMap::new(),
+                pragmas: vec![],
+                doc_comment: None,
+            }),
                 BaseClass::Profile(Some((name, max))) => {
                     let resolvers = self.resolvers.borrow();
                     let class_def = if let Ty::Imported(path, _, _) = ty {
@@ -750,13 +755,14 @@ impl<'a> TypeResolver<'a> {
                         self.classes.get(name).unwrap()
                     };
                     let resolved_def = self.resolve_class_definition(class_def, &[]);
-                    ClassDefinition::Custom(ClassDef {
-                        base: BaseClass::Profile(Some((name.clone(), *max))),
-                        fields: resolved_def.fields,
-                        field_tokens: resolved_def.field_tokens,
-                        field_index: resolved_def.field_index,
-                        pragmas: resolved_def.pragmas,
-                    })
+                ClassDefinition::Custom(ClassDef {
+                    base: BaseClass::Profile(Some((name.clone(), *max))),
+                    fields: resolved_def.fields,
+                    field_tokens: resolved_def.field_tokens,
+                    field_index: resolved_def.field_index,
+                    pragmas: resolved_def.pragmas,
+                    doc_comment: resolved_def.doc_comment,
+                })
                 }
                 _ => panic!(
                     "Expected base class alias to have the necessary fields for the base class it aliases"
