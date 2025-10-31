@@ -8,6 +8,8 @@ use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use serde::Deserialize;
 
+use crate::pragma::ParsedPragma;
+
 /// Configuration for which Rust traits to derive on generated types.
 ///
 /// Defaults apply to all types. Per-type entries replace the defaults for that type.
@@ -106,6 +108,71 @@ impl DeriveConfig {
         let mut combined: Vec<String> = self
             .derives_for_type(type_name)
             .into_iter()
+            .filter(|n| n != "Encode" && n != "Decode" && n != "TreeHash")
+            .collect();
+        combined.push("Copy".to_string());
+        combined.push("Clone".to_string());
+
+        let mut seen: HashSet<String> = HashSet::new();
+        let mut deduped: Vec<String> = Vec::new();
+        for s in combined.into_iter() {
+            if seen.insert(s.clone()) {
+                deduped.push(s);
+            }
+        }
+
+        let idents: Vec<Ident> = deduped
+            .into_iter()
+            .map(|n| Ident::new(&n, Span::call_site()))
+            .collect();
+        if idents.is_empty() {
+            quote! {}
+        } else {
+            quote! { #[derive( #(#idents),* )] }
+        }
+    }
+
+    /// Build a #[derive(...)] attribute token stream for an owned type, incorporating pragmas
+    pub fn owned_derive_attr_with_pragmas(
+        &self,
+        type_name: &str,
+        pragmas: &ParsedPragma,
+    ) -> TokenStream {
+        // Combine configured derives + pragma derives + required SSZ derives
+        let mut combined: Vec<String> = self.derives_for_type(type_name);
+        combined.extend(pragmas.derives.iter().cloned());
+        combined.push("Clone".to_string());
+        combined.push("Encode".to_string());
+        combined.push("Decode".to_string());
+        combined.push("TreeHash".to_string());
+
+        // Deduplicate while preserving order
+        let mut seen: HashSet<String> = HashSet::new();
+        let mut deduped: Vec<String> = Vec::new();
+        for s in combined.into_iter() {
+            if seen.insert(s.clone()) {
+                deduped.push(s);
+            }
+        }
+
+        let paths: Vec<Ident> = deduped
+            .into_iter()
+            .map(|n| Ident::new(&n, Span::call_site()))
+            .collect();
+        quote! { #[derive( #(#paths),* )] }
+    }
+
+    /// Build a #[derive(...)] attribute token stream for a view type, incorporating pragmas
+    pub fn view_derive_attr_with_pragmas(
+        &self,
+        type_name: &str,
+        pragmas: &ParsedPragma,
+    ) -> TokenStream {
+        // Start from configured derives + pragma derives, but strip SSZ derives for view types
+        let mut combined: Vec<String> = self
+            .derives_for_type(type_name)
+            .into_iter()
+            .chain(pragmas.derives.iter().cloned())
             .filter(|n| n != "Encode" && n != "Decode" && n != "TreeHash")
             .collect();
         combined.push("Copy".to_string());

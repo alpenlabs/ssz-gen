@@ -518,6 +518,8 @@ pub struct ClassFieldDef {
     pub name: String,
     /// The type of the field
     pub ty: TypeResolution,
+    /// Pragma comments for the field
+    pub pragmas: Vec<String>,
 }
 
 /// Definition of a class with its base type and fields
@@ -531,6 +533,8 @@ pub struct ClassDef {
     pub fields: Vec<ClassFieldDef>,
     /// Token streams for each field
     pub field_tokens: Vec<TokenStream>,
+    /// Pragma comments for the class
+    pub pragmas: Vec<String>,
 }
 
 impl ClassDef {
@@ -615,13 +619,30 @@ impl ClassDef {
     ///
     /// A TokenStream containing the generated Rust code for the class
     pub fn to_token_stream(&self, ident: &Ident, derive_cfg: &DeriveConfig) -> TokenStream {
+        use crate::pragma::ParsedPragma;
+
         let field_tokens = &self.field_tokens;
         let type_name = ident.to_string();
-        let owned_derive = derive_cfg.owned_derive_attr(&type_name);
+
+        // Parse pragmas
+        let pragmas = ParsedPragma::parse(&self.pragmas);
+        let owned_derive = derive_cfg.owned_derive_attr_with_pragmas(&type_name, &pragmas);
+
+        // Build struct-level attributes from pragmas
+        let struct_attrs = if !pragmas.struct_attrs.is_empty() {
+            let attrs = &pragmas.struct_attrs;
+            quote! {
+                #(#attrs)*
+            }
+        } else {
+            quote! {}
+        };
+
         match self.base {
             BaseClass::Container => {
                 quote! {
                     #owned_derive
+                    #struct_attrs
                     #[ssz(struct_behaviour="container")]
                     #[tree_hash(struct_behaviour="container")]
                     pub struct #ident {
@@ -633,6 +654,7 @@ impl ClassDef {
                 let max = max as usize;
                 quote! {
                     #owned_derive
+                    #struct_attrs
                     #[ssz(struct_behaviour="stable_container", max_fields=#max)]
                     #[tree_hash(struct_behaviour="stable_container", max_fields=#max)]
                     pub struct #ident {
@@ -650,6 +672,7 @@ impl ClassDef {
 
                 quote! {
                     #owned_derive
+                    #struct_attrs
                     #[ssz(struct_behaviour="profile")]
                     #[tree_hash(struct_behaviour="profile", max_fields=#max)]
                     pub struct #ident {
@@ -827,6 +850,8 @@ impl ClassDef {
     /// A [`TokenStream`] containing the generated Rust code for the view struct (e.g.,
     /// `FooRef<'a>`).
     pub fn to_view_struct(&self, ident: &Ident, derive_cfg: &DeriveConfig) -> TokenStream {
+        use crate::pragma::ParsedPragma;
+
         let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
         let doc_comment = format!(
             "Zero-copy view over [`{}`].\n\n\
@@ -837,7 +862,8 @@ impl ClassDef {
         );
         let doc_comments = Self::format_doc_comment(&doc_comment);
         let type_name = ident.to_string();
-        let view_derive = derive_cfg.view_derive_attr(&type_name);
+        let pragmas = ParsedPragma::parse(&self.pragmas);
+        let view_derive = derive_cfg.view_derive_attr_with_pragmas(&type_name, &pragmas);
 
         // All view structs are now thin wrappers around bytes
         match self.base {

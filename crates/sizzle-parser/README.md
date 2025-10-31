@@ -26,13 +26,16 @@ The parser supports three types of comments:
       x: uint32
   ```
 
-- **Pragma comments** (`#~#`): Special directive comments
+- **Pragma comments** (`#~#`): Special directive comments that are preserved in the AST and schema. Pragmas can be attached to classes and fields to provide metadata or directives for code generation (handled by downstream tools like `ssz_codegen`).
   ```python
-  #~# some-directive value
+  #~# derive: Serialize, Deserialize
+  #~# attr: #[repr(C)]
   class Point(Container):
-      #~# field-pragma
+      #~# field_attr: #[serde(rename = "x_coord")]
       x: uint32
   ```
+  
+  Multiple pragmas can be specified on consecutive lines. Class-level pragmas appear before the class definition, and field-level pragmas appear before field definitions.
 
 - **Regular comments** (`#`): Standard comments that are discarded during parsing
   ```python

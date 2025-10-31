@@ -53,13 +53,40 @@ The parser supports three types of comments:
       y: uint32
   ```
 
-- **Pragma comments** (`#~#`): Special directive comments (available via AST/schema, not currently emitted in generated code)
+- **Pragma comments** (`#~#`): Special directive comments that control code generation behavior. Pragmas can specify additional derive macros or custom attributes.
+  
+  **Class-level pragmas** are placed before class definitions:
   ```python
-  #~# some-directive value
+  #~# derive: Serialize, Deserialize
+  #~# attr: #[repr(C)]
   class Point(Container):
-      #~# field-pragma
+      x: uint32
+      y: uint32
+  ```
+  
+  **Field-level pragmas** are placed before field definitions:
+  ```python
+  class Point(Container):
+      #~# field_attr: #[serde(rename = "x_coord")]
+      x: uint32
+      y: uint32
+  ```
+  
+  **Supported pragma formats:**
+  - `derive: Trait1, Trait2, ...` - Adds additional derive macros to the generated type. These are merged with configured derives and required SSZ derives (Encode, Decode, TreeHash).
+  - `attr: #[attribute]` - Adds struct-level attributes (e.g., `#[repr(C)]`, `#[cfg(test)]`).
+  - `field_attr: #[attribute]` - Adds field-level attributes (e.g., `#[serde(rename = "field_name")]`).
+  
+  Multiple pragmas can be specified on separate lines:
+  ```python
+  #~# derive: Serialize, Deserialize
+  #~# attr: #[repr(C)]
+  #~# attr: #[derive(Default)]
+  class Point(Container):
       x: uint32
   ```
+  
+  Pragmas are preserved through inheritance - child classes inherit parent pragmas and can add their own.
 
 - **Regular comments** (`#`): Standard comments that are discarded during parsing
   ```python
