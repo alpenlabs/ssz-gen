@@ -444,3 +444,21 @@ fn test_derives_toml_override() {
     // And should not contain Debug (since per-type replaces default)
     assert!(!derive_text.contains("Debug"));
 }
+
+#[test]
+fn test_comments() {
+    build_ssz_files(
+        &["test_comments.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_comments.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types with comments");
+
+    let expected_output = fs::read_to_string("tests/expected_output/test_comments.rs")
+        .expect("Failed to read expected output");
+    let actual_output =
+        fs::read_to_string("tests/output/test_comments.rs").expect("Failed to read actual output");
+    assert_eq!(expected_output, actual_output);
+}

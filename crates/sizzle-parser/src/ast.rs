@@ -1350,4 +1350,232 @@ class Point(Container):
             panic!("Expected Class entry");
         }
     }
+
+    #[test]
+    fn test_ast_parse_class_with_multiple_pragmas() {
+        let s = r"
+#~# first-pragma value1
+#~# second-pragma value2
+class Point(Container):
+    x: int32
+    y: int32
+";
+
+        let arr = s.chars().collect::<Vec<_>>();
+
+        let toks = parse_char_array_to_tokens(&arr).expect("test: tokenize string");
+        let tt = parse_tokens_to_toktrs(&toks).expect("test: treeize tokens");
+
+        let mut module_manager = ModuleManager::new(&[]);
+        module_manager.add_module(Path::new(""), false);
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
+            .expect("test: parse toktrs");
+
+        let entries = module_manager
+            .get_module_mut(Path::new(""))
+            .unwrap()
+            .mut_entries();
+
+        if let crate::ast::ModuleEntry::Class(class_def) = &entries[0] {
+            let pragmas = class_def.pragmas();
+            assert_eq!(pragmas.len(), 2);
+            assert_eq!(pragmas[0], "first-pragma value1");
+            assert_eq!(pragmas[1], "second-pragma value2");
+        } else {
+            panic!("Expected Class entry");
+        }
+    }
+
+    #[test]
+    fn test_ast_parse_regular_comment_discarded() {
+        let s = r"
+# This is a regular comment and should be discarded
+class Point(Container):
+    x: int32
+    y: int32
+";
+
+        let arr = s.chars().collect::<Vec<_>>();
+
+        let toks = parse_char_array_to_tokens(&arr).expect("test: tokenize string");
+        let tt = parse_tokens_to_toktrs(&toks).expect("test: treeize tokens");
+
+        let mut module_manager = ModuleManager::new(&[]);
+        module_manager.add_module(Path::new(""), false);
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
+            .expect("test: parse toktrs");
+
+        let entries = module_manager
+            .get_module_mut(Path::new(""))
+            .unwrap()
+            .mut_entries();
+
+        if let crate::ast::ModuleEntry::Class(class_def) = &entries[0] {
+            // Regular comments should not be attached as doc_comment or pragmas
+            assert!(class_def.doc_comment().is_none());
+            assert_eq!(class_def.pragmas().len(), 0);
+            // Class should still be parsed correctly
+            assert_eq!(class_def.name().0, "Point");
+            assert_eq!(class_def.fields().len(), 2);
+        } else {
+            panic!("Expected Class entry");
+        }
+    }
+
+    #[test]
+    fn test_ast_parse_class_with_both_doc_comment_and_pragma() {
+        let s = r"
+### This is a doc comment
+#~# some-pragma directive
+class Point(Container):
+    x: int32
+    y: int32
+";
+
+        let arr = s.chars().collect::<Vec<_>>();
+
+        let toks = parse_char_array_to_tokens(&arr).expect("test: tokenize string");
+        let tt = parse_tokens_to_toktrs(&toks).expect("test: treeize tokens");
+
+        let mut module_manager = ModuleManager::new(&[]);
+        module_manager.add_module(Path::new(""), false);
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
+            .expect("test: parse toktrs");
+
+        let entries = module_manager
+            .get_module_mut(Path::new(""))
+            .unwrap()
+            .mut_entries();
+
+        if let crate::ast::ModuleEntry::Class(class_def) = &entries[0] {
+            assert!(class_def.doc_comment().is_some());
+            assert_eq!(class_def.doc_comment().unwrap(), " This is a doc comment");
+            let pragmas = class_def.pragmas();
+            assert_eq!(pragmas.len(), 1);
+            assert_eq!(pragmas[0], "some-pragma directive");
+        } else {
+            panic!("Expected Class entry");
+        }
+    }
+
+    #[test]
+    fn test_ast_parse_multiple_fields_with_comments() {
+        let s = r"
+class Point(Container):
+    ### Doc for field x
+    x: int32
+    ### Doc for field y
+    y: int32
+    #~# Pragma for field z
+    z: int32
+";
+
+        let arr = s.chars().collect::<Vec<_>>();
+
+        let toks = parse_char_array_to_tokens(&arr).expect("test: tokenize string");
+        let tt = parse_tokens_to_toktrs(&toks).expect("test: treeize tokens");
+
+        let mut module_manager = ModuleManager::new(&[]);
+        module_manager.add_module(Path::new(""), false);
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
+            .expect("test: parse toktrs");
+
+        let entries = module_manager
+            .get_module_mut(Path::new(""))
+            .unwrap()
+            .mut_entries();
+
+        if let crate::ast::ModuleEntry::Class(class_def) = &entries[0] {
+            let fields = class_def.fields();
+            assert_eq!(fields.len(), 3);
+
+            // First field has doc comment
+            assert!(fields[0].doc_comment().is_some());
+            assert_eq!(fields[0].doc_comment().unwrap(), " Doc for field x");
+            assert_eq!(fields[0].pragmas().len(), 0);
+
+            // Second field has doc comment
+            assert!(fields[1].doc_comment().is_some());
+            assert_eq!(fields[1].doc_comment().unwrap(), " Doc for field y");
+            assert_eq!(fields[1].pragmas().len(), 0);
+
+            // Third field has pragma
+            assert!(fields[2].doc_comment().is_none());
+            assert_eq!(fields[2].pragmas().len(), 1);
+            assert_eq!(fields[2].pragmas()[0], "Pragma for field z");
+        } else {
+            panic!("Expected Class entry");
+        }
+    }
+
+    #[test]
+    fn test_ast_parse_class_with_empty_doc_comment() {
+        let s = r"
+###
+class Point(Container):
+    x: int32
+    y: int32
+";
+
+        let arr = s.chars().collect::<Vec<_>>();
+
+        let toks = parse_char_array_to_tokens(&arr).expect("test: tokenize string");
+        let tt = parse_tokens_to_toktrs(&toks).expect("test: treeize tokens");
+
+        let mut module_manager = ModuleManager::new(&[]);
+        module_manager.add_module(Path::new(""), false);
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
+            .expect("test: parse toktrs");
+
+        let entries = module_manager
+            .get_module_mut(Path::new(""))
+            .unwrap()
+            .mut_entries();
+
+        if let crate::ast::ModuleEntry::Class(class_def) = &entries[0] {
+            // Empty doc comment should still be present but empty string
+            let doc_comment = class_def.doc_comment();
+            assert!(doc_comment.is_some());
+            assert_eq!(doc_comment.unwrap(), "");
+        } else {
+            panic!("Expected Class entry");
+        }
+    }
+
+    #[test]
+    fn test_ast_parse_class_doc_comment_preserves_newlines() {
+        let s = r"
+### Line one
+### Line two
+### Line three
+class Point(Container):
+    x: int32
+";
+
+        let arr = s.chars().collect::<Vec<_>>();
+
+        let toks = parse_char_array_to_tokens(&arr).expect("test: tokenize string");
+        let tt = parse_tokens_to_toktrs(&toks).expect("test: treeize tokens");
+
+        let mut module_manager = ModuleManager::new(&[]);
+        module_manager.add_module(Path::new(""), false);
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
+            .expect("test: parse toktrs");
+
+        let entries = module_manager
+            .get_module_mut(Path::new(""))
+            .unwrap()
+            .mut_entries();
+
+        if let crate::ast::ModuleEntry::Class(class_def) = &entries[0] {
+            let doc_comment = class_def.doc_comment().expect("Expected doc comment");
+            assert!(doc_comment.contains("Line one"));
+            assert!(doc_comment.contains("Line two"));
+            assert!(doc_comment.contains("Line three"));
+            // Should contain newlines between them
+            assert!(doc_comment.contains('\n'));
+        } else {
+            panic!("Expected Class entry");
+        }
+    }
 }

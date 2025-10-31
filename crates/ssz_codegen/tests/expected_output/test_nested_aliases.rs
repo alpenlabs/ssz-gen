@@ -38,9 +38,11 @@ pub mod tests {
                 pub field3: F,
                 pub field4: G,
             }
-            /**Zero-copy view over [`NestedAliasContainer`].
-
-This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
+            /// Zero-copy view over [`NestedAliasContainer`].
+            ///
+            /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
+            /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
+            /// needed.
             #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
             pub struct NestedAliasContainerRef<'a> {
                 bytes: &'a [u8],

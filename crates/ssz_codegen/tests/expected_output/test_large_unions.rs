@@ -479,9 +479,11 @@ pub mod tests {
                 pub same: SameTypeUnion,
                 pub mixed: MixedUnion,
             }
-            /**Zero-copy view over [`ContainerWithBigUnions`].
-
-This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
+            /// Zero-copy view over [`ContainerWithBigUnions`].
+            ///
+            /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
+            /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
+            /// needed.
             #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
             pub struct ContainerWithBigUnionsRef<'a> {
                 bytes: &'a [u8],

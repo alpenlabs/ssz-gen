@@ -40,9 +40,11 @@ pub mod tests {
                 pub std_vec: StandardBitvector,
                 pub large_vec: LargeBitvector,
             }
-            /**Zero-copy view over [`BitfieldContainer`].
-
-This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
+            /// Zero-copy view over [`BitfieldContainer`].
+            ///
+            /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
+            /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
+            /// needed.
             #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
             pub struct BitfieldContainerRef<'a> {
                 bytes: &'a [u8],
