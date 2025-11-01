@@ -53,14 +53,15 @@ impl DeriveConfig {
     /// Built-in ergonomic defaults for derives.
     pub fn default_defaults() -> Self {
         // Reasonable ergonomic defaults; users can override
+        // Note: PartialOrd and Ord are excluded because they don't work for
+        // Container types or VariableList types. Users can add them explicitly
+        // via TOML or pragmas for types that support them.
         Self {
             default: vec![
                 "Clone".into(),
                 "Debug".into(),
                 "PartialEq".into(),
                 "Eq".into(),
-                "PartialOrd".into(),
-                "Ord".into(),
             ],
             types: HashMap::new(),
         }
@@ -138,9 +139,27 @@ impl DeriveConfig {
         type_name: &str,
         pragmas: &ParsedPragma,
     ) -> TokenStream {
+        self.owned_derive_attr_with_pragmas_filtered(type_name, pragmas, false)
+    }
+
+    /// Build a `#[derive(...)]` attribute token stream for an owned type, incorporating pragmas.
+    /// If `is_container` is `true`, filters out `PartialOrd` and `Ord` (which don't work for
+    /// `Container` types).
+    pub fn owned_derive_attr_with_pragmas_filtered(
+        &self,
+        type_name: &str,
+        pragmas: &ParsedPragma,
+        is_container: bool,
+    ) -> TokenStream {
         // Combine configured derives + pragma derives + required SSZ derives
         let mut combined: Vec<String> = self.derives_for_type(type_name);
         combined.extend(pragmas.derives.iter().cloned());
+
+        // Filter out PartialOrd and Ord for Container types
+        if is_container {
+            combined.retain(|d| d != "PartialOrd" && d != "Ord");
+        }
+
         combined.push("Clone".to_string());
         combined.push("Encode".to_string());
         combined.push("Decode".to_string());
@@ -168,6 +187,18 @@ impl DeriveConfig {
         type_name: &str,
         pragmas: &ParsedPragma,
     ) -> TokenStream {
+        self.view_derive_attr_with_pragmas_filtered(type_name, pragmas, false)
+    }
+
+    /// Build a `#[derive(...)]` attribute token stream for a view type, incorporating pragmas.
+    /// If `is_container` is `true`, filters out `PartialOrd` and `Ord` (which don't work for
+    /// `Container` types).
+    pub fn view_derive_attr_with_pragmas_filtered(
+        &self,
+        type_name: &str,
+        pragmas: &ParsedPragma,
+        is_container: bool,
+    ) -> TokenStream {
         // Start from configured derives + pragma derives, but strip SSZ derives for view types
         let mut combined: Vec<String> = self
             .derives_for_type(type_name)
@@ -175,6 +206,12 @@ impl DeriveConfig {
             .chain(pragmas.derives.iter().cloned())
             .filter(|n| n != "Encode" && n != "Decode" && n != "TreeHash")
             .collect();
+
+        // Filter out PartialOrd and Ord for Container types
+        if is_container {
+            combined.retain(|d| d != "PartialOrd" && d != "Ord");
+        }
+
         combined.push("Copy".to_string());
         combined.push("Clone".to_string());
 

@@ -632,7 +632,13 @@ impl ClassDef {
 
         // Parse pragmas
         let pragmas = ParsedPragma::parse(&self.pragmas);
-        let owned_derive = derive_cfg.owned_derive_attr_with_pragmas(&type_name, &pragmas);
+        // Container, StableContainer, and Profile don't support PartialOrd/Ord
+        let is_container = matches!(
+            self.base,
+            BaseClass::Container | BaseClass::StableContainer(_) | BaseClass::Profile(_)
+        );
+        let owned_derive =
+            derive_cfg.owned_derive_attr_with_pragmas_filtered(&type_name, &pragmas, is_container);
 
         // Build struct-level attributes from pragmas
         let struct_attrs = if !pragmas.struct_attrs.is_empty() {
@@ -891,7 +897,13 @@ impl ClassDef {
         let doc_comments = Self::format_doc_comment(&doc_comment);
         let type_name = ident.to_string();
         let pragmas = ParsedPragma::parse(&self.pragmas);
-        let view_derive = derive_cfg.view_derive_attr_with_pragmas(&type_name, &pragmas);
+        // Container, StableContainer, and Profile don't support PartialOrd/Ord
+        let is_container = matches!(
+            self.base,
+            BaseClass::Container | BaseClass::StableContainer(_) | BaseClass::Profile(_)
+        );
+        let view_derive =
+            derive_cfg.view_derive_attr_with_pragmas_filtered(&type_name, &pragmas, is_container);
 
         // All view structs are now thin wrappers around bytes
         match self.base {

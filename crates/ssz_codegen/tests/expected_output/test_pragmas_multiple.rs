@@ -15,8 +15,6 @@ pub mod tests {
                 Debug,
                 PartialEq,
                 Eq,
-                PartialOrd,
-                Ord,
                 Serialize,
                 Deserialize,
                 Encode,
@@ -35,17 +33,7 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
-            #[derive(
-                Clone,
-                Debug,
-                PartialEq,
-                Eq,
-                PartialOrd,
-                Ord,
-                Serialize,
-                Deserialize,
-                Copy
-            )]
+            #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Copy)]
             pub struct MultiPragmaContainerRef<'a> {
                 bytes: &'a [u8],
             }

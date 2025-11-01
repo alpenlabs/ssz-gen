@@ -10,17 +10,7 @@ pub mod tests {
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
             /// This is a foo.
-            #[derive(
-                Clone,
-                Debug,
-                PartialEq,
-                Eq,
-                PartialOrd,
-                Ord,
-                Encode,
-                Decode,
-                TreeHash
-            )]
+            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TreeHash)]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct Foo {}
@@ -29,7 +19,7 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
-            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
+            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
             pub struct FooRef<'a> {
                 bytes: &'a [u8],
             }
@@ -70,17 +60,7 @@ pub mod tests {
             /// This is a docstring that should come first.
             ///
             /// This is a doc comment
-            #[derive(
-                Clone,
-                Debug,
-                PartialEq,
-                Eq,
-                PartialOrd,
-                Ord,
-                Encode,
-                Decode,
-                TreeHash
-            )]
+            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TreeHash)]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct PointWithBoth {
@@ -94,7 +74,7 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
-            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
+            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
             pub struct PointWithBothRef<'a> {
                 bytes: &'a [u8],
             }
@@ -173,17 +153,7 @@ pub mod tests {
             /// First comes the docstring. It has multiple lines.
             ///
             /// This should come after the docstring
-            #[derive(
-                Clone,
-                Debug,
-                PartialEq,
-                Eq,
-                PartialOrd,
-                Ord,
-                Encode,
-                Decode,
-                TreeHash
-            )]
+            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TreeHash)]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct TestMerge {
@@ -194,7 +164,7 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
-            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
+            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
             pub struct TestMergeRef<'a> {
                 bytes: &'a [u8],
             }

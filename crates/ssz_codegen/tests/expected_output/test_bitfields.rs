@@ -19,17 +19,7 @@ pub mod tests {
             pub type TinyBitvector = BitVector<1usize>;
             pub type StandardBitvector = BitVector<64usize>;
             pub type LargeBitvector = BitVector<128usize>;
-            #[derive(
-                Clone,
-                Debug,
-                PartialEq,
-                Eq,
-                PartialOrd,
-                Ord,
-                Encode,
-                Decode,
-                TreeHash
-            )]
+            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TreeHash)]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct BitfieldContainer {
@@ -45,7 +35,7 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
-            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
+            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
             pub struct BitfieldContainerRef<'a> {
                 bytes: &'a [u8],
             }

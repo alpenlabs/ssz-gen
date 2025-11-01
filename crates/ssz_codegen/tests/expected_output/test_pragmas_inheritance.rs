@@ -10,18 +10,7 @@ pub mod tests {
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
             /// Test pragmas with inheritance
-            #[derive(
-                Clone,
-                Debug,
-                PartialEq,
-                Eq,
-                PartialOrd,
-                Ord,
-                Default,
-                Encode,
-                Decode,
-                TreeHash
-            )]
+            #[derive(Clone, Debug, PartialEq, Eq, Default, Encode, Decode, TreeHash)]
             #[ssz(struct_behaviour = "stable_container", max_fields = 5usize)]
             #[tree_hash(struct_behaviour = "stable_container", max_fields = 5usize)]
             pub struct Parent {
@@ -33,7 +22,7 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
-            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Default, Copy)]
+            #[derive(Clone, Debug, PartialEq, Eq, Default, Copy)]
             pub struct ParentRef<'a> {
                 bytes: &'a [u8],
             }
@@ -131,18 +120,7 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(
-                Clone,
-                Debug,
-                PartialEq,
-                Eq,
-                PartialOrd,
-                Ord,
-                Serialize,
-                Encode,
-                Decode,
-                TreeHash
-            )]
+            #[derive(Clone, Debug, PartialEq, Eq, Serialize, Encode, Decode, TreeHash)]
             #[repr(C)]
             #[ssz(struct_behaviour = "stable_container", max_fields = 5usize)]
             #[tree_hash(struct_behaviour = "stable_container", max_fields = 5usize)]
@@ -156,7 +134,7 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
-            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Copy)]
+            #[derive(Clone, Debug, PartialEq, Eq, Serialize, Copy)]
             pub struct ChildRef<'a> {
                 bytes: &'a [u8],
             }
