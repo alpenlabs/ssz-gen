@@ -1,0 +1,9 @@
+### Test empty pragmas (edge case)
+#~# 
+class EmptyPragmaContainer(Container):
+    x: uint8
+
+#~# pragma-with-value
+class EmptyValueContainer(Container):
+    y: uint16
+

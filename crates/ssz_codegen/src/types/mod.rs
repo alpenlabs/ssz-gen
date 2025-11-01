@@ -518,6 +518,10 @@ pub struct ClassFieldDef {
     pub name: String,
     /// The type of the field
     pub ty: TypeResolution,
+    /// Pragma comments for the field
+    pub pragmas: Vec<String>,
+    /// Doc comment for the field
+    pub doc_comment: Option<String>,
 }
 
 /// Definition of a class with its base type and fields
@@ -531,6 +535,12 @@ pub struct ClassDef {
     pub fields: Vec<ClassFieldDef>,
     /// Token streams for each field
     pub field_tokens: Vec<TokenStream>,
+    /// Pragma comments for the class
+    pub pragmas: Vec<String>,
+    /// Doc comment for the class (from ### comments)
+    pub doc_comment: Option<String>,
+    /// Docstring for the class (from """ docstrings)
+    pub doc: Option<String>,
 }
 
 impl ClassDef {
@@ -615,13 +625,56 @@ impl ClassDef {
     ///
     /// A TokenStream containing the generated Rust code for the class
     pub fn to_token_stream(&self, ident: &Ident, derive_cfg: &DeriveConfig) -> TokenStream {
+        use crate::pragma::ParsedPragma;
+
         let field_tokens = &self.field_tokens;
         let type_name = ident.to_string();
-        let owned_derive = derive_cfg.owned_derive_attr(&type_name);
+
+        // Parse pragmas
+        let pragmas = ParsedPragma::parse(&self.pragmas);
+        // Container, StableContainer, and Profile don't support PartialOrd/Ord
+        let is_container = matches!(
+            self.base,
+            BaseClass::Container | BaseClass::StableContainer(_) | BaseClass::Profile(_)
+        );
+        let owned_derive =
+            derive_cfg.owned_derive_attr_with_pragmas_filtered(&type_name, &pragmas, is_container);
+
+        // Build struct-level attributes from pragmas
+        let struct_attrs = if !pragmas.struct_attrs.is_empty() {
+            let attrs = &pragmas.struct_attrs;
+            quote! {
+                #(#attrs)*
+            }
+        } else {
+            quote! {}
+        };
+
+        // Format doc comment for the struct
+        // Merge doc (""") and doc_comment (###) with doc taking priority
+        let doc_comments = match (&self.doc, &self.doc_comment) {
+            (Some(docstring), Some(doc_comment)) => {
+                // Both exist: docstring first, then blank line, then doc_comment
+                let merged = format!("{}\n\n{}", docstring.trim(), doc_comment.trim());
+                Self::format_doc_comment(&merged)
+            }
+            (Some(docstring), None) => {
+                // Only docstring
+                Self::format_doc_comment(docstring)
+            }
+            (None, Some(doc_comment)) => {
+                // Only doc_comment
+                Self::format_doc_comment(doc_comment)
+            }
+            (None, None) => quote! {},
+        };
+
         match self.base {
             BaseClass::Container => {
                 quote! {
+                    #doc_comments
                     #owned_derive
+                    #struct_attrs
                     #[ssz(struct_behaviour="container")]
                     #[tree_hash(struct_behaviour="container")]
                     pub struct #ident {
@@ -632,7 +685,9 @@ impl ClassDef {
             BaseClass::StableContainer(Some(max)) => {
                 let max = max as usize;
                 quote! {
+                    #doc_comments
                     #owned_derive
+                    #struct_attrs
                     #[ssz(struct_behaviour="stable_container", max_fields=#max)]
                     #[tree_hash(struct_behaviour="stable_container", max_fields=#max)]
                     pub struct #ident {
@@ -649,7 +704,9 @@ impl ClassDef {
                     .collect::<Vec<_>>();
 
                 quote! {
+                    #doc_comments
                     #owned_derive
+                    #struct_attrs
                     #[ssz(struct_behaviour="profile")]
                     #[tree_hash(struct_behaviour="profile", max_fields=#max)]
                     pub struct #ident {
@@ -757,9 +814,78 @@ impl ClassDef {
     ///
     /// # Returns
     ///
+    /// Formats a doc comment string into `///` lines with 80-character wrapping.
+    /// The 80-character limit includes the `/// ` prefix.
+    pub fn format_doc_comment(text: &str) -> TokenStream {
+        if text.trim().is_empty() {
+            return quote! {};
+        }
+
+        const MAX_LINE_LENGTH: usize = 80;
+        const PREFIX_LENGTH: usize = 4; // "/// "
+
+        let mut lines = Vec::new();
+        let mut current_line = String::new();
+
+        // Split by newlines first to preserve paragraph breaks
+        for paragraph in text.split('\n') {
+            let trimmed = paragraph.trim();
+            if trimmed.is_empty() {
+                // Empty line - add as blank doc comment
+                if !current_line.is_empty() {
+                    lines.push(format!("/// {}", current_line.trim()));
+                    current_line.clear();
+                }
+                lines.push("///".to_string());
+                continue;
+            }
+
+            // Word-wrap within paragraph
+            for word in trimmed.split_whitespace() {
+                let test_line = if current_line.is_empty() {
+                    word.to_string()
+                } else {
+                    format!("{} {}", current_line, word)
+                };
+
+                // Check if line with prefix fits within 80 chars
+                if test_line.len() + PREFIX_LENGTH <= MAX_LINE_LENGTH {
+                    current_line = test_line;
+                } else {
+                    if !current_line.is_empty() {
+                        lines.push(format!("/// {}", current_line.trim()));
+                    }
+                    current_line = word.to_string();
+                    // If a single word is too long, we still need to add it
+                    if current_line.len() + PREFIX_LENGTH > MAX_LINE_LENGTH {
+                        lines.push(format!("/// {}", current_line.trim()));
+                        current_line.clear();
+                    }
+                }
+            }
+        }
+
+        // Add remaining line
+        if !current_line.is_empty() {
+            lines.push(format!("/// {}", current_line.trim()));
+        }
+
+        // Parse each line as a doc comment
+        let doc_lines: Vec<TokenStream> = lines
+            .iter()
+            .map(|line| syn::parse_str::<TokenStream>(line).unwrap_or_else(|_| quote! {}))
+            .collect();
+
+        quote! {
+            #(#doc_lines)*
+        }
+    }
+
     /// A [`TokenStream`] containing the generated Rust code for the view struct (e.g.,
     /// `FooRef<'a>`).
     pub fn to_view_struct(&self, ident: &Ident, derive_cfg: &DeriveConfig) -> TokenStream {
+        use crate::pragma::ParsedPragma;
+
         let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
         let doc_comment = format!(
             "Zero-copy view over [`{}`].\n\n\
@@ -768,14 +894,22 @@ impl ClassDef {
             Use `.to_owned()` to convert to the owned type when needed.",
             ident
         );
+        let doc_comments = Self::format_doc_comment(&doc_comment);
         let type_name = ident.to_string();
-        let view_derive = derive_cfg.view_derive_attr(&type_name);
+        let pragmas = ParsedPragma::parse(&self.pragmas);
+        // Container, StableContainer, and Profile don't support PartialOrd/Ord
+        let is_container = matches!(
+            self.base,
+            BaseClass::Container | BaseClass::StableContainer(_) | BaseClass::Profile(_)
+        );
+        let view_derive =
+            derive_cfg.view_derive_attr_with_pragmas_filtered(&type_name, &pragmas, is_container);
 
         // All view structs are now thin wrappers around bytes
         match self.base {
             BaseClass::Container | BaseClass::StableContainer(_) | BaseClass::Profile(_) => {
                 quote! {
-                    #[doc = #doc_comment]
+                    #doc_comments
                     #view_derive
                     pub struct #ref_ident<'a> {
                         bytes: &'a [u8],

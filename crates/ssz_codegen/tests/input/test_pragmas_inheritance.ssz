@@ -1,0 +1,11 @@
+### Test pragmas with inheritance
+#~# derive: Default
+class Parent(StableContainer[5]):
+    a: Optional[uint8]
+    b: Optional[uint8]
+
+#~# derive: Serialize
+#~# attr: #[repr(C)]
+class Child(Parent):
+    b: Optional[uint16]
+    c: Optional[uint8]

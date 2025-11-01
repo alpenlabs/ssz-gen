@@ -138,6 +138,12 @@ impl<'a> CircleBufferCodegen<'a> {
         }
 
         let mut parent_class_def = parent_class.unwrap();
+
+        // Copy pragmas and doc comments from the class definition
+        parent_class_def.pragmas = class.pragmas().to_vec();
+        parent_class_def.doc_comment = class.doc_comment().map(|s| s.to_string());
+        parent_class_def.doc = class.doc().map(|s| s.to_string());
+
         let success = match parent_class_def.base {
             BaseClass::Container | BaseClass::StableContainer(_) => {
                 self.process_simple_inheritance(&mut parent_class_def, class, type_resolver)
@@ -308,20 +314,44 @@ impl<'a> CircleBufferCodegen<'a> {
                     index: curr_index,
                     name: field.name().0.to_string(),
                     ty: field_type,
+                    pragmas: field.pragmas().to_vec(),
+                    doc_comment: field.doc_comment().map(|s| s.to_string()),
+                };
+
+                // Build field token with pragma attributes and doc comment
+                let field_pragmas = crate::pragma::ParsedPragma::parse(field.pragmas());
+                let field_doc = if let Some(doc) = &new_field.doc_comment {
+                    ClassDef::format_doc_comment(doc)
+                } else {
+                    quote! {}
+                };
+                let has_field_doc = new_field.doc_comment.is_some();
+                let field_attr_tokens = if !field_pragmas.field_attrs.is_empty() {
+                    let attrs = &field_pragmas.field_attrs;
+                    quote! {
+                        #field_doc
+                        #(#attrs)*
+                        pub #field_ident: #field_ty
+                    }
+                } else if has_field_doc {
+                    quote! {
+                        #field_doc
+                        pub #field_ident: #field_ty
+                    }
+                } else {
+                    parse_quote! {
+                        pub #field_ident: #field_ty
+                    }
                 };
 
                 if parent_class_def.fields.len() > curr_index {
                     // Replacing existing field
                     parent_class_def.fields[curr_index] = new_field;
-                    parent_class_def.field_tokens[curr_index] = parse_quote! {
-                        pub #field_ident: #field_ty
-                    };
+                    parent_class_def.field_tokens[curr_index] = field_attr_tokens;
                 } else {
                     // Adding new field
                     parent_class_def.fields.push(new_field);
-                    parent_class_def.field_tokens.push(parse_quote! {
-                        pub #field_ident: #field_ty
-                    });
+                    parent_class_def.field_tokens.push(field_attr_tokens);
                     parent_class_def
                         .field_index
                         .insert(field.name().0.to_string(), curr_index);
@@ -417,13 +447,39 @@ impl<'a> CircleBufferCodegen<'a> {
                     index: curr_index,
                     name: field.name().0.to_string(),
                     ty: field_type,
+                    pragmas: field.pragmas().to_vec(),
+                    doc_comment: field.doc_comment().map(|s| s.to_string()),
+                };
+
+                // Build field token with pragma attributes and doc comment
+                let field_pragmas = crate::pragma::ParsedPragma::parse(field.pragmas());
+                let field_doc = if let Some(doc) = &new_field.doc_comment {
+                    ClassDef::format_doc_comment(doc)
+                } else {
+                    quote! {}
+                };
+                let has_field_doc = new_field.doc_comment.is_some();
+                let field_attr_tokens = if !field_pragmas.field_attrs.is_empty() {
+                    let attrs = &field_pragmas.field_attrs;
+                    quote! {
+                        #field_doc
+                        #(#attrs)*
+                        pub #field_ident: #field_ty
+                    }
+                } else if has_field_doc {
+                    quote! {
+                        #field_doc
+                        pub #field_ident: #field_ty
+                    }
+                } else {
+                    parse_quote! {
+                        pub #field_ident: #field_ty
+                    }
                 };
 
                 new_field_index.insert(field.name().0.to_string(), new_fields.len());
                 new_fields.push(new_field.clone());
-                new_field_tokens.push(parse_quote! {
-                    pub #field_ident: #field_ty
-                });
+                new_field_tokens.push(field_attr_tokens);
             } else {
                 panic!("Expected field type to be a type or base class");
             }

@@ -552,17 +552,7 @@ pub mod tests {
             pub type OptionalSimple = Option<u8>;
             pub type OptionalComplex = Option<VariableList<u16, 8usize>>;
             pub type OptionalUnion = Option<SimpleUnion>;
-            #[derive(
-                Clone,
-                Debug,
-                PartialEq,
-                Eq,
-                PartialOrd,
-                Ord,
-                Encode,
-                Decode,
-                TreeHash
-            )]
+            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TreeHash)]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct UnionEdgeCases {
@@ -573,10 +563,12 @@ pub mod tests {
                 pub opt_complex: OptionalComplex,
                 pub opt_union: OptionalUnion,
             }
-            /**Zero-copy view over [`UnionEdgeCases`].
-
-This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
+            /// Zero-copy view over [`UnionEdgeCases`].
+            ///
+            /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
+            /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
+            /// needed.
+            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
             pub struct UnionEdgeCasesRef<'a> {
                 bytes: &'a [u8],
             }
@@ -797,17 +789,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     }
                 }
             }
-            #[derive(
-                Clone,
-                Debug,
-                PartialEq,
-                Eq,
-                PartialOrd,
-                Ord,
-                Encode,
-                Decode,
-                TreeHash
-            )]
+            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TreeHash)]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct AllUnions {
@@ -815,10 +797,12 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                 pub union2: NestedUnion,
                 pub union3: OptionalSimple,
             }
-            /**Zero-copy view over [`AllUnions`].
-
-This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
+            /// Zero-copy view over [`AllUnions`].
+            ///
+            /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
+            /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
+            /// needed.
+            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
             pub struct AllUnionsRef<'a> {
                 bytes: &'a [u8],
             }

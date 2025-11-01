@@ -1,0 +1,18 @@
+### This is a doc comment for the Point class
+### It can span multiple lines
+#~# pragma: some-directive
+class Point(Container):
+    ### X coordinate of the point
+    x: uint32
+    ### Y coordinate of the point  
+    y: uint32
+    #~# field-pragma: custom
+    z: uint32
+
+### A container for coordinates
+class CoordinateContainer(Container):
+    ### Latitude coordinate
+    lat: uint64
+    ### Longitude coordinate
+    lon: uint64
+

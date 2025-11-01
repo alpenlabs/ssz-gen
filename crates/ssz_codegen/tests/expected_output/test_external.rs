@@ -231,27 +231,19 @@ pub mod tests {
             }
             pub type TestA = external_ssz::A;
             pub type TestB = external_ssz::module_a::module_b::B;
-            #[derive(
-                Clone,
-                Debug,
-                PartialEq,
-                Eq,
-                PartialOrd,
-                Ord,
-                Encode,
-                Decode,
-                TreeHash
-            )]
+            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TreeHash)]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct ExternalContainer {
                 pub field_a: external_ssz::A,
                 pub field_b: external_ssz::module_a::module_b::B,
             }
-            /**Zero-copy view over [`ExternalContainer`].
-
-This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
+            /// Zero-copy view over [`ExternalContainer`].
+            ///
+            /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
+            /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
+            /// needed.
+            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
             pub struct ExternalContainerRef<'a> {
                 bytes: &'a [u8],
             }

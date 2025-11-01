@@ -82,6 +82,9 @@ impl ConstDef {
 pub struct ClassDef {
     name: Identifier,
     parent_ty: Ty,
+    doc: Option<String>,
+    doc_comment: Option<String>,
+    pragmas: Vec<String>,
     fields: Vec<ClassFieldDef>,
 }
 
@@ -96,6 +99,21 @@ impl ClassDef {
         &self.parent_ty
     }
 
+    /// Documentation string for the class.
+    pub fn doc(&self) -> Option<&str> {
+        self.doc.as_ref().map(|s| s.as_ref())
+    }
+
+    /// Doc comment for the class.
+    pub fn doc_comment(&self) -> Option<&str> {
+        self.doc_comment.as_ref().map(|s| s.as_ref())
+    }
+
+    /// Pragma comments for the class.
+    pub fn pragmas(&self) -> &[String] {
+        &self.pragmas
+    }
+
     /// Fields of the class.
     pub fn fields(&self) -> &[ClassFieldDef] {
         &self.fields
@@ -107,6 +125,8 @@ impl ClassDef {
 pub struct ClassFieldDef {
     name: Identifier,
     ty: Ty,
+    doc_comment: Option<String>,
+    pragmas: Vec<String>,
 }
 
 impl ClassFieldDef {
@@ -118,6 +138,16 @@ impl ClassFieldDef {
     /// Type of the field.
     pub fn ty(&self) -> &Ty {
         &self.ty
+    }
+
+    /// Doc comment for the field.
+    pub fn doc_comment(&self) -> Option<&str> {
+        self.doc_comment.as_ref().map(|s| s.as_ref())
+    }
+
+    /// Pragma comments for the field.
+    pub fn pragmas(&self) -> &[String] {
+        &self.pragmas
     }
 }
 
@@ -322,12 +352,20 @@ fn conv_classdef<'a>(
         field_names.insert(name.clone());
 
         let ty = resolv.resolve_spec_as_ty(d.ty())?;
-        fields.push(ClassFieldDef { name, ty })
+        fields.push(ClassFieldDef {
+            name,
+            ty,
+            doc_comment: d.doc_comment().map(|s| s.to_owned()),
+            pragmas: d.pragmas().to_vec(),
+        })
     }
 
     Ok(ClassDef {
         name: def.name().clone(),
         parent_ty: resolv.resolve_spec_as_ty(def.parent_ty())?,
+        doc: def.doc().map(|s| s.to_owned()),
+        doc_comment: def.doc_comment().map(|s| s.to_owned()),
+        pragmas: def.pragmas().to_vec(),
         fields,
     })
 }
