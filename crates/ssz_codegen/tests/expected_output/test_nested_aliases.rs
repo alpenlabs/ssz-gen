@@ -10,8 +10,11 @@ pub mod tests {
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const SIZE_1: u64 = 10u64;
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const SIZE_2: u64 = 10u64;
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const SIZE_3: u64 = 10u64;
             pub type A = u8;
             pub type B = A;

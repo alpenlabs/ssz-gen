@@ -98,6 +98,7 @@ impl<'a> CircleBufferCodegen<'a> {
 
             if type_def.is_constant() {
                 self.tokens.push(quote! {
+                    #[allow(dead_code, reason = "generated code using ssz-gen")]
                     pub const #ident: u64 = #ty;
                 });
             } else {
@@ -680,6 +681,7 @@ pub fn schema_map_to_rust_code(
                 type_resolver.add_constant(&ident, value);
 
                 quote! {
+                    #[allow(dead_code, reason = "generated code using ssz-gen")]
                     pub const #ident: u64 = #value;
                 }
             })

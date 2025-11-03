@@ -813,3 +813,33 @@ fn test_view_types_imports_and_to_owned() {
         "Should generate owned struct"
     );
 }
+
+/// Test that constants are marked with `#[allow(dead_code)]` to avoid clippy warnings
+/// Constants may only be used as const generics (e.g., `List[T, MAX_CONSTANT]`)
+/// which clippy doesn't recognize as "using" the constant
+#[test]
+fn test_constants_have_dead_code_allow() {
+    build_ssz_files(
+        &["test_1.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_constants.rs",
+        ModuleGeneration::SingleModule,
+    )
+    .expect("Failed to generate SSZ types for constants test");
+
+    let generated = fs::read_to_string("tests/output/test_constants.rs")
+        .expect("Failed to read generated output");
+
+    // Verify that constants have #[allow(dead_code)] with reason
+    assert!(
+        generated.contains("#[allow(dead_code, reason = \"generated code using ssz-gen\")]")
+            && generated.contains("pub const VAL_X"),
+        "Constants should be marked with #[allow(dead_code, reason = \"generated code using ssz-gen\")]"
+    );
+    assert!(
+        generated.contains("#[allow(dead_code, reason = \"generated code using ssz-gen\")]")
+            && generated.contains("pub const VAL_Y"),
+        "Constants should be marked with #[allow(dead_code, reason = \"generated code using ssz-gen\")]"
+    );
+}

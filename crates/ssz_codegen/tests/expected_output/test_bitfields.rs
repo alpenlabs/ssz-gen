@@ -10,9 +10,13 @@ pub mod tests {
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const SMALL_SIZE: u64 = 1u64;
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const MEDIUM_SIZE: u64 = 64u64;
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const LARGE_SIZE: u64 = 256u64;
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const POWER_OF_TWO: u64 = 128u64;
             pub type TinyBitlist = BitList<1usize>;
             pub type StandardBitlist = BitList<64usize>;

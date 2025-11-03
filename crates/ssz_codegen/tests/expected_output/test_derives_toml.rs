@@ -718,8 +718,11 @@ pub mod tests {
                     }
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const VAL_X: u64 = 42u64;
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const VAL_Y: u64 = 64u64;
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const SIZE_ALIAS: u64 = 64u64;
             pub type AliasUintAlias = u16;
             pub type AliasVecA = FixedVector<u8, 10usize>;

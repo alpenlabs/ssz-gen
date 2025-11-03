@@ -98,6 +98,7 @@ pub mod tests {
                     }
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const CONSTANT_VALUE: u64 = 5u64;
             pub type AliasUint8 = u8;
             pub type AliasAliasUint8 = AliasUint8;
@@ -336,8 +337,11 @@ pub mod tests {
                     }
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const CONSTANT_VALUE: u64 = 5u64;
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const CONSTANT_VALUE_2: u64 = 5u64;
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const CONSTANT_VALUE_IMPORTED: u64 = crate::tests::input::test_common::CONSTANT_VALUE;
             pub type AliasListImportedLength = VariableList<
                 crate::tests::input::test_common::AliasUint8,
