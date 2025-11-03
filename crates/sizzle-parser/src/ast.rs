@@ -842,14 +842,8 @@ fn parse_class_body(
                 gob.gobble_one();
                 continue;
             }
-            Some(Comment(_, text)) => {
-                // Indented comments in class body: check if pragma, otherwise treat as doc comment
-                let trimmed = text.trim_start();
-                if trimmed.starts_with("pragma") {
-                    comment_buffer.add_pragma(trimmed.to_owned());
-                } else {
-                    comment_buffer.set_doc_comment(Some(text.clone()));
-                }
+            Some(Comment(_, _)) => {
+                // Regular comments are discarded (per documentation)
                 gob.gobble_one();
                 continue;
             }

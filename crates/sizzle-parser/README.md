@@ -19,7 +19,7 @@ The parser supports four types of comments:
 
 - **Docstrings** (`"""..."""`): Triple-quoted documentation strings that are preserved and attached to classes. Docstrings support multi-line text and are cleaned up to remove common indentation.
   ```python
-  ass Point(Container):
+  class Point(Container):
       """
       This is a docstring for the class
       It can span multiple lines
