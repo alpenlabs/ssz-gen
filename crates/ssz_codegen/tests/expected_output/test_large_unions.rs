@@ -5,6 +5,7 @@ pub mod tests {
         pub mod test_large_unions {
             #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
+            use ssz_types::view::{FixedVectorRef, VariableListRef};
             use ssz_derive::{Encode, Decode};
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
@@ -553,21 +554,24 @@ pub mod tests {
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
                     {
                         let big = self.big().expect("valid view");
-                        hasher
-                            .write(big.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&big);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let same = self.same().expect("valid view");
-                        hasher
-                            .write(same.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&same);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let mixed = self.mixed().expect("valid view");
-                        hasher
-                            .write(mixed.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&mixed);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }

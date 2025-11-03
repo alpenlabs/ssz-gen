@@ -965,7 +965,8 @@ impl ClassDef {
                             quote! {
                                 {
                                     let #field_name = self.#field_name().expect("valid view");
-                                    hasher.write(#field_name.tree_hash_root().as_ref()).expect("write field");
+                                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<H>::tree_hash_root(&#field_name);
+                                    hasher.write(root.as_ref()).expect("write field");
                                 }
                             }
                         }
@@ -1025,7 +1026,8 @@ impl ClassDef {
                             let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(#max);
                             #(
                                 let #field_names = self.#field_names().expect("valid view");
-                                hasher.write(#field_names.tree_hash_root().as_ref()).expect("write field");
+                                let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<H>::tree_hash_root(&#field_names);
+                                hasher.write(root.as_ref()).expect("write field");
                             )*
 
                             hasher.finish().expect("finish hasher")
@@ -1067,7 +1069,8 @@ impl ClassDef {
                                     for _ in 0..#indices {
                                         // Placeholder for proper index handling
                                     }
-                                    hasher.write(#field_names.tree_hash_root().as_ref()).expect("write field");
+                                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<H>::tree_hash_root(&#field_names);
+                                    hasher.write(root.as_ref()).expect("write field");
                                 }
                             )*
 
@@ -1442,8 +1445,29 @@ impl ClassDef {
                             #field_name: self.#field_name().expect("valid view")
                         }
                     }
+                    TypeResolutionKind::List(ty, _size) => {
+                        // Check if it's List<u8, N> which uses BytesRef
+                        let inner = &**ty;
+                        if matches!(inner.resolution, TypeResolutionKind::UInt(8)) {
+                            // BytesRef::to_owned() returns Vec<u8>, need to convert to VariableList
+                            quote! {
+                                #field_name: self.#field_name().expect("valid view").to_owned().into()
+                            }
+                        } else {
+                            // VariableListRef::to_owned() returns Result<VariableList<T, N>, Error>
+                            quote! {
+                                #field_name: self.#field_name().expect("valid view").to_owned().expect("valid view")
+                            }
+                        }
+                    }
+                    TypeResolutionKind::Vector(_, _) => {
+                        // FixedVectorRef::to_owned() returns Result<FixedVector<T, N>, Error>
+                        quote! {
+                            #field_name: self.#field_name().expect("valid view").to_owned().expect("valid view")
+                        }
+                    }
                     _ => {
-                        // For complex types, call getter and then to_owned()
+                        // For other complex types, call getter and then to_owned()
                         quote! {
                             #field_name: self.#field_name().expect("valid view").to_owned()
                         }

@@ -5,6 +5,7 @@ pub mod tests {
         pub mod test_nested_aliases {
             #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
+            use ssz_types::view::{FixedVectorRef, VariableListRef};
             use ssz_derive::{Encode, Decode};
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
@@ -138,27 +139,31 @@ pub mod tests {
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
                     {
                         let field1 = self.field1().expect("valid view");
-                        hasher
-                            .write(field1.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&field1);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let field2 = self.field2().expect("valid view");
-                        hasher
-                            .write(field2.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&field2);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let field3 = self.field3().expect("valid view");
-                        hasher
-                            .write(field3.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&field3);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let field4 = self.field4().expect("valid view");
-                        hasher
-                            .write(field4.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&field4);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }
@@ -198,10 +203,18 @@ pub mod tests {
             impl<'a> NestedAliasContainerRef<'a> {
                 pub fn to_owned(&self) -> NestedAliasContainer {
                     NestedAliasContainer {
-                        field1: self.field1().expect("valid view").to_owned(),
-                        field2: self.field2().expect("valid view").to_owned(),
-                        field3: self.field3().expect("valid view").to_owned(),
-                        field4: self.field4().expect("valid view").to_owned(),
+                        field1: self.field1().expect("valid view").to_owned().into(),
+                        field2: self
+                            .field2()
+                            .expect("valid view")
+                            .to_owned()
+                            .expect("valid view"),
+                        field3: self.field3().expect("valid view").to_owned().into(),
+                        field4: self
+                            .field4()
+                            .expect("valid view")
+                            .to_owned()
+                            .expect("valid view"),
                     }
                 }
             }

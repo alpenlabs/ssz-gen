@@ -1,0 +1,9 @@
+class ExportEntry(Container):
+    key: uint32
+    value: uint64
+
+class ViewTypeTest(Container):
+    payload: List[uint8, 4096]
+    entries: List[ExportEntry, 256]
+    hash: Vector[uint8, 32]
+

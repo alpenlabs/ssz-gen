@@ -549,6 +549,7 @@ fn single_module_rust_code(schema_map: &HashMap<&PathBuf, TokenStream>) -> Token
     quote! {
         #![allow(unused_imports, reason = "generated code using ssz-gen")]
         use ssz_types::*;
+        use ssz_types::view::{FixedVectorRef, VariableListRef};
         use ssz_derive::{Encode, Decode};
         use tree_hash::TreeHashDigest;
         use tree_hash_derive::TreeHash;
@@ -575,6 +576,7 @@ fn flat_modules_rust_code(schema_map: &HashMap<&PathBuf, TokenStream>) -> TokenS
                 pub mod #module_ident {
                     #![allow(unused_imports, reason = "generated code using ssz-gen")]
                     use ssz_types::*;
+                    use ssz_types::view::{FixedVectorRef, VariableListRef};
                     use ssz_derive::{Encode, Decode};
                     use tree_hash::TreeHashDigest;
                     use tree_hash_derive::TreeHash;
@@ -713,6 +715,7 @@ pub fn schema_map_to_rust_code(
             path,
             quote! {
                 use ssz_types::*;
+                use ssz_types::view::{FixedVectorRef, VariableListRef};
                 use ssz_derive::{Encode, Decode};
                 use tree_hash::TreeHashDigest;
                 use tree_hash_derive::TreeHash;

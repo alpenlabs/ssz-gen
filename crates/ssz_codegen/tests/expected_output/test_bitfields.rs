@@ -5,6 +5,7 @@ pub mod tests {
         pub mod test_bitfields {
             #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
+            use ssz_types::view::{FixedVectorRef, VariableListRef};
             use ssz_derive::{Encode, Decode};
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
@@ -162,39 +163,45 @@ pub mod tests {
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
                     {
                         let tiny_list = self.tiny_list().expect("valid view");
-                        hasher
-                            .write(tiny_list.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&tiny_list);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let std_list = self.std_list().expect("valid view");
-                        hasher
-                            .write(std_list.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&std_list);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let large_list = self.large_list().expect("valid view");
-                        hasher
-                            .write(large_list.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&large_list);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let tiny_vec = self.tiny_vec().expect("valid view");
-                        hasher
-                            .write(tiny_vec.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&tiny_vec);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let std_vec = self.std_vec().expect("valid view");
-                        hasher
-                            .write(std_vec.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&std_vec);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let large_vec = self.large_vec().expect("valid view");
-                        hasher
-                            .write(large_vec.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&large_vec);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }

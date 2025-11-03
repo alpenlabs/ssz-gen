@@ -518,9 +518,9 @@ fn test_pragmas_basic() {
     assert_eq!(expected_output, actual_output);
 }
 
+/// Test that multiple pragmas don't break codegen.
 #[test]
 fn test_pragmas_multiple() {
-    // Test that multiple pragmas don't break codegen
     build_ssz_files(
         &["test_pragmas_multiple.ssz"],
         "tests/input",
@@ -537,9 +537,9 @@ fn test_pragmas_multiple() {
     assert_eq!(expected_output, actual_output);
 }
 
+/// Test that field-level pragmas don't break codegen.
 #[test]
 fn test_pragmas_field() {
-    // Test that field-level pragmas don't break codegen
     build_ssz_files(
         &["test_pragmas_field.ssz"],
         "tests/input",
@@ -556,9 +556,9 @@ fn test_pragmas_field() {
     assert_eq!(expected_output, actual_output);
 }
 
+/// Test that pragmas work with inheritance.
 #[test]
 fn test_pragmas_inheritance() {
-    // Test that pragmas work with inheritance
     build_ssz_files(
         &["test_pragmas_inheritance.ssz"],
         "tests/input",
@@ -575,9 +575,9 @@ fn test_pragmas_inheritance() {
     assert_eq!(expected_output, actual_output);
 }
 
+/// Test edge case: empty pragmas don't break codegen.
 #[test]
 fn test_pragmas_empty() {
-    // Test edge case: empty pragmas don't break codegen
     build_ssz_files(
         &["test_pragmas_empty.ssz"],
         "tests/input",
@@ -594,9 +594,9 @@ fn test_pragmas_empty() {
     assert_eq!(expected_output, actual_output);
 }
 
+/// Test that pragmas are correctly parsed and stored in the schema.
 #[test]
 fn test_pragmas_schema_parsing() {
-    // Test that pragmas are correctly parsed and stored in the schema
     use std::collections::HashMap;
 
     use sizzle_parser::parse_str_schema;
@@ -643,9 +643,9 @@ class TestContainer(Container):
     assert!(field2_pragmas[0].contains("another-field-pragma"));
 }
 
+/// Test pragmas with StableContainer.
 #[test]
 fn test_pragmas_with_stable_container() {
-    // Test pragmas with StableContainer
     use std::collections::HashMap;
 
     use sizzle_parser::parse_str_schema;
@@ -681,9 +681,9 @@ class StableTest(StableContainer[5]):
     .expect("StableContainer with pragmas should generate");
 }
 
+/// Test multiple consecutive pragma lines.
 #[test]
 fn test_pragmas_multiple_consecutive() {
-    // Test multiple consecutive pragma lines
     use std::collections::HashMap;
 
     use sizzle_parser::parse_str_schema;
@@ -749,4 +749,67 @@ class DocAndPragma(Container):
     assert!(fields[0].doc_comment().is_some());
     assert!(!fields[0].pragmas().is_empty());
     assert!(fields[0].pragmas()[0].contains("field-pragma"));
+}
+
+/// Test that view types ([`VariableListRef`], [`FixedVectorRef`])
+/// are properly imported and that [`ToOwnedSsz::to_owned`]
+/// methods work correctly for different types:
+///
+/// - `List<u8, N>` uses [`BytesRef`] and needs .into() conversion
+/// - `List<T, N>` uses [`VariableListRef`] and returns Result
+/// - `Vector<T, N>` uses [`FixedVectorRef`] and returns Result
+#[test]
+fn test_view_types_imports_and_to_owned() {
+    build_ssz_files(
+        &["test_view_types.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_view_types.rs",
+        ModuleGeneration::SingleModule,
+    )
+    .expect("Failed to generate SSZ types for view types test");
+
+    let generated = fs::read_to_string("tests/output/test_view_types.rs")
+        .expect("Failed to read generated output");
+
+    // Verify that VariableListRef and FixedVectorRef are imported
+    assert!(
+        generated.contains("use ssz_types::view::{FixedVectorRef, VariableListRef}"),
+        "Generated code should import VariableListRef and FixedVectorRef"
+    );
+
+    // Verify that List<u8, N> (BytesRef) uses .into() for to_owned conversion
+    assert!(
+        generated.contains(".to_owned().into()"),
+        "List<u8, N> fields should use .into() to convert Vec<u8> to VariableList"
+    );
+
+    // Verify that List<T, N> (VariableListRef) uses .expect() to unwrap Result
+    assert!(
+        generated.contains(".to_owned().expect(\"valid view\")"),
+        "VariableListRef::to_owned() should use .expect() to unwrap Result"
+    );
+
+    // Verify that Vector<T, N> (FixedVectorRef) uses .expect() to unwrap Result
+    assert!(
+        generated.contains("to_owned().expect(\"valid view\")"),
+        "FixedVectorRef::to_owned() should use .expect() to unwrap Result"
+    );
+
+    // Verify that tree_hash_root uses explicit type annotations for type inference
+    assert!(
+        generated.contains("let root: <H as tree_hash::TreeHashDigest>::Output"),
+        "Tree hash generation should use explicit type annotations"
+    );
+
+    // Try to compile the generated code by creating a minimal test
+    // We can't directly compile it in a unit test, but we can verify the structure is correct
+    assert!(
+        generated.contains("pub struct ViewTypeTestRef<'a>"),
+        "Should generate view struct"
+    );
+    assert!(
+        generated.contains("pub struct ViewTypeTest"),
+        "Should generate owned struct"
+    );
 }

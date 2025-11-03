@@ -5,6 +5,7 @@ pub mod tests {
         pub mod test_2 {
             #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
+            use ssz_types::view::{FixedVectorRef, VariableListRef};
             use ssz_derive::{Encode, Decode};
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
@@ -86,9 +87,15 @@ pub mod tests {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     let a = self.a().expect("valid view");
-                    hasher.write(a.tree_hash_root().as_ref()).expect("write field");
+                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        H,
+                    >::tree_hash_root(&a);
+                    hasher.write(root.as_ref()).expect("write field");
                     let b = self.b().expect("valid view");
-                    hasher.write(b.tree_hash_root().as_ref()).expect("write field");
+                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        H,
+                    >::tree_hash_root(&b);
+                    hasher.write(root.as_ref()).expect("write field");
                     hasher.finish().expect("finish hasher")
                 }
             }
@@ -242,13 +249,25 @@ pub mod tests {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(8usize);
                     let x = self.x().expect("valid view");
-                    hasher.write(x.tree_hash_root().as_ref()).expect("write field");
+                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        H,
+                    >::tree_hash_root(&x);
+                    hasher.write(root.as_ref()).expect("write field");
                     let y = self.y().expect("valid view");
-                    hasher.write(y.tree_hash_root().as_ref()).expect("write field");
+                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        H,
+                    >::tree_hash_root(&y);
+                    hasher.write(root.as_ref()).expect("write field");
                     let z = self.z().expect("valid view");
-                    hasher.write(z.tree_hash_root().as_ref()).expect("write field");
+                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        H,
+                    >::tree_hash_root(&z);
+                    hasher.write(root.as_ref()).expect("write field");
                     let w = self.w().expect("valid view");
-                    hasher.write(w.tree_hash_root().as_ref()).expect("write field");
+                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        H,
+                    >::tree_hash_root(&w);
+                    hasher.write(root.as_ref()).expect("write field");
                     hasher.finish().expect("finish hasher")
                 }
             }
@@ -402,22 +421,34 @@ pub mod tests {
                     {
                         let x = self.x().expect("valid view");
                         for _ in 0..0usize {}
-                        hasher.write(x.tree_hash_root().as_ref()).expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&x);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let y = self.y().expect("valid view");
                         for _ in 0..1usize {}
-                        hasher.write(y.tree_hash_root().as_ref()).expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&y);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let z = self.z().expect("valid view");
                         for _ in 0..2usize {}
-                        hasher.write(z.tree_hash_root().as_ref()).expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&z);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let w = self.w().expect("valid view");
                         for _ in 0..3usize {}
-                        hasher.write(w.tree_hash_root().as_ref()).expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&w);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }
@@ -547,17 +578,26 @@ pub mod tests {
                     {
                         let x = self.x().expect("valid view");
                         for _ in 0..0usize {}
-                        hasher.write(x.tree_hash_root().as_ref()).expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&x);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let y = self.y().expect("valid view");
                         for _ in 0..1usize {}
-                        hasher.write(y.tree_hash_root().as_ref()).expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&y);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let z = self.z().expect("valid view");
                         for _ in 0..2usize {}
-                        hasher.write(z.tree_hash_root().as_ref()).expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&z);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }
@@ -587,7 +627,7 @@ pub mod tests {
                 pub fn to_owned(&self) -> InnerProfile2 {
                     InnerProfile2 {
                         x: self.x().expect("valid view").to_owned(),
-                        y: self.y().expect("valid view").to_owned(),
+                        y: self.y().expect("valid view").to_owned().into(),
                         z: self.z().expect("valid view").to_owned(),
                     }
                 }
@@ -665,12 +705,18 @@ pub mod tests {
                     {
                         let a = self.a().expect("valid view");
                         for _ in 0..0usize {}
-                        hasher.write(a.tree_hash_root().as_ref()).expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&a);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let b = self.b().expect("valid view");
                         for _ in 0..1usize {}
-                        hasher.write(b.tree_hash_root().as_ref()).expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&b);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }
@@ -758,7 +804,10 @@ pub mod tests {
                     {
                         let w = self.w().expect("valid view");
                         for _ in 0..3usize {}
-                        hasher.write(w.tree_hash_root().as_ref()).expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&w);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }
@@ -870,12 +919,18 @@ pub mod tests {
                     {
                         let y = self.y().expect("valid view");
                         for _ in 0..1usize {}
-                        hasher.write(y.tree_hash_root().as_ref()).expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&y);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let z = self.z().expect("valid view");
                         for _ in 0..2usize {}
-                        hasher.write(z.tree_hash_root().as_ref()).expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&z);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }
@@ -915,7 +970,7 @@ pub mod tests {
             impl<'a> InnerProfile4Ref<'a> {
                 pub fn to_owned(&self) -> InnerProfile4 {
                     InnerProfile4 {
-                        y: self.y().expect("valid view").to_owned(),
+                        y: self.y().expect("valid view").to_owned().into(),
                         z: self.z().expect("valid view").to_owned(),
                     }
                 }
@@ -1002,17 +1057,26 @@ pub mod tests {
                     {
                         let x = self.x().expect("valid view");
                         for _ in 0..0usize {}
-                        hasher.write(x.tree_hash_root().as_ref()).expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&x);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let z = self.z().expect("valid view");
                         for _ in 0..2usize {}
-                        hasher.write(z.tree_hash_root().as_ref()).expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&z);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let w = self.w().expect("valid view");
                         for _ in 0..3usize {}
-                        hasher.write(w.tree_hash_root().as_ref()).expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&w);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }
@@ -1137,12 +1201,18 @@ pub mod tests {
                     {
                         let x = self.x().expect("valid view");
                         for _ in 0..0usize {}
-                        hasher.write(x.tree_hash_root().as_ref()).expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&x);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let w = self.w().expect("valid view");
                         for _ in 0..3usize {}
-                        hasher.write(w.tree_hash_root().as_ref()).expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&w);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }
@@ -1385,21 +1455,45 @@ pub mod tests {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(8usize);
                     let x = self.x().expect("valid view");
-                    hasher.write(x.tree_hash_root().as_ref()).expect("write field");
+                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        H,
+                    >::tree_hash_root(&x);
+                    hasher.write(root.as_ref()).expect("write field");
                     let y = self.y().expect("valid view");
-                    hasher.write(y.tree_hash_root().as_ref()).expect("write field");
+                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        H,
+                    >::tree_hash_root(&y);
+                    hasher.write(root.as_ref()).expect("write field");
                     let z = self.z().expect("valid view");
-                    hasher.write(z.tree_hash_root().as_ref()).expect("write field");
+                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        H,
+                    >::tree_hash_root(&z);
+                    hasher.write(root.as_ref()).expect("write field");
                     let w = self.w().expect("valid view");
-                    hasher.write(w.tree_hash_root().as_ref()).expect("write field");
+                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        H,
+                    >::tree_hash_root(&w);
+                    hasher.write(root.as_ref()).expect("write field");
                     let a = self.a().expect("valid view");
-                    hasher.write(a.tree_hash_root().as_ref()).expect("write field");
+                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        H,
+                    >::tree_hash_root(&a);
+                    hasher.write(root.as_ref()).expect("write field");
                     let b = self.b().expect("valid view");
-                    hasher.write(b.tree_hash_root().as_ref()).expect("write field");
+                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        H,
+                    >::tree_hash_root(&b);
+                    hasher.write(root.as_ref()).expect("write field");
                     let c = self.c().expect("valid view");
-                    hasher.write(c.tree_hash_root().as_ref()).expect("write field");
+                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        H,
+                    >::tree_hash_root(&c);
+                    hasher.write(root.as_ref()).expect("write field");
                     let d = self.d().expect("valid view");
-                    hasher.write(d.tree_hash_root().as_ref()).expect("write field");
+                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        H,
+                    >::tree_hash_root(&d);
+                    hasher.write(root.as_ref()).expect("write field");
                     hasher.finish().expect("finish hasher")
                 }
             }
