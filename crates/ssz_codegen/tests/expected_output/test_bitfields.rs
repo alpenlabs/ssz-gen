@@ -242,6 +242,20 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for BitfieldContainerRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<BitfieldContainer>
+            for BitfieldContainerRef<'a> {
+                fn to_owned(&self) -> BitfieldContainer {
+                    <BitfieldContainerRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a> BitfieldContainerRef<'a> {
                 pub fn to_owned(&self) -> BitfieldContainer {
                     BitfieldContainer {

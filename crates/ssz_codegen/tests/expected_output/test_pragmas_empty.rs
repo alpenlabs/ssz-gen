@@ -73,6 +73,20 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for EmptyPragmaContainerRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    true
+                }
+                fn ssz_fixed_len() -> usize {
+                    1usize
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<EmptyPragmaContainer>
+            for EmptyPragmaContainerRef<'a> {
+                fn to_owned(&self) -> EmptyPragmaContainer {
+                    <EmptyPragmaContainerRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a> EmptyPragmaContainerRef<'a> {
                 pub fn to_owned(&self) -> EmptyPragmaContainer {
                     EmptyPragmaContainer {
@@ -140,6 +154,20 @@ pub mod tests {
                         });
                     }
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for EmptyValueContainerRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    true
+                }
+                fn ssz_fixed_len() -> usize {
+                    2usize
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<EmptyValueContainer>
+            for EmptyValueContainerRef<'a> {
+                fn to_owned(&self) -> EmptyValueContainer {
+                    <EmptyValueContainerRef<'a>>::to_owned(self)
                 }
             }
             impl<'a> EmptyValueContainerRef<'a> {

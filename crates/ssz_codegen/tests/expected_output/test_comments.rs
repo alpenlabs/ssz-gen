@@ -111,6 +111,19 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for PointRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    true
+                }
+                fn ssz_fixed_len() -> usize {
+                    12usize
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<Point> for PointRef<'a> {
+                fn to_owned(&self) -> Point {
+                    <PointRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a> PointRef<'a> {
                 pub fn to_owned(&self) -> Point {
                     Point {
@@ -201,6 +214,20 @@ pub mod tests {
                         });
                     }
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for CoordinateContainerRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    true
+                }
+                fn ssz_fixed_len() -> usize {
+                    16usize
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<CoordinateContainer>
+            for CoordinateContainerRef<'a> {
+                fn to_owned(&self) -> CoordinateContainer {
+                    <CoordinateContainerRef<'a>>::to_owned(self)
                 }
             }
             impl<'a> CoordinateContainerRef<'a> {

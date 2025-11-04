@@ -119,6 +119,19 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for ParentRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<Parent> for ParentRef<'a> {
+                fn to_owned(&self) -> Parent {
+                    <ParentRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a> ParentRef<'a> {
                 pub fn to_owned(&self) -> Parent {
                     Parent {
@@ -261,6 +274,19 @@ pub mod tests {
                         });
                     }
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for ChildRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<Child> for ChildRef<'a> {
+                fn to_owned(&self) -> Child {
+                    <ChildRef<'a>>::to_owned(self)
                 }
             }
             impl<'a> ChildRef<'a> {

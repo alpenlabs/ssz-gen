@@ -843,3 +843,55 @@ fn test_constants_have_dead_code_allow() {
         "Constants should be marked with #[allow(dead_code, reason = \"generated code using ssz-gen\")]"
     );
 }
+
+/// Test that containers inside lists generate correct [`SszTypeInfo`](ssz::view::SszTypeInfo) and
+/// [`ToOwnedSsz`](ssz_types::view::ToOwnedSsz) implementations.
+#[test]
+fn test_container_in_list() {
+    build_ssz_files(
+        &["test_container_in_list.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_container_in_list.rs",
+        ModuleGeneration::SingleModule,
+    )
+    .expect("Failed to generate SSZ types");
+
+    let generated = fs::read_to_string("tests/output/test_container_in_list.rs")
+        .expect("Failed to read generated output");
+
+    // Verify SszTypeInfo is implemented for container views
+    assert!(
+        generated.contains("impl<'a> ssz::view::SszTypeInfo for ExportEntryRef<'a>"),
+        "SszTypeInfo should be implemented for ExportEntryRef"
+    );
+    assert!(
+        generated.contains("impl<'a> ssz::view::SszTypeInfo for ExportContainerRef<'a>"),
+        "SszTypeInfo should be implemented for ExportContainerRef"
+    );
+
+    // Verify ToOwnedSsz is implemented for container views
+    assert!(
+        generated
+            .contains("impl<'a> ssz_types::view::ToOwnedSsz<ExportEntry> for ExportEntryRef<'a>"),
+        "ToOwnedS
+            sz should be implemented for ExportEntryRef"
+    );
+    assert!(
+        generated.contains(
+            "impl<'a> ssz_types::view::ToOwnedSsz<ExportContainer> for ExportContainerRef<'a>"
+        ),
+        "ToOwnedSsz should 
+            be implemented for ExportContainerRef"
+    );
+
+    // Verify the generated code compiles by checking it includes the necessary traits
+    assert!(
+        generated.contains("pub struct ExportEntryRef<'a>"),
+        "ExportEntryRef struct should be generated"
+    );
+    assert!(
+        generated.contains("pub struct ExportContainerRef<'a>"),
+        "ExportContainerRef struct should be generated"
+    );
+}

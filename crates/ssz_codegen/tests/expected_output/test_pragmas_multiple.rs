@@ -102,6 +102,20 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for MultiPragmaContainerRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    true
+                }
+                fn ssz_fixed_len() -> usize {
+                    8usize
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<MultiPragmaContainer>
+            for MultiPragmaContainerRef<'a> {
+                fn to_owned(&self) -> MultiPragmaContainer {
+                    <MultiPragmaContainerRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a> MultiPragmaContainerRef<'a> {
                 pub fn to_owned(&self) -> MultiPragmaContainer {
                     MultiPragmaContainer {

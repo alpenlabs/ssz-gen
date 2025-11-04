@@ -177,6 +177,14 @@ impl<'a> CircleBufferCodegen<'a> {
             self.tokens
                 .push(parent_class_def.to_view_decode_impl(&ident));
 
+            // Generate SszTypeInfo implementation (required for lists/vectors)
+            self.tokens
+                .push(parent_class_def.to_view_ssz_type_info_impl(&ident));
+
+            // Generate ToOwnedSsz implementation (required for lists/vectors)
+            self.tokens
+                .push(parent_class_def.to_view_to_owned_ssz_impl(&ident));
+
             // Generate to_owned implementation (uses getters)
             self.tokens
                 .push(parent_class_def.to_view_to_owned_impl(&ident));

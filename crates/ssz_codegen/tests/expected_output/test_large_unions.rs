@@ -608,6 +608,20 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for ContainerWithBigUnionsRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<ContainerWithBigUnions>
+            for ContainerWithBigUnionsRef<'a> {
+                fn to_owned(&self) -> ContainerWithBigUnions {
+                    <ContainerWithBigUnionsRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a> ContainerWithBigUnionsRef<'a> {
                 pub fn to_owned(&self) -> ContainerWithBigUnions {
                     ContainerWithBigUnions {

@@ -53,6 +53,19 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for FooRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    true
+                }
+                fn ssz_fixed_len() -> usize {
+                    0usize
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<Foo> for FooRef<'a> {
+                fn to_owned(&self) -> Foo {
+                    <FooRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a> FooRef<'a> {
                 pub fn to_owned(&self) -> Foo {
                     Foo {}
@@ -143,6 +156,20 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for PointWithBothRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    true
+                }
+                fn ssz_fixed_len() -> usize {
+                    8usize
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<PointWithBoth>
+            for PointWithBothRef<'a> {
+                fn to_owned(&self) -> PointWithBoth {
+                    <PointWithBothRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a> PointWithBothRef<'a> {
                 pub fn to_owned(&self) -> PointWithBoth {
                     PointWithBoth {
@@ -214,6 +241,19 @@ pub mod tests {
                         });
                     }
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for TestMergeRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    true
+                }
+                fn ssz_fixed_len() -> usize {
+                    1usize
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<TestMerge> for TestMergeRef<'a> {
+                fn to_owned(&self) -> TestMerge {
+                    <TestMergeRef<'a>>::to_owned(self)
                 }
             }
             impl<'a> TestMergeRef<'a> {

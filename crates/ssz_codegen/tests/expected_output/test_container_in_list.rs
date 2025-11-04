@@ -9,8 +9,8 @@ use ssz::view::*;
 #[ssz(struct_behaviour = "container")]
 #[tree_hash(struct_behaviour = "container")]
 pub struct ExportEntry {
-    pub key: u32,
     pub value: u64,
+    pub data: u32,
 }
 /// Zero-copy view over [`ExportEntry`].
 ///
@@ -22,9 +22,9 @@ pub struct ExportEntryRef<'a> {
     bytes: &'a [u8],
 }
 impl<'a> ExportEntryRef<'a> {
-    pub fn key(&self) -> Result<u32, ssz::DecodeError> {
+    pub fn value(&self) -> Result<u64, ssz::DecodeError> {
         let offset = 0usize;
-        let end = offset + 4usize;
+        let end = offset + 8usize;
         if end > self.bytes.len() {
             return Err(ssz::DecodeError::InvalidByteLength {
                 len: self.bytes.len(),
@@ -34,9 +34,9 @@ impl<'a> ExportEntryRef<'a> {
         let bytes = &self.bytes[offset..end];
         ssz::view::DecodeView::from_ssz_bytes(bytes)
     }
-    pub fn value(&self) -> Result<u64, ssz::DecodeError> {
-        let offset = 4usize;
-        let end = offset + 8usize;
+    pub fn data(&self) -> Result<u32, ssz::DecodeError> {
+        let offset = 8usize;
+        let end = offset + 4usize;
         if end > self.bytes.len() {
             return Err(ssz::DecodeError::InvalidByteLength {
                 len: self.bytes.len(),
@@ -62,12 +62,12 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ExportEntryRef
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
         {
             let offset = 0usize;
-            let field_bytes = &self.bytes[offset..offset + 4usize];
+            let field_bytes = &self.bytes[offset..offset + 8usize];
             hasher.write(field_bytes).expect("write field");
         }
         {
-            let offset = 4usize;
-            let field_bytes = &self.bytes[offset..offset + 8usize];
+            let offset = 8usize;
+            let field_bytes = &self.bytes[offset..offset + 4usize];
             hasher.write(field_bytes).expect("write field");
         }
         hasher.finish().expect("finish hasher")
@@ -100,40 +100,41 @@ impl<'a> ssz_types::view::ToOwnedSsz<ExportEntry> for ExportEntryRef<'a> {
 impl<'a> ExportEntryRef<'a> {
     pub fn to_owned(&self) -> ExportEntry {
         ExportEntry {
-            key: self.key().expect("valid view"),
             value: self.value().expect("valid view"),
+            data: self.data().expect("valid view"),
         }
     }
 }
 #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TreeHash)]
 #[ssz(struct_behaviour = "container")]
 #[tree_hash(struct_behaviour = "container")]
-pub struct ViewTypeTest {
-    pub payload: VariableList<u8, 4096usize>,
-    pub entries: VariableList<ExportEntry, 256usize>,
-    pub hash: FixedVector<u8, 32usize>,
+pub struct ExportContainer {
+    pub entries: VariableList<ExportEntry, 4096usize>,
+    pub name: u32,
 }
-/// Zero-copy view over [`ViewTypeTest`].
+/// Zero-copy view over [`ExportContainer`].
 ///
 /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
 /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
 /// needed.
 #[derive(Clone, Debug, PartialEq, Eq, Copy)]
-pub struct ViewTypeTestRef<'a> {
+pub struct ExportContainerRef<'a> {
     bytes: &'a [u8],
 }
-impl<'a> ViewTypeTestRef<'a> {
-    pub fn payload(&self) -> Result<BytesRef<'a>, ssz::DecodeError> {
+impl<'a> ExportContainerRef<'a> {
+    pub fn entries(
+        &self,
+    ) -> Result<VariableListRef<'a, ExportEntryRef<'a>, 4096usize>, ssz::DecodeError> {
         let start = ssz::layout::read_variable_offset(
             self.bytes,
-            40usize,
-            2usize,
+            8usize,
+            1usize,
             0usize,
         )?;
         let end = ssz::layout::read_variable_offset_or_end(
             self.bytes,
-            40usize,
-            2usize,
+            8usize,
+            1usize,
             0usize + 1,
         )?;
         if start > end || end > self.bytes.len() {
@@ -142,30 +143,9 @@ impl<'a> ViewTypeTestRef<'a> {
         let bytes = &self.bytes[start..end];
         ssz::view::DecodeView::from_ssz_bytes(bytes)
     }
-    pub fn entries(
-        &self,
-    ) -> Result<VariableListRef<'a, ExportEntryRef<'a>, 256usize>, ssz::DecodeError> {
-        let start = ssz::layout::read_variable_offset(
-            self.bytes,
-            40usize,
-            2usize,
-            1usize,
-        )?;
-        let end = ssz::layout::read_variable_offset_or_end(
-            self.bytes,
-            40usize,
-            2usize,
-            1usize + 1,
-        )?;
-        if start > end || end > self.bytes.len() {
-            return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-        }
-        let bytes = &self.bytes[start..end];
-        ssz::view::DecodeView::from_ssz_bytes(bytes)
-    }
-    pub fn hash(&self) -> Result<FixedVectorRef<'a, u8, 32usize>, ssz::DecodeError> {
-        let offset = 8usize;
-        let end = offset + 32usize;
+    pub fn name(&self) -> Result<u32, ssz::DecodeError> {
+        let offset = 4usize;
+        let end = offset + 4usize;
         if end > self.bytes.len() {
             return Err(ssz::DecodeError::InvalidByteLength {
                 len: self.bytes.len(),
@@ -176,7 +156,8 @@ impl<'a> ViewTypeTestRef<'a> {
         ssz::view::DecodeView::from_ssz_bytes(bytes)
     }
 }
-impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ViewTypeTestRef<'a> {
+impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
+for ExportContainerRef<'a> {
     fn tree_hash_type() -> tree_hash::TreeHashType {
         tree_hash::TreeHashType::Container
     }
@@ -190,13 +171,6 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ViewTypeTestRe
         use tree_hash::TreeHash;
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
         {
-            let payload = self.payload().expect("valid view");
-            let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
-                H,
-            >::tree_hash_root(&payload);
-            hasher.write(root.as_ref()).expect("write field");
-        }
-        {
             let entries = self.entries().expect("valid view");
             let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
                 H,
@@ -204,27 +178,25 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ViewTypeTestRe
             hasher.write(root.as_ref()).expect("write field");
         }
         {
-            let hash = self.hash().expect("valid view");
-            let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
-                H,
-            >::tree_hash_root(&hash);
-            hasher.write(root.as_ref()).expect("write field");
+            let offset = 4usize;
+            let field_bytes = &self.bytes[offset..offset + 4usize];
+            hasher.write(field_bytes).expect("write field");
         }
         hasher.finish().expect("finish hasher")
     }
 }
-impl<'a> ssz::view::DecodeView<'a> for ViewTypeTestRef<'a> {
+impl<'a> ssz::view::DecodeView<'a> for ExportContainerRef<'a> {
     fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-        if bytes.len() < 40usize {
+        if bytes.len() < 8usize {
             return Err(ssz::DecodeError::InvalidByteLength {
                 len: bytes.len(),
-                expected: 40usize,
+                expected: 8usize,
             });
         }
         let mut prev_offset: Option<usize> = None;
-        for i in 0..2usize {
-            let offset = ssz::layout::read_variable_offset(bytes, 40usize, 2usize, i)?;
-            if i == 0 && offset != 40usize {
+        for i in 0..1usize {
+            let offset = ssz::layout::read_variable_offset(bytes, 8usize, 1usize, i)?;
+            if i == 0 && offset != 8usize {
                 return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
             }
             if let Some(prev) = prev_offset {
@@ -240,7 +212,7 @@ impl<'a> ssz::view::DecodeView<'a> for ViewTypeTestRef<'a> {
         Ok(Self { bytes })
     }
 }
-impl<'a> ssz::view::SszTypeInfo for ViewTypeTestRef<'a> {
+impl<'a> ssz::view::SszTypeInfo for ExportContainerRef<'a> {
     fn is_ssz_fixed_len() -> bool {
         false
     }
@@ -248,17 +220,16 @@ impl<'a> ssz::view::SszTypeInfo for ViewTypeTestRef<'a> {
         0
     }
 }
-impl<'a> ssz_types::view::ToOwnedSsz<ViewTypeTest> for ViewTypeTestRef<'a> {
-    fn to_owned(&self) -> ViewTypeTest {
-        <ViewTypeTestRef<'a>>::to_owned(self)
+impl<'a> ssz_types::view::ToOwnedSsz<ExportContainer> for ExportContainerRef<'a> {
+    fn to_owned(&self) -> ExportContainer {
+        <ExportContainerRef<'a>>::to_owned(self)
     }
 }
-impl<'a> ViewTypeTestRef<'a> {
-    pub fn to_owned(&self) -> ViewTypeTest {
-        ViewTypeTest {
-            payload: self.payload().expect("valid view").to_owned().into(),
+impl<'a> ExportContainerRef<'a> {
+    pub fn to_owned(&self) -> ExportContainer {
+        ExportContainer {
             entries: self.entries().expect("valid view").to_owned().expect("valid view"),
-            hash: self.hash().expect("valid view").to_owned().expect("valid view"),
+            name: self.name().expect("valid view"),
         }
     }
 }

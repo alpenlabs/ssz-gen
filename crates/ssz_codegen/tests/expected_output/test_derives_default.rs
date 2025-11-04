@@ -833,6 +833,19 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for AlphaRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    true
+                }
+                fn ssz_fixed_len() -> usize {
+                    13usize
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<Alpha> for AlphaRef<'a> {
+                fn to_owned(&self) -> Alpha {
+                    <AlphaRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a> AlphaRef<'a> {
                 pub fn to_owned(&self) -> Alpha {
                     Alpha {
@@ -970,6 +983,19 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for BetaRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<Beta> for BetaRef<'a> {
+                fn to_owned(&self) -> Beta {
+                    <BetaRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a> BetaRef<'a> {
                 pub fn to_owned(&self) -> Beta {
                     Beta {
@@ -1092,6 +1118,19 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for GammaRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<Gamma> for GammaRef<'a> {
+                fn to_owned(&self) -> Gamma {
+                    <GammaRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a> GammaRef<'a> {
                 pub fn to_owned(&self) -> Gamma {
                     Gamma {
@@ -1178,6 +1217,19 @@ pub mod tests {
                         });
                     }
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for DeltaRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    true
+                }
+                fn ssz_fixed_len() -> usize {
+                    2usize
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<Delta> for DeltaRef<'a> {
+                fn to_owned(&self) -> Delta {
+                    <DeltaRef<'a>>::to_owned(self)
                 }
             }
             impl<'a> DeltaRef<'a> {
@@ -1355,6 +1407,19 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for EpsilonRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<Epsilon> for EpsilonRef<'a> {
+                fn to_owned(&self) -> Epsilon {
+                    <EpsilonRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a> EpsilonRef<'a> {
                 pub fn to_owned(&self) -> Epsilon {
                     Epsilon {
@@ -1476,6 +1541,19 @@ pub mod tests {
                         });
                     }
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for ZetaRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<Zeta> for ZetaRef<'a> {
+                fn to_owned(&self) -> Zeta {
+                    <ZetaRef<'a>>::to_owned(self)
                 }
             }
             impl<'a> ZetaRef<'a> {
@@ -1614,6 +1692,19 @@ pub mod tests {
                         prev_offset = Some(offset);
                     }
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for TestTypeRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<TestType> for TestTypeRef<'a> {
+                fn to_owned(&self) -> TestType {
+                    <TestTypeRef<'a>>::to_owned(self)
                 }
             }
             impl<'a> TestTypeRef<'a> {
@@ -1775,6 +1866,19 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for EtaRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<Eta> for EtaRef<'a> {
+                fn to_owned(&self) -> Eta {
+                    <EtaRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a> EtaRef<'a> {
                 pub fn to_owned(&self) -> Eta {
                     Eta {
@@ -1923,6 +2027,19 @@ pub mod tests {
                         prev_offset = Some(offset);
                     }
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for ThetaRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<Theta> for ThetaRef<'a> {
+                fn to_owned(&self) -> Theta {
+                    <ThetaRef<'a>>::to_owned(self)
                 }
             }
             impl<'a> ThetaRef<'a> {
@@ -2160,6 +2277,19 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for IotaRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<Iota> for IotaRef<'a> {
+                fn to_owned(&self) -> Iota {
+                    <IotaRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a> IotaRef<'a> {
                 pub fn to_owned(&self) -> Iota {
                     Iota {
@@ -2311,6 +2441,19 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for KappaRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<Kappa> for KappaRef<'a> {
+                fn to_owned(&self) -> Kappa {
+                    <KappaRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a> KappaRef<'a> {
                 pub fn to_owned(&self) -> Kappa {
                     Kappa {
@@ -2426,6 +2569,19 @@ pub mod tests {
                         });
                     }
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for LambdaRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<Lambda> for LambdaRef<'a> {
+                fn to_owned(&self) -> Lambda {
+                    <LambdaRef<'a>>::to_owned(self)
                 }
             }
             impl<'a> LambdaRef<'a> {
@@ -2552,6 +2708,19 @@ pub mod tests {
                         prev_offset = Some(offset);
                     }
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for MuRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<Mu> for MuRef<'a> {
+                fn to_owned(&self) -> Mu {
+                    <MuRef<'a>>::to_owned(self)
                 }
             }
             impl<'a> MuRef<'a> {
@@ -2728,6 +2897,19 @@ pub mod tests {
                         prev_offset = Some(offset);
                     }
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for NuRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<Nu> for NuRef<'a> {
+                fn to_owned(&self) -> Nu {
+                    <NuRef<'a>>::to_owned(self)
                 }
             }
             impl<'a> NuRef<'a> {

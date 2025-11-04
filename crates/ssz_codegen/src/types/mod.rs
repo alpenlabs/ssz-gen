@@ -1415,6 +1415,81 @@ impl ClassDef {
         }
     }
 
+    /// Generates the [`SszTypeInfo`](ssz::view::SszTypeInfo) implementation for view structs.
+    ///
+    /// This is required for view types to be used in
+    /// [`VariableListRef`](ssz_types::view::VariableListRef) and
+    /// [`FixedVectorRef`](ssz_types::view::FixedVectorRef).
+    ///
+    /// # Arguments
+    ///
+    /// * `ident` - The base identifier for the class
+    ///
+    /// # Returns
+    ///
+    /// A [`TokenStream`] containing the [`SszTypeInfo`](ssz::view::SszTypeInfo) implementation.
+    pub fn to_view_ssz_type_info_impl(&self, ident: &Ident) -> TokenStream {
+        let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
+        let (_, fixed_size, _) = self.compute_layout();
+
+        match fixed_size {
+            Some(size) => {
+                // Fixed-size container
+                quote! {
+                    impl<'a> ssz::view::SszTypeInfo for #ref_ident<'a> {
+                        fn is_ssz_fixed_len() -> bool {
+                            true
+                        }
+
+                        fn ssz_fixed_len() -> usize {
+                            #size
+                        }
+                    }
+                }
+            }
+            None => {
+                // Variable-size container
+                quote! {
+                    impl<'a> ssz::view::SszTypeInfo for #ref_ident<'a> {
+                        fn is_ssz_fixed_len() -> bool {
+                            false
+                        }
+
+                        fn ssz_fixed_len() -> usize {
+                            0
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Generates the [`ToOwnedSsz`](ssz_types::view::ToOwnedSsz) implementation for container view
+    /// types.
+    ///
+    /// This is required for container views to be used in
+    /// [`VariableListRef`](ssz_types::view::VariableListRef) and
+    /// [`FixedVectorRef`](ssz_types::view::FixedVectorRef).
+    ///
+    /// # Arguments
+    ///
+    /// * `ident` - The base identifier for the class
+    ///
+    /// # Returns
+    ///
+    /// A [`TokenStream`] containing the [`ToOwnedSsz`](ssz_types::view::ToOwnedSsz) implementation.
+    pub fn to_view_to_owned_ssz_impl(&self, ident: &Ident) -> TokenStream {
+        let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
+
+        quote! {
+            impl<'a> ssz_types::view::ToOwnedSsz<#ident> for #ref_ident<'a> {
+                fn to_owned(&self) -> #ident {
+                    <#ref_ident<'a>>::to_owned(self)
+                }
+            }
+        }
+    }
+
     /// Generates the to_owned implementation for converting view to owned
     ///
     /// Now uses getter methods instead of direct field access.

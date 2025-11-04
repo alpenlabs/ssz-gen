@@ -73,6 +73,20 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for BasicContainerRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    true
+                }
+                fn ssz_fixed_len() -> usize {
+                    1usize
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<BasicContainer>
+            for BasicContainerRef<'a> {
+                fn to_owned(&self) -> BasicContainer {
+                    <BasicContainerRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a> BasicContainerRef<'a> {
                 pub fn to_owned(&self) -> BasicContainer {
                     BasicContainer {

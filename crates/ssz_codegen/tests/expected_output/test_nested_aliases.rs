@@ -203,6 +203,20 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for NestedAliasContainerRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<NestedAliasContainer>
+            for NestedAliasContainerRef<'a> {
+                fn to_owned(&self) -> NestedAliasContainer {
+                    <NestedAliasContainerRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a> NestedAliasContainerRef<'a> {
                 pub fn to_owned(&self) -> NestedAliasContainer {
                     NestedAliasContainer {

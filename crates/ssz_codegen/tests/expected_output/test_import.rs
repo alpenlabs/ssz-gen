@@ -211,6 +211,20 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for StableContainerClassRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<StableContainerClass>
+            for StableContainerClassRef<'a> {
+                fn to_owned(&self) -> StableContainerClass {
+                    <StableContainerClassRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a> StableContainerClassRef<'a> {
                 pub fn to_owned(&self) -> StableContainerClass {
                     StableContainerClass {
@@ -436,6 +450,20 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for StableContainerClassRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<StableContainerClass>
+            for StableContainerClassRef<'a> {
+                fn to_owned(&self) -> StableContainerClass {
+                    <StableContainerClassRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a> StableContainerClassRef<'a> {
                 pub fn to_owned(&self) -> StableContainerClass {
                     StableContainerClass {
@@ -558,6 +586,20 @@ pub mod tests {
                         });
                     }
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for ProfileInehritanceRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<ProfileInehritance>
+            for ProfileInehritanceRef<'a> {
+                fn to_owned(&self) -> ProfileInehritance {
+                    <ProfileInehritanceRef<'a>>::to_owned(self)
                 }
             }
             impl<'a> ProfileInehritanceRef<'a> {

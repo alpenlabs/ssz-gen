@@ -120,6 +120,19 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for AlphaRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<Alpha> for AlphaRef<'a> {
+                fn to_owned(&self) -> Alpha {
+                    <AlphaRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a> AlphaRef<'a> {
                 pub fn to_owned(&self) -> Alpha {
                     Alpha {
@@ -290,6 +303,19 @@ pub mod tests {
                         });
                     }
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for InnerBaseRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<InnerBase> for InnerBaseRef<'a> {
+                fn to_owned(&self) -> InnerBase {
+                    <InnerBaseRef<'a>>::to_owned(self)
                 }
             }
             impl<'a> InnerBaseRef<'a> {
@@ -474,6 +500,20 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for InnerProfile1Ref<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<InnerProfile1>
+            for InnerProfile1Ref<'a> {
+                fn to_owned(&self) -> InnerProfile1 {
+                    <InnerProfile1Ref<'a>>::to_owned(self)
+                }
+            }
             impl<'a> InnerProfile1Ref<'a> {
                 pub fn to_owned(&self) -> InnerProfile1 {
                     InnerProfile1 {
@@ -623,6 +663,20 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for InnerProfile2Ref<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<InnerProfile2>
+            for InnerProfile2Ref<'a> {
+                fn to_owned(&self) -> InnerProfile2 {
+                    <InnerProfile2Ref<'a>>::to_owned(self)
+                }
+            }
             impl<'a> InnerProfile2Ref<'a> {
                 pub fn to_owned(&self) -> InnerProfile2 {
                     InnerProfile2 {
@@ -742,6 +796,19 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for AlphaProfileRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<AlphaProfile> for AlphaProfileRef<'a> {
+                fn to_owned(&self) -> AlphaProfile {
+                    <AlphaProfileRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a> AlphaProfileRef<'a> {
                 pub fn to_owned(&self) -> AlphaProfile {
                     AlphaProfile {
@@ -842,6 +909,20 @@ pub mod tests {
                         prev_offset = Some(offset);
                     }
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for InnerProfile3Ref<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<InnerProfile3>
+            for InnerProfile3Ref<'a> {
+                fn to_owned(&self) -> InnerProfile3 {
+                    <InnerProfile3Ref<'a>>::to_owned(self)
                 }
             }
             impl<'a> InnerProfile3Ref<'a> {
@@ -965,6 +1046,20 @@ pub mod tests {
                         prev_offset = Some(offset);
                     }
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for InnerProfile4Ref<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<InnerProfile4>
+            for InnerProfile4Ref<'a> {
+                fn to_owned(&self) -> InnerProfile4 {
+                    <InnerProfile4Ref<'a>>::to_owned(self)
                 }
             }
             impl<'a> InnerProfile4Ref<'a> {
@@ -1113,6 +1208,20 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for InnerProfile5Ref<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<InnerProfile5>
+            for InnerProfile5Ref<'a> {
+                fn to_owned(&self) -> InnerProfile5 {
+                    <InnerProfile5Ref<'a>>::to_owned(self)
+                }
+            }
             impl<'a> InnerProfile5Ref<'a> {
                 pub fn to_owned(&self) -> InnerProfile5 {
                     InnerProfile5 {
@@ -1236,6 +1345,20 @@ pub mod tests {
                         });
                     }
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for ProfileProfileRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<ProfileProfile>
+            for ProfileProfileRef<'a> {
+                fn to_owned(&self) -> ProfileProfile {
+                    <ProfileProfileRef<'a>>::to_owned(self)
                 }
             }
             impl<'a> ProfileProfileRef<'a> {
@@ -1516,6 +1639,20 @@ pub mod tests {
                         });
                     }
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for ContainerContainerRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<ContainerContainer>
+            for ContainerContainerRef<'a> {
+                fn to_owned(&self) -> ContainerContainer {
+                    <ContainerContainerRef<'a>>::to_owned(self)
                 }
             }
             impl<'a> ContainerContainerRef<'a> {

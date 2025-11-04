@@ -111,6 +111,20 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for FieldPragmaContainerRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    true
+                }
+                fn ssz_fixed_len() -> usize {
+                    7usize
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<FieldPragmaContainer>
+            for FieldPragmaContainerRef<'a> {
+                fn to_owned(&self) -> FieldPragmaContainer {
+                    <FieldPragmaContainerRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a> FieldPragmaContainerRef<'a> {
                 pub fn to_owned(&self) -> FieldPragmaContainer {
                     FieldPragmaContainer {

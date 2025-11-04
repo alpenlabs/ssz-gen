@@ -353,6 +353,20 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for ExternalContainerRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<ExternalContainer>
+            for ExternalContainerRef<'a> {
+                fn to_owned(&self) -> ExternalContainer {
+                    <ExternalContainerRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a> ExternalContainerRef<'a> {
                 pub fn to_owned(&self) -> ExternalContainer {
                     ExternalContainer {

@@ -784,6 +784,20 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for UnionEdgeCasesRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<UnionEdgeCases>
+            for UnionEdgeCasesRef<'a> {
+                fn to_owned(&self) -> UnionEdgeCases {
+                    <UnionEdgeCasesRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a> UnionEdgeCasesRef<'a> {
                 pub fn to_owned(&self) -> UnionEdgeCases {
                     UnionEdgeCases {
@@ -940,6 +954,19 @@ pub mod tests {
                         prev_offset = Some(offset);
                     }
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for AllUnionsRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<AllUnions> for AllUnionsRef<'a> {
+                fn to_owned(&self) -> AllUnions {
+                    <AllUnionsRef<'a>>::to_owned(self)
                 }
             }
             impl<'a> AllUnionsRef<'a> {

@@ -1,0 +1,8 @@
+class ExportEntry(Container):
+    value: uint64
+    data: uint32
+
+class ExportContainer(Container):
+    entries: List[ExportEntry, 4096]
+    name: uint32
+
