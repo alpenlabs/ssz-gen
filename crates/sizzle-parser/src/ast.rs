@@ -375,23 +375,41 @@ pub enum TyArgSpec {
     None,
 }
 
+/// Errors that can occur during AST parsing.
 #[derive(Debug, Error)]
 pub enum ParseError {
+    /// A malformed block structure was encountered at the given source position.
     #[error("malformed def at {0}")]
     MalformedBlock(SrcPos),
 
+    /// An unexpected token was encountered at the given source position.
     #[error("unexpected token at {0}")]
     UnexpectedToken(SrcPos),
 
+    /// Multiple docstrings were found in a single definition (only one docstring is allowed per
+    /// class).
     #[error("multiple docstrings in def")]
     MultipleDocStrings,
 
+    /// A standalone docstring was encountered at the module level (docstrings must be inside class
+    /// bodies).
+    #[error("standalone docstring at {0}")]
+    StandaloneDocstring(SrcPos),
+
+    /// A standalone doc comment was encountered at the module level (doc comments must precede a
+    /// class, assignment, or import).
+    #[error("standalone doc comment")]
+    StandaloneDocComment,
+
+    /// The parser reached the end of input unexpectedly.
     #[error("unexpected end of input")]
     UnexpectedEnd,
 
+    /// A feature that is not yet implemented was encountered.
     #[error("not yet implemented")]
     Unimplemented,
 
+    /// An unhandled error occurred with the given message.
     #[error("unhandled other error '{0}'")]
     Other(String),
 }
@@ -476,38 +494,55 @@ pub(crate) fn parse_module_from_toktrs<P: AsRef<Path>>(
     let mut import_map = HashMap::new();
 
     let mut comment_buffer = CommentBuffer::new();
+    let mut consecutive_newlines = 0;
 
     while let Some(cur) = gob.get() {
         match cur {
             // Discard newlines.
             TaggedToktr::Newline(_) => {
+                consecutive_newlines += 1;
                 gob.gobble_one();
-                // Clear comment buffer on newline unless we're about to parse a class
-                // (comments should be right before what they document)
+                // Clear comment buffer if there are multiple blank lines
+                // (comments should be right before what they document, not separated by blank
+                // lines)
+                // If we have a doc comment or pragma and hit multiple newlines, it's standalone
+                if consecutive_newlines > 1
+                    && (comment_buffer.take_doc_comment().is_some()
+                        || !comment_buffer.take_pragmas().is_empty())
+                {
+                    return Err(ParseError::StandaloneDocComment);
+                }
             }
 
             // Discard regular comments
-            TaggedToktr::Comment(_, _) => gob.gobble_one(),
+            TaggedToktr::Comment(_, _) => {
+                consecutive_newlines = 0;
+                gob.gobble_one();
+            }
 
             // Collect doc comments and pragmas
             TaggedToktr::DocComment(_, text) => {
+                consecutive_newlines = 0;
                 comment_buffer.set_doc_comment(Some(text.clone()));
                 gob.gobble_one();
             }
 
             TaggedToktr::PragmaComment(_, text) => {
+                consecutive_newlines = 0;
                 comment_buffer.add_pragma(text.clone());
                 gob.gobble_one();
             }
 
             // Lines that start with "import" are imports.
             TaggedToktr::Import(_) => {
+                consecutive_newlines = 0;
                 comment_buffer.clear(); // Clear comments before imports
                 parse_import(&mut gob, path, module_manager, &mut import_map)?;
             }
 
             // Lines that start with identifiers are probably assignments.
             TaggedToktr::Identifier(_, _) => {
+                consecutive_newlines = 0;
                 comment_buffer.clear(); // Clear comments before assignments
                 let cd = parse_assignment(&mut gob, &import_map)?;
                 module_manager
@@ -519,6 +554,7 @@ pub(crate) fn parse_module_from_toktrs<P: AsRef<Path>>(
 
             // Lines that start with "class" are always classes.
             TaggedToktr::Class(_) => {
+                consecutive_newlines = 0;
                 // Comments should have been collected into comment_buffer
                 let mut cd = parse_class(&mut gob, &import_map)?;
                 // Attach collected comments to the class
@@ -536,8 +572,27 @@ pub(crate) fn parse_module_from_toktrs<P: AsRef<Path>>(
                     .push(ModuleEntry::Class(cd));
             }
 
-            t => return Err(ParseError::UnexpectedToken(*t.tag())),
+            // Standalone docstrings are not allowed at module level
+            TaggedToktr::DocString(sp, _) => {
+                return Err(ParseError::StandaloneDocstring(*sp));
+            }
+
+            t => {
+                return Err(ParseError::UnexpectedToken(*t.tag()));
+            }
         }
+    }
+
+    // Check if there are any standalone doc comments or pragmas left in the buffer
+    // (not attached to any class, assignment, or import)
+    if comment_buffer.take_doc_comment().is_some() || !comment_buffer.take_pragmas().is_empty() {
+        // If we have doc comments or pragmas but no following element, it's an error
+        // We need to find the source position - we'll use the last token's position
+        // Since we've consumed all tokens, we'll report an error at the end
+        // For now, we'll use a dummy position - in practice this shouldn't happen
+        // as the comment buffer should be cleared when encountering newlines before non-class
+        // elements
+        return Err(ParseError::StandaloneDocComment);
     }
 
     Ok(())
@@ -1075,7 +1130,7 @@ mod tests {
     use std::path::Path;
 
     use crate::{
-        ast::{ModuleManager, parse_module_from_toktrs},
+        ast::{ModuleManager, ParseError, parse_module_from_toktrs},
         token::parse_char_array_to_tokens,
         token_tree::parse_tokens_to_toktrs,
     };
@@ -1570,6 +1625,130 @@ class Point(Container):
             assert!(doc_comment.contains('\n'));
         } else {
             panic!("Expected Class entry");
+        }
+    }
+
+    #[test]
+    fn test_ast_parse_standalone_docstring_error() {
+        let s = r#"
+"""
+This is a standalone docstring
+"""
+class Foo(Container):
+    x: uint8
+"#;
+
+        let arr = s.chars().collect::<Vec<_>>();
+
+        let toks = parse_char_array_to_tokens(&arr).expect("test: tokenize string");
+        let tt = parse_tokens_to_toktrs(&toks).expect("test: treeize tokens");
+
+        let mut module_manager = ModuleManager::new(&[]);
+        module_manager.add_module(Path::new(""), false);
+        let result = parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager);
+
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ParseError::StandaloneDocstring(_) => {
+                // Expected error
+            }
+            other => panic!("Expected StandaloneDocstring error, got: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_ast_parse_standalone_doccomment_error() {
+        let s = r#"
+### This is a standalone docstring
+
+class Foo(Container):
+    x: uint8
+"#;
+
+        let arr = s.chars().collect::<Vec<_>>();
+
+        let toks = parse_char_array_to_tokens(&arr).expect("test: tokenize string");
+        let tt = parse_tokens_to_toktrs(&toks).expect("test: treeize tokens");
+
+        let mut module_manager = ModuleManager::new(&[]);
+        module_manager.add_module(Path::new(""), false);
+        let result = parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager);
+
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ParseError::StandaloneDocComment => {
+                // Expected error
+            }
+            other => panic!("Expected StandaloneDocComment error, got: {:?}", other),
+        }
+    }
+    #[test]
+    fn test_ast_parse_standalone_docstring_with_newlines_error() {
+        let s = r#"
+"""
+This is a standalone docstring
+
+With multiple lines
+"""
+class Foo(Container):
+    x: uint8
+"#;
+
+        let arr = s.chars().collect::<Vec<_>>();
+
+        let toks = parse_char_array_to_tokens(&arr).expect("test: tokenize string");
+        let tt = parse_tokens_to_toktrs(&toks).expect("test: treeize tokens");
+
+        let mut module_manager = ModuleManager::new(&[]);
+        module_manager.add_module(Path::new(""), false);
+        let result = parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager);
+
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ParseError::StandaloneDocstring(_) => {
+                // Expected error
+            }
+            other => panic!("Expected StandaloneDocstring error, got: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_ast_parse_standalone_docstring_with_comments_error() {
+        let s = r#"
+### This comment
+
+
+
+
+"""
+This is a standalone docstring
+"""
+class Foo(Container):
+    x: uint8
+"#;
+
+        let arr = s.chars().collect::<Vec<_>>();
+
+        let toks = parse_char_array_to_tokens(&arr).expect("test: tokenize string");
+        let tt = parse_tokens_to_toktrs(&toks).expect("test: treeize tokens");
+
+        let mut module_manager = ModuleManager::new(&[]);
+        module_manager.add_module(Path::new(""), false);
+        let result = parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager);
+
+        assert!(result.is_err());
+        // The doc comment is detected first as standalone due to multiple newlines
+        match result.unwrap_err() {
+            ParseError::StandaloneDocComment => {
+                // Expected error - doc comment is detected first
+            }
+            ParseError::StandaloneDocstring(_) => {
+                // Also acceptable - docstring detected if comment wasn't standalone
+            }
+            other => panic!(
+                "Expected StandaloneDocComment or StandaloneDocstring error, got: {:?}",
+                other
+            ),
         }
     }
 }
