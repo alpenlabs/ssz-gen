@@ -5,6 +5,7 @@ pub mod tests {
         pub mod test_large_unions {
             #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
+            use ssz_types::view::{FixedVectorRef, VariableListRef};
             use ssz_derive::{Encode, Decode};
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
@@ -461,17 +462,7 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(
-                Clone,
-                Debug,
-                PartialEq,
-                Eq,
-                PartialOrd,
-                Ord,
-                Encode,
-                Decode,
-                TreeHash
-            )]
+            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TreeHash)]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct ContainerWithBigUnions {
@@ -479,13 +470,17 @@ pub mod tests {
                 pub same: SameTypeUnion,
                 pub mixed: MixedUnion,
             }
-            /**Zero-copy view over [`ContainerWithBigUnions`].
-
-This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
+            /// Zero-copy view over [`ContainerWithBigUnions`].
+            ///
+            /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
+            /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
+            /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
+            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
             pub struct ContainerWithBigUnionsRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ContainerWithBigUnionsRef<'a> {
                 pub fn big(&self) -> Result<BigUnionRef<'a>, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
@@ -498,7 +493,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                         self.bytes,
                         12usize,
                         3usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -517,7 +512,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                         self.bytes,
                         12usize,
                         3usize,
-                        1usize + 1,
+                        2usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -536,7 +531,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                         self.bytes,
                         12usize,
                         3usize,
-                        2usize + 1,
+                        3usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -561,21 +556,24 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
                     {
                         let big = self.big().expect("valid view");
-                        hasher
-                            .write(big.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&big);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let same = self.same().expect("valid view");
-                        hasher
-                            .write(same.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&same);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let mixed = self.mixed().expect("valid view");
-                        hasher
-                            .write(mixed.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&mixed);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }
@@ -599,10 +597,8 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                         if i == 0 && offset != 12usize {
                             return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
                         }
-                        if let Some(prev) = prev_offset {
-                            if offset < prev {
-                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                            }
+                        if let Some(prev) = prev_offset && offset < prev {
+                            return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
                         }
                         if offset > bytes.len() {
                             return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
@@ -612,7 +608,31 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for ContainerWithBigUnionsRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
+            impl<'a> ssz_types::view::ToOwnedSsz<ContainerWithBigUnions>
+            for ContainerWithBigUnionsRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                fn to_owned(&self) -> ContainerWithBigUnions {
+                    <ContainerWithBigUnionsRef<'a>>::to_owned(self)
+                }
+            }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ContainerWithBigUnionsRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> ContainerWithBigUnions {
                     ContainerWithBigUnions {
                         big: self.big().expect("valid view").to_owned(),

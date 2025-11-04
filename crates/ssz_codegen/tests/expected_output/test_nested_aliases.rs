@@ -5,12 +5,16 @@ pub mod tests {
         pub mod test_nested_aliases {
             #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
+            use ssz_types::view::{FixedVectorRef, VariableListRef};
             use ssz_derive::{Encode, Decode};
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const SIZE_1: u64 = 10u64;
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const SIZE_2: u64 = 10u64;
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const SIZE_3: u64 = 10u64;
             pub type A = u8;
             pub type B = A;
@@ -19,17 +23,7 @@ pub mod tests {
             pub type E = FixedVector<D, 5usize>;
             pub type F = VariableList<A, 10usize>;
             pub type G = FixedVector<F, 10usize>;
-            #[derive(
-                Clone,
-                Debug,
-                PartialEq,
-                Eq,
-                PartialOrd,
-                Ord,
-                Encode,
-                Decode,
-                TreeHash
-            )]
+            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TreeHash)]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct NestedAliasContainer {
@@ -38,13 +32,17 @@ pub mod tests {
                 pub field3: F,
                 pub field4: G,
             }
-            /**Zero-copy view over [`NestedAliasContainer`].
-
-This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
+            /// Zero-copy view over [`NestedAliasContainer`].
+            ///
+            /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
+            /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
+            /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
+            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
             pub struct NestedAliasContainerRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> NestedAliasContainerRef<'a> {
                 pub fn field1(&self) -> Result<BytesRef<'a>, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
@@ -57,7 +55,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                         self.bytes,
                         16usize,
                         4usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -78,7 +76,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                         self.bytes,
                         16usize,
                         4usize,
-                        1usize + 1,
+                        2usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -97,7 +95,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                         self.bytes,
                         16usize,
                         4usize,
-                        2usize + 1,
+                        3usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -121,7 +119,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                         self.bytes,
                         16usize,
                         4usize,
-                        3usize + 1,
+                        4usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -146,27 +144,31 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
                     {
                         let field1 = self.field1().expect("valid view");
-                        hasher
-                            .write(field1.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&field1);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let field2 = self.field2().expect("valid view");
-                        hasher
-                            .write(field2.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&field2);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let field3 = self.field3().expect("valid view");
-                        hasher
-                            .write(field3.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&field3);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let field4 = self.field4().expect("valid view");
-                        hasher
-                            .write(field4.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&field4);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }
@@ -190,10 +192,8 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                         if i == 0 && offset != 16usize {
                             return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
                         }
-                        if let Some(prev) = prev_offset {
-                            if offset < prev {
-                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                            }
+                        if let Some(prev) = prev_offset && offset < prev {
+                            return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
                         }
                         if offset > bytes.len() {
                             return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
@@ -203,13 +203,45 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for NestedAliasContainerRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
+            impl<'a> ssz_types::view::ToOwnedSsz<NestedAliasContainer>
+            for NestedAliasContainerRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                fn to_owned(&self) -> NestedAliasContainer {
+                    <NestedAliasContainerRef<'a>>::to_owned(self)
+                }
+            }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> NestedAliasContainerRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> NestedAliasContainer {
                     NestedAliasContainer {
-                        field1: self.field1().expect("valid view").to_owned(),
-                        field2: self.field2().expect("valid view").to_owned(),
-                        field3: self.field3().expect("valid view").to_owned(),
-                        field4: self.field4().expect("valid view").to_owned(),
+                        field1: self.field1().expect("valid view").to_owned().into(),
+                        field2: self
+                            .field2()
+                            .expect("valid view")
+                            .to_owned()
+                            .expect("valid view"),
+                        field3: self.field3().expect("valid view").to_owned().into(),
+                        field4: self
+                            .field4()
+                            .expect("valid view")
+                            .to_owned()
+                            .expect("valid view"),
                     }
                 }
             }

@@ -38,6 +38,86 @@ class Alpha(Container):
     c: Vector[uint8, 10]
 ```
 
+### Comments
+
+The parser supports four types of comments:
+
+- **Docstrings** (`"""..."""`): Triple-quoted documentation strings that are preserved and converted to Rust doc comments. Docstrings support multi-line text and are cleaned up to remove common indentation.
+  ```python
+  class Point(Container):
+      """
+      This is a doc comment for the class
+      It can span multiple lines
+      """
+      x: uint32
+      y: uint32
+  ```
+
+- **Doc comments** (`###`): Documentation comments preserved in the generated code
+  ```python
+  ### This is a doc comment for the class
+  ### It can span multiple lines
+  class Point(Container):
+      ### X coordinate of the point
+      x: uint32
+      ### Y coordinate of the point
+      y: uint32
+  ```
+  
+  **Merging docstrings and doc comments**: When both docstrings (`"""..."""`) and doc comments (`###`) are present on a class, they are merged in the generated Rust code with the docstring appearing first, followed by a blank line, then the doc comments:
+  ```python
+  ### This doc comment comes after the docstring
+  class PointWithBoth(Container):
+      """
+      This docstring comes first.
+      """
+      x: uint32
+  ```
+
+- **Pragma comments** (`#~#`): Special directive comments that control code generation behavior. Pragmas can specify additional derive macros or custom attributes.
+  
+  **Class-level pragmas** are placed before class definitions:
+  ```python
+  #~# derive: Serialize, Deserialize
+  #~# attr: #[repr(C)]
+  class Point(Container):
+      x: uint32
+      y: uint32
+  ```
+  
+  **Field-level pragmas** are placed before field definitions:
+  ```python
+  class Point(Container):
+      #~# field_attr: #[serde(rename = "x_coord")]
+      x: uint32
+      y: uint32
+  ```
+  
+  **Supported pragma formats:**
+  - `derive: Trait1, Trait2, ...` - Adds additional derive macros to the generated type. These are merged with configured derives and required SSZ derives (Encode, Decode, TreeHash).
+  - `attr: #[attribute]` - Adds struct-level attributes (e.g., `#[repr(C)]`, `#[cfg(test)]`).
+  - `field_attr: #[attribute]` - Adds field-level attributes (e.g., `#[serde(rename = "field_name")]`).
+  
+  Multiple pragmas can be specified on separate lines:
+  ```python
+  #~# derive: Serialize, Deserialize
+  #~# attr: #[repr(C)]
+  #~# attr: #[derive(Default)]
+  class Point(Container):
+      x: uint32
+  ```
+  
+  Pragmas are preserved through inheritance - child classes inherit parent pragmas and can add their own.
+
+- **Regular comments** (`#`): Standard comments that are discarded during parsing
+  ```python
+  # This comment is ignored
+  class Point(Container):
+      x: uint32
+  ```
+
+Docstrings appear at the beginning of a class body and are attached to the class. Doc comments appearing before class definitions or field definitions are attached to those elements and preserved through the parsing pipeline. Multiple consecutive doc comment lines are merged with newlines preserved. Both docstrings and doc comments are emitted in the generated Rust code as `///` comments with 80-character line wrapping.
+
 ### Inheritance
 ```python
 class Foo(StableContainer[5]):

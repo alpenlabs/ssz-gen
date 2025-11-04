@@ -1,0 +1,6 @@
+### Test multiple pragmas on a class
+#~# derive: Serialize, Deserialize
+#~# attr: #[repr(C)]
+class MultiPragmaContainer(Container):
+    x: uint32
+    y: uint32

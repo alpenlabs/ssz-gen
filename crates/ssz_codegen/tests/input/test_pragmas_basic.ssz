@@ -1,0 +1,4 @@
+### Test basic pragma with derive
+#~# derive: Default
+class BasicContainer(Container):
+    a: uint8

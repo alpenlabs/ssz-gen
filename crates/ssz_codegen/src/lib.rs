@@ -37,6 +37,7 @@ pub enum ModuleGeneration {
 pub mod codegen;
 pub mod derive_config;
 pub mod files;
+pub mod pragma;
 pub mod types;
 
 /// Run the code generation process in a build script (build.rs).

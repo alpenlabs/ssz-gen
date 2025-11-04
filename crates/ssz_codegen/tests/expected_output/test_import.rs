@@ -5,6 +5,7 @@ pub mod tests {
         pub mod test_common {
             #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
+            use ssz_types::view::{FixedVectorRef, VariableListRef};
             use ssz_derive::{Encode, Decode};
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
@@ -97,34 +98,29 @@ pub mod tests {
                     }
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const CONSTANT_VALUE: u64 = 5u64;
             pub type AliasUint8 = u8;
             pub type AliasAliasUint8 = AliasUint8;
             pub type AliasUnion = Option<u8>;
-            #[derive(
-                Clone,
-                Debug,
-                PartialEq,
-                Eq,
-                PartialOrd,
-                Ord,
-                Encode,
-                Decode,
-                TreeHash
-            )]
+            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TreeHash)]
             #[ssz(struct_behaviour = "stable_container", max_fields = 5usize)]
             #[tree_hash(struct_behaviour = "stable_container", max_fields = 5usize)]
             pub struct StableContainerClass {
                 pub a: Optional<u8>,
                 pub b: Optional<AliasUnion>,
             }
-            /**Zero-copy view over [`StableContainerClass`].
-
-This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
+            /// Zero-copy view over [`StableContainerClass`].
+            ///
+            /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
+            /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
+            /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
+            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
             pub struct StableContainerClassRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> StableContainerClassRef<'a> {
                 pub fn a(&self) -> Result<Optional<u8>, ssz::DecodeError> {
                     let bitvector_offset = 1usize;
@@ -139,7 +135,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                         container_bytes,
                         8usize,
                         2usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -160,7 +156,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                         container_bytes,
                         8usize,
                         2usize,
-                        1usize + 1,
+                        2usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -184,9 +180,15 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(5usize);
                     let a = self.a().expect("valid view");
-                    hasher.write(a.tree_hash_root().as_ref()).expect("write field");
+                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        H,
+                    >::tree_hash_root(&a);
+                    hasher.write(root.as_ref()).expect("write field");
                     let b = self.b().expect("valid view");
-                    hasher.write(b.tree_hash_root().as_ref()).expect("write field");
+                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        H,
+                    >::tree_hash_root(&b);
+                    hasher.write(root.as_ref()).expect("write field");
                     hasher.finish().expect("finish hasher")
                 }
             }
@@ -211,7 +213,31 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for StableContainerClassRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
+            impl<'a> ssz_types::view::ToOwnedSsz<StableContainerClass>
+            for StableContainerClassRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                fn to_owned(&self) -> StableContainerClass {
+                    <StableContainerClassRef<'a>>::to_owned(self)
+                }
+            }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> StableContainerClassRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> StableContainerClass {
                     StableContainerClass {
                         a: self.a().expect("valid view").to_owned(),
@@ -223,6 +249,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
         pub mod test_import_1 {
             #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
+            use ssz_types::view::{FixedVectorRef, VariableListRef};
             use ssz_derive::{Encode, Decode};
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
@@ -336,8 +363,11 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     }
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const CONSTANT_VALUE: u64 = 5u64;
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const CONSTANT_VALUE_2: u64 = 5u64;
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const CONSTANT_VALUE_IMPORTED: u64 = crate::tests::input::test_common::CONSTANT_VALUE;
             pub type AliasListImportedLength = VariableList<
                 crate::tests::input::test_common::AliasUint8,
@@ -351,29 +381,23 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
             pub type AliasUint8 = crate::tests::input::test_common::AliasUint8;
             pub type AliasAliasUint8 = crate::tests::input::test_common::AliasAliasUint8;
             pub type AliasUnion = crate::tests::input::test_common::AliasUnion;
-            #[derive(
-                Clone,
-                Debug,
-                PartialEq,
-                Eq,
-                PartialOrd,
-                Ord,
-                Encode,
-                Decode,
-                TreeHash
-            )]
+            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TreeHash)]
             #[ssz(struct_behaviour = "stable_container", max_fields = 5usize)]
             #[tree_hash(struct_behaviour = "stable_container", max_fields = 5usize)]
             pub struct StableContainerClass {
                 pub a: Optional<crate::tests::input::test_common::AliasUint8>,
             }
-            /**Zero-copy view over [`StableContainerClass`].
-
-This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
+            /// Zero-copy view over [`StableContainerClass`].
+            ///
+            /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
+            /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
+            /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
+            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
             pub struct StableContainerClassRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> StableContainerClassRef<'a> {
                 pub fn a(&self) -> Result<Optional<u8>, ssz::DecodeError> {
                     let bitvector_offset = 1usize;
@@ -388,7 +412,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                         container_bytes,
                         4usize,
                         1usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -412,7 +436,10 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(5usize);
                     let a = self.a().expect("valid view");
-                    hasher.write(a.tree_hash_root().as_ref()).expect("write field");
+                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        H,
+                    >::tree_hash_root(&a);
+                    hasher.write(root.as_ref()).expect("write field");
                     hasher.finish().expect("finish hasher")
                 }
             }
@@ -437,7 +464,31 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for StableContainerClassRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
+            impl<'a> ssz_types::view::ToOwnedSsz<StableContainerClass>
+            for StableContainerClassRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                fn to_owned(&self) -> StableContainerClass {
+                    <StableContainerClassRef<'a>>::to_owned(self)
+                }
+            }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> StableContainerClassRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> StableContainerClass {
                     StableContainerClass {
                         a: self.a().expect("valid view").to_owned(),
@@ -448,21 +499,12 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
         pub mod test_import_2 {
             #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
+            use ssz_types::view::{FixedVectorRef, VariableListRef};
             use ssz_derive::{Encode, Decode};
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
-            #[derive(
-                Clone,
-                Debug,
-                PartialEq,
-                Eq,
-                PartialOrd,
-                Ord,
-                Encode,
-                Decode,
-                TreeHash
-            )]
+            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TreeHash)]
             #[ssz(struct_behaviour = "profile")]
             #[tree_hash(struct_behaviour = "profile", max_fields = 5usize)]
             pub struct ProfileInehritance {
@@ -471,13 +513,17 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                 #[tree_hash(stable_index = 1usize)]
                 pub b: Optional<Option<u8>>,
             }
-            /**Zero-copy view over [`ProfileInehritance`].
-
-This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
+            /// Zero-copy view over [`ProfileInehritance`].
+            ///
+            /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
+            /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
+            /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
+            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
             pub struct ProfileInehritanceRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ProfileInehritanceRef<'a> {
                 pub fn a(&self) -> Result<u8, ssz::DecodeError> {
                     let bitvector_offset = 1usize;
@@ -505,7 +551,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                         container_bytes,
                         5usize,
                         1usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -531,12 +577,18 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     {
                         let a = self.a().expect("valid view");
                         for _ in 0..0usize {}
-                        hasher.write(a.tree_hash_root().as_ref()).expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&a);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let b = self.b().expect("valid view");
                         for _ in 0..1usize {}
-                        hasher.write(b.tree_hash_root().as_ref()).expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&b);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }
@@ -562,7 +614,31 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for ProfileInehritanceRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
+            impl<'a> ssz_types::view::ToOwnedSsz<ProfileInehritance>
+            for ProfileInehritanceRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                fn to_owned(&self) -> ProfileInehritance {
+                    <ProfileInehritanceRef<'a>>::to_owned(self)
+                }
+            }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ProfileInehritanceRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> ProfileInehritance {
                     ProfileInehritance {
                         a: self.a().expect("valid view"),

@@ -7,11 +7,56 @@ It supports:
 
 * `class` defs
   * with only typed fields, but without default values
-  * with(out) doc comments **(planned)**
+  * with doc comments and pragmas
   * without methods
   * without decorators
 * type alias assignments
 * integer constant assignments
+
+## Comments
+
+The parser supports four types of comments:
+
+- **Docstrings** (`"""..."""`): Triple-quoted documentation strings that are preserved and attached to classes. Docstrings support multi-line text and are cleaned up to remove common indentation.
+  ```python
+  class Point(Container):
+      """
+      This is a docstring for the class
+      It can span multiple lines
+      """
+      x: uint32
+  ```
+
+- **Doc comments** (`###`): Documentation comments that are preserved and attached to classes or fields
+  ```python
+  ### This is a doc comment for the class
+  ### It can span multiple lines
+  class Point(Container):
+      ### X coordinate
+      x: uint32
+  ```
+
+- **Pragma comments** (`#~#`): Special directive comments that are preserved in the AST and schema. Pragmas can be attached to classes and fields to provide metadata or directives for code generation (handled by downstream tools like `ssz_codegen`).
+  ```python
+  #~# derive: Serialize, Deserialize
+  #~# attr: #[repr(C)]
+  class Point(Container):
+      #~# field_attr: #[serde(rename = "x_coord")]
+      x: uint32
+  ```
+  
+  Multiple pragmas can be specified on consecutive lines. Class-level pragmas appear before the class definition, and field-level pragmas appear before field definitions.
+
+- **Regular comments** (`#`): Standard comments that are discarded during parsing
+  ```python
+  # This comment is ignored
+  class Point(Container):
+      x: uint32
+  ```
+
+Docstrings appear at the beginning of a class body and are attached to the class. Doc comments and pragmas appearing before a class definition are attached to the class. Similarly, comments appearing before field definitions within a class body are attached to those fields.
+
+When both docstrings (`"""..."""`) and doc comments (`###`) are present on a class, they are merged with the docstring appearing first, followed by a blank line, then the doc comments.
 
 ## Design
 

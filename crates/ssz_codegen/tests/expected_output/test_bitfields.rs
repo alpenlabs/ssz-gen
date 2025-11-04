@@ -5,13 +5,18 @@ pub mod tests {
         pub mod test_bitfields {
             #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
+            use ssz_types::view::{FixedVectorRef, VariableListRef};
             use ssz_derive::{Encode, Decode};
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const SMALL_SIZE: u64 = 1u64;
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const MEDIUM_SIZE: u64 = 64u64;
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const LARGE_SIZE: u64 = 256u64;
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const POWER_OF_TWO: u64 = 128u64;
             pub type TinyBitlist = BitList<1usize>;
             pub type StandardBitlist = BitList<64usize>;
@@ -19,17 +24,7 @@ pub mod tests {
             pub type TinyBitvector = BitVector<1usize>;
             pub type StandardBitvector = BitVector<64usize>;
             pub type LargeBitvector = BitVector<128usize>;
-            #[derive(
-                Clone,
-                Debug,
-                PartialEq,
-                Eq,
-                PartialOrd,
-                Ord,
-                Encode,
-                Decode,
-                TreeHash
-            )]
+            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TreeHash)]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct BitfieldContainer {
@@ -40,13 +35,17 @@ pub mod tests {
                 pub std_vec: StandardBitvector,
                 pub large_vec: LargeBitvector,
             }
-            /**Zero-copy view over [`BitfieldContainer`].
-
-This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
+            /// Zero-copy view over [`BitfieldContainer`].
+            ///
+            /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
+            /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
+            /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
+            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
             pub struct BitfieldContainerRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BitfieldContainerRef<'a> {
                 pub fn tiny_list(
                     &self,
@@ -61,7 +60,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                         self.bytes,
                         37usize,
                         3usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -82,7 +81,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                         self.bytes,
                         37usize,
                         3usize,
-                        1usize + 1,
+                        2usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -103,7 +102,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                         self.bytes,
                         37usize,
                         3usize,
-                        2usize + 1,
+                        3usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -170,39 +169,45 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
                     {
                         let tiny_list = self.tiny_list().expect("valid view");
-                        hasher
-                            .write(tiny_list.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&tiny_list);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let std_list = self.std_list().expect("valid view");
-                        hasher
-                            .write(std_list.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&std_list);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let large_list = self.large_list().expect("valid view");
-                        hasher
-                            .write(large_list.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&large_list);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let tiny_vec = self.tiny_vec().expect("valid view");
-                        hasher
-                            .write(tiny_vec.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&tiny_vec);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let std_vec = self.std_vec().expect("valid view");
-                        hasher
-                            .write(std_vec.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&std_vec);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let large_vec = self.large_vec().expect("valid view");
-                        hasher
-                            .write(large_vec.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&large_vec);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }
@@ -226,10 +231,8 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                         if i == 0 && offset != 37usize {
                             return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
                         }
-                        if let Some(prev) = prev_offset {
-                            if offset < prev {
-                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                            }
+                        if let Some(prev) = prev_offset && offset < prev {
+                            return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
                         }
                         if offset > bytes.len() {
                             return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
@@ -239,7 +242,31 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for BitfieldContainerRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
+            impl<'a> ssz_types::view::ToOwnedSsz<BitfieldContainer>
+            for BitfieldContainerRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                fn to_owned(&self) -> BitfieldContainer {
+                    <BitfieldContainerRef<'a>>::to_owned(self)
+                }
+            }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BitfieldContainerRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> BitfieldContainer {
                     BitfieldContainer {
                         tiny_list: self.tiny_list().expect("valid view").to_owned(),

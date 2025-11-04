@@ -5,6 +5,7 @@ pub mod tests {
         pub mod test_external {
             #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
+            use ssz_types::view::{FixedVectorRef, VariableListRef};
             use ssz_derive::{Encode, Decode};
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
@@ -231,30 +232,24 @@ pub mod tests {
             }
             pub type TestA = external_ssz::A;
             pub type TestB = external_ssz::module_a::module_b::B;
-            #[derive(
-                Clone,
-                Debug,
-                PartialEq,
-                Eq,
-                PartialOrd,
-                Ord,
-                Encode,
-                Decode,
-                TreeHash
-            )]
+            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TreeHash)]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct ExternalContainer {
                 pub field_a: external_ssz::A,
                 pub field_b: external_ssz::module_a::module_b::B,
             }
-            /**Zero-copy view over [`ExternalContainer`].
-
-This type wraps SSZ-encoded bytes without allocating. Fields are accessed via lazy getter methods. Use `.to_owned()` to convert to the owned type when needed.*/
-            #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
+            /// Zero-copy view over [`ExternalContainer`].
+            ///
+            /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
+            /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
+            /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
+            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
             pub struct ExternalContainerRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ExternalContainerRef<'a> {
                 pub fn field_a(&self) -> Result<external_ssz::A, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
@@ -267,7 +262,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                         self.bytes,
                         8usize,
                         2usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -288,7 +283,7 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                         self.bytes,
                         8usize,
                         2usize,
-                        1usize + 1,
+                        2usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -313,15 +308,17 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
                     {
                         let field_a = self.field_a().expect("valid view");
-                        hasher
-                            .write(field_a.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&field_a);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let field_b = self.field_b().expect("valid view");
-                        hasher
-                            .write(field_b.tree_hash_root().as_ref())
-                            .expect("write field");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&field_b);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }
@@ -345,10 +342,8 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                         if i == 0 && offset != 8usize {
                             return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
                         }
-                        if let Some(prev) = prev_offset {
-                            if offset < prev {
-                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                            }
+                        if let Some(prev) = prev_offset && offset < prev {
+                            return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
                         }
                         if offset > bytes.len() {
                             return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
@@ -358,7 +353,31 @@ This type wraps SSZ-encoded bytes without allocating. Fields are accessed via la
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for ExternalContainerRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
+            impl<'a> ssz_types::view::ToOwnedSsz<ExternalContainer>
+            for ExternalContainerRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                fn to_owned(&self) -> ExternalContainer {
+                    <ExternalContainerRef<'a>>::to_owned(self)
+                }
+            }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ExternalContainerRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> ExternalContainer {
                     ExternalContainer {
                         field_a: self.field_a().expect("valid view").to_owned(),

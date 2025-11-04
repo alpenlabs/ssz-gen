@@ -518,6 +518,10 @@ pub struct ClassFieldDef {
     pub name: String,
     /// The type of the field
     pub ty: TypeResolution,
+    /// Pragma comments for the field
+    pub pragmas: Vec<String>,
+    /// Doc comment for the field
+    pub doc_comment: Option<String>,
 }
 
 /// Definition of a class with its base type and fields
@@ -531,6 +535,12 @@ pub struct ClassDef {
     pub fields: Vec<ClassFieldDef>,
     /// Token streams for each field
     pub field_tokens: Vec<TokenStream>,
+    /// Pragma comments for the class
+    pub pragmas: Vec<String>,
+    /// Doc comment for the class (from ### comments)
+    pub doc_comment: Option<String>,
+    /// Docstring for the class (from """ docstrings)
+    pub doc: Option<String>,
 }
 
 impl ClassDef {
@@ -615,13 +625,56 @@ impl ClassDef {
     ///
     /// A TokenStream containing the generated Rust code for the class
     pub fn to_token_stream(&self, ident: &Ident, derive_cfg: &DeriveConfig) -> TokenStream {
+        use crate::pragma::ParsedPragma;
+
         let field_tokens = &self.field_tokens;
         let type_name = ident.to_string();
-        let owned_derive = derive_cfg.owned_derive_attr(&type_name);
+
+        // Parse pragmas
+        let pragmas = ParsedPragma::parse(&self.pragmas);
+        // Container, StableContainer, and Profile don't support PartialOrd/Ord
+        let is_container = matches!(
+            self.base,
+            BaseClass::Container | BaseClass::StableContainer(_) | BaseClass::Profile(_)
+        );
+        let owned_derive =
+            derive_cfg.owned_derive_attr_with_pragmas_filtered(&type_name, &pragmas, is_container);
+
+        // Build struct-level attributes from pragmas
+        let struct_attrs = if !pragmas.struct_attrs.is_empty() {
+            let attrs = &pragmas.struct_attrs;
+            quote! {
+                #(#attrs)*
+            }
+        } else {
+            quote! {}
+        };
+
+        // Format doc comment for the struct
+        // Merge doc (""") and doc_comment (###) with doc taking priority
+        let doc_comments = match (&self.doc, &self.doc_comment) {
+            (Some(docstring), Some(doc_comment)) => {
+                // Both exist: docstring first, then blank line, then doc_comment
+                let merged = format!("{}\n\n{}", docstring.trim(), doc_comment.trim());
+                Self::format_doc_comment(&merged)
+            }
+            (Some(docstring), None) => {
+                // Only docstring
+                Self::format_doc_comment(docstring)
+            }
+            (None, Some(doc_comment)) => {
+                // Only doc_comment
+                Self::format_doc_comment(doc_comment)
+            }
+            (None, None) => quote! {},
+        };
+
         match self.base {
             BaseClass::Container => {
                 quote! {
+                    #doc_comments
                     #owned_derive
+                    #struct_attrs
                     #[ssz(struct_behaviour="container")]
                     #[tree_hash(struct_behaviour="container")]
                     pub struct #ident {
@@ -632,7 +685,9 @@ impl ClassDef {
             BaseClass::StableContainer(Some(max)) => {
                 let max = max as usize;
                 quote! {
+                    #doc_comments
                     #owned_derive
+                    #struct_attrs
                     #[ssz(struct_behaviour="stable_container", max_fields=#max)]
                     #[tree_hash(struct_behaviour="stable_container", max_fields=#max)]
                     pub struct #ident {
@@ -649,7 +704,9 @@ impl ClassDef {
                     .collect::<Vec<_>>();
 
                 quote! {
+                    #doc_comments
                     #owned_derive
+                    #struct_attrs
                     #[ssz(struct_behaviour="profile")]
                     #[tree_hash(struct_behaviour="profile", max_fields=#max)]
                     pub struct #ident {
@@ -757,9 +814,78 @@ impl ClassDef {
     ///
     /// # Returns
     ///
+    /// Formats a doc comment string into `///` lines with 80-character wrapping.
+    /// The 80-character limit includes the `/// ` prefix.
+    pub fn format_doc_comment(text: &str) -> TokenStream {
+        if text.trim().is_empty() {
+            return quote! {};
+        }
+
+        const MAX_LINE_LENGTH: usize = 80;
+        const PREFIX_LENGTH: usize = 4; // "/// "
+
+        let mut lines = Vec::new();
+        let mut current_line = String::new();
+
+        // Split by newlines first to preserve paragraph breaks
+        for paragraph in text.split('\n') {
+            let trimmed = paragraph.trim();
+            if trimmed.is_empty() {
+                // Empty line - add as blank doc comment
+                if !current_line.is_empty() {
+                    lines.push(format!("/// {}", current_line.trim()));
+                    current_line.clear();
+                }
+                lines.push("///".to_string());
+                continue;
+            }
+
+            // Word-wrap within paragraph
+            for word in trimmed.split_whitespace() {
+                let test_line = if current_line.is_empty() {
+                    word.to_string()
+                } else {
+                    format!("{} {}", current_line, word)
+                };
+
+                // Check if line with prefix fits within 80 chars
+                if test_line.len() + PREFIX_LENGTH <= MAX_LINE_LENGTH {
+                    current_line = test_line;
+                } else {
+                    if !current_line.is_empty() {
+                        lines.push(format!("/// {}", current_line.trim()));
+                    }
+                    current_line = word.to_string();
+                    // If a single word is too long, we still need to add it
+                    if current_line.len() + PREFIX_LENGTH > MAX_LINE_LENGTH {
+                        lines.push(format!("/// {}", current_line.trim()));
+                        current_line.clear();
+                    }
+                }
+            }
+        }
+
+        // Add remaining line
+        if !current_line.is_empty() {
+            lines.push(format!("/// {}", current_line.trim()));
+        }
+
+        // Parse each line as a doc comment
+        let doc_lines: Vec<TokenStream> = lines
+            .iter()
+            .map(|line| syn::parse_str::<TokenStream>(line).unwrap_or_else(|_| quote! {}))
+            .collect();
+
+        quote! {
+            #(#doc_lines)*
+        }
+    }
+
     /// A [`TokenStream`] containing the generated Rust code for the view struct (e.g.,
     /// `FooRef<'a>`).
     pub fn to_view_struct(&self, ident: &Ident, derive_cfg: &DeriveConfig) -> TokenStream {
+        use crate::pragma::ParsedPragma;
+
         let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
         let doc_comment = format!(
             "Zero-copy view over [`{}`].\n\n\
@@ -768,14 +894,23 @@ impl ClassDef {
             Use `.to_owned()` to convert to the owned type when needed.",
             ident
         );
+        let doc_comments = Self::format_doc_comment(&doc_comment);
         let type_name = ident.to_string();
-        let view_derive = derive_cfg.view_derive_attr(&type_name);
+        let pragmas = ParsedPragma::parse(&self.pragmas);
+        // Container, StableContainer, and Profile don't support PartialOrd/Ord
+        let is_container = matches!(
+            self.base,
+            BaseClass::Container | BaseClass::StableContainer(_) | BaseClass::Profile(_)
+        );
+        let view_derive =
+            derive_cfg.view_derive_attr_with_pragmas_filtered(&type_name, &pragmas, is_container);
 
         // All view structs are now thin wrappers around bytes
         match self.base {
             BaseClass::Container | BaseClass::StableContainer(_) | BaseClass::Profile(_) => {
                 quote! {
-                    #[doc = #doc_comment]
+                    #doc_comments
+                    #[allow(dead_code, reason = "generated code using ssz-gen")]
                     #view_derive
                     pub struct #ref_ident<'a> {
                         bytes: &'a [u8],
@@ -831,7 +966,8 @@ impl ClassDef {
                             quote! {
                                 {
                                     let #field_name = self.#field_name().expect("valid view");
-                                    hasher.write(#field_name.tree_hash_root().as_ref()).expect("write field");
+                                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<H>::tree_hash_root(&#field_name);
+                                    hasher.write(root.as_ref()).expect("write field");
                                 }
                             }
                         }
@@ -891,7 +1027,8 @@ impl ClassDef {
                             let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(#max);
                             #(
                                 let #field_names = self.#field_names().expect("valid view");
-                                hasher.write(#field_names.tree_hash_root().as_ref()).expect("write field");
+                                let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<H>::tree_hash_root(&#field_names);
+                                hasher.write(root.as_ref()).expect("write field");
                             )*
 
                             hasher.finish().expect("finish hasher")
@@ -933,7 +1070,8 @@ impl ClassDef {
                                     for _ in 0..#indices {
                                         // Placeholder for proper index handling
                                     }
-                                    hasher.write(#field_names.tree_hash_root().as_ref()).expect("write field");
+                                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<H>::tree_hash_root(&#field_names);
+                                    hasher.write(root.as_ref()).expect("write field");
                                 }
                             )*
 
@@ -1031,6 +1169,7 @@ impl ClassDef {
                             variable_index += 1;
                         }
                     }
+                    let next_variable_index = variable_index + 1;
 
                     if bitvector_offset > 0 {
                         // Account for bitvector at start
@@ -1048,7 +1187,7 @@ impl ClassDef {
                                     container_bytes,
                                     #fixed_portion_size,
                                     #num_variable_fields,
-                                    #variable_index + 1
+                                    #next_variable_index
                                 )?;
                                 if start > end || end > container_bytes.len() {
                                     return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -1070,7 +1209,7 @@ impl ClassDef {
                                     self.bytes,
                                     #fixed_portion_size,
                                     #num_variable_fields,
-                                    #variable_index + 1
+                                    #next_variable_index
                                 )?;
                                 if start > end || end > self.bytes.len() {
                                     return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -1085,6 +1224,7 @@ impl ClassDef {
             .collect();
 
         quote! {
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> #ref_ident<'a> {
                 #(#getters)*
             }
@@ -1145,10 +1285,8 @@ impl ClassDef {
                             }
 
                             // Offsets must not decrease
-                            if let Some(prev) = prev_offset {
-                                if offset < prev {
-                                    return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                                }
+                            if let Some(prev) = prev_offset && offset < prev {
+                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
                             }
 
                             // Offset must not exceed container length
@@ -1221,10 +1359,8 @@ impl ClassDef {
                                     return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
                                 }
 
-                                if let Some(prev) = prev_offset {
-                                    if offset < prev {
-                                        return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                                    }
+                                if let Some(prev) = prev_offset && offset < prev {
+                                    return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
                                 }
 
                                 if offset > bytes.len() {
@@ -1278,6 +1414,83 @@ impl ClassDef {
         }
     }
 
+    /// Generates the [`SszTypeInfo`](ssz::view::SszTypeInfo) implementation for view structs.
+    ///
+    /// This is required for view types to be used in
+    /// [`VariableListRef`](ssz_types::view::VariableListRef) and
+    /// [`FixedVectorRef`](ssz_types::view::FixedVectorRef).
+    ///
+    /// # Arguments
+    ///
+    /// * `ident` - The base identifier for the class
+    ///
+    /// # Returns
+    ///
+    /// A [`TokenStream`] containing the [`SszTypeInfo`](ssz::view::SszTypeInfo) implementation.
+    pub fn to_view_ssz_type_info_impl(&self, ident: &Ident) -> TokenStream {
+        let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
+        let (_, fixed_size, _) = self.compute_layout();
+
+        match fixed_size {
+            Some(size) => {
+                // Fixed-size container
+                quote! {
+                    impl<'a> ssz::view::SszTypeInfo for #ref_ident<'a> {
+                        fn is_ssz_fixed_len() -> bool {
+                            true
+                        }
+
+                        fn ssz_fixed_len() -> usize {
+                            #size
+                        }
+                    }
+                }
+            }
+            None => {
+                // Variable-size container
+                quote! {
+                    impl<'a> ssz::view::SszTypeInfo for #ref_ident<'a> {
+                        fn is_ssz_fixed_len() -> bool {
+                            false
+                        }
+
+                        fn ssz_fixed_len() -> usize {
+                            0
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Generates the [`ToOwnedSsz`](ssz_types::view::ToOwnedSsz) implementation for container view
+    /// types.
+    ///
+    /// This is required for container views to be used in
+    /// [`VariableListRef`](ssz_types::view::VariableListRef) and
+    /// [`FixedVectorRef`](ssz_types::view::FixedVectorRef).
+    ///
+    /// # Arguments
+    ///
+    /// * `ident` - The base identifier for the class
+    ///
+    /// # Returns
+    ///
+    /// A [`TokenStream`] containing the [`ToOwnedSsz`](ssz_types::view::ToOwnedSsz) implementation.
+    pub fn to_view_to_owned_ssz_impl(&self, ident: &Ident) -> TokenStream {
+        let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
+
+        quote! {
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
+            impl<'a> ssz_types::view::ToOwnedSsz<#ident> for #ref_ident<'a> {
+                #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+                fn to_owned(&self) -> #ident {
+                    <#ref_ident<'a>>::to_owned(self)
+                }
+            }
+        }
+    }
+
     /// Generates the to_owned implementation for converting view to owned
     ///
     /// Now uses getter methods instead of direct field access.
@@ -1308,8 +1521,29 @@ impl ClassDef {
                             #field_name: self.#field_name().expect("valid view")
                         }
                     }
+                    TypeResolutionKind::List(ty, _size) => {
+                        // Check if it's List<u8, N> which uses BytesRef
+                        let inner = &**ty;
+                        if matches!(inner.resolution, TypeResolutionKind::UInt(8)) {
+                            // BytesRef::to_owned() returns Vec<u8>, need to convert to VariableList
+                            quote! {
+                                #field_name: self.#field_name().expect("valid view").to_owned().into()
+                            }
+                        } else {
+                            // VariableListRef::to_owned() returns Result<VariableList<T, N>, Error>
+                            quote! {
+                                #field_name: self.#field_name().expect("valid view").to_owned().expect("valid view")
+                            }
+                        }
+                    }
+                    TypeResolutionKind::Vector(_, _) => {
+                        // FixedVectorRef::to_owned() returns Result<FixedVector<T, N>, Error>
+                        quote! {
+                            #field_name: self.#field_name().expect("valid view").to_owned().expect("valid view")
+                        }
+                    }
                     _ => {
-                        // For complex types, call getter and then to_owned()
+                        // For other complex types, call getter and then to_owned()
                         quote! {
                             #field_name: self.#field_name().expect("valid view").to_owned()
                         }
@@ -1319,7 +1553,9 @@ impl ClassDef {
             .collect();
 
         quote! {
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> #ref_ident<'a> {
+                #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
                 pub fn to_owned(&self) -> #ident {
                     #ident {
                         #(#field_conversions),*

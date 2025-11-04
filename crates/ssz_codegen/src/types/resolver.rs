@@ -638,6 +638,9 @@ impl<'a> TypeResolver<'a> {
                 fields: vec![],
                 field_tokens: vec![],
                 field_index: HashMap::new(),
+                pragmas: vec![],
+                doc_comment: None,
+                doc: None,
             },
             ClassDefinition::StableContainer => {
                 let max = match args.first() {
@@ -652,6 +655,9 @@ impl<'a> TypeResolver<'a> {
                     fields: vec![],
                     field_tokens: vec![],
                     field_index: HashMap::new(),
+                    pragmas: vec![],
+                    doc_comment: None,
+                    doc: None,
                 }
             }
             ClassDefinition::Profile => {
@@ -675,6 +681,9 @@ impl<'a> TypeResolver<'a> {
                         fields: class_def.fields,
                         field_tokens: class_def.field_tokens,
                         field_index: class_def.field_index,
+                        pragmas: class_def.pragmas,
+                        doc_comment: class_def.doc_comment,
+                        doc: class_def.doc,
                     }
                 } else {
                     panic!("Expected profile to inherit from a stable container");
@@ -729,12 +738,18 @@ impl<'a> TypeResolver<'a> {
                     fields: vec![],
                     field_tokens: vec![],
                     field_index: HashMap::new(),
+                    pragmas: vec![],
+                    doc_comment: None,
+                    doc: None,
                 }),
                 BaseClass::StableContainer(Some(max)) => ClassDefinition::Custom(ClassDef {
                     base: BaseClass::StableContainer(Some(*max)),
                     fields: vec![],
                     field_tokens: vec![],
                     field_index: HashMap::new(),
+                    pragmas: vec![],
+                    doc_comment: None,
+                    doc: None,
                 }),
                 BaseClass::Profile(Some((name, max))) => {
                     let resolvers = self.resolvers.borrow();
@@ -750,6 +765,9 @@ impl<'a> TypeResolver<'a> {
                         fields: resolved_def.fields,
                         field_tokens: resolved_def.field_tokens,
                         field_index: resolved_def.field_index,
+                        pragmas: resolved_def.pragmas,
+                        doc_comment: resolved_def.doc_comment,
+                        doc: resolved_def.doc,
                     })
                 }
                 _ => panic!(
