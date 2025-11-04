@@ -22,10 +22,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Clone, Debug, PartialEq, Eq, Default, Copy)]
             pub struct BasicContainerRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BasicContainerRef<'a> {
                 pub fn a(&self) -> Result<u8, ssz::DecodeError> {
                     let offset = 0usize;
@@ -81,13 +83,23 @@ pub mod tests {
                     1usize
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<BasicContainer>
             for BasicContainerRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> BasicContainer {
                     <BasicContainerRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BasicContainerRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> BasicContainer {
                     BasicContainer {
                         a: self.a().expect("valid view"),

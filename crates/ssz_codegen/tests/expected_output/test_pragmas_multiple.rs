@@ -34,10 +34,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Copy)]
             pub struct MultiPragmaContainerRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> MultiPragmaContainerRef<'a> {
                 pub fn x(&self) -> Result<u32, ssz::DecodeError> {
                     let offset = 0usize;
@@ -110,13 +112,23 @@ pub mod tests {
                     8usize
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<MultiPragmaContainer>
             for MultiPragmaContainerRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> MultiPragmaContainer {
                     <MultiPragmaContainerRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> MultiPragmaContainerRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> MultiPragmaContainer {
                     MultiPragmaContainer {
                         x: self.x().expect("valid view"),

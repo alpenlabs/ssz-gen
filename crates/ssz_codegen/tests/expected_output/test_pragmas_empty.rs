@@ -22,10 +22,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Clone, Debug, PartialEq, Eq, Copy)]
             pub struct EmptyPragmaContainerRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> EmptyPragmaContainerRef<'a> {
                 pub fn x(&self) -> Result<u8, ssz::DecodeError> {
                     let offset = 0usize;
@@ -81,13 +83,23 @@ pub mod tests {
                     1usize
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<EmptyPragmaContainer>
             for EmptyPragmaContainerRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> EmptyPragmaContainer {
                     <EmptyPragmaContainerRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> EmptyPragmaContainerRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> EmptyPragmaContainer {
                     EmptyPragmaContainer {
                         x: self.x().expect("valid view"),
@@ -105,10 +117,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Clone, Debug, PartialEq, Eq, Copy)]
             pub struct EmptyValueContainerRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> EmptyValueContainerRef<'a> {
                 pub fn y(&self) -> Result<u16, ssz::DecodeError> {
                     let offset = 0usize;
@@ -164,13 +178,23 @@ pub mod tests {
                     2usize
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<EmptyValueContainer>
             for EmptyValueContainerRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> EmptyValueContainer {
                     <EmptyValueContainerRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> EmptyValueContainerRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> EmptyValueContainer {
                     EmptyValueContainer {
                         y: self.y().expect("valid view"),

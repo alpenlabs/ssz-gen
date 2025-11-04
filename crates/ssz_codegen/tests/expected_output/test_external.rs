@@ -244,10 +244,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Clone, Debug, PartialEq, Eq, Copy)]
             pub struct ExternalContainerRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ExternalContainerRef<'a> {
                 pub fn field_a(&self) -> Result<external_ssz::A, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
@@ -260,7 +262,7 @@ pub mod tests {
                         self.bytes,
                         8usize,
                         2usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -281,7 +283,7 @@ pub mod tests {
                         self.bytes,
                         8usize,
                         2usize,
-                        1usize + 1,
+                        2usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -340,10 +342,8 @@ pub mod tests {
                         if i == 0 && offset != 8usize {
                             return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
                         }
-                        if let Some(prev) = prev_offset {
-                            if offset < prev {
-                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                            }
+                        if let Some(prev) = prev_offset && offset < prev {
+                            return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
                         }
                         if offset > bytes.len() {
                             return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
@@ -361,13 +361,23 @@ pub mod tests {
                     0
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<ExternalContainer>
             for ExternalContainerRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> ExternalContainer {
                     <ExternalContainerRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ExternalContainerRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> ExternalContainer {
                     ExternalContainer {
                         field_a: self.field_a().expect("valid view").to_owned(),

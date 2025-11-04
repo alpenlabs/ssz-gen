@@ -115,10 +115,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Clone, Debug, PartialEq, Eq, Copy)]
             pub struct StableContainerClassRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> StableContainerClassRef<'a> {
                 pub fn a(&self) -> Result<Optional<u8>, ssz::DecodeError> {
                     let bitvector_offset = 1usize;
@@ -133,7 +135,7 @@ pub mod tests {
                         container_bytes,
                         8usize,
                         2usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -154,7 +156,7 @@ pub mod tests {
                         container_bytes,
                         8usize,
                         2usize,
-                        1usize + 1,
+                        2usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -219,13 +221,23 @@ pub mod tests {
                     0
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<StableContainerClass>
             for StableContainerClassRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> StableContainerClass {
                     <StableContainerClassRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> StableContainerClassRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> StableContainerClass {
                     StableContainerClass {
                         a: self.a().expect("valid view").to_owned(),
@@ -380,10 +392,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Clone, Debug, PartialEq, Eq, Copy)]
             pub struct StableContainerClassRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> StableContainerClassRef<'a> {
                 pub fn a(&self) -> Result<Optional<u8>, ssz::DecodeError> {
                     let bitvector_offset = 1usize;
@@ -398,7 +412,7 @@ pub mod tests {
                         container_bytes,
                         4usize,
                         1usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -458,13 +472,23 @@ pub mod tests {
                     0
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<StableContainerClass>
             for StableContainerClassRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> StableContainerClass {
                     <StableContainerClassRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> StableContainerClassRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> StableContainerClass {
                     StableContainerClass {
                         a: self.a().expect("valid view").to_owned(),
@@ -494,10 +518,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Clone, Debug, PartialEq, Eq, Copy)]
             pub struct ProfileInehritanceRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ProfileInehritanceRef<'a> {
                 pub fn a(&self) -> Result<u8, ssz::DecodeError> {
                     let bitvector_offset = 1usize;
@@ -525,7 +551,7 @@ pub mod tests {
                         container_bytes,
                         5usize,
                         1usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -596,13 +622,23 @@ pub mod tests {
                     0
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<ProfileInehritance>
             for ProfileInehritanceRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> ProfileInehritance {
                     <ProfileInehritanceRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ProfileInehritanceRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> ProfileInehritance {
                     ProfileInehritance {
                         a: self.a().expect("valid view"),

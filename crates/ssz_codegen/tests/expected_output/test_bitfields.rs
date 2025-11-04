@@ -40,10 +40,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Clone, Debug, PartialEq, Eq, Copy)]
             pub struct BitfieldContainerRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BitfieldContainerRef<'a> {
                 pub fn tiny_list(
                     &self,
@@ -58,7 +60,7 @@ pub mod tests {
                         self.bytes,
                         37usize,
                         3usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -79,7 +81,7 @@ pub mod tests {
                         self.bytes,
                         37usize,
                         3usize,
-                        1usize + 1,
+                        2usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -100,7 +102,7 @@ pub mod tests {
                         self.bytes,
                         37usize,
                         3usize,
-                        2usize + 1,
+                        3usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -229,10 +231,8 @@ pub mod tests {
                         if i == 0 && offset != 37usize {
                             return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
                         }
-                        if let Some(prev) = prev_offset {
-                            if offset < prev {
-                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                            }
+                        if let Some(prev) = prev_offset && offset < prev {
+                            return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
                         }
                         if offset > bytes.len() {
                             return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
@@ -250,13 +250,23 @@ pub mod tests {
                     0
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<BitfieldContainer>
             for BitfieldContainerRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> BitfieldContainer {
                     <BitfieldContainerRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BitfieldContainerRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> BitfieldContainer {
                     BitfieldContainer {
                         tiny_list: self.tiny_list().expect("valid view").to_owned(),

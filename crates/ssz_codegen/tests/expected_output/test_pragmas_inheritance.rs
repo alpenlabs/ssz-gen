@@ -23,10 +23,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Clone, Debug, PartialEq, Eq, Default, Copy)]
             pub struct ParentRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ParentRef<'a> {
                 pub fn a(&self) -> Result<Optional<u8>, ssz::DecodeError> {
                     let bitvector_offset = 1usize;
@@ -41,7 +43,7 @@ pub mod tests {
                         container_bytes,
                         8usize,
                         2usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -62,7 +64,7 @@ pub mod tests {
                         container_bytes,
                         8usize,
                         2usize,
-                        1usize + 1,
+                        2usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -127,12 +129,22 @@ pub mod tests {
                     0
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<Parent> for ParentRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> Parent {
                     <ParentRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ParentRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> Parent {
                     Parent {
                         a: self.a().expect("valid view").to_owned(),
@@ -154,10 +166,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Clone, Debug, PartialEq, Eq, Serialize, Copy)]
             pub struct ChildRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ChildRef<'a> {
                 pub fn a(&self) -> Result<Optional<u8>, ssz::DecodeError> {
                     let bitvector_offset = 1usize;
@@ -172,7 +186,7 @@ pub mod tests {
                         container_bytes,
                         12usize,
                         3usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -193,7 +207,7 @@ pub mod tests {
                         container_bytes,
                         12usize,
                         3usize,
-                        1usize + 1,
+                        2usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -214,7 +228,7 @@ pub mod tests {
                         container_bytes,
                         12usize,
                         3usize,
-                        2usize + 1,
+                        3usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -284,12 +298,22 @@ pub mod tests {
                     0
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<Child> for ChildRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> Child {
                     <ChildRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ChildRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> Child {
                     Child {
                         a: self.a().expect("valid view").to_owned(),

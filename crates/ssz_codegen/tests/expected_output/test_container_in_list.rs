@@ -17,10 +17,12 @@ pub struct ExportEntry {
 /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
 /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
 /// needed.
+#[allow(dead_code, reason = "generated code using ssz-gen")]
 #[derive(Clone, Debug, PartialEq, Eq, Copy)]
 pub struct ExportEntryRef<'a> {
     bytes: &'a [u8],
 }
+#[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ExportEntryRef<'a> {
     pub fn value(&self) -> Result<u64, ssz::DecodeError> {
         let offset = 0usize;
@@ -92,12 +94,16 @@ impl<'a> ssz::view::SszTypeInfo for ExportEntryRef<'a> {
         12usize
     }
 }
+#[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<ExportEntry> for ExportEntryRef<'a> {
+    #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     fn to_owned(&self) -> ExportEntry {
         <ExportEntryRef<'a>>::to_owned(self)
     }
 }
+#[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ExportEntryRef<'a> {
+    #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> ExportEntry {
         ExportEntry {
             value: self.value().expect("valid view"),
@@ -117,10 +123,12 @@ pub struct ExportContainer {
 /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
 /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
 /// needed.
+#[allow(dead_code, reason = "generated code using ssz-gen")]
 #[derive(Clone, Debug, PartialEq, Eq, Copy)]
 pub struct ExportContainerRef<'a> {
     bytes: &'a [u8],
 }
+#[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ExportContainerRef<'a> {
     pub fn entries(
         &self,
@@ -135,7 +143,7 @@ impl<'a> ExportContainerRef<'a> {
             self.bytes,
             8usize,
             1usize,
-            0usize + 1,
+            1usize,
         )?;
         if start > end || end > self.bytes.len() {
             return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -199,10 +207,8 @@ impl<'a> ssz::view::DecodeView<'a> for ExportContainerRef<'a> {
             if i == 0 && offset != 8usize {
                 return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
             }
-            if let Some(prev) = prev_offset {
-                if offset < prev {
-                    return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                }
+            if let Some(prev) = prev_offset && offset < prev {
+                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
             }
             if offset > bytes.len() {
                 return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
@@ -220,12 +226,16 @@ impl<'a> ssz::view::SszTypeInfo for ExportContainerRef<'a> {
         0
     }
 }
+#[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<ExportContainer> for ExportContainerRef<'a> {
+    #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     fn to_owned(&self) -> ExportContainer {
         <ExportContainerRef<'a>>::to_owned(self)
     }
 }
+#[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ExportContainerRef<'a> {
+    #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> ExportContainer {
         ExportContainer {
             entries: self.entries().expect("valid view").to_owned().expect("valid view"),

@@ -910,6 +910,7 @@ impl ClassDef {
             BaseClass::Container | BaseClass::StableContainer(_) | BaseClass::Profile(_) => {
                 quote! {
                     #doc_comments
+                    #[allow(dead_code, reason = "generated code using ssz-gen")]
                     #view_derive
                     pub struct #ref_ident<'a> {
                         bytes: &'a [u8],
@@ -1168,6 +1169,7 @@ impl ClassDef {
                             variable_index += 1;
                         }
                     }
+                    let next_variable_index = variable_index + 1;
 
                     if bitvector_offset > 0 {
                         // Account for bitvector at start
@@ -1185,7 +1187,7 @@ impl ClassDef {
                                     container_bytes,
                                     #fixed_portion_size,
                                     #num_variable_fields,
-                                    #variable_index + 1
+                                    #next_variable_index
                                 )?;
                                 if start > end || end > container_bytes.len() {
                                     return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -1207,7 +1209,7 @@ impl ClassDef {
                                     self.bytes,
                                     #fixed_portion_size,
                                     #num_variable_fields,
-                                    #variable_index + 1
+                                    #next_variable_index
                                 )?;
                                 if start > end || end > self.bytes.len() {
                                     return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -1222,6 +1224,7 @@ impl ClassDef {
             .collect();
 
         quote! {
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> #ref_ident<'a> {
                 #(#getters)*
             }
@@ -1282,10 +1285,8 @@ impl ClassDef {
                             }
 
                             // Offsets must not decrease
-                            if let Some(prev) = prev_offset {
-                                if offset < prev {
-                                    return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                                }
+                            if let Some(prev) = prev_offset && offset < prev {
+                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
                             }
 
                             // Offset must not exceed container length
@@ -1358,10 +1359,8 @@ impl ClassDef {
                                     return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
                                 }
 
-                                if let Some(prev) = prev_offset {
-                                    if offset < prev {
-                                        return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                                    }
+                                if let Some(prev) = prev_offset && offset < prev {
+                                    return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
                                 }
 
                                 if offset > bytes.len() {
@@ -1482,7 +1481,9 @@ impl ClassDef {
         let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
 
         quote! {
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<#ident> for #ref_ident<'a> {
+                #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
                 fn to_owned(&self) -> #ident {
                     <#ref_ident<'a>>::to_owned(self)
                 }
@@ -1552,7 +1553,9 @@ impl ClassDef {
             .collect();
 
         quote! {
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> #ref_ident<'a> {
+                #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
                 pub fn to_owned(&self) -> #ident {
                     #ident {
                         #(#field_conversions),*

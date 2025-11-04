@@ -744,10 +744,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Eq, Copy, Clone)]
             pub struct AlphaRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> AlphaRef<'a> {
                 pub fn a(&self) -> Result<u8, ssz::DecodeError> {
                     let offset = 0usize;
@@ -841,12 +843,22 @@ pub mod tests {
                     13usize
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<Alpha> for AlphaRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> Alpha {
                     <AlphaRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> AlphaRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> Alpha {
                     Alpha {
                         a: self.a().expect("valid view"),
@@ -868,10 +880,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Debug, Copy, Clone)]
             pub struct BetaRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BetaRef<'a> {
                 pub fn d(&self) -> Result<BytesRef<'a>, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
@@ -884,7 +898,7 @@ pub mod tests {
                         self.bytes,
                         7usize,
                         1usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -970,10 +984,8 @@ pub mod tests {
                         if i == 0 && offset != 7usize {
                             return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
                         }
-                        if let Some(prev) = prev_offset {
-                            if offset < prev {
-                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                            }
+                        if let Some(prev) = prev_offset && offset < prev {
+                            return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
                         }
                         if offset > bytes.len() {
                             return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
@@ -991,12 +1003,22 @@ pub mod tests {
                     0
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<Beta> for BetaRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> Beta {
                     <BetaRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BetaRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> Beta {
                     Beta {
                         d: self.d().expect("valid view").to_owned().into(),
@@ -1017,10 +1039,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Debug, Copy, Clone)]
             pub struct GammaRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> GammaRef<'a> {
                 pub fn g(&self) -> Result<Optional<u8>, ssz::DecodeError> {
                     let bitvector_offset = 1usize;
@@ -1035,7 +1059,7 @@ pub mod tests {
                         container_bytes,
                         8usize,
                         2usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -1061,7 +1085,7 @@ pub mod tests {
                         container_bytes,
                         8usize,
                         2usize,
-                        1usize + 1,
+                        2usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -1126,12 +1150,22 @@ pub mod tests {
                     0
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<Gamma> for GammaRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> Gamma {
                     <GammaRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> GammaRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> Gamma {
                     Gamma {
                         g: self.g().expect("valid view").to_owned(),
@@ -1151,10 +1185,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Debug, Copy, Clone)]
             pub struct DeltaRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> DeltaRef<'a> {
                 pub fn z(&self) -> Result<bool, ssz::DecodeError> {
                     let offset = 0usize;
@@ -1227,12 +1263,22 @@ pub mod tests {
                     2usize
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<Delta> for DeltaRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> Delta {
                     <DeltaRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> DeltaRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> Delta {
                     Delta {
                         z: self.z().expect("valid view"),
@@ -1254,10 +1300,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Debug, Copy, Clone)]
             pub struct EpsilonRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> EpsilonRef<'a> {
                 pub fn g(&self) -> Result<Optional<u8>, ssz::DecodeError> {
                     let bitvector_offset = 1usize;
@@ -1272,7 +1320,7 @@ pub mod tests {
                         container_bytes,
                         16usize,
                         4usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -1298,7 +1346,7 @@ pub mod tests {
                         container_bytes,
                         16usize,
                         4usize,
-                        1usize + 1,
+                        2usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -1319,7 +1367,7 @@ pub mod tests {
                         container_bytes,
                         16usize,
                         4usize,
-                        2usize + 1,
+                        3usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -1340,7 +1388,7 @@ pub mod tests {
                         container_bytes,
                         16usize,
                         4usize,
-                        3usize + 1,
+                        4usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -1415,12 +1463,22 @@ pub mod tests {
                     0
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<Epsilon> for EpsilonRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> Epsilon {
                     <EpsilonRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> EpsilonRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> Epsilon {
                     Epsilon {
                         g: self.g().expect("valid view").to_owned(),
@@ -1442,10 +1500,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Debug, Copy, Clone)]
             pub struct ZetaRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ZetaRef<'a> {
                 pub fn u(
                     &self,
@@ -1465,7 +1525,7 @@ pub mod tests {
                         container_bytes,
                         8usize,
                         2usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -1486,7 +1546,7 @@ pub mod tests {
                         container_bytes,
                         8usize,
                         2usize,
-                        1usize + 1,
+                        2usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -1551,12 +1611,22 @@ pub mod tests {
                     0
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<Zeta> for ZetaRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> Zeta {
                     <ZetaRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ZetaRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> Zeta {
                     Zeta {
                         u: self.u().expect("valid view").to_owned(),
@@ -1577,10 +1647,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Debug, Copy, Clone)]
             pub struct TestTypeRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> TestTypeRef<'a> {
                 pub fn ccc(&self) -> Result<u8, ssz::DecodeError> {
                     let offset = 0usize;
@@ -1619,7 +1691,7 @@ pub mod tests {
                         self.bytes,
                         6usize,
                         1usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -1681,10 +1753,8 @@ pub mod tests {
                         if i == 0 && offset != 6usize {
                             return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
                         }
-                        if let Some(prev) = prev_offset {
-                            if offset < prev {
-                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                            }
+                        if let Some(prev) = prev_offset && offset < prev {
+                            return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
                         }
                         if offset > bytes.len() {
                             return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
@@ -1702,12 +1772,22 @@ pub mod tests {
                     0
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<TestType> for TestTypeRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> TestType {
                     <TestTypeRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> TestTypeRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> TestType {
                     TestType {
                         ccc: self.ccc().expect("valid view"),
@@ -1733,10 +1813,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Debug, Copy, Clone)]
             pub struct EtaRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> EtaRef<'a> {
                 pub fn l(&self) -> Result<ZetaRef<'a>, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
@@ -1749,7 +1831,7 @@ pub mod tests {
                         self.bytes,
                         12usize,
                         3usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -1768,7 +1850,7 @@ pub mod tests {
                         self.bytes,
                         12usize,
                         3usize,
-                        1usize + 1,
+                        2usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -1787,7 +1869,7 @@ pub mod tests {
                         self.bytes,
                         12usize,
                         3usize,
-                        2usize + 1,
+                        3usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -1853,10 +1935,8 @@ pub mod tests {
                         if i == 0 && offset != 12usize {
                             return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
                         }
-                        if let Some(prev) = prev_offset {
-                            if offset < prev {
-                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                            }
+                        if let Some(prev) = prev_offset && offset < prev {
+                            return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
                         }
                         if offset > bytes.len() {
                             return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
@@ -1874,12 +1954,22 @@ pub mod tests {
                     0
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<Eta> for EtaRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> Eta {
                     <EtaRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> EtaRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> Eta {
                     Eta {
                         l: self.l().expect("valid view").to_owned(),
@@ -1901,10 +1991,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Debug, Copy, Clone)]
             pub struct ThetaRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ThetaRef<'a> {
                 pub fn o(&self) -> Result<UnionBRef<'a>, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
@@ -1917,7 +2009,7 @@ pub mod tests {
                         self.bytes,
                         18usize,
                         2usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -1936,7 +2028,7 @@ pub mod tests {
                         self.bytes,
                         18usize,
                         2usize,
-                        1usize + 1,
+                        2usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -2016,10 +2108,8 @@ pub mod tests {
                         if i == 0 && offset != 18usize {
                             return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
                         }
-                        if let Some(prev) = prev_offset {
-                            if offset < prev {
-                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                            }
+                        if let Some(prev) = prev_offset && offset < prev {
+                            return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
                         }
                         if offset > bytes.len() {
                             return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
@@ -2037,12 +2127,22 @@ pub mod tests {
                     0
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<Theta> for ThetaRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> Theta {
                     <ThetaRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ThetaRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> Theta {
                     Theta {
                         o: self.o().expect("valid view").to_owned(),
@@ -2067,10 +2167,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Debug, Copy, Clone)]
             pub struct IotaRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> IotaRef<'a> {
                 pub fn g(&self) -> Result<Optional<u8>, ssz::DecodeError> {
                     let bitvector_offset = 1usize;
@@ -2085,7 +2187,7 @@ pub mod tests {
                         container_bytes,
                         24usize,
                         6usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -2111,7 +2213,7 @@ pub mod tests {
                         container_bytes,
                         24usize,
                         6usize,
-                        1usize + 1,
+                        2usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -2132,7 +2234,7 @@ pub mod tests {
                         container_bytes,
                         24usize,
                         6usize,
-                        2usize + 1,
+                        3usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -2153,7 +2255,7 @@ pub mod tests {
                         container_bytes,
                         24usize,
                         6usize,
-                        3usize + 1,
+                        4usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -2179,7 +2281,7 @@ pub mod tests {
                         container_bytes,
                         24usize,
                         6usize,
-                        4usize + 1,
+                        5usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -2200,7 +2302,7 @@ pub mod tests {
                         container_bytes,
                         24usize,
                         6usize,
-                        5usize + 1,
+                        6usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -2285,12 +2387,22 @@ pub mod tests {
                     0
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<Iota> for IotaRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> Iota {
                     <IotaRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> IotaRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> Iota {
                     Iota {
                         g: self.g().expect("valid view").to_owned(),
@@ -2315,10 +2427,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Debug, Copy, Clone)]
             pub struct KappaRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> KappaRef<'a> {
                 pub fn t(&self) -> Result<AlphaRef<'a>, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
@@ -2331,7 +2445,7 @@ pub mod tests {
                         self.bytes,
                         16usize,
                         2usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -2350,7 +2464,7 @@ pub mod tests {
                         self.bytes,
                         16usize,
                         2usize,
-                        1usize + 1,
+                        2usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -2428,10 +2542,8 @@ pub mod tests {
                         if i == 0 && offset != 16usize {
                             return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
                         }
-                        if let Some(prev) = prev_offset {
-                            if offset < prev {
-                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                            }
+                        if let Some(prev) = prev_offset && offset < prev {
+                            return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
                         }
                         if offset > bytes.len() {
                             return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
@@ -2449,12 +2561,22 @@ pub mod tests {
                     0
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<Kappa> for KappaRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> Kappa {
                     <KappaRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> KappaRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> Kappa {
                     Kappa {
                         t: self.t().expect("valid view").to_owned(),
@@ -2475,10 +2597,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Debug, Copy, Clone)]
             pub struct LambdaRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> LambdaRef<'a> {
                 pub fn w(&self) -> Result<Optional<u16>, ssz::DecodeError> {
                     let bitvector_offset = 1usize;
@@ -2493,7 +2617,7 @@ pub mod tests {
                         container_bytes,
                         8usize,
                         2usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -2514,7 +2638,7 @@ pub mod tests {
                         container_bytes,
                         8usize,
                         2usize,
-                        1usize + 1,
+                        2usize,
                     )?;
                     if start > end || end > container_bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -2579,12 +2703,22 @@ pub mod tests {
                     0
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<Lambda> for LambdaRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> Lambda {
                     <LambdaRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> LambdaRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> Lambda {
                     Lambda {
                         w: self.w().expect("valid view").to_owned(),
@@ -2604,10 +2738,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Debug, Copy, Clone)]
             pub struct MuRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> MuRef<'a> {
                 pub fn y(&self) -> Result<LambdaRef<'a>, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
@@ -2620,7 +2756,7 @@ pub mod tests {
                         self.bytes,
                         8usize,
                         2usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -2639,7 +2775,7 @@ pub mod tests {
                         self.bytes,
                         8usize,
                         2usize,
-                        1usize + 1,
+                        2usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -2697,10 +2833,8 @@ pub mod tests {
                         if i == 0 && offset != 8usize {
                             return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
                         }
-                        if let Some(prev) = prev_offset {
-                            if offset < prev {
-                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                            }
+                        if let Some(prev) = prev_offset && offset < prev {
+                            return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
                         }
                         if offset > bytes.len() {
                             return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
@@ -2718,12 +2852,22 @@ pub mod tests {
                     0
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<Mu> for MuRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> Mu {
                     <MuRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> MuRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> Mu {
                     Mu {
                         y: self.y().expect("valid view").to_owned(),
@@ -2746,10 +2890,12 @@ pub mod tests {
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Debug, Copy, Clone)]
             pub struct NuRef<'a> {
                 bytes: &'a [u8],
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> NuRef<'a> {
                 pub fn zz(&self) -> Result<MuRef<'a>, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
@@ -2762,7 +2908,7 @@ pub mod tests {
                         self.bytes,
                         16usize,
                         3usize,
-                        0usize + 1,
+                        1usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -2795,7 +2941,7 @@ pub mod tests {
                         self.bytes,
                         16usize,
                         3usize,
-                        1usize + 1,
+                        2usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -2814,7 +2960,7 @@ pub mod tests {
                         self.bytes,
                         16usize,
                         3usize,
-                        2usize + 1,
+                        3usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -2886,10 +3032,8 @@ pub mod tests {
                         if i == 0 && offset != 16usize {
                             return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
                         }
-                        if let Some(prev) = prev_offset {
-                            if offset < prev {
-                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                            }
+                        if let Some(prev) = prev_offset && offset < prev {
+                            return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
                         }
                         if offset > bytes.len() {
                             return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
@@ -2907,12 +3051,22 @@ pub mod tests {
                     0
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ssz_types::view::ToOwnedSsz<Nu> for NuRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 fn to_owned(&self) -> Nu {
                     <NuRef<'a>>::to_owned(self)
                 }
             }
+            #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> NuRef<'a> {
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> Nu {
                     Nu {
                         zz: self.zz().expect("valid view").to_owned(),
