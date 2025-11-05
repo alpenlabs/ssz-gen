@@ -1,0 +1,8 @@
+import test_three_way_c as c
+
+CONST_B = 200
+
+class ContainerB(Container):
+    value: uint16
+    c_ref: c.ContainerC
+

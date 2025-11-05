@@ -895,3 +895,296 @@ fn test_container_in_list() {
         "ExportContainerRef struct should be generated"
     );
 }
+
+/// Test cross-module dependencies where an entry point imports another entry point.
+/// This should not cause duplicate constant/type definitions in `SingleModule` mode.
+#[test]
+fn test_cross_entry_point_imports_single_module() {
+    build_ssz_files(
+        &["test_cross_entry_state.ssz", "test_cross_entry_update.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_cross_entry_single.rs",
+        ModuleGeneration::SingleModule,
+    )
+    .expect("Failed to generate SSZ types with cross-entry imports in SingleModule mode");
+
+    let generated = fs::read_to_string("tests/output/test_cross_entry_single.rs")
+        .expect("Failed to read generated output");
+
+    // Verify MAX_VK_BYTES is only defined once
+    let max_vk_count = generated.matches("pub const MAX_VK_BYTES").count();
+    assert_eq!(
+        max_vk_count, 1,
+        "MAX_VK_BYTES should only be defined once, found {} times",
+        max_vk_count
+    );
+
+    // Verify State is only defined once (owned version, not StateRef)
+    let state_count = generated.matches("pub struct State {").count();
+    assert_eq!(
+        state_count, 1,
+        "State should only be defined once, found {} times",
+        state_count
+    );
+
+    // Verify both Update and State are present
+    assert!(
+        generated.contains("pub struct Update {"),
+        "Update struct should be generated"
+    );
+    assert!(
+        generated.contains("pub struct State {"),
+        "State struct should be generated"
+    );
+}
+
+/// Test cross-module dependencies in `FlatModules` mode.
+#[test]
+fn test_cross_entry_point_imports_flat_modules() {
+    build_ssz_files(
+        &["test_cross_entry_state.ssz", "test_cross_entry_update.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_cross_entry_flat.rs",
+        ModuleGeneration::FlatModules,
+    )
+    .expect("Failed to generate SSZ types with cross-entry imports in FlatModules mode");
+
+    let generated = fs::read_to_string("tests/output/test_cross_entry_flat.rs")
+        .expect("Failed to read generated output");
+
+    // Verify both modules are present
+    assert!(
+        generated.contains("pub mod test_cross_entry_state"),
+        "test_cross_entry_state module should be generated"
+    );
+    assert!(
+        generated.contains("pub mod test_cross_entry_update"),
+        "test_cross_entry_update module should be generated"
+    );
+
+    // Verify State is in its own module
+    assert!(
+        generated.contains("pub struct State"),
+        "State struct should be in test_cross_entry_state module"
+    );
+
+    // Verify Update is in its own module
+    assert!(
+        generated.contains("pub struct Update"),
+        "Update struct should be in test_cross_entry_update module"
+    );
+}
+
+/// Test cross-module dependencies in `NestedModules` mode.
+#[test]
+fn test_cross_entry_point_imports_nested_modules() {
+    build_ssz_files(
+        &["test_cross_entry_state.ssz", "test_cross_entry_update.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_cross_entry_nested.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types with cross-entry imports in NestedModules mode");
+
+    let generated = fs::read_to_string("tests/output/test_cross_entry_nested.rs")
+        .expect("Failed to read generated output");
+
+    // In NestedModules mode, both modules should be present
+    assert!(
+        generated.contains("pub mod test_cross_entry_state"),
+        "test_cross_entry_state module should be generated"
+    );
+    assert!(
+        generated.contains("pub mod test_cross_entry_update"),
+        "test_cross_entry_update module should be generated"
+    );
+
+    // Both should have their own definitions
+    assert!(
+        generated.contains("pub struct State"),
+        "State struct should be generated"
+    );
+    assert!(
+        generated.contains("pub struct Update"),
+        "Update struct should be generated"
+    );
+}
+
+/// Test that the same module passed twice as entry points only gets parsed once.
+#[test]
+fn test_duplicate_entry_point() {
+    build_ssz_files(
+        &["test_1.ssz", "test_1.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_duplicate_entry.rs",
+        ModuleGeneration::SingleModule,
+    )
+    .expect("Failed to generate SSZ types with duplicate entry point");
+
+    let generated = fs::read_to_string("tests/output/test_duplicate_entry.rs")
+        .expect("Failed to read generated output");
+
+    // Verify constants are only defined once
+    let val_x_count = generated.matches("pub const VAL_X").count();
+    assert_eq!(
+        val_x_count, 1,
+        "VAL_X should only be defined once, found {} times",
+        val_x_count
+    );
+
+    // Verify structs are only defined once
+    let alpha_count = generated.matches("pub struct Alpha {").count();
+    assert_eq!(
+        alpha_count, 1,
+        "Alpha should only be defined once, found {} times",
+        alpha_count
+    );
+}
+
+/// Test that circular imports between entry points cause an error.
+/// When A imports B and B imports A, the circular dependency should be detected
+/// and result in an UnknownImport error.
+#[test]
+#[should_panic(expected = "UnknownImport")]
+fn test_circular_imports() {
+    build_ssz_files(
+        &["test_circular_a.ssz", "test_circular_b.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_circular.rs",
+        ModuleGeneration::SingleModule,
+    )
+    .expect("This should panic due to circular import");
+}
+
+/// Test that the order of entry points does not affect duplicate prevention.
+#[test]
+fn test_entry_point_order_independence() {
+    // Generate with one order
+    build_ssz_files(
+        &["test_cross_entry_state.ssz", "test_cross_entry_update.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_order_1.rs",
+        ModuleGeneration::SingleModule,
+    )
+    .expect("Failed to generate SSZ types with first order");
+
+    // Generate with reversed order
+    build_ssz_files(
+        &["test_cross_entry_update.ssz", "test_cross_entry_state.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_order_2.rs",
+        ModuleGeneration::SingleModule,
+    )
+    .expect("Failed to generate SSZ types with reversed order");
+
+    let generated_1 = fs::read_to_string("tests/output/test_order_1.rs")
+        .expect("Failed to read first generated output");
+    let generated_2 = fs::read_to_string("tests/output/test_order_2.rs")
+        .expect("Failed to read second generated output");
+
+    // Both should have the same number of definitions
+    let max_vk_count_1 = generated_1.matches("pub const MAX_VK_BYTES").count();
+    let max_vk_count_2 = generated_2.matches("pub const MAX_VK_BYTES").count();
+    assert_eq!(
+        max_vk_count_1, 1,
+        "MAX_VK_BYTES should only be defined once in first order, found {} times",
+        max_vk_count_1
+    );
+    assert_eq!(
+        max_vk_count_2, 1,
+        "MAX_VK_BYTES should only be defined once in second order, found {} times",
+        max_vk_count_2
+    );
+
+    let state_count_1 = generated_1.matches("pub struct State {").count();
+    let state_count_2 = generated_2.matches("pub struct State {").count();
+    assert_eq!(
+        state_count_1, 1,
+        "State should only be defined once in first order, found {} times",
+        state_count_1
+    );
+    assert_eq!(
+        state_count_2, 1,
+        "State should only be defined once in second order, found {} times",
+        state_count_2
+    );
+
+    // Both should contain the same definitions
+    assert!(
+        generated_1.contains("pub struct State {") && generated_2.contains("pub struct State {"),
+        "Both orders should generate State"
+    );
+    assert!(
+        generated_1.contains("pub struct Update {") && generated_2.contains("pub struct Update {"),
+        "Both orders should generate Update"
+    );
+}
+
+/// Test 3-way dependency where A imports B, B imports C, and all are entry points.
+#[test]
+fn test_three_way_dependency() {
+    build_ssz_files(
+        &[
+            "test_three_way_a.ssz",
+            "test_three_way_b.ssz",
+            "test_three_way_c.ssz",
+        ],
+        "tests/input",
+        &[],
+        "tests/output/test_three_way.rs",
+        ModuleGeneration::SingleModule,
+    )
+    .expect("Failed to generate SSZ types with 3-way dependency");
+
+    let generated = fs::read_to_string("tests/output/test_three_way.rs")
+        .expect("Failed to read generated output");
+
+    // Verify all constants are only defined once
+    let const_a_count = generated.matches("pub const CONST_A").count();
+    let const_b_count = generated.matches("pub const CONST_B").count();
+    let const_c_count = generated.matches("pub const CONST_C").count();
+
+    assert_eq!(
+        const_a_count, 1,
+        "CONST_A should only be defined once, found {} times",
+        const_a_count
+    );
+    assert_eq!(
+        const_b_count, 1,
+        "CONST_B should only be defined once, found {} times",
+        const_b_count
+    );
+    assert_eq!(
+        const_c_count, 1,
+        "CONST_C should only be defined once, found {} times",
+        const_c_count
+    );
+
+    // Verify all structs are present and only defined once
+    let container_a_count = generated.matches("pub struct ContainerA {").count();
+    let container_b_count = generated.matches("pub struct ContainerB {").count();
+    let container_c_count = generated.matches("pub struct ContainerC {").count();
+
+    assert_eq!(
+        container_a_count, 1,
+        "ContainerA should only be defined once, found {} times",
+        container_a_count
+    );
+    assert_eq!(
+        container_b_count, 1,
+        "ContainerB should only be defined once, found {} times",
+        container_b_count
+    );
+    assert_eq!(
+        container_c_count, 1,
+        "ContainerC should only be defined once, found {} times",
+        container_c_count
+    );
+}

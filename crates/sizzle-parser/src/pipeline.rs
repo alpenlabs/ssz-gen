@@ -51,8 +51,11 @@ pub fn parse_str_schema(
 
         // TODO: Inserts at positon 0 in Vec, it's ok for now since we don't expect too many imports
         // but if it becomes a bottleneck we can fix it.
-        module_manager.add_module_to_front(path.clone());
-        ast::parse_module_from_toktrs(&toktrs, path, &mut module_manager)?;
+        // Only parse if the module hasn't been added yet (e.g., by an import from another entry
+        // point)
+        if module_manager.add_module_to_front(path.clone()) {
+            ast::parse_module_from_toktrs(&toktrs, path, &mut module_manager)?;
+        }
     }
 
     let mut schema_map = HashMap::new();

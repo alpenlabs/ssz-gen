@@ -1,6 +1,10 @@
 //! Code generation module for converting SSZ schemas into Rust code.
 
-use std::{cell::RefCell, collections::HashMap, path::PathBuf};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+};
 
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
@@ -542,7 +546,10 @@ fn generate_module_code(
 }
 
 /// Generates a single flat module with all definitions at the root level
-fn single_module_rust_code(schema_map: &HashMap<&PathBuf, TokenStream>) -> TokenStream {
+fn single_module_rust_code(
+    schema_map: &HashMap<&PathBuf, TokenStream>,
+    entry_point_paths: &HashSet<PathBuf>,
+) -> TokenStream {
     let mut all_tokens = Vec::new();
 
     // Sort paths to ensure consistent ordering
@@ -550,7 +557,10 @@ fn single_module_rust_code(schema_map: &HashMap<&PathBuf, TokenStream>) -> Token
     paths.sort();
 
     for path in paths {
-        if let Some(tokens) = schema_map.get(path) {
+        // Only include tokens from actual entry points to avoid duplicates
+        if entry_point_paths.contains(*path)
+            && let Some(tokens) = schema_map.get(path)
+        {
             all_tokens.push(tokens.clone());
         }
     }
@@ -569,7 +579,10 @@ fn single_module_rust_code(schema_map: &HashMap<&PathBuf, TokenStream>) -> Token
 }
 
 /// Generates flat modules without deep nesting (one level per file)
-fn flat_modules_rust_code(schema_map: &HashMap<&PathBuf, TokenStream>) -> TokenStream {
+fn flat_modules_rust_code(
+    schema_map: &HashMap<&PathBuf, TokenStream>,
+    entry_point_paths: &HashSet<PathBuf>,
+) -> TokenStream {
     let mut modules = Vec::new();
 
     // Sort paths to ensure consistent ordering
@@ -577,23 +590,26 @@ fn flat_modules_rust_code(schema_map: &HashMap<&PathBuf, TokenStream>) -> TokenS
     paths.sort();
 
     for path in paths {
-        let module_name = path.file_stem().unwrap_or_default().to_string_lossy();
-        let module_ident = Ident::new(&module_name, Span::call_site());
+        // Only include modules from actual entry points to avoid duplicates
+        if entry_point_paths.contains(*path) {
+            let module_name = path.file_stem().unwrap_or_default().to_string_lossy();
+            let module_ident = Ident::new(&module_name, Span::call_site());
 
-        if let Some(content_tokens) = schema_map.get(path) {
-            modules.push(quote! {
-                pub mod #module_ident {
-                    #![allow(unused_imports, reason = "generated code using ssz-gen")]
-                    use ssz_types::*;
-                    use ssz_types::view::{FixedVectorRef, VariableListRef};
-                    use ssz_derive::{Encode, Decode};
-                    use tree_hash::TreeHashDigest;
-                    use tree_hash_derive::TreeHash;
-                    use ssz::view::*;
+            if let Some(content_tokens) = schema_map.get(path) {
+                modules.push(quote! {
+                    pub mod #module_ident {
+                        #![allow(unused_imports, reason = "generated code using ssz-gen")]
+                        use ssz_types::*;
+                        use ssz_types::view::{FixedVectorRef, VariableListRef};
+                        use ssz_derive::{Encode, Decode};
+                        use tree_hash::TreeHashDigest;
+                        use tree_hash_derive::TreeHash;
+                        use ssz::view::*;
 
-                    #content_tokens
-                }
-            });
+                        #content_tokens
+                    }
+                });
+            }
         }
     }
 
@@ -661,6 +677,8 @@ fn module_tokens_to_rust_code(schema_map: &HashMap<&PathBuf, TokenStream>) -> To
 /// * `parsing_order` - The order in which to process the schemas
 /// * `schema_map` - The mapping of module path => SSZ schema to convert
 /// * `module_generation` - Controls how modules are structured in the generated code
+/// * `derive_cfg` - Configuration for derive macros
+/// * `entry_point_paths` - Set of paths that are actual entry points (vs imported dependencies)
 ///
 /// # Returns
 ///
@@ -670,6 +688,7 @@ pub fn schema_map_to_rust_code(
     schema_map: &HashMap<PathBuf, SszSchema>,
     module_generation: ModuleGeneration,
     derive_cfg: &DeriveConfig,
+    entry_point_paths: &HashSet<PathBuf>,
 ) -> TokenStream {
     let mut module_tokens = HashMap::new();
     let mut module_content_tokens = HashMap::new(); // Content without imports for `SingleModule`
@@ -740,8 +759,12 @@ pub fn schema_map_to_rust_code(
     }
 
     match module_generation {
-        ModuleGeneration::SingleModule => single_module_rust_code(&module_content_tokens),
-        ModuleGeneration::FlatModules => flat_modules_rust_code(&module_content_tokens),
+        ModuleGeneration::SingleModule => {
+            single_module_rust_code(&module_content_tokens, entry_point_paths)
+        }
+        ModuleGeneration::FlatModules => {
+            flat_modules_rust_code(&module_content_tokens, entry_point_paths)
+        }
         ModuleGeneration::NestedModules => module_tokens_to_rust_code(&module_tokens),
     }
 }

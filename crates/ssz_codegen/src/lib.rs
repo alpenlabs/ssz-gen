@@ -3,7 +3,7 @@
 //! A codegen tool that parses simplified Python SSZ (Simple Serialize) definitions using
 //! `sizzle-parser` and generates Rust code for it utilizing `ssz_derive`'s derive macros.
 
-use std::{error, fs, path::Path};
+use std::{collections::HashSet, error, fs, path::Path};
 
 use prettyplease::unparse;
 #[cfg(any(test, doctest))]
@@ -51,7 +51,9 @@ pub mod types;
 ///
 /// # Arguments
 ///
-/// * `entry_points` - Paths to the entrypoint SSZ definition files
+/// * `entry_points` - Paths to the entrypoint SSZ definition files. Entry points can safely import
+///   each other without causing duplicate definitions. If the same file is listed multiple times,
+///   it will only be parsed once. The order of entry points does not affect duplicate prevention.
 /// * `base_dir` - Path to the base directory of the SSZ definition files
 /// * `crates` - A slice of strings representing the external crates you want to import in your ssz
 ///   schema
@@ -85,12 +87,17 @@ pub fn build_ssz_files(
     let files = files::read_entrypoint_ssz(entry_points, base_dir)?;
     println!("cargo:rerun-if-changed={base_dir}");
     let (parsing_order, schema_map) = parse_str_schema(&files, crates)?;
+
+    // Track which paths are actual entry points (vs imported dependencies)
+    let entry_point_paths: HashSet<_> = files.keys().cloned().collect();
+
     let generation_mode = module_generation;
     let rust_code = codegen::schema_map_to_rust_code(
         &parsing_order,
         &schema_map,
         generation_mode,
         &derive_config::DeriveConfig::default_defaults(),
+        &entry_point_paths,
     );
     let pretty_rust_code = prettyplease::unparse(&syn::parse_str(&rust_code.to_string())?);
     let output_path = Path::new(output_file_path);
@@ -119,6 +126,9 @@ pub fn build_ssz_files_with_derives(
 
     let (parsing_order, schema_map) = parse_str_schema(&files, crates)?;
 
+    // Track which paths are actual entry points (vs imported dependencies)
+    let entry_point_paths: HashSet<_> = files.keys().cloned().collect();
+
     // Load config: start with defaults, merge optional in-memory, then TOML (replacing fields)
     let mut cfg = DeriveConfig::default_defaults();
     if let Some(user_cfg) = derives {
@@ -131,8 +141,13 @@ pub fn build_ssz_files_with_derives(
         cfg = file_cfg; // per-type entries already replace semantics
     }
 
-    let rust_code =
-        codegen::schema_map_to_rust_code(&parsing_order, &schema_map, module_generation, &cfg);
+    let rust_code = codegen::schema_map_to_rust_code(
+        &parsing_order,
+        &schema_map,
+        module_generation,
+        &cfg,
+        &entry_point_paths,
+    );
     let pretty_rust_code = unparse(&parse_str(&rust_code.to_string())?);
     let output_path = Path::new(output_file_path);
     if let Some(parent) = output_path.parent() {

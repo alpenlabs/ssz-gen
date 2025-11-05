@@ -1,0 +1,6 @@
+MAX_VK_BYTES = 48
+
+class State(Container):
+    data: Vector[uint8, MAX_VK_BYTES]
+    counter: uint64
+

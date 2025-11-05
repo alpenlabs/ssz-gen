@@ -259,6 +259,11 @@ impl TypeResolution {
     ///
     /// A [`Type`] representing the view type (e.g., `BytesRef`, `FixedBytesRef`)
     pub fn to_view_type(&self) -> Type {
+        self.to_view_type_inner(false)
+    }
+
+    /// Internal helper that can distinguish between direct field context and list/vector context
+    fn to_view_type_inner(&self, in_collection: bool) -> Type {
         match &self.resolution {
             TypeResolutionKind::Class(class) => {
                 let ref_ident = Ident::new(&format!("{}Ref", class), Span::call_site());
@@ -267,7 +272,7 @@ impl TypeResolution {
             TypeResolutionKind::Boolean => primitive_rust_type("bool"),
             TypeResolutionKind::UInt(size) => primitive_rust_type(&format!("u{size}")),
             TypeResolutionKind::Vector(ty, size) => {
-                let inner_view_ty = ty.to_view_type();
+                let inner_view_ty = ty.to_view_type_inner(true);
                 let size = *size as usize;
                 parse_quote!(FixedVectorRef<'a, #inner_view_ty, #size>)
             }
@@ -279,7 +284,7 @@ impl TypeResolution {
                 if matches!(inner.resolution, TypeResolutionKind::UInt(8)) {
                     parse_quote!(BytesRef<'a>)
                 } else {
-                    let inner_view_ty = ty.to_view_type();
+                    let inner_view_ty = ty.to_view_type_inner(true);
                     parse_quote!(VariableListRef<'a, #inner_view_ty, #size>)
                 }
             }
@@ -292,11 +297,11 @@ impl TypeResolution {
                 parse_quote!(BitListRef<'a, #size>)
             }
             TypeResolutionKind::Optional(ty) => {
-                let inner_view_ty = ty.to_view_type();
+                let inner_view_ty = ty.to_view_type_inner(in_collection);
                 parse_quote!(Optional<#inner_view_ty>)
             }
             TypeResolutionKind::Option(ty) => {
-                let inner_view_ty = ty.to_view_type();
+                let inner_view_ty = ty.to_view_type_inner(in_collection);
                 parse_quote!(Option<#inner_view_ty>)
             }
             TypeResolutionKind::Union(ident, _) => {
@@ -307,8 +312,42 @@ impl TypeResolution {
                 parse_quote!(FixedBytesRef<'a, #size>)
             }
             TypeResolutionKind::External => {
-                // External types remain as-is since we don't control them
-                self.unwrap_type()
+                // For external types, behavior depends on context:
+                // - In Lists/Vectors: use view type convention ({Type}Ref) because VariableListRef
+                //   requires the inner type to implement both DecodeView and SszTypeInfo
+                // - For direct fields: use the type itself, which works for primitive-like types
+                //   that implement DecodeView directly
+                if in_collection {
+                    // In List/Vector context: try view type convention
+                    if let Some(ty) = &self.ty {
+                        match ty {
+                            Type::Path(TypePath { path, .. }) => {
+                                let mut path_segments = path.segments.clone();
+                                if let Some(last_segment) = path_segments.last_mut() {
+                                    let ref_ident = Ident::new(
+                                        &format!("{}Ref", last_segment.ident),
+                                        last_segment.ident.span(),
+                                    );
+                                    last_segment.ident = ref_ident;
+                                }
+                                let view_path = Path {
+                                    leading_colon: path.leading_colon,
+                                    segments: path_segments,
+                                };
+                                parse_quote! {
+                                    #view_path<'a>
+                                }
+                            }
+                            _ => self.unwrap_type(),
+                        }
+                    } else {
+                        self.unwrap_type()
+                    }
+                } else {
+                    // Direct field context: use the type itself
+                    // This works for primitive-like types that implement DecodeView directly
+                    self.unwrap_type()
+                }
             }
             _ => panic!("Cannot convert {:?} to view type", self.resolution),
         }
