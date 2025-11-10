@@ -193,7 +193,7 @@ fn test_external_type_ref_variants() {
     // Test that external container types use Ref variants in view getters,
     // while primitive-like types use the type itself
     build_ssz_files(
-        &["test_external.ssz"],
+        &["test_external_ref_variants.ssz"],
         "tests/input",
         &["external_ssz"],
         "tests/output/test_external_ref_variants.rs",
@@ -204,12 +204,21 @@ fn test_external_type_ref_variants() {
     let output = fs::read_to_string("tests/output/test_external_ref_variants.rs")
         .expect("Failed to read output");
 
-    // Verify that ExternalContainerRef uses Ref variants for external types
-    // The exact pattern depends on what external_ssz types are, but we should
-    // see that view getters return Result<external_ssz::..., DecodeError>
+    // Verify that container types use Ref variants
     assert!(
-        output.contains("Result<external_ssz::") || output.contains("external_ssz::"),
-        "External types should be referenced correctly in view getters"
+        output.contains("MsgPayloadRef") || output.contains("Result<external_ssz::MsgPayloadRef"),
+        "Container type MsgPayload should use Ref variant in view getters"
+    );
+    assert!(
+        output.contains("MessagePayloadRef")
+            || output.contains("Result<external_ssz::MessagePayloadRef"),
+        "Container type MessagePayload in List should use Ref variant"
+    );
+
+    // Verify that primitive-like types use the type itself, not Ref variant
+    assert!(
+        output.contains("Result<external_ssz::AccountId") && !output.contains("AccountIdRef"),
+        "Primitive-like type AccountId should use the type itself, not Ref variant"
     );
 }
 

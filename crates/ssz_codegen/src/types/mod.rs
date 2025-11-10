@@ -25,6 +25,40 @@ pub fn primitive_rust_type(base_name: &str) -> Type {
     })
 }
 
+/// Converts `crate::ssz::` paths to `super::` paths for cross-entry type references.
+///
+/// When types are referenced across entry points in nested modules, they should use
+/// `super::` paths instead of `crate::ssz::` paths.
+///
+/// # Arguments
+///
+/// * `path` - The path to potentially convert
+///
+/// # Returns
+///
+/// `Some(new_path)` if the path was converted, [`None`] if no conversion was needed
+fn convert_crate_ssz_to_super(path: &Path) -> Option<Path> {
+    let mut path_segments = path.segments.clone();
+    if path_segments.len() >= 3
+        && path_segments[0].ident == "crate"
+        && path_segments[1].ident == "ssz"
+    {
+        path_segments = path_segments.into_iter().skip(2).collect();
+        let mut new_segments = syn::punctuated::Punctuated::new();
+        new_segments.push(syn::PathSegment {
+            ident: Ident::new("super", Span::call_site()),
+            arguments: syn::PathArguments::None,
+        });
+        new_segments.extend(path_segments.iter().cloned());
+        Some(Path {
+            leading_colon: path.leading_colon,
+            segments: new_segments,
+        })
+    } else {
+        None
+    }
+}
+
 /// Represents the resolution of a type
 #[derive(Clone, Debug)]
 pub struct TypeResolution {
@@ -141,26 +175,9 @@ impl TypeResolution {
             // For locally generated types, convert crate::ssz:: paths to super:: paths
             if matches!(self.resolution, TypeResolutionKind::Class(_))
                 && let Type::Path(TypePath { path, .. }) = ty
+                && let Some(converted_path) = convert_crate_ssz_to_super(path)
             {
-                let mut path_segments = path.segments.clone();
-                if path_segments.len() >= 3
-                    && path_segments[0].ident == "crate"
-                    && path_segments[1].ident == "ssz"
-                {
-                    path_segments = path_segments.into_iter().skip(2).collect();
-                    let mut new_segments = syn::punctuated::Punctuated::new();
-                    new_segments.push(syn::PathSegment {
-                        ident: Ident::new("super", Span::call_site()),
-                        arguments: syn::PathArguments::None,
-                    });
-                    new_segments.extend(path_segments.iter().cloned());
-                    path_segments = new_segments;
-                    let view_path = Path {
-                        leading_colon: path.leading_colon,
-                        segments: path_segments,
-                    };
-                    return parse_quote! { #view_path };
-                }
+                return parse_quote! { #converted_path };
             }
             return ty.clone();
         }
@@ -287,25 +304,19 @@ impl TypeResolution {
     }
 
     /// Internal helper that can distinguish between direct field context and list/vector context
-    fn to_view_type_inner(&self, _in_collection: bool) -> Type {
+    #[allow(
+        clippy::only_used_in_recursion,
+        reason = "Parameter is intentionally passed through to nested types"
+    )]
+    fn to_view_type_inner(&self, in_collection: bool) -> Type {
         match &self.resolution {
             TypeResolutionKind::Class(class) => {
                 if let Some(Type::Path(TypePath { path, .. })) = &self.ty {
                     let mut path_segments = path.segments.clone();
                     // Strip `crate::ssz::` prefix if present (all generated code is inside
                     // `ssz` module)
-                    if path_segments.len() >= 3
-                        && path_segments[0].ident == "crate"
-                        && path_segments[1].ident == "ssz"
-                    {
-                        path_segments = path_segments.into_iter().skip(2).collect();
-                        let mut new_segments = syn::punctuated::Punctuated::new();
-                        new_segments.push(syn::PathSegment {
-                            ident: Ident::new("super", Span::call_site()),
-                            arguments: syn::PathArguments::None,
-                        });
-                        new_segments.extend(path_segments.iter().cloned());
-                        path_segments = new_segments;
+                    if let Some(converted_path) = convert_crate_ssz_to_super(path) {
+                        path_segments = converted_path.segments;
                     }
                     if let Some(last_segment) = path_segments.last_mut() {
                         let ref_ident = Ident::new(
@@ -352,11 +363,11 @@ impl TypeResolution {
                 parse_quote!(BitListRef<'a, #size>)
             }
             TypeResolutionKind::Optional(ty) => {
-                let inner_view_ty = ty.to_view_type_inner(_in_collection);
+                let inner_view_ty = ty.to_view_type_inner(in_collection);
                 parse_quote!(Optional<#inner_view_ty>)
             }
             TypeResolutionKind::Option(ty) => {
-                let inner_view_ty = ty.to_view_type_inner(_in_collection);
+                let inner_view_ty = ty.to_view_type_inner(in_collection);
                 parse_quote!(Option<#inner_view_ty>)
             }
             TypeResolutionKind::Union(ident, _) => {
@@ -364,18 +375,8 @@ impl TypeResolution {
                     let mut path_segments = path.segments.clone();
                     // Strip `crate::ssz::` prefix if present (all generated code is inside
                     // `ssz` module)
-                    if path_segments.len() >= 3
-                        && path_segments[0].ident == "crate"
-                        && path_segments[1].ident == "ssz"
-                    {
-                        path_segments = path_segments.into_iter().skip(2).collect();
-                        let mut new_segments = syn::punctuated::Punctuated::new();
-                        new_segments.push(syn::PathSegment {
-                            ident: Ident::new("super", Span::call_site()),
-                            arguments: syn::PathArguments::None,
-                        });
-                        new_segments.extend(path_segments.iter().cloned());
-                        path_segments = new_segments;
+                    if let Some(converted_path) = convert_crate_ssz_to_super(path) {
+                        path_segments = converted_path.segments;
                     }
                     if let Some(last_segment) = path_segments.last_mut() {
                         let ref_ident = Ident::new(
