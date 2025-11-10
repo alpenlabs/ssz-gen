@@ -26,7 +26,6 @@ pub mod tests {
             pub type LargeBitvector = BitVector<128usize>;
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            #[tree_hash(struct_behaviour = "container")]
             pub struct BitfieldContainer {
                 pub tiny_list: TinyBitlist,
                 pub std_list: StandardBitlist,

@@ -464,7 +464,6 @@ pub mod tests {
             }
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            #[tree_hash(struct_behaviour = "container")]
             pub struct ContainerWithBigUnions {
                 pub big: BigUnion,
                 pub same: SameTypeUnion,

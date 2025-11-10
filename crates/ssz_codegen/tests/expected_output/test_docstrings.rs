@@ -13,7 +13,6 @@ pub mod tests {
             /// This is a foo.
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            #[tree_hash(struct_behaviour = "container")]
             pub struct Foo {}
             impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Foo {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -106,7 +105,6 @@ pub mod tests {
             /// This is a doc comment
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            #[tree_hash(struct_behaviour = "container")]
             pub struct PointWithBoth {
                 /// X coordinate
                 pub x: u32,
@@ -255,7 +253,6 @@ pub mod tests {
             /// This should come after the docstring
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            #[tree_hash(struct_behaviour = "container")]
             pub struct TestMerge {
                 pub field: u8,
             }

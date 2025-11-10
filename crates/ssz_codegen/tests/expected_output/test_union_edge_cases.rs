@@ -555,7 +555,6 @@ pub mod tests {
             pub type OptionalUnion = Option<SimpleUnion>;
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            #[tree_hash(struct_behaviour = "container")]
             pub struct UnionEdgeCases {
                 pub simple: SimpleUnion,
                 pub nested: NestedUnion,
@@ -883,7 +882,6 @@ pub mod tests {
             }
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            #[tree_hash(struct_behaviour = "container")]
             pub struct AllUnions {
                 pub union1: SimpleUnion,
                 pub union2: NestedUnion,

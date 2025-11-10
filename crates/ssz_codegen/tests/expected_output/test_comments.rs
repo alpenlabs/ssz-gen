@@ -13,7 +13,6 @@ pub mod tests {
             /// This is a doc comment for the Point class It can span multiple lines
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            #[tree_hash(struct_behaviour = "container")]
             pub struct Point {
                 /// X coordinate of the point
                 pub x: u32,
@@ -184,7 +183,6 @@ pub mod tests {
             /// A container for coordinates
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            #[tree_hash(struct_behaviour = "container")]
             pub struct CoordinateContainer {
                 /// Latitude coordinate
                 pub lat: u64,

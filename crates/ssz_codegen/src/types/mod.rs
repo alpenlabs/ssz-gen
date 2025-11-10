@@ -715,7 +715,6 @@ impl ClassDef {
                     #owned_derive
                     #struct_attrs
                     #[ssz(struct_behaviour="container")]
-                    #[tree_hash(struct_behaviour="container")]
                     pub struct #ident {
                         #(#field_tokens),*
                     }
@@ -728,31 +727,19 @@ impl ClassDef {
                     #owned_derive
                     #struct_attrs
                     #[ssz(struct_behaviour="stable_container", max_fields=#max)]
-                    #[tree_hash(struct_behaviour="stable_container", max_fields=#max)]
                     pub struct #ident {
                         #(#field_tokens),*
                     }
                 }
             }
-            BaseClass::Profile(Some((_, max))) => {
-                let max = max as usize;
-                let index = self
-                    .fields
-                    .iter()
-                    .map(|field| field.index)
-                    .collect::<Vec<_>>();
-
+            BaseClass::Profile(Some((_, _))) => {
                 quote! {
                     #doc_comments
                     #owned_derive
                     #struct_attrs
                     #[ssz(struct_behaviour="profile")]
-                    #[tree_hash(struct_behaviour="profile", max_fields=#max)]
                     pub struct #ident {
-                        #(
-                            #[tree_hash(stable_index = #index)]
-                            #field_tokens
-                        ),*
+                        #(#field_tokens),*
                     }
                 }
             }
@@ -1171,7 +1158,7 @@ impl ClassDef {
                     }
                 }
             }
-            BaseClass::StableContainer(Some(max)) => {
+            BaseClass::StableContainer(Some(max)) | BaseClass::Profile(Some((_, max))) => {
                 let max_fields = max as usize;
                 let field_names: Vec<Ident> = self
                     .fields
@@ -1190,7 +1177,7 @@ impl ClassDef {
                                 hasher.write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(#field_name).as_ref())
                                     .expect("tree hash derive should not apply too many leaves");
                             } else {
-                                hasher.write(&[0u8; 32])
+                                hasher.write(H::get_zero_hash_slice(0))
                                     .expect("tree hash derive should not apply too many leaves");
                             }
                         }
@@ -1205,7 +1192,7 @@ impl ClassDef {
                         let field_name = &field_names[idx];
                         quote! {
                             if self.#field_name.is_some() {
-                                active_fields.set_bit(#idx);
+                                active_fields.set(#idx, true).expect("Should not be out of bounds");
                             }
                         }
                     })
@@ -1218,91 +1205,11 @@ impl ClassDef {
                         }
 
                         fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
-                            unreachable!("StableContainer should never be packed")
+                            unreachable!("StableContainer/Profile should never be packed")
                         }
 
                         fn tree_hash_packing_factor() -> usize {
-                            unreachable!("StableContainer should never be packed")
-                        }
-
-                        fn tree_hash_root(&self) -> H::Output {
-                            use tree_hash::TreeHash;
-                            use ssz_types::BitVector;
-
-                            // Construct BitVector
-                            let mut active_fields = BitVector::<#max>::new();
-
-                            #(
-                                #set_active_fields
-                            )*
-
-                            // Hash according to `max_fields` regardless of the actual number of fields
-                            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(#max_fields);
-
-                            #(
-                                #hashes
-                            )*
-
-                            let hash = hasher.finish().expect("tree hash derive should not have a remaining buffer");
-                            let active_fields_hash = <_ as tree_hash::TreeHash<H>>::tree_hash_root(&active_fields);
-
-                            H::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
-                        }
-                    }
-                }
-            }
-            BaseClass::Profile(Some((_, max))) => {
-                let max_fields = max as usize;
-                let field_names: Vec<Ident> = self
-                    .fields
-                    .iter()
-                    .map(|f| Ident::new(&f.name, Span::call_site()))
-                    .collect();
-
-                let hashes: Vec<TokenStream> = self
-                    .fields
-                    .iter()
-                    .enumerate()
-                    .map(|(idx, _)| {
-                        let field_name = &field_names[idx];
-                        quote! {
-                            if let Some(ref #field_name) = self.#field_name {
-                                hasher.write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(#field_name).as_ref())
-                                    .expect("tree hash derive should not apply too many leaves");
-                            } else {
-                                hasher.write(&[0u8; 32])
-                                    .expect("tree hash derive should not apply too many leaves");
-                            }
-                        }
-                    })
-                    .collect();
-
-                let set_active_fields: Vec<TokenStream> = self
-                    .fields
-                    .iter()
-                    .enumerate()
-                    .map(|(idx, _)| {
-                        let field_name = &field_names[idx];
-                        quote! {
-                            if self.#field_name.is_some() {
-                                active_fields.set_bit(#idx);
-                            }
-                        }
-                    })
-                    .collect();
-
-                quote! {
-                    impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ident {
-                        fn tree_hash_type() -> tree_hash::TreeHashType {
-                            tree_hash::TreeHashType::StableContainer
-                        }
-
-                        fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
-                            unreachable!("Profile should never be packed")
-                        }
-
-                        fn tree_hash_packing_factor() -> usize {
-                            unreachable!("Profile should never be packed")
+                            unreachable!("StableContainer/Profile should never be packed")
                         }
 
                         fn tree_hash_root(&self) -> H::Output {

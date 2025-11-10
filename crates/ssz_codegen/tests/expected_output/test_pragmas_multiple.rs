@@ -23,7 +23,6 @@ pub mod tests {
             )]
             #[repr(C)]
             #[ssz(struct_behaviour = "container")]
-            #[tree_hash(struct_behaviour = "container")]
             pub struct MultiPragmaContainer {
                 pub x: u32,
                 pub y: u32,

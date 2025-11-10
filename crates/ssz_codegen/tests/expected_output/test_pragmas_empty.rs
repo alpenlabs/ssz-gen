@@ -13,7 +13,6 @@ pub mod tests {
             /// Test empty pragmas (edge case)
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            #[tree_hash(struct_behaviour = "container")]
             pub struct EmptyPragmaContainer {
                 pub x: u8,
             }
@@ -133,7 +132,6 @@ pub mod tests {
             }
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            #[tree_hash(struct_behaviour = "container")]
             pub struct EmptyValueContainer {
                 pub y: u16,
             }

@@ -25,7 +25,6 @@ pub mod tests {
             pub type G = FixedVector<F, 10usize>;
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            #[tree_hash(struct_behaviour = "container")]
             pub struct NestedAliasContainer {
                 pub field1: D,
                 pub field2: E,

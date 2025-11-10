@@ -13,7 +13,6 @@ pub mod tests {
             /// Test basic pragma with derive
             #[derive(Clone, Debug, PartialEq, Eq, Default, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            #[tree_hash(struct_behaviour = "container")]
             pub struct BasicContainer {
                 pub a: u8,
             }

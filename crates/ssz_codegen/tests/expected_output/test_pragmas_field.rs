@@ -13,7 +13,6 @@ pub mod tests {
             /// Test field-level pragmas
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            #[tree_hash(struct_behaviour = "container")]
             pub struct FieldPragmaContainer {
                 pub normal_field: u8,
                 #[serde(rename = "custom_field_name")]

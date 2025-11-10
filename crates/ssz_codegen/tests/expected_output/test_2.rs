@@ -12,7 +12,6 @@ pub mod tests {
             use ssz::view::*;
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "stable_container", max_fields = 2usize)]
-            #[tree_hash(struct_behaviour = "stable_container", max_fields = 2usize)]
             pub struct Alpha {
                 pub a: Optional<u8>,
                 pub b: Optional<BitList<32usize>>,
@@ -22,20 +21,24 @@ pub mod tests {
                     tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
-                    unreachable!("StableContainer should never be packed")
+                    unreachable!("StableContainer/Profile should never be packed")
                 }
                 fn tree_hash_packing_factor() -> usize {
-                    unreachable!("StableContainer should never be packed")
+                    unreachable!("StableContainer/Profile should never be packed")
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
                     let mut active_fields = BitVector::<2u64>::new();
                     if self.a.is_some() {
-                        active_fields.set_bit(0usize);
+                        active_fields
+                            .set(0usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     if self.b.is_some() {
-                        active_fields.set_bit(1usize);
+                        active_fields
+                            .set(1usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     if let Some(ref a) = self.a {
@@ -46,7 +49,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     if let Some(ref b) = self.b {
@@ -57,7 +60,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     let hash = hasher
@@ -207,7 +210,6 @@ pub mod tests {
             }
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "stable_container", max_fields = 8usize)]
-            #[tree_hash(struct_behaviour = "stable_container", max_fields = 8usize)]
             pub struct InnerBase {
                 pub x: Optional<u8>,
                 pub y: Optional<VariableList<u8, 4usize>>,
@@ -219,26 +221,34 @@ pub mod tests {
                     tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
-                    unreachable!("StableContainer should never be packed")
+                    unreachable!("StableContainer/Profile should never be packed")
                 }
                 fn tree_hash_packing_factor() -> usize {
-                    unreachable!("StableContainer should never be packed")
+                    unreachable!("StableContainer/Profile should never be packed")
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
                     let mut active_fields = BitVector::<8u64>::new();
                     if self.x.is_some() {
-                        active_fields.set_bit(0usize);
+                        active_fields
+                            .set(0usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     if self.y.is_some() {
-                        active_fields.set_bit(1usize);
+                        active_fields
+                            .set(1usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     if self.z.is_some() {
-                        active_fields.set_bit(2usize);
+                        active_fields
+                            .set(2usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     if self.w.is_some() {
-                        active_fields.set_bit(3usize);
+                        active_fields
+                            .set(3usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(8usize);
                     if let Some(ref x) = self.x {
@@ -249,7 +259,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     if let Some(ref y) = self.y {
@@ -260,7 +270,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     if let Some(ref z) = self.z {
@@ -271,7 +281,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     if let Some(ref w) = self.w {
@@ -282,7 +292,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     let hash = hasher
@@ -486,15 +496,10 @@ pub mod tests {
             }
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "profile")]
-            #[tree_hash(struct_behaviour = "profile", max_fields = 8usize)]
             pub struct InnerProfile1 {
-                #[tree_hash(stable_index = 0usize)]
                 pub x: u8,
-                #[tree_hash(stable_index = 1usize)]
                 pub y: Optional<VariableList<u8, 4usize>>,
-                #[tree_hash(stable_index = 2usize)]
                 pub z: Optional<BitVector<16usize>>,
-                #[tree_hash(stable_index = 3usize)]
                 pub w: Optional<Alpha>,
             }
             impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for InnerProfile1 {
@@ -502,26 +507,34 @@ pub mod tests {
                     tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
-                    unreachable!("Profile should never be packed")
+                    unreachable!("StableContainer/Profile should never be packed")
                 }
                 fn tree_hash_packing_factor() -> usize {
-                    unreachable!("Profile should never be packed")
+                    unreachable!("StableContainer/Profile should never be packed")
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
                     let mut active_fields = BitVector::<8u64>::new();
                     if self.x.is_some() {
-                        active_fields.set_bit(0usize);
+                        active_fields
+                            .set(0usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     if self.y.is_some() {
-                        active_fields.set_bit(1usize);
+                        active_fields
+                            .set(1usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     if self.z.is_some() {
-                        active_fields.set_bit(2usize);
+                        active_fields
+                            .set(2usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     if self.w.is_some() {
-                        active_fields.set_bit(3usize);
+                        active_fields
+                            .set(3usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(8usize);
                     if let Some(ref x) = self.x {
@@ -532,7 +545,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     if let Some(ref y) = self.y {
@@ -543,7 +556,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     if let Some(ref z) = self.z {
@@ -554,7 +567,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     if let Some(ref w) = self.w {
@@ -565,7 +578,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     let hash = hasher
@@ -774,13 +787,9 @@ pub mod tests {
             }
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "profile")]
-            #[tree_hash(struct_behaviour = "profile", max_fields = 8usize)]
             pub struct InnerProfile2 {
-                #[tree_hash(stable_index = 0usize)]
                 pub x: Optional<u8>,
-                #[tree_hash(stable_index = 1usize)]
                 pub y: VariableList<u8, 4usize>,
-                #[tree_hash(stable_index = 2usize)]
                 pub z: BitVector<16usize>,
             }
             impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for InnerProfile2 {
@@ -788,23 +797,29 @@ pub mod tests {
                     tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
-                    unreachable!("Profile should never be packed")
+                    unreachable!("StableContainer/Profile should never be packed")
                 }
                 fn tree_hash_packing_factor() -> usize {
-                    unreachable!("Profile should never be packed")
+                    unreachable!("StableContainer/Profile should never be packed")
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
                     let mut active_fields = BitVector::<8u64>::new();
                     if self.x.is_some() {
-                        active_fields.set_bit(0usize);
+                        active_fields
+                            .set(0usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     if self.y.is_some() {
-                        active_fields.set_bit(1usize);
+                        active_fields
+                            .set(1usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     if self.z.is_some() {
-                        active_fields.set_bit(2usize);
+                        active_fields
+                            .set(2usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(8usize);
                     if let Some(ref x) = self.x {
@@ -815,7 +830,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     if let Some(ref y) = self.y {
@@ -826,7 +841,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     if let Some(ref z) = self.z {
@@ -837,7 +852,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     let hash = hasher
@@ -1014,11 +1029,8 @@ pub mod tests {
             }
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "profile")]
-            #[tree_hash(struct_behaviour = "profile", max_fields = 2usize)]
             pub struct AlphaProfile {
-                #[tree_hash(stable_index = 0usize)]
                 pub a: u8,
-                #[tree_hash(stable_index = 1usize)]
                 pub b: Optional<BitList<32usize>>,
             }
             impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for AlphaProfile {
@@ -1026,20 +1038,24 @@ pub mod tests {
                     tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
-                    unreachable!("Profile should never be packed")
+                    unreachable!("StableContainer/Profile should never be packed")
                 }
                 fn tree_hash_packing_factor() -> usize {
-                    unreachable!("Profile should never be packed")
+                    unreachable!("StableContainer/Profile should never be packed")
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
                     let mut active_fields = BitVector::<2u64>::new();
                     if self.a.is_some() {
-                        active_fields.set_bit(0usize);
+                        active_fields
+                            .set(0usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     if self.b.is_some() {
-                        active_fields.set_bit(1usize);
+                        active_fields
+                            .set(1usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     if let Some(ref a) = self.a {
@@ -1050,7 +1066,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     if let Some(ref b) = self.b {
@@ -1061,7 +1077,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     let hash = hasher
@@ -1209,9 +1225,7 @@ pub mod tests {
             }
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "profile")]
-            #[tree_hash(struct_behaviour = "profile", max_fields = 8usize)]
             pub struct InnerProfile3 {
-                #[tree_hash(stable_index = 3usize)]
                 pub w: AlphaProfile,
             }
             impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for InnerProfile3 {
@@ -1219,17 +1233,19 @@ pub mod tests {
                     tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
-                    unreachable!("Profile should never be packed")
+                    unreachable!("StableContainer/Profile should never be packed")
                 }
                 fn tree_hash_packing_factor() -> usize {
-                    unreachable!("Profile should never be packed")
+                    unreachable!("StableContainer/Profile should never be packed")
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
                     let mut active_fields = BitVector::<8u64>::new();
                     if self.w.is_some() {
-                        active_fields.set_bit(0usize);
+                        active_fields
+                            .set(0usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(8usize);
                     if let Some(ref w) = self.w {
@@ -1240,7 +1256,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     let hash = hasher
@@ -1372,11 +1388,8 @@ pub mod tests {
             }
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "profile")]
-            #[tree_hash(struct_behaviour = "profile", max_fields = 8usize)]
             pub struct InnerProfile4 {
-                #[tree_hash(stable_index = 1usize)]
                 pub y: VariableList<u8, 4usize>,
-                #[tree_hash(stable_index = 2usize)]
                 pub z: BitVector<16usize>,
             }
             impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for InnerProfile4 {
@@ -1384,20 +1397,24 @@ pub mod tests {
                     tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
-                    unreachable!("Profile should never be packed")
+                    unreachable!("StableContainer/Profile should never be packed")
                 }
                 fn tree_hash_packing_factor() -> usize {
-                    unreachable!("Profile should never be packed")
+                    unreachable!("StableContainer/Profile should never be packed")
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
                     let mut active_fields = BitVector::<8u64>::new();
                     if self.y.is_some() {
-                        active_fields.set_bit(0usize);
+                        active_fields
+                            .set(0usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     if self.z.is_some() {
-                        active_fields.set_bit(1usize);
+                        active_fields
+                            .set(1usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(8usize);
                     if let Some(ref y) = self.y {
@@ -1408,7 +1425,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     if let Some(ref z) = self.z {
@@ -1419,7 +1436,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     let hash = hasher
@@ -1572,13 +1589,9 @@ pub mod tests {
             }
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "profile")]
-            #[tree_hash(struct_behaviour = "profile", max_fields = 8usize)]
             pub struct InnerProfile5 {
-                #[tree_hash(stable_index = 0usize)]
                 pub x: u8,
-                #[tree_hash(stable_index = 2usize)]
                 pub z: BitVector<16usize>,
-                #[tree_hash(stable_index = 3usize)]
                 pub w: Alpha,
             }
             impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for InnerProfile5 {
@@ -1586,23 +1599,29 @@ pub mod tests {
                     tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
-                    unreachable!("Profile should never be packed")
+                    unreachable!("StableContainer/Profile should never be packed")
                 }
                 fn tree_hash_packing_factor() -> usize {
-                    unreachable!("Profile should never be packed")
+                    unreachable!("StableContainer/Profile should never be packed")
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
                     let mut active_fields = BitVector::<8u64>::new();
                     if self.x.is_some() {
-                        active_fields.set_bit(0usize);
+                        active_fields
+                            .set(0usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     if self.z.is_some() {
-                        active_fields.set_bit(1usize);
+                        active_fields
+                            .set(1usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     if self.w.is_some() {
-                        active_fields.set_bit(2usize);
+                        active_fields
+                            .set(2usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(8usize);
                     if let Some(ref x) = self.x {
@@ -1613,7 +1632,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     if let Some(ref z) = self.z {
@@ -1624,7 +1643,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     if let Some(ref w) = self.w {
@@ -1635,7 +1654,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     let hash = hasher
@@ -1809,11 +1828,8 @@ pub mod tests {
             }
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "profile")]
-            #[tree_hash(struct_behaviour = "profile", max_fields = 8usize)]
             pub struct ProfileProfile {
-                #[tree_hash(stable_index = 0usize)]
                 pub x: Optional<u8>,
-                #[tree_hash(stable_index = 3usize)]
                 pub w: AlphaProfile,
             }
             impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
@@ -1822,20 +1838,24 @@ pub mod tests {
                     tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
-                    unreachable!("Profile should never be packed")
+                    unreachable!("StableContainer/Profile should never be packed")
                 }
                 fn tree_hash_packing_factor() -> usize {
-                    unreachable!("Profile should never be packed")
+                    unreachable!("StableContainer/Profile should never be packed")
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
                     let mut active_fields = BitVector::<8u64>::new();
                     if self.x.is_some() {
-                        active_fields.set_bit(0usize);
+                        active_fields
+                            .set(0usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     if self.w.is_some() {
-                        active_fields.set_bit(1usize);
+                        active_fields
+                            .set(1usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(8usize);
                     if let Some(ref x) = self.x {
@@ -1846,7 +1866,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     if let Some(ref w) = self.w {
@@ -1857,7 +1877,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     let hash = hasher
@@ -2012,7 +2032,6 @@ pub mod tests {
             }
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "stable_container", max_fields = 8usize)]
-            #[tree_hash(struct_behaviour = "stable_container", max_fields = 8usize)]
             pub struct ContainerContainer {
                 pub x: Optional<u16>,
                 pub y: Optional<VariableList<u8, 4usize>>,
@@ -2029,38 +2048,54 @@ pub mod tests {
                     tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
-                    unreachable!("StableContainer should never be packed")
+                    unreachable!("StableContainer/Profile should never be packed")
                 }
                 fn tree_hash_packing_factor() -> usize {
-                    unreachable!("StableContainer should never be packed")
+                    unreachable!("StableContainer/Profile should never be packed")
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
                     let mut active_fields = BitVector::<8u64>::new();
                     if self.x.is_some() {
-                        active_fields.set_bit(0usize);
+                        active_fields
+                            .set(0usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     if self.y.is_some() {
-                        active_fields.set_bit(1usize);
+                        active_fields
+                            .set(1usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     if self.z.is_some() {
-                        active_fields.set_bit(2usize);
+                        active_fields
+                            .set(2usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     if self.w.is_some() {
-                        active_fields.set_bit(3usize);
+                        active_fields
+                            .set(3usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     if self.a.is_some() {
-                        active_fields.set_bit(4usize);
+                        active_fields
+                            .set(4usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     if self.b.is_some() {
-                        active_fields.set_bit(5usize);
+                        active_fields
+                            .set(5usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     if self.c.is_some() {
-                        active_fields.set_bit(6usize);
+                        active_fields
+                            .set(6usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     if self.d.is_some() {
-                        active_fields.set_bit(7usize);
+                        active_fields
+                            .set(7usize, true)
+                            .expect("Should not be out of bounds");
                     }
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(8usize);
                     if let Some(ref x) = self.x {
@@ -2071,7 +2106,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     if let Some(ref y) = self.y {
@@ -2082,7 +2117,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     if let Some(ref z) = self.z {
@@ -2093,7 +2128,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     if let Some(ref w) = self.w {
@@ -2104,7 +2139,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     if let Some(ref a) = self.a {
@@ -2115,7 +2150,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     if let Some(ref b) = self.b {
@@ -2126,7 +2161,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     if let Some(ref c) = self.c {
@@ -2137,7 +2172,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     if let Some(ref d) = self.d {
@@ -2148,7 +2183,7 @@ pub mod tests {
                             .expect("tree hash derive should not apply too many leaves");
                     } else {
                         hasher
-                            .write(&[0u8; 32])
+                            .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
                     let hash = hasher

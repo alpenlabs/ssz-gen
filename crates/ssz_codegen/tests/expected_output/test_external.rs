@@ -234,7 +234,6 @@ pub mod tests {
             pub type TestB = external_ssz::module_a::module_b::B;
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            #[tree_hash(struct_behaviour = "container")]
             pub struct ExternalContainer {
                 pub field_a: external_ssz::A,
                 pub field_b: external_ssz::module_a::module_b::B,
