@@ -138,6 +138,30 @@ impl TypeResolution {
     /// Panics if the resolution is not a type variant.
     pub fn unwrap_type(&self) -> Type {
         if let Some(ty) = &self.ty {
+            // For locally generated types, convert crate::ssz:: paths to super:: paths
+            if matches!(self.resolution, TypeResolutionKind::Class(_))
+                && let Type::Path(TypePath { path, .. }) = ty
+            {
+                let mut path_segments = path.segments.clone();
+                if path_segments.len() >= 3
+                    && path_segments[0].ident == "crate"
+                    && path_segments[1].ident == "ssz"
+                {
+                    path_segments = path_segments.into_iter().skip(2).collect();
+                    let mut new_segments = syn::punctuated::Punctuated::new();
+                    new_segments.push(syn::PathSegment {
+                        ident: Ident::new("super", Span::call_site()),
+                        arguments: syn::PathArguments::None,
+                    });
+                    new_segments.extend(path_segments.iter().cloned());
+                    path_segments = new_segments;
+                    let view_path = Path {
+                        leading_colon: path.leading_colon,
+                        segments: path_segments,
+                    };
+                    return parse_quote! { #view_path };
+                }
+            }
             return ty.clone();
         }
 
@@ -263,11 +287,42 @@ impl TypeResolution {
     }
 
     /// Internal helper that can distinguish between direct field context and list/vector context
-    fn to_view_type_inner(&self, in_collection: bool) -> Type {
+    fn to_view_type_inner(&self, _in_collection: bool) -> Type {
         match &self.resolution {
             TypeResolutionKind::Class(class) => {
-                let ref_ident = Ident::new(&format!("{}Ref", class), Span::call_site());
-                parse_quote!(#ref_ident<'a>)
+                if let Some(Type::Path(TypePath { path, .. })) = &self.ty {
+                    let mut path_segments = path.segments.clone();
+                    // Strip `crate::ssz::` prefix if present (all generated code is inside
+                    // `ssz` module)
+                    if path_segments.len() >= 3
+                        && path_segments[0].ident == "crate"
+                        && path_segments[1].ident == "ssz"
+                    {
+                        path_segments = path_segments.into_iter().skip(2).collect();
+                        let mut new_segments = syn::punctuated::Punctuated::new();
+                        new_segments.push(syn::PathSegment {
+                            ident: Ident::new("super", Span::call_site()),
+                            arguments: syn::PathArguments::None,
+                        });
+                        new_segments.extend(path_segments.iter().cloned());
+                        path_segments = new_segments;
+                    }
+                    if let Some(last_segment) = path_segments.last_mut() {
+                        let ref_ident = Ident::new(
+                            &format!("{}Ref", last_segment.ident),
+                            last_segment.ident.span(),
+                        );
+                        last_segment.ident = ref_ident;
+                    }
+                    let view_path = Path {
+                        leading_colon: path.leading_colon,
+                        segments: path_segments,
+                    };
+                    parse_quote! { #view_path<'a> }
+                } else {
+                    let ref_ident = Ident::new(&format!("{}Ref", class), Span::call_site());
+                    parse_quote!(#ref_ident<'a>)
+                }
             }
             TypeResolutionKind::Boolean => primitive_rust_type("bool"),
             TypeResolutionKind::UInt(size) => primitive_rust_type(&format!("u{size}")),
@@ -297,55 +352,94 @@ impl TypeResolution {
                 parse_quote!(BitListRef<'a, #size>)
             }
             TypeResolutionKind::Optional(ty) => {
-                let inner_view_ty = ty.to_view_type_inner(in_collection);
+                let inner_view_ty = ty.to_view_type_inner(_in_collection);
                 parse_quote!(Optional<#inner_view_ty>)
             }
             TypeResolutionKind::Option(ty) => {
-                let inner_view_ty = ty.to_view_type_inner(in_collection);
+                let inner_view_ty = ty.to_view_type_inner(_in_collection);
                 parse_quote!(Option<#inner_view_ty>)
             }
             TypeResolutionKind::Union(ident, _) => {
-                let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
-                parse_quote!(#ref_ident<'a>)
+                if let Some(Type::Path(TypePath { path, .. })) = &self.ty {
+                    let mut path_segments = path.segments.clone();
+                    // Strip `crate::ssz::` prefix if present (all generated code is inside
+                    // `ssz` module)
+                    if path_segments.len() >= 3
+                        && path_segments[0].ident == "crate"
+                        && path_segments[1].ident == "ssz"
+                    {
+                        path_segments = path_segments.into_iter().skip(2).collect();
+                        let mut new_segments = syn::punctuated::Punctuated::new();
+                        new_segments.push(syn::PathSegment {
+                            ident: Ident::new("super", Span::call_site()),
+                            arguments: syn::PathArguments::None,
+                        });
+                        new_segments.extend(path_segments.iter().cloned());
+                        path_segments = new_segments;
+                    }
+                    if let Some(last_segment) = path_segments.last_mut() {
+                        let ref_ident = Ident::new(
+                            &format!("{}Ref", last_segment.ident),
+                            last_segment.ident.span(),
+                        );
+                        last_segment.ident = ref_ident;
+                    }
+                    let view_path = Path {
+                        leading_colon: path.leading_colon,
+                        segments: path_segments,
+                    };
+                    parse_quote! { #view_path<'a> }
+                } else {
+                    let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
+                    parse_quote!(#ref_ident<'a>)
+                }
             }
             TypeResolutionKind::Bytes(size) => {
                 parse_quote!(FixedBytesRef<'a, #size>)
             }
             TypeResolutionKind::External => {
-                // For external types, behavior depends on context:
-                // - In Lists/Vectors: use view type convention ({Type}Ref) because VariableListRef
-                //   requires the inner type to implement both DecodeView and SszTypeInfo
-                // - For direct fields: use the type itself, which works for primitive-like types
-                //   that implement DecodeView directly
-                if in_collection {
-                    // In List/Vector context: try view type convention
-                    if let Some(ty) = &self.ty {
-                        match ty {
-                            Type::Path(TypePath { path, .. }) => {
-                                let mut path_segments = path.segments.clone();
-                                if let Some(last_segment) = path_segments.last_mut() {
-                                    let ref_ident = Ident::new(
-                                        &format!("{}Ref", last_segment.ident),
-                                        last_segment.ident.span(),
-                                    );
-                                    last_segment.ident = ref_ident;
+                // For external types, use Ref variant if the type name suggests it's a container
+                // (ends with "Payload", "Message", "State", "Proof", "Claim", etc.)
+                // Otherwise, use the type itself (for primitive-like types that implement
+                // DecodeView directly)
+                if let Some(ty) = &self.ty {
+                    match ty {
+                        Type::Path(TypePath { path, .. }) => {
+                            if let Some(last_segment) = path.segments.last() {
+                                let name = last_segment.ident.to_string();
+                                // Check if type name suggests it's a container that needs Ref
+                                if name.ends_with("Payload")
+                                    || name.ends_with("Message")
+                                    || name.ends_with("State")
+                                    || name.ends_with("Proof")
+                                    || name.ends_with("Claim")
+                                {
+                                    let mut path_segments = path.segments.clone();
+                                    if let Some(last_segment) = path_segments.last_mut() {
+                                        let ref_ident = Ident::new(
+                                            &format!("{}Ref", last_segment.ident),
+                                            last_segment.ident.span(),
+                                        );
+                                        last_segment.ident = ref_ident;
+                                    }
+                                    let view_path = Path {
+                                        leading_colon: path.leading_colon,
+                                        segments: path_segments,
+                                    };
+                                    parse_quote! {
+                                        #view_path<'a>
+                                    }
+                                } else {
+                                    // For primitive-like types, use the type itself
+                                    self.unwrap_type()
                                 }
-                                let view_path = Path {
-                                    leading_colon: path.leading_colon,
-                                    segments: path_segments,
-                                };
-                                parse_quote! {
-                                    #view_path<'a>
-                                }
+                            } else {
+                                self.unwrap_type()
                             }
-                            _ => self.unwrap_type(),
                         }
-                    } else {
-                        self.unwrap_type()
+                        _ => self.unwrap_type(),
                     }
                 } else {
-                    // Direct field context: use the type itself
-                    // This works for primitive-like types that implement DecodeView directly
                     self.unwrap_type()
                 }
             }

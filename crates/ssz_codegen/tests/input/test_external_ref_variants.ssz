@@ -1,0 +1,11 @@
+import external_ssz
+
+# Test that container types use Ref variants, primitive types don't
+class ContainerWithExternal(Container):
+    # Container type - should use Ref variant
+    payload: external_ssz.MsgPayload
+    # Primitive-like type - should use type itself
+    account_id: external_ssz.AccountId
+    # Container in list - should use Ref variant
+    messages: List[external_ssz.MessagePayload, 10]
+

@@ -1,0 +1,6 @@
+class CommonTypeA(Container):
+    value: uint32
+
+class CommonTypeB(Container):
+    value: uint64
+

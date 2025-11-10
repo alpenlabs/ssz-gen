@@ -3244,7 +3244,7 @@ pub mod test_1 {
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> NuRef<'a> {
-        pub fn zz(&self) -> Result<MuRef<'a>, ssz::DecodeError> {
+        pub fn zz(&self) -> Result<AliasMuRef<'a>, ssz::DecodeError> {
             let start = ssz::layout::read_variable_offset(
                 self.bytes,
                 16usize,
@@ -3294,7 +3294,7 @@ pub mod test_1 {
             let bytes = &self.bytes[start..end];
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
-        pub fn test(&self) -> Result<Option<MuRef<'a>>, ssz::DecodeError> {
+        pub fn test(&self) -> Result<Option<AliasMuRef<'a>>, ssz::DecodeError> {
             let start = ssz::layout::read_variable_offset(
                 self.bytes,
                 16usize,

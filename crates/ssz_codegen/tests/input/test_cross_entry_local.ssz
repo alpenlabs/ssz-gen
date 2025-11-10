@@ -1,0 +1,6 @@
+import test_cross_entry_common
+
+class ContainerA(Container):
+    field: test_cross_entry_common.CommonTypeA
+    list: List[test_cross_entry_common.CommonTypeB, 10]
+

@@ -1036,10 +1036,13 @@ fn parse_import<P: AsRef<Path>>(
                         if is_first_tok {
                             is_external = module_manager.external_modules.contains(&name.0);
                             if is_external {
-                                path = PathBuf::new();
+                                path = PathBuf::from(&name.0);
+                            } else {
+                                path = path.join(&name.0);
                             }
+                        } else {
+                            path = path.join(&name.0);
                         }
-                        path = path.join(&name.0);
                         path_gob.gobble_exact(2);
                     }
                     [Dot(_), Dot(_), ..] => {
@@ -1053,10 +1056,13 @@ fn parse_import<P: AsRef<Path>>(
                         if is_first_tok {
                             is_external = module_manager.external_modules.contains(&name.0);
                             if is_external {
-                                path = PathBuf::new();
+                                path = PathBuf::from(&name.0);
+                            } else {
+                                path = path.join(&name.0);
                             }
+                        } else {
+                            path = path.join(&name.0);
                         }
-                        path = path.join(&name.0);
                         import_alias = alias.clone();
                         path_gob.gobble_exact(3);
                         break;
@@ -1065,10 +1071,13 @@ fn parse_import<P: AsRef<Path>>(
                         if is_first_tok {
                             is_external = module_manager.external_modules.contains(&name.0);
                             if is_external {
-                                path = PathBuf::new();
+                                path = PathBuf::from(&name.0);
+                            } else {
+                                path = path.join(&name.0);
                             }
+                        } else {
+                            path = path.join(&name.0);
                         }
-                        path = path.join(&name.0);
                         import_alias = name.clone();
                         path_gob.gobble_one();
                         break;
