@@ -7,7 +7,6 @@ use tree_hash_derive::TreeHash;
 use ssz::view::*;
 #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
 #[ssz(struct_behaviour = "container")]
-#[tree_hash(struct_behaviour = "container")]
 pub struct ExportEntry {
     pub key: u32,
     pub value: u64,
@@ -135,11 +134,10 @@ impl<'a> ExportEntryRef<'a> {
 }
 #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
 #[ssz(struct_behaviour = "container")]
-#[tree_hash(struct_behaviour = "container")]
 pub struct ViewTypeTest {
     pub payload: VariableList<u8, 4096usize>,
     pub entries: VariableList<ExportEntry, 256usize>,
-    pub hash: FixedVector<u8, 32usize>,
+    pub hash: FixedBytes<32usize>,
 }
 impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ViewTypeTest {
     fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -218,7 +216,7 @@ impl<'a> ViewTypeTestRef<'a> {
         let bytes = &self.bytes[start..end];
         ssz::view::DecodeView::from_ssz_bytes(bytes)
     }
-    pub fn hash(&self) -> Result<FixedVectorRef<'a, u8, 32usize>, ssz::DecodeError> {
+    pub fn hash(&self) -> Result<FixedBytesRef<'a, 32usize>, ssz::DecodeError> {
         let offset = 8usize;
         let end = offset + 32usize;
         if end > self.bytes.len() {
@@ -315,7 +313,7 @@ impl<'a> ViewTypeTestRef<'a> {
         ViewTypeTest {
             payload: self.payload().expect("valid view").to_owned().into(),
             entries: self.entries().expect("valid view").to_owned().expect("valid view"),
-            hash: self.hash().expect("valid view").to_owned().expect("valid view"),
+            hash: ssz_types::FixedBytes(self.hash().expect("valid view").to_owned()),
         }
     }
 }

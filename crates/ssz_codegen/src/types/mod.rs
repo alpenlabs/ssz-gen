@@ -1803,10 +1803,19 @@ impl ClassDef {
                             }
                         }
                     }
-                    TypeResolutionKind::Vector(_, _) => {
-                        // FixedVectorRef::to_owned() returns Result<FixedVector<T, N>, Error>
-                        quote! {
-                            #field_name: self.#field_name().expect("valid view").to_owned().expect("valid view")
+                    TypeResolutionKind::Vector(ty, _size) => {
+                        // Check if it's Vector[byte, N] which uses FixedBytesRef
+                        let inner = &**ty;
+                        if matches!(inner.resolution, TypeResolutionKind::UInt(8)) {
+                            // FixedBytesRef::to_owned() returns [u8; N], need to wrap in FixedBytes<N>
+                            quote! {
+                                #field_name: ssz_types::FixedBytes(self.#field_name().expect("valid view").to_owned())
+                            }
+                        } else {
+                            // FixedVectorRef::to_owned() returns Result<FixedVector<T, N>, Error>
+                            quote! {
+                                #field_name: self.#field_name().expect("valid view").to_owned().expect("valid view")
+                            }
                         }
                     }
                     _ => {

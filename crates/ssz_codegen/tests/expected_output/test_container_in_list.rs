@@ -7,7 +7,6 @@ use tree_hash_derive::TreeHash;
 use ssz::view::*;
 #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
 #[ssz(struct_behaviour = "container")]
-#[tree_hash(struct_behaviour = "container")]
 pub struct ExportEntry {
     pub value: u64,
     pub data: u32,
@@ -135,7 +134,6 @@ impl<'a> ExportEntryRef<'a> {
 }
 #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
 #[ssz(struct_behaviour = "container")]
-#[tree_hash(struct_behaviour = "container")]
 pub struct ExportContainer {
     pub entries: VariableList<ExportEntry, 4096usize>,
     pub name: u32,
