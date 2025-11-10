@@ -172,6 +172,13 @@ impl<const N: usize> ToOwnedSsz<FixedBytes<N>> for FixedBytes<N> {
     }
 }
 
+/// Implement [`ToOwnedSsz`] for [`ssz::view::FixedBytesRef`] to enable use in Lists.
+impl<'a, const N: usize> ToOwnedSsz<FixedBytes<N>> for ssz::view::FixedBytesRef<'a, N> {
+    fn to_owned(&self) -> FixedBytes<N> {
+        FixedBytes(*self.as_bytes())
+    }
+}
+
 impl ToOwnedSsz<U256> for U256 {
     fn to_owned(&self) -> U256 {
         *self

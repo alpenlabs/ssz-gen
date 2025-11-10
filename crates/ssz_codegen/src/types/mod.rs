@@ -190,9 +190,16 @@ impl TypeResolution {
             TypeResolutionKind::Boolean => primitive_rust_type("bool"),
             TypeResolutionKind::UInt(size) => primitive_rust_type(&format!("u{size}")),
             TypeResolutionKind::Vector(ty, size) => {
-                let ty = ty.unwrap_type();
                 let size = *size as usize;
-                parse_quote!(FixedVector<#ty, #size>)
+                // Special case: Vector[byte, N] -> FixedBytes<N>
+                // This ensures proper trait implementations (SszTypeInfo, ToOwnedSsz) when used in
+                // Lists
+                if matches!(ty.resolution, TypeResolutionKind::UInt(8)) {
+                    parse_quote!(FixedBytes<#size>)
+                } else {
+                    let ty = ty.unwrap_type();
+                    parse_quote!(FixedVector<#ty, #size>)
+                }
             }
             TypeResolutionKind::List(ty, size) => {
                 let ty = ty.unwrap_type();
@@ -220,7 +227,8 @@ impl TypeResolution {
                 parse_quote!(#ident)
             }
             TypeResolutionKind::Bytes(size) => {
-                parse_quote!(FixedVector<u8, #size>)
+                // Generate FixedBytes for consistency with Vector[byte, N]
+                parse_quote!(FixedBytes<#size>)
             }
             _ => panic!("Expected type resolution to be a type"),
         }
@@ -338,9 +346,15 @@ impl TypeResolution {
             TypeResolutionKind::Boolean => primitive_rust_type("bool"),
             TypeResolutionKind::UInt(size) => primitive_rust_type(&format!("u{size}")),
             TypeResolutionKind::Vector(ty, size) => {
-                let inner_view_ty = ty.to_view_type_inner(true);
                 let size = *size as usize;
-                parse_quote!(FixedVectorRef<'a, #inner_view_ty, #size>)
+                // Special case: Vector[byte, N] -> FixedBytesRef<'a, N>
+                // This ensures proper trait implementations when used in Lists
+                if matches!(ty.resolution, TypeResolutionKind::UInt(8)) {
+                    parse_quote!(FixedBytesRef<'a, #size>)
+                } else {
+                    let inner_view_ty = ty.to_view_type_inner(true);
+                    parse_quote!(FixedVectorRef<'a, #inner_view_ty, #size>)
+                }
             }
             TypeResolutionKind::List(ty, size) => {
                 let inner = &**ty;
