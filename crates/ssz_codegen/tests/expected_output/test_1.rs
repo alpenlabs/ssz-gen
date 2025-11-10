@@ -896,7 +896,9 @@ pub mod tests {
                     Alpha {
                         a: self.a().expect("valid view"),
                         b: self.b().expect("valid view"),
-                        c: self.c().expect("valid view").to_owned().expect("valid view"),
+                        c: ssz_types::FixedBytes(
+                            self.c().expect("valid view").to_owned(),
+                        ),
                     }
                 }
             }
@@ -2541,7 +2543,9 @@ pub mod tests {
                     Theta {
                         o: self.o().expect("valid view").to_owned(),
                         p: self.p().expect("valid view").to_owned(),
-                        q: self.q().expect("valid view").to_owned().expect("valid view"),
+                        q: ssz_types::FixedBytes(
+                            self.q().expect("valid view").to_owned(),
+                        ),
                     }
                 }
             }
