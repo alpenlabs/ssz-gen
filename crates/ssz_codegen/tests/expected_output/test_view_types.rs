@@ -5,12 +5,34 @@ use ssz_derive::{Encode, Decode};
 use tree_hash::TreeHashDigest;
 use tree_hash_derive::TreeHash;
 use ssz::view::*;
-#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TreeHash)]
+#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
 #[ssz(struct_behaviour = "container")]
 #[tree_hash(struct_behaviour = "container")]
 pub struct ExportEntry {
     pub key: u32,
     pub value: u64,
+}
+impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ExportEntry {
+    fn tree_hash_type() -> tree_hash::TreeHashType {
+        tree_hash::TreeHashType::Container
+    }
+    fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+        unreachable!("Container should never be packed")
+    }
+    fn tree_hash_packing_factor() -> usize {
+        unreachable!("Container should never be packed")
+    }
+    fn tree_hash_root(&self) -> H::Output {
+        use tree_hash::TreeHash;
+        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
+        hasher
+            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.key).as_ref())
+            .expect("tree hash derive should not apply too many leaves");
+        hasher
+            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.value).as_ref())
+            .expect("tree hash derive should not apply too many leaves");
+        hasher.finish().expect("tree hash derive should not have a remaining buffer")
+    }
 }
 /// Zero-copy view over [`ExportEntry`].
 ///
@@ -111,13 +133,38 @@ impl<'a> ExportEntryRef<'a> {
         }
     }
 }
-#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TreeHash)]
+#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
 #[ssz(struct_behaviour = "container")]
 #[tree_hash(struct_behaviour = "container")]
 pub struct ViewTypeTest {
     pub payload: VariableList<u8, 4096usize>,
     pub entries: VariableList<ExportEntry, 256usize>,
     pub hash: FixedVector<u8, 32usize>,
+}
+impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ViewTypeTest {
+    fn tree_hash_type() -> tree_hash::TreeHashType {
+        tree_hash::TreeHashType::Container
+    }
+    fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+        unreachable!("Container should never be packed")
+    }
+    fn tree_hash_packing_factor() -> usize {
+        unreachable!("Container should never be packed")
+    }
+    fn tree_hash_root(&self) -> H::Output {
+        use tree_hash::TreeHash;
+        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
+        hasher
+            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.payload).as_ref())
+            .expect("tree hash derive should not apply too many leaves");
+        hasher
+            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.entries).as_ref())
+            .expect("tree hash derive should not apply too many leaves");
+        hasher
+            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.hash).as_ref())
+            .expect("tree hash derive should not apply too many leaves");
+        hasher.finish().expect("tree hash derive should not have a remaining buffer")
+    }
 }
 /// Zero-copy view over [`ViewTypeTest`].
 ///

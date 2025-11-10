@@ -24,7 +24,7 @@ pub mod tests {
             pub type TinyBitvector = BitVector<1usize>;
             pub type StandardBitvector = BitVector<64usize>;
             pub type LargeBitvector = BitVector<128usize>;
-            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TreeHash)]
+            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct BitfieldContainer {
@@ -34,6 +34,67 @@ pub mod tests {
                 pub tiny_vec: TinyBitvector,
                 pub std_vec: StandardBitvector,
                 pub large_vec: LargeBitvector,
+            }
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
+            for BitfieldContainer {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Container
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    use tree_hash::TreeHash;
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(6usize);
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<
+                                H,
+                            >>::tree_hash_root(&self.tiny_list)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.std_list)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<
+                                H,
+                            >>::tree_hash_root(&self.large_list)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.tiny_vec)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.std_vec)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<
+                                H,
+                            >>::tree_hash_root(&self.large_vec)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .finish()
+                        .expect("tree hash derive should not have a remaining buffer")
+                }
             }
             /// Zero-copy view over [`BitfieldContainer`].
             ///

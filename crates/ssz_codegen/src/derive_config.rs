@@ -80,11 +80,12 @@ impl DeriveConfig {
     /// required SSZ derives are present and deduplicated in-order.
     pub fn owned_derive_attr(&self, type_name: &str) -> TokenStream {
         // Combine configured derives + required SSZ derives + ensure Clone for owned types
+        // Note: TreeHash is NOT included here - we generate a generic TreeHash<H> implementation
+        // manually instead of using the derive macro which only generates TreeHash<Sha256Hasher>
         let mut combined: Vec<String> = self.derives_for_type(type_name);
         combined.push("Clone".to_string());
         combined.push("Encode".to_string());
         combined.push("Decode".to_string());
-        combined.push("TreeHash".to_string());
 
         // Deduplicate while preserving order
         let mut seen: HashSet<String> = HashSet::new();
@@ -163,7 +164,8 @@ impl DeriveConfig {
         combined.push("Clone".to_string());
         combined.push("Encode".to_string());
         combined.push("Decode".to_string());
-        combined.push("TreeHash".to_string());
+        // Note: TreeHash is NOT included here - we generate a generic TreeHash<H> implementation
+        // manually instead of using the derive macro which only generates TreeHash<Sha256Hasher>
 
         // Deduplicate while preserving order
         let mut seen: HashSet<String> = HashSet::new();

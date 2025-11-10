@@ -731,13 +731,49 @@ pub mod tests {
             pub type AliasNested = AliasUintAlias;
             pub type BitAlias = BitList<42usize>;
             pub type UnionE = UnionD;
-            #[derive(Eq, Clone, Encode, Decode, TreeHash)]
+            #[derive(Eq, Clone, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct Alpha {
                 pub a: u8,
                 pub b: u16,
                 pub c: AliasVecB,
+            }
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Alpha {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Container
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    use tree_hash::TreeHash;
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.a)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.b)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.c)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .finish()
+                        .expect("tree hash derive should not have a remaining buffer")
+                }
             }
             /// Zero-copy view over [`Alpha`].
             ///
@@ -867,13 +903,49 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Debug, Clone, Encode, Decode, TreeHash)]
+            #[derive(Debug, Clone, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct Beta {
                 pub d: AliasListAlias,
                 pub e: u8,
                 pub f: AliasUintAlias,
+            }
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Beta {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Container
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    use tree_hash::TreeHash;
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.d)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.e)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.f)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .finish()
+                        .expect("tree hash derive should not have a remaining buffer")
+                }
             }
             /// Zero-copy view over [`Beta`].
             ///
@@ -1027,12 +1099,64 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Debug, Clone, Encode, Decode, TreeHash)]
+            #[derive(Debug, Clone, Encode, Decode)]
             #[ssz(struct_behaviour = "stable_container", max_fields = 42usize)]
             #[tree_hash(struct_behaviour = "stable_container", max_fields = 42usize)]
             pub struct Gamma {
                 pub g: Optional<u8>,
                 pub h: Optional<VariableList<AliasUintAlias, 8usize>>,
+            }
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Gamma {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::StableContainer
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("StableContainer should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("StableContainer should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    use tree_hash::TreeHash;
+                    use ssz_types::BitVector;
+                    let mut active_fields = BitVector::<42u64>::new();
+                    if self.g.is_some() {
+                        active_fields.set_bit(0usize);
+                    }
+                    if self.h.is_some() {
+                        active_fields.set_bit(1usize);
+                    }
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(42usize);
+                    if let Some(ref g) = self.g {
+                        hasher
+                            .write(
+                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(g).as_ref(),
+                            )
+                            .expect("tree hash derive should not apply too many leaves");
+                    } else {
+                        hasher
+                            .write(&[0u8; 32])
+                            .expect("tree hash derive should not apply too many leaves");
+                    }
+                    if let Some(ref h) = self.h {
+                        hasher
+                            .write(
+                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(h).as_ref(),
+                            )
+                            .expect("tree hash derive should not apply too many leaves");
+                    } else {
+                        hasher
+                            .write(&[0u8; 32])
+                            .expect("tree hash derive should not apply too many leaves");
+                    }
+                    let hash = hasher
+                        .finish()
+                        .expect("tree hash derive should not have a remaining buffer");
+                    let active_fields_hash = <_ as tree_hash::TreeHash<
+                        H,
+                    >>::tree_hash_root(&active_fields);
+                    H::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
+                }
             }
             /// Zero-copy view over [`Gamma`].
             ///
@@ -1173,12 +1297,42 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Debug, Clone, Encode, Decode, TreeHash)]
+            #[derive(Debug, Clone, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct Delta {
                 pub z: bool,
                 pub w: u8,
+            }
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Delta {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Container
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    use tree_hash::TreeHash;
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.z)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.w)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .finish()
+                        .expect("tree hash derive should not have a remaining buffer")
+                }
             }
             /// Zero-copy view over [`Delta`].
             ///
@@ -1286,7 +1440,7 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Debug, Clone, Encode, Decode, TreeHash)]
+            #[derive(Debug, Clone, Encode, Decode)]
             #[ssz(struct_behaviour = "stable_container", max_fields = 42usize)]
             #[tree_hash(struct_behaviour = "stable_container", max_fields = 42usize)]
             pub struct Epsilon {
@@ -1294,6 +1448,86 @@ pub mod tests {
                 pub h: Optional<VariableList<AliasUintAlias, 8usize>>,
                 pub i: Optional<u8>,
                 pub j: Optional<AliasNested>,
+            }
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Epsilon {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::StableContainer
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("StableContainer should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("StableContainer should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    use tree_hash::TreeHash;
+                    use ssz_types::BitVector;
+                    let mut active_fields = BitVector::<42u64>::new();
+                    if self.g.is_some() {
+                        active_fields.set_bit(0usize);
+                    }
+                    if self.h.is_some() {
+                        active_fields.set_bit(1usize);
+                    }
+                    if self.i.is_some() {
+                        active_fields.set_bit(2usize);
+                    }
+                    if self.j.is_some() {
+                        active_fields.set_bit(3usize);
+                    }
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(42usize);
+                    if let Some(ref g) = self.g {
+                        hasher
+                            .write(
+                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(g).as_ref(),
+                            )
+                            .expect("tree hash derive should not apply too many leaves");
+                    } else {
+                        hasher
+                            .write(&[0u8; 32])
+                            .expect("tree hash derive should not apply too many leaves");
+                    }
+                    if let Some(ref h) = self.h {
+                        hasher
+                            .write(
+                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(h).as_ref(),
+                            )
+                            .expect("tree hash derive should not apply too many leaves");
+                    } else {
+                        hasher
+                            .write(&[0u8; 32])
+                            .expect("tree hash derive should not apply too many leaves");
+                    }
+                    if let Some(ref i) = self.i {
+                        hasher
+                            .write(
+                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(i).as_ref(),
+                            )
+                            .expect("tree hash derive should not apply too many leaves");
+                    } else {
+                        hasher
+                            .write(&[0u8; 32])
+                            .expect("tree hash derive should not apply too many leaves");
+                    }
+                    if let Some(ref j) = self.j {
+                        hasher
+                            .write(
+                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(j).as_ref(),
+                            )
+                            .expect("tree hash derive should not apply too many leaves");
+                    } else {
+                        hasher
+                            .write(&[0u8; 32])
+                            .expect("tree hash derive should not apply too many leaves");
+                    }
+                    let hash = hasher
+                        .finish()
+                        .expect("tree hash derive should not have a remaining buffer");
+                    let active_fields_hash = <_ as tree_hash::TreeHash<
+                        H,
+                    >>::tree_hash_root(&active_fields);
+                    H::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
+                }
             }
             /// Zero-copy view over [`Epsilon`].
             ///
@@ -1488,12 +1722,64 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Debug, Clone, Encode, Decode, TreeHash)]
+            #[derive(Debug, Clone, Encode, Decode)]
             #[ssz(struct_behaviour = "stable_container", max_fields = 128usize)]
             #[tree_hash(struct_behaviour = "stable_container", max_fields = 128usize)]
             pub struct Zeta {
                 pub u: Optional<FixedVector<u8, 16usize>>,
                 pub v: Optional<AliasListAlias>,
+            }
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Zeta {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::StableContainer
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("StableContainer should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("StableContainer should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    use tree_hash::TreeHash;
+                    use ssz_types::BitVector;
+                    let mut active_fields = BitVector::<128u64>::new();
+                    if self.u.is_some() {
+                        active_fields.set_bit(0usize);
+                    }
+                    if self.v.is_some() {
+                        active_fields.set_bit(1usize);
+                    }
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(128usize);
+                    if let Some(ref u) = self.u {
+                        hasher
+                            .write(
+                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(u).as_ref(),
+                            )
+                            .expect("tree hash derive should not apply too many leaves");
+                    } else {
+                        hasher
+                            .write(&[0u8; 32])
+                            .expect("tree hash derive should not apply too many leaves");
+                    }
+                    if let Some(ref v) = self.v {
+                        hasher
+                            .write(
+                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(v).as_ref(),
+                            )
+                            .expect("tree hash derive should not apply too many leaves");
+                    } else {
+                        hasher
+                            .write(&[0u8; 32])
+                            .expect("tree hash derive should not apply too many leaves");
+                    }
+                    let hash = hasher
+                        .finish()
+                        .expect("tree hash derive should not have a remaining buffer");
+                    let active_fields_hash = <_ as tree_hash::TreeHash<
+                        H,
+                    >>::tree_hash_root(&active_fields);
+                    H::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
+                }
             }
             /// Zero-copy view over [`Zeta`].
             ///
@@ -1634,13 +1920,49 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Debug, Clone, Encode, Decode, TreeHash)]
+            #[derive(Debug, Clone, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct TestType {
                 pub ccc: u8,
                 pub ddd: u8,
                 pub eee: VariableList<u16, 3usize>,
+            }
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for TestType {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Container
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    use tree_hash::TreeHash;
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.ccc)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.ddd)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.eee)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .finish()
+                        .expect("tree hash derive should not have a remaining buffer")
+                }
             }
             /// Zero-copy view over [`TestType`].
             ///
@@ -1800,13 +2122,49 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Debug, Clone, Encode, Decode, TreeHash)]
+            #[derive(Debug, Clone, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct Eta {
                 pub l: Zeta,
                 pub m: TestType,
                 pub n: FirstUnion,
+            }
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Eta {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Container
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    use tree_hash::TreeHash;
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.l)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.m)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.n)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .finish()
+                        .expect("tree hash derive should not have a remaining buffer")
+                }
             }
             /// Zero-copy view over [`Eta`].
             ///
@@ -1978,13 +2336,49 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Debug, Clone, Encode, Decode, TreeHash)]
+            #[derive(Debug, Clone, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct Theta {
                 pub o: UnionB,
                 pub p: UnionC,
                 pub q: AliasVecA,
+            }
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Theta {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Container
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    use tree_hash::TreeHash;
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.o)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.p)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.q)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .finish()
+                        .expect("tree hash derive should not have a remaining buffer")
+                }
             }
             /// Zero-copy view over [`Theta`].
             ///
@@ -2151,7 +2545,7 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Debug, Clone, Encode, Decode, TreeHash)]
+            #[derive(Debug, Clone, Encode, Decode)]
             #[ssz(struct_behaviour = "stable_container", max_fields = 42usize)]
             #[tree_hash(struct_behaviour = "stable_container", max_fields = 42usize)]
             pub struct Iota {
@@ -2161,6 +2555,114 @@ pub mod tests {
                 pub j: Optional<AliasNested>,
                 pub r: Optional<VariableList<AliasNested, 2usize>>,
                 pub s: Optional<u8>,
+            }
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Iota {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::StableContainer
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("StableContainer should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("StableContainer should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    use tree_hash::TreeHash;
+                    use ssz_types::BitVector;
+                    let mut active_fields = BitVector::<42u64>::new();
+                    if self.g.is_some() {
+                        active_fields.set_bit(0usize);
+                    }
+                    if self.h.is_some() {
+                        active_fields.set_bit(1usize);
+                    }
+                    if self.i.is_some() {
+                        active_fields.set_bit(2usize);
+                    }
+                    if self.j.is_some() {
+                        active_fields.set_bit(3usize);
+                    }
+                    if self.r.is_some() {
+                        active_fields.set_bit(4usize);
+                    }
+                    if self.s.is_some() {
+                        active_fields.set_bit(5usize);
+                    }
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(42usize);
+                    if let Some(ref g) = self.g {
+                        hasher
+                            .write(
+                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(g).as_ref(),
+                            )
+                            .expect("tree hash derive should not apply too many leaves");
+                    } else {
+                        hasher
+                            .write(&[0u8; 32])
+                            .expect("tree hash derive should not apply too many leaves");
+                    }
+                    if let Some(ref h) = self.h {
+                        hasher
+                            .write(
+                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(h).as_ref(),
+                            )
+                            .expect("tree hash derive should not apply too many leaves");
+                    } else {
+                        hasher
+                            .write(&[0u8; 32])
+                            .expect("tree hash derive should not apply too many leaves");
+                    }
+                    if let Some(ref i) = self.i {
+                        hasher
+                            .write(
+                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(i).as_ref(),
+                            )
+                            .expect("tree hash derive should not apply too many leaves");
+                    } else {
+                        hasher
+                            .write(&[0u8; 32])
+                            .expect("tree hash derive should not apply too many leaves");
+                    }
+                    if let Some(ref j) = self.j {
+                        hasher
+                            .write(
+                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(j).as_ref(),
+                            )
+                            .expect("tree hash derive should not apply too many leaves");
+                    } else {
+                        hasher
+                            .write(&[0u8; 32])
+                            .expect("tree hash derive should not apply too many leaves");
+                    }
+                    if let Some(ref r) = self.r {
+                        hasher
+                            .write(
+                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(r).as_ref(),
+                            )
+                            .expect("tree hash derive should not apply too many leaves");
+                    } else {
+                        hasher
+                            .write(&[0u8; 32])
+                            .expect("tree hash derive should not apply too many leaves");
+                    }
+                    if let Some(ref s) = self.s {
+                        hasher
+                            .write(
+                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(s).as_ref(),
+                            )
+                            .expect("tree hash derive should not apply too many leaves");
+                    } else {
+                        hasher
+                            .write(&[0u8; 32])
+                            .expect("tree hash derive should not apply too many leaves");
+                    }
+                    let hash = hasher
+                        .finish()
+                        .expect("tree hash derive should not have a remaining buffer");
+                    let active_fields_hash = <_ as tree_hash::TreeHash<
+                        H,
+                    >>::tree_hash_root(&active_fields);
+                    H::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
+                }
             }
             /// Zero-copy view over [`Iota`].
             ///
@@ -2414,13 +2916,49 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Debug, Clone, Encode, Decode, TreeHash)]
+            #[derive(Debug, Clone, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct Kappa {
                 pub t: Alpha,
                 pub u: Beta,
                 pub v: BitVector<64usize>,
+            }
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Kappa {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Container
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    use tree_hash::TreeHash;
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.t)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.u)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.v)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .finish()
+                        .expect("tree hash derive should not have a remaining buffer")
+                }
             }
             /// Zero-copy view over [`Kappa`].
             ///
@@ -2585,12 +3123,64 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Debug, Clone, Encode, Decode, TreeHash)]
+            #[derive(Debug, Clone, Encode, Decode)]
             #[ssz(struct_behaviour = "stable_container", max_fields = 4usize)]
             #[tree_hash(struct_behaviour = "stable_container", max_fields = 4usize)]
             pub struct Lambda {
                 pub w: Optional<u16>,
                 pub x: Optional<u8>,
+            }
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Lambda {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::StableContainer
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("StableContainer should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("StableContainer should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    use tree_hash::TreeHash;
+                    use ssz_types::BitVector;
+                    let mut active_fields = BitVector::<4u64>::new();
+                    if self.w.is_some() {
+                        active_fields.set_bit(0usize);
+                    }
+                    if self.x.is_some() {
+                        active_fields.set_bit(1usize);
+                    }
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(4usize);
+                    if let Some(ref w) = self.w {
+                        hasher
+                            .write(
+                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(w).as_ref(),
+                            )
+                            .expect("tree hash derive should not apply too many leaves");
+                    } else {
+                        hasher
+                            .write(&[0u8; 32])
+                            .expect("tree hash derive should not apply too many leaves");
+                    }
+                    if let Some(ref x) = self.x {
+                        hasher
+                            .write(
+                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(x).as_ref(),
+                            )
+                            .expect("tree hash derive should not apply too many leaves");
+                    } else {
+                        hasher
+                            .write(&[0u8; 32])
+                            .expect("tree hash derive should not apply too many leaves");
+                    }
+                    let hash = hasher
+                        .finish()
+                        .expect("tree hash derive should not have a remaining buffer");
+                    let active_fields_hash = <_ as tree_hash::TreeHash<
+                        H,
+                    >>::tree_hash_root(&active_fields);
+                    H::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
+                }
             }
             /// Zero-copy view over [`Lambda`].
             ///
@@ -2726,12 +3316,42 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Debug, Clone, Encode, Decode, TreeHash)]
+            #[derive(Debug, Clone, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct Mu {
                 pub y: Lambda,
                 pub z: UnionA,
+            }
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Mu {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Container
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    use tree_hash::TreeHash;
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.y)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.z)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .finish()
+                        .expect("tree hash derive should not have a remaining buffer")
+                }
             }
             /// Zero-copy view over [`Mu`].
             ///
@@ -2876,7 +3496,7 @@ pub mod tests {
                 }
             }
             pub type AliasMu = Mu;
-            #[derive(Debug, Clone, Encode, Decode, TreeHash)]
+            #[derive(Debug, Clone, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
             #[tree_hash(struct_behaviour = "container")]
             pub struct Nu {
@@ -2884,6 +3504,48 @@ pub mod tests {
                 pub aaa: FixedVector<bool, 4usize>,
                 pub bbb: BitAlias,
                 pub test: Option<AliasMu>,
+            }
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Nu {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Container
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    use tree_hash::TreeHash;
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(4usize);
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.zz)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.aaa)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.bbb)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.test)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .finish()
+                        .expect("tree hash derive should not have a remaining buffer")
+                }
             }
             /// Zero-copy view over [`Nu`].
             ///

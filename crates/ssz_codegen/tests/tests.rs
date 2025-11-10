@@ -436,13 +436,17 @@ fn test_derives_toml_override() {
     // Per-type override for Alpha is ["Eq"], owned must still include Clone + SSZ derives
     assert!(derive_text.contains("Eq"));
     assert!(derive_text.contains("Clone"));
-    assert!(
-        derive_text.contains("Encode")
-            && derive_text.contains("Decode")
-            && derive_text.contains("TreeHash")
-    );
+    assert!(derive_text.contains("Encode") && derive_text.contains("Decode"));
+    // TreeHash is no longer in the derive attribute - we generate it manually as a generic impl
+    assert!(!derive_text.contains("TreeHash"));
     // And should not contain Debug (since per-type replaces default)
     assert!(!derive_text.contains("Debug"));
+
+    // Verify that a generic TreeHash implementation exists for Alpha
+    assert!(
+        output.contains("impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Alpha"),
+        "Generic TreeHash implementation not found for Alpha"
+    );
 }
 
 #[test]
