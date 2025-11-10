@@ -665,7 +665,7 @@ pub mod test_1 {
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     pub const SIZE_ALIAS: u64 = 64u64;
     pub type AliasUintAlias = u16;
-    pub type AliasVecA = FixedVector<u8, 10usize>;
+    pub type AliasVecA = FixedBytes<10usize>;
     pub type AliasVecB = AliasVecA;
     pub type AliasListAlias = VariableList<u8, 5usize>;
     pub type AliasNested = AliasUintAlias;
@@ -739,7 +739,7 @@ pub mod test_1 {
             let bytes = &self.bytes[offset..end];
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
-        pub fn c(&self) -> Result<FixedVectorRef<'a, u8, 10usize>, ssz::DecodeError> {
+        pub fn c(&self) -> Result<FixedBytesRef<'a, 10usize>, ssz::DecodeError> {
             let offset = 3usize;
             let end = offset + 10usize;
             if end > self.bytes.len() {
@@ -1575,7 +1575,7 @@ pub mod test_1 {
     #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
     #[ssz(struct_behaviour = "stable_container", max_fields = 128usize)]
     pub struct Zeta {
-        pub u: Optional<FixedVector<u8, 16usize>>,
+        pub u: Optional<FixedBytes<16usize>>,
         pub v: Optional<AliasListAlias>,
     }
     impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Zeta {
@@ -1640,7 +1640,7 @@ pub mod test_1 {
     impl<'a> ZetaRef<'a> {
         pub fn u(
             &self,
-        ) -> Result<Optional<FixedVectorRef<'a, u8, 16usize>>, ssz::DecodeError> {
+        ) -> Result<Optional<FixedBytesRef<'a, 16usize>>, ssz::DecodeError> {
             let bitvector_offset = 1usize;
             let container_bytes = &self.bytes[bitvector_offset..];
             let start = ssz::layout::read_variable_offset(
@@ -2209,7 +2209,7 @@ pub mod test_1 {
             let bytes = &self.bytes[start..end];
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
-        pub fn q(&self) -> Result<FixedVectorRef<'a, u8, 10usize>, ssz::DecodeError> {
+        pub fn q(&self) -> Result<FixedBytesRef<'a, 10usize>, ssz::DecodeError> {
             let offset = 8usize;
             let end = offset + 10usize;
             if end > self.bytes.len() {
