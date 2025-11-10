@@ -1,0 +1,5 @@
+CONST_C = 300
+
+class ContainerC(Container):
+    value: uint32
+

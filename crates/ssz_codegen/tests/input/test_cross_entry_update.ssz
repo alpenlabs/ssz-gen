@@ -1,0 +1,9 @@
+import test_cross_entry_state as state
+
+MAX_UPDATES = 10
+
+class Update(Container):
+    state: state.State
+    timestamp: uint64
+    updates: List[uint8, MAX_UPDATES]
+

@@ -1,0 +1,8 @@
+import test_circular_a as a
+
+CONST_B = 20
+
+class ContainerB(Container):
+    value: uint16
+    a_ref: a.ContainerA
+
