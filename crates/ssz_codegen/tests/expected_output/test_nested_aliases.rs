@@ -23,14 +23,56 @@ pub mod tests {
             pub type E = FixedVector<D, 5usize>;
             pub type F = VariableList<A, 10usize>;
             pub type G = FixedVector<F, 10usize>;
-            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TreeHash)]
+            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            #[tree_hash(struct_behaviour = "container")]
             pub struct NestedAliasContainer {
                 pub field1: D,
                 pub field2: E,
                 pub field3: F,
                 pub field4: G,
+            }
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
+            for NestedAliasContainer {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Container
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    use tree_hash::TreeHash;
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(4usize);
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.field1)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.field2)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.field3)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.field4)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .finish()
+                        .expect("tree hash derive should not have a remaining buffer")
+                }
             }
             /// Zero-copy view over [`NestedAliasContainer`].
             ///

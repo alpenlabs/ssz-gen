@@ -166,6 +166,10 @@ impl<'a> CircleBufferCodegen<'a> {
             self.tokens
                 .push(parent_class_def.to_token_stream(&ident, self.derive_cfg));
 
+            // Generate generic TreeHash implementation for owned struct
+            self.tokens
+                .push(parent_class_def.to_owned_tree_hash_impl(&ident));
+
             // Generate view struct (thin wrapper)
             self.tokens
                 .push(parent_class_def.to_view_struct(&ident, self.derive_cfg));

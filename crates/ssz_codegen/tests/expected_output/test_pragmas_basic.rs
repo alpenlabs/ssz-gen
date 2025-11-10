@@ -11,11 +11,35 @@ pub mod tests {
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
             /// Test basic pragma with derive
-            #[derive(Clone, Debug, PartialEq, Eq, Default, Encode, Decode, TreeHash)]
+            #[derive(Clone, Debug, PartialEq, Eq, Default, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            #[tree_hash(struct_behaviour = "container")]
             pub struct BasicContainer {
                 pub a: u8,
+            }
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
+            for BasicContainer {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Container
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    use tree_hash::TreeHash;
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.a)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .finish()
+                        .expect("tree hash derive should not have a remaining buffer")
+                }
             }
             /// Zero-copy view over [`BasicContainer`].
             ///

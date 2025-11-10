@@ -232,12 +232,42 @@ pub mod tests {
             }
             pub type TestA = external_ssz::A;
             pub type TestB = external_ssz::module_a::module_b::B;
-            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TreeHash)]
+            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            #[tree_hash(struct_behaviour = "container")]
             pub struct ExternalContainer {
                 pub field_a: external_ssz::A,
                 pub field_b: external_ssz::module_a::module_b::B,
+            }
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
+            for ExternalContainer {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Container
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Container should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    use tree_hash::TreeHash;
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.field_a)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.field_b)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .finish()
+                        .expect("tree hash derive should not have a remaining buffer")
+                }
             }
             /// Zero-copy view over [`ExternalContainer`].
             ///

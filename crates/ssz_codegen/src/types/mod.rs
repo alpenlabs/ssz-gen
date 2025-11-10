@@ -715,7 +715,6 @@ impl ClassDef {
                     #owned_derive
                     #struct_attrs
                     #[ssz(struct_behaviour="container")]
-                    #[tree_hash(struct_behaviour="container")]
                     pub struct #ident {
                         #(#field_tokens),*
                     }
@@ -728,31 +727,19 @@ impl ClassDef {
                     #owned_derive
                     #struct_attrs
                     #[ssz(struct_behaviour="stable_container", max_fields=#max)]
-                    #[tree_hash(struct_behaviour="stable_container", max_fields=#max)]
                     pub struct #ident {
                         #(#field_tokens),*
                     }
                 }
             }
-            BaseClass::Profile(Some((_, max))) => {
-                let max = max as usize;
-                let index = self
-                    .fields
-                    .iter()
-                    .map(|field| field.index)
-                    .collect::<Vec<_>>();
-
+            BaseClass::Profile(Some((_, _))) => {
                 quote! {
                     #doc_comments
                     #owned_derive
                     #struct_attrs
                     #[ssz(struct_behaviour="profile")]
-                    #[tree_hash(struct_behaviour="profile", max_fields=#max)]
                     pub struct #ident {
-                        #(
-                            #[tree_hash(stable_index = #index)]
-                            #field_tokens
-                        ),*
+                        #(#field_tokens),*
                     }
                 }
             }
@@ -1115,6 +1102,138 @@ impl ClassDef {
                             )*
 
                             hasher.finish().expect("finish hasher")
+                        }
+                    }
+                }
+            }
+            _ => panic!("Base class arguments not set"),
+        }
+    }
+
+    /// Generates generic TreeHash implementation for owned structs.
+    ///
+    /// This generates `impl<H: TreeHashDigest> TreeHash<H> for Type` instead of using
+    /// the derive macro which only generates `TreeHash<Sha256Hasher>`.
+    ///
+    /// # Arguments
+    ///
+    /// * `ident` - The identifier for the class (e.g., `Foo`)
+    ///
+    /// # Returns
+    ///
+    /// A [`TokenStream`] containing the generic TreeHash implementation.
+    pub fn to_owned_tree_hash_impl(&self, ident: &Ident) -> TokenStream {
+        let field_names: Vec<Ident> = self
+            .fields
+            .iter()
+            .map(|f| Ident::new(&f.name, Span::call_site()))
+            .collect();
+
+        match self.base {
+            BaseClass::Container => {
+                let num_leaves = field_names.len();
+                quote! {
+                    impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ident {
+                        fn tree_hash_type() -> tree_hash::TreeHashType {
+                            tree_hash::TreeHashType::Container
+                        }
+
+                        fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                            unreachable!("Container should never be packed")
+                        }
+
+                        fn tree_hash_packing_factor() -> usize {
+                            unreachable!("Container should never be packed")
+                        }
+
+                        fn tree_hash_root(&self) -> H::Output {
+                            use tree_hash::TreeHash;
+                            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(#num_leaves);
+                            #(
+                                hasher.write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.#field_names).as_ref())
+                                    .expect("tree hash derive should not apply too many leaves");
+                            )*
+                            hasher.finish().expect("tree hash derive should not have a remaining buffer")
+                        }
+                    }
+                }
+            }
+            BaseClass::StableContainer(Some(max)) | BaseClass::Profile(Some((_, max))) => {
+                let max_fields = max as usize;
+                let field_names: Vec<Ident> = self
+                    .fields
+                    .iter()
+                    .map(|f| Ident::new(&f.name, Span::call_site()))
+                    .collect();
+
+                let hashes: Vec<TokenStream> = self
+                    .fields
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, _)| {
+                        let field_name = &field_names[idx];
+                        quote! {
+                            if let Some(ref #field_name) = self.#field_name {
+                                hasher.write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(#field_name).as_ref())
+                                    .expect("tree hash derive should not apply too many leaves");
+                            } else {
+                                hasher.write(H::get_zero_hash_slice(0))
+                                    .expect("tree hash derive should not apply too many leaves");
+                            }
+                        }
+                    })
+                    .collect();
+
+                let set_active_fields: Vec<TokenStream> = self
+                    .fields
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, _)| {
+                        let field_name = &field_names[idx];
+                        quote! {
+                            if self.#field_name.is_some() {
+                                active_fields.set(#idx, true).expect("Should not be out of bounds");
+                            }
+                        }
+                    })
+                    .collect();
+
+                quote! {
+                    impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ident {
+                        fn tree_hash_type() -> tree_hash::TreeHashType {
+                            tree_hash::TreeHashType::StableContainer
+                        }
+
+                        fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                            unreachable!("StableContainer/Profile should never be packed")
+                        }
+
+                        fn tree_hash_packing_factor() -> usize {
+                            unreachable!("StableContainer/Profile should never be packed")
+                        }
+
+                        fn tree_hash_root(&self) -> H::Output {
+                            use tree_hash::TreeHash;
+                            use ssz_types::BitVector;
+
+                            // Construct BitVector
+                            let mut active_fields = BitVector::<#max>::new();
+
+                            #(
+                                #set_active_fields
+                            )*
+
+                            // Hash according to `max_fields` regardless of the actual number of fields
+                            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(#max_fields);
+
+                            #(
+                                #hashes
+                            )*
+
+                            let hash = hasher.finish().expect("tree hash derive should not have a remaining buffer");
+                            let active_fields_hash = <_ as tree_hash::TreeHash<H>>::tree_hash_root(&active_fields);
+
+                            H::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
                         }
                     }
                 }
