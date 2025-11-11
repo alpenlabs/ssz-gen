@@ -380,10 +380,16 @@ impl<'a> CircleBufferCodegen<'a> {
         let capacity = match parent_class_def.base {
             BaseClass::StableContainer(Some(cap)) => cap,
             BaseClass::StableContainer(None) => {
-                panic!("Expected parent class used for inheritance to have all arguments")
+                panic!(
+                    "Expected parent class used for inheritance to have all arguments: class '{}'",
+                    class.name().0
+                )
             }
             BaseClass::Container => u64::MAX,
-            _ => panic!("Simple inheritance is only allowed for Container and StableContainer"),
+            _ => panic!(
+                "Simple inheritance is only allowed for Container and StableContainer: class '{}'",
+                class.name().0
+            ),
         };
 
         let mut curr_index = 0;
@@ -391,7 +397,11 @@ impl<'a> CircleBufferCodegen<'a> {
             // If name overlap -> replace field type
             if let Some(parent_field_index) = parent_class_def.field_index.get(&field.name().0) {
                 if *parent_field_index < curr_index {
-                    panic!("Inheritance field order violation");
+                    panic!(
+                        "Inheritance field order violation: field '{}' in class '{}'",
+                        field.name().0,
+                        class.name().0
+                    );
                 }
                 curr_index = *parent_field_index;
             } else {
@@ -400,7 +410,12 @@ impl<'a> CircleBufferCodegen<'a> {
 
             // Check for capacity overflow
             if curr_index >= capacity as usize {
-                panic!("Capacity overflow");
+                panic!(
+                    "Capacity overflow: field '{}' in class '{}' exceeds capacity {}",
+                    field.name().0,
+                    class.name().0,
+                    capacity
+                );
             }
 
             // Resolve the field type
@@ -436,18 +451,27 @@ impl<'a> CircleBufferCodegen<'a> {
                 match parent_class_def.base {
                     BaseClass::Container => {
                         if matches!(field_type.resolution, TypeResolutionKind::Optional(_)) {
-                            panic!("Optional fields are not allowed in Container classes");
+                            panic!(
+                                "Optional fields are not allowed in Container classes: field '{}' in class '{}'",
+                                field.name().0,
+                                class.name().0
+                            );
                         }
                     }
                     BaseClass::StableContainer(_) => {
                         if !matches!(field_type.resolution, TypeResolutionKind::Optional(_))
                             && !matches!(field_type.resolution, TypeResolutionKind::External)
                         {
-                            panic!("All fields in StableContainer classes must be optional");
+                            panic!(
+                                "All fields in StableContainer classes must be optional: field '{}' in class '{}'",
+                                field.name().0,
+                                class.name().0
+                            );
                         }
                     }
                     _ => panic!(
-                        "Simple inheritance is only allowed for Container and StableContainer"
+                        "Simple inheritance is only allowed for Container and StableContainer: class '{}'",
+                        class.name().0
                     ),
                 }
             }
@@ -503,7 +527,11 @@ impl<'a> CircleBufferCodegen<'a> {
                         .insert(field.name().0.to_string(), curr_index);
                 }
             } else {
-                panic!("Expected field type to be a type or base class");
+                panic!(
+                    "Expected field type to be a type or base class: field '{}' in class '{}'",
+                    field.name().0,
+                    class.name().0
+                );
             }
         }
         true
@@ -520,7 +548,10 @@ impl<'a> CircleBufferCodegen<'a> {
         // Needed in case we're inheriting from a profile class into a new profile class
         let stable_contaienr_name = match &parent_class_def.base {
             BaseClass::Profile(Some((name, _))) => name,
-            _ => panic!("Expected profile to inherit from a stable container"),
+            _ => panic!(
+                "Expected profile to inherit from a stable container: class '{}'",
+                class.name().0
+            ),
         };
 
         // If it's imported, we need to get the original stable container's definition from another
@@ -534,11 +565,19 @@ impl<'a> CircleBufferCodegen<'a> {
         };
 
         if stable_container_def.is_none() {
-            panic!("Expected stable container parent of profile class to be defined");
+            panic!(
+                "Expected stable container parent '{}' of profile class '{}' to be defined",
+                stable_contaienr_name,
+                class.name().0
+            );
         }
         let stable_container_def = match stable_container_def.unwrap() {
             ClassDefinition::Custom(class_def) => class_def,
-            _ => panic!("Expected stable container parent of profile class to be defined"),
+            _ => panic!(
+                "Expected stable container parent '{}' of profile class '{}' to be defined",
+                stable_contaienr_name,
+                class.name().0
+            ),
         };
 
         // Profile classes are not allowed to add extra fields to their parent class
@@ -563,12 +602,20 @@ impl<'a> CircleBufferCodegen<'a> {
                 // Check if field exists in original stable container
                 original_field_index = *stable_field_index;
             } else {
-                panic!("Profile classes cannot add new fields to their parent classes");
+                panic!(
+                    "Profile classes cannot add new fields to their parent classes: field '{}' in class '{}'",
+                    field.name().0,
+                    class.name().0
+                );
             }
 
             // Make sure ordering is maintained
             if original_field_index < curr_index {
-                panic!("Inheritance field order violation");
+                panic!(
+                    "Inheritance field order violation: field '{}' in class '{}'",
+                    field.name().0,
+                    class.name().0
+                );
             }
             curr_index = original_field_index;
 
@@ -627,7 +674,11 @@ impl<'a> CircleBufferCodegen<'a> {
                 new_fields.push(new_field.clone());
                 new_field_tokens.push(field_attr_tokens);
             } else {
-                panic!("Expected field type to be a type or base class");
+                panic!(
+                    "Expected field type to be a type or base class: field '{}' in class '{}'",
+                    field.name().0,
+                    class.name().0
+                );
             }
         }
 

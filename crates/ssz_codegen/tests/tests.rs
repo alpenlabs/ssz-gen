@@ -1305,3 +1305,84 @@ fn test_single_generic() {
         output.contains("pub struct RawMerkleProof<H: ssz::Encode + ssz::Decode + MerkleHash>")
     );
 }
+
+#[test]
+fn test_nested_generics() {
+    use ssz_codegen::{ModuleGeneration, build_ssz_files};
+
+    build_ssz_files(
+        &["test_nested_generics.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_nested_generics.rs",
+        ModuleGeneration::SingleModule,
+    )
+    .expect("Failed to generate SSZ types with nested generics");
+
+    let output = std::fs::read_to_string("tests/output/test_nested_generics.rs")
+        .expect("Failed to read generated output");
+
+    // Check that Inner has generic parameter T
+    assert!(output.contains("pub struct Inner<T: ssz::Encode + ssz::Decode>"));
+
+    // Check that Outer has generic parameter T and uses Inner<T>
+    assert!(output.contains("pub struct Outer<T: ssz::Encode + ssz::Decode>"));
+    assert!(output.contains("pub inner: Inner<T>"));
+}
+
+#[test]
+fn test_multiple_generic_params() {
+    use ssz_codegen::{ModuleGeneration, build_ssz_files};
+
+    build_ssz_files(
+        &["test_multiple_generic_params.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_multiple_generic_params.rs",
+        ModuleGeneration::SingleModule,
+    )
+    .expect("Failed to generate SSZ types with multiple generic params");
+
+    let output = std::fs::read_to_string("tests/output/test_multiple_generic_params.rs")
+        .expect("Failed to read generated output");
+
+    // Check that Pair has two type parameters
+    assert!(
+        output.contains(
+            "pub struct Pair<T: ssz::Encode + ssz::Decode, U: ssz::Encode + ssz::Decode>"
+        )
+    );
+
+    // Check that Triple has three type parameters (may be split across lines)
+    assert!(output.contains("pub struct Triple<"));
+    assert!(output.contains("T: ssz::Encode + ssz::Decode"));
+    assert!(output.contains("U: ssz::Encode + ssz::Decode"));
+    assert!(output.contains("V: ssz::Encode + ssz::Decode"));
+}
+
+#[test]
+fn test_generic_aliases() {
+    use ssz_codegen::{ModuleGeneration, build_ssz_files};
+
+    build_ssz_files(
+        &["test_generic_aliases.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_generic_aliases.rs",
+        ModuleGeneration::SingleModule,
+    )
+    .expect("Failed to generate SSZ types with generic aliases");
+
+    let output = std::fs::read_to_string("tests/output/test_generic_aliases.rs")
+        .expect("Failed to read generated output");
+
+    // Check that Box is generic
+    assert!(output.contains("pub struct Box<T: ssz::Encode + ssz::Decode>"));
+
+    // Check that BoxHash32 is a type alias (not a struct)
+    assert!(output.contains("pub type BoxHash32 = Box<Hash32>"));
+
+    // Check that Warehouse uses BoxHash32
+    assert!(output.contains("pub struct Warehouse {"));
+    assert!(output.contains("pub item: BoxHash32"));
+}

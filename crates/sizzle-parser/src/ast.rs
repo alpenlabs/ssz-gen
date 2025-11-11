@@ -163,7 +163,10 @@ pub(crate) enum TypeParamKind {
     /// Type variable (e.g., T, U)
     Type,
     /// Const variable (e.g., N for sizes)
-    #[allow(dead_code)]
+    #[expect(
+        dead_code,
+        reason = "Reserved for future const generics implementation"
+    )]
     Const,
 }
 
