@@ -30,7 +30,7 @@ enum AliasOrClass<'a> {
 }
 
 /// Convert a parser Ty to a TokenStream for use in generic contexts
-/// This is a simplified conversion that handles common cases
+/// This is a simplified conversion that handles common cases and maps SSZ types to Rust types
 fn ty_to_token_stream(ty: &Ty) -> TokenStream {
     use sizzle_parser::tysys::TyExpr;
 
@@ -42,7 +42,16 @@ fn ty_to_token_stream(ty: &Ty) -> TokenStream {
         }
         Ty::Complex(base, args) => {
             let base_name = &base.0;
-            let base_ident = Ident::new(base_name, Span::call_site());
+
+            // Map SSZ schema types to their Rust equivalents
+            let rust_type_name = match base_name.as_str() {
+                "List" => "VariableList",
+                "Vector" => "FixedVector",
+                "Bitlist" => "Bitlist",
+                "Bitvector" => "Bitvector",
+                _ => base_name.as_str(),
+            };
+            let base_ident = Ident::new(rust_type_name, Span::call_site());
 
             let arg_tokens: Vec<TokenStream> = args
                 .iter()

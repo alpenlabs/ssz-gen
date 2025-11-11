@@ -1272,11 +1272,13 @@ fn test_generics() {
     let output = std::fs::read_to_string("tests/output/test_generics.rs")
         .expect("Failed to read generated output");
 
-    // Check that RawMerkleProof has generic parameter H with MerkleHash bound
-    assert!(output.contains("pub struct RawMerkleProof<H: Encode + Decode + MerkleHash>"));
+    // Check that RawMerkleProof has generic parameter H with fully qualified trait bounds
+    assert!(
+        output.contains("pub struct RawMerkleProof<H: ssz::Encode + ssz::Decode + MerkleHash>")
+    );
 
-    // Check that MerkleProof has generic parameter H with MerkleHash bound
-    assert!(output.contains("pub struct MerkleProof<H: Encode + Decode + MerkleHash>"));
+    // Check that MerkleProof has generic parameter H with fully qualified trait bounds
+    assert!(output.contains("pub struct MerkleProof<H: ssz::Encode + ssz::Decode + MerkleHash>"));
 
     // Check that CompactMmr64 is non-generic
     assert!(output.contains("pub struct CompactMmr64 {"));
@@ -1299,5 +1301,7 @@ fn test_single_generic() {
     let output = std::fs::read_to_string("tests/output/test_single_generic.rs")
         .expect("Failed to read generated output");
 
-    assert!(output.contains("pub struct RawMerkleProof<H: Encode + Decode + MerkleHash>"));
+    assert!(
+        output.contains("pub struct RawMerkleProof<H: ssz::Encode + ssz::Decode + MerkleHash>")
+    );
 }

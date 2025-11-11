@@ -6,7 +6,7 @@ use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{Ident, Path, Type, TypePath, parse_quote};
 
-use crate::{derive_config::DeriveConfig, types::resolver::TypeResolver};
+use crate::{derive_config::DeriveConfig, pragma::ParsedPragma, types::resolver::TypeResolver};
 pub mod resolver;
 
 /// Converts a primitive type name into a Rust [`Type`].
@@ -857,27 +857,22 @@ impl ClassDef {
                 match tp.kind {
                     TypeParamKind::Type => {
                         // Type parameters get trait bounds from pragmas
-                        // Default bounds: Encode + Decode for all type params
-                        let mut bounds = vec!["Encode".to_string(), "Decode".to_string()];
+                        // Default bounds: ssz::Encode + ssz::Decode for all type params
+                        let mut bounds: Vec<TokenStream> =
+                            vec![parse_quote!(ssz::Encode), parse_quote!(ssz::Decode)];
 
                         // Add custom bounds from pragmas
                         if let Some(pragma_bounds) = pragmas.type_param_bounds.get(&tp.name) {
-                            bounds.extend(pragma_bounds.iter().cloned());
+                            for bound_str in pragma_bounds {
+                                // Parse the bound string as a path (e.g., "MerkleHash" or
+                                // "tree_hash::TreeHash")
+                                if let Ok(bound_path) = syn::parse_str::<syn::Path>(bound_str) {
+                                    bounds.push(quote! { #bound_path });
+                                }
+                            }
                         }
 
-                        // Deduplicate bounds
-                        let mut seen = std::collections::HashSet::new();
-                        let unique_bounds: Vec<String> = bounds
-                            .into_iter()
-                            .filter(|b| seen.insert(b.clone()))
-                            .collect();
-
-                        let bound_idents: Vec<Ident> = unique_bounds
-                            .iter()
-                            .map(|b| Ident::new(b, Span::call_site()))
-                            .collect();
-
-                        quote! { #param_ident: #(#bound_idents)+* }
+                        quote! { #param_ident: #(#bounds)+* }
                     }
                     TypeParamKind::Const => {
                         // Const parameters are always usize
@@ -909,27 +904,29 @@ impl ClassDef {
                 match tp.kind {
                     TypeParamKind::Type => {
                         // Type parameters get trait bounds from pragmas
-                        // Default bounds: Encode + Decode for all type params
-                        let mut bounds = vec!["Encode".to_string(), "Decode".to_string()];
+                        // Default bounds for view types: need all SSZ traits plus lifetime
+                        // These are required for types to be usable in collections and for
+                        // to_owned()
+                        let mut bounds: Vec<TokenStream> = vec![
+                            parse_quote!(ssz::Encode),
+                            parse_quote!(ssz::Decode),
+                            parse_quote!(ssz::view::DecodeView<'a>),
+                            parse_quote!(ssz::view::SszTypeInfo),
+                            parse_quote!('a), // Lifetime bound to ensure H lives as long as 'a
+                        ];
 
                         // Add custom bounds from pragmas
                         if let Some(pragma_bounds) = pragmas.type_param_bounds.get(&tp.name) {
-                            bounds.extend(pragma_bounds.iter().cloned());
+                            for bound_str in pragma_bounds {
+                                // Parse the bound string as a path (e.g., "MerkleHash" or
+                                // "tree_hash::TreeHash")
+                                if let Ok(bound_path) = syn::parse_str::<syn::Path>(bound_str) {
+                                    bounds.push(quote! { #bound_path });
+                                }
+                            }
                         }
 
-                        // Deduplicate bounds
-                        let mut seen = std::collections::HashSet::new();
-                        let unique_bounds: Vec<String> = bounds
-                            .into_iter()
-                            .filter(|b| seen.insert(b.clone()))
-                            .collect();
-
-                        let bound_idents: Vec<Ident> = unique_bounds
-                            .iter()
-                            .map(|b| Ident::new(b, Span::call_site()))
-                            .collect();
-
-                        quote! { #param_ident: #(#bound_idents)+* }
+                        quote! { #param_ident: #(#bounds)+* }
                     }
                     TypeParamKind::Const => {
                         // Const parameters are always usize
@@ -993,19 +990,20 @@ impl ClassDef {
         quote! { <#(#param_names),*> }
     }
 
-    /// Build generic parameters for TreeHash impl of view structs (includes 'a, H, and type params)
-    fn build_tree_hash_view_generic_params(
+    /// Build generic parameters for TreeHash impl of owned structs (includes H and type params with
+    /// bounds)
+    fn build_tree_hash_owned_generic_params(
         &self,
         pragmas: &crate::pragma::ParsedPragma,
     ) -> TokenStream {
         use syn::Ident;
 
         if self.type_params.is_empty() {
-            // No type params, just 'a and H
-            return quote! { <'a, H: tree_hash::TreeHashDigest> };
+            // No type params, just H
+            return quote! { <H: tree_hash::TreeHashDigest> };
         }
 
-        // Build type parameters with bounds
+        // For TreeHash impl on owned types, add TreeHashDigest bound to type params
         let type_params: Vec<TokenStream> = self
             .type_params
             .iter()
@@ -1014,44 +1012,90 @@ impl ClassDef {
 
                 match tp.kind {
                     TypeParamKind::Type => {
-                        // Type parameters get trait bounds from pragmas
-                        // For TreeHash, we need TreeHash<H> bound in addition to custom bounds
-                        let mut bounds = vec!["tree_hash::TreeHash<H>".to_string()];
+                        // Start with TreeHashDigest, TreeHash and Encode/Decode bounds
+                        let mut bounds: Vec<TokenStream> = vec![
+                            parse_quote!(tree_hash::TreeHashDigest),
+                            parse_quote!(tree_hash::TreeHash),
+                            parse_quote!(ssz::Encode),
+                            parse_quote!(ssz::Decode),
+                        ];
 
-                        // Add custom bounds from pragmas (but not Encode/Decode for TreeHash)
+                        // Add custom bounds from pragmas
                         if let Some(pragma_bounds) = pragmas.type_param_bounds.get(&tp.name) {
-                            bounds.extend(pragma_bounds.iter().cloned());
+                            for bound_str in pragma_bounds {
+                                if let Ok(bound_path) = syn::parse_str::<syn::Path>(bound_str) {
+                                    bounds.push(quote! { #bound_path });
+                                }
+                            }
                         }
 
-                        // Deduplicate bounds
-                        let mut seen = std::collections::HashSet::new();
-                        let unique_bounds: Vec<String> = bounds
-                            .into_iter()
-                            .filter(|b| seen.insert(b.clone()))
-                            .collect();
-
-                        // Parse the bounds as paths
-                        let bound_tokens: Vec<TokenStream> = unique_bounds
-                            .iter()
-                            .map(|b| {
-                                let tokens: proc_macro2::TokenStream =
-                                    b.parse().expect("valid bound");
-                                quote! { #tokens }
-                            })
-                            .collect();
-
-                        quote! { #param_ident: #(#bound_tokens)+* }
+                        quote! { #param_ident: #(#bounds)+* }
                     }
                     TypeParamKind::Const => {
-                        // Const parameters are always usize
                         quote! { const #param_ident: usize }
                     }
                 }
             })
             .collect();
 
-        // TreeHash impl has: <'a, H: TreeHashDigest, type_params>
-        quote! { <'a, H: tree_hash::TreeHashDigest, #(#type_params),*> }
+        // TreeHash impl has: <type_params> (H is in type_params)
+        quote! { <#(#type_params),*> }
+    }
+
+    /// Build generic parameters for TreeHash impl of view structs (includes 'a, H, and type params)
+    fn build_tree_hash_view_generic_params(
+        &self,
+        pragmas: &crate::pragma::ParsedPragma,
+    ) -> TokenStream {
+        use syn::Ident;
+
+        if self.type_params.is_empty() {
+            // No type params, just 'a and H (add H for the TreeHash trait parameter)
+            return quote! { <'a, H: tree_hash::TreeHashDigest> };
+        }
+
+        // For TreeHash impl, we need TreeHashDigest + TreeHash bounds on type params
+        // that will be used as the hash digest type
+        let type_params: Vec<TokenStream> = self
+            .type_params
+            .iter()
+            .map(|tp| {
+                let param_ident = Ident::new(&tp.name, Span::call_site());
+
+                match tp.kind {
+                    TypeParamKind::Type => {
+                        // Start with TreeHashDigest, TreeHash, and SSZ bounds for all type params
+                        let mut bounds: Vec<TokenStream> = vec![
+                            parse_quote!(tree_hash::TreeHashDigest),
+                            parse_quote!(tree_hash::TreeHash),
+                            parse_quote!(ssz::Encode),
+                            parse_quote!(ssz::Decode),
+                            parse_quote!(ssz::view::DecodeView<'a>),
+                            parse_quote!(ssz::view::SszTypeInfo),
+                            parse_quote!('a),
+                        ];
+
+                        // Add custom bounds from pragmas
+                        if let Some(pragma_bounds) = pragmas.type_param_bounds.get(&tp.name) {
+                            for bound_str in pragma_bounds {
+                                if let Ok(bound_path) = syn::parse_str::<syn::Path>(bound_str) {
+                                    bounds.push(quote! { #bound_path });
+                                }
+                            }
+                        }
+
+                        quote! { #param_ident: #(#bounds)+* }
+                    }
+                    TypeParamKind::Const => {
+                        quote! { const #param_ident: usize }
+                    }
+                }
+            })
+            .collect();
+
+        // TreeHash impl has: <'a, type_params>
+        // We implement TreeHash<TypeParam> where TypeParam is the first type parameter
+        quote! { <'a, #(#type_params),*> }
     }
 
     /// Returns true if this class is a Container
@@ -1409,14 +1453,40 @@ impl ClassDef {
         let view_generics = self.build_view_generic_params(&pragmas);
 
         // All view structs are now thin wrappers around bytes
+        // Add PhantomData for type parameters if any
+        let type_params: Vec<syn::Ident> = self
+            .type_params
+            .iter()
+            .filter_map(|tp| {
+                if matches!(tp.kind, TypeParamKind::Type) {
+                    Some(syn::Ident::new(&tp.name, proc_macro2::Span::call_site()))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
         match self.base {
             BaseClass::Container | BaseClass::StableContainer(_) | BaseClass::Profile(_) => {
-                quote! {
-                    #doc_comments
-                    #[allow(dead_code, reason = "generated code using ssz-gen")]
-                    #view_derive
-                    pub struct #ref_ident #view_generics {
-                        bytes: &'a [u8],
+                if type_params.is_empty() {
+                    quote! {
+                        #doc_comments
+                        #[allow(dead_code, reason = "generated code using ssz-gen")]
+                        #view_derive
+                        pub struct #ref_ident #view_generics {
+                            bytes: &'a [u8],
+                        }
+                    }
+                } else {
+                    // Use a tuple of all type parameters in PhantomData
+                    quote! {
+                        #doc_comments
+                        #[allow(dead_code, reason = "generated code using ssz-gen")]
+                        #view_derive
+                        pub struct #ref_ident #view_generics {
+                            bytes: &'a [u8],
+                            _phantom: core::marker::PhantomData<(#(#type_params,)*)>,
+                        }
                     }
                 }
             }
@@ -1613,11 +1683,16 @@ impl ClassDef {
             .map(|f| Ident::new(&f.name, Span::call_site()))
             .collect();
 
+        // Get generic parameter names for the struct
+        let pragmas = ParsedPragma::parse(&self.pragmas);
+        let generic_names = self.build_generic_names(&pragmas);
+        let tree_hash_impl_generics = self.build_tree_hash_owned_generic_params(&pragmas);
+
         match self.base {
             BaseClass::Container => {
                 let num_leaves = field_names.len();
                 quote! {
-                    impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ident {
+                    impl #tree_hash_impl_generics tree_hash::TreeHash<H> for #ident #generic_names {
                         fn tree_hash_type() -> tree_hash::TreeHashType {
                             tree_hash::TreeHashType::Container
                         }
@@ -1683,7 +1758,7 @@ impl ClassDef {
                     .collect();
 
                 quote! {
-                    impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ident {
+                    impl #tree_hash_impl_generics tree_hash::TreeHash<H> for #ident #generic_names {
                         fn tree_hash_type() -> tree_hash::TreeHashType {
                             tree_hash::TreeHashType::StableContainer
                         }
@@ -1951,11 +2026,22 @@ impl ClassDef {
                     }
                 };
 
+                // Check if we need to initialize _phantom field
+                let struct_init = if self
+                    .type_params
+                    .iter()
+                    .any(|tp| matches!(tp.kind, TypeParamKind::Type))
+                {
+                    quote! { Self { bytes, _phantom: core::marker::PhantomData } }
+                } else {
+                    quote! { Self { bytes } }
+                };
+
                 quote! {
                     impl #view_generics ssz::view::DecodeView<'a> for #ref_ident #view_generic_names {
                         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
                             #validation
-                            Ok(Self { bytes })
+                            Ok(#struct_init)
                         }
                     }
                 }
@@ -2053,11 +2139,22 @@ impl ClassDef {
                     }
                 };
 
+                // Check if we need to initialize _phantom field
+                let struct_init = if self
+                    .type_params
+                    .iter()
+                    .any(|tp| matches!(tp.kind, TypeParamKind::Type))
+                {
+                    quote! { Self { bytes, _phantom: core::marker::PhantomData } }
+                } else {
+                    quote! { Self { bytes } }
+                };
+
                 quote! {
                     impl #view_generics ssz::view::DecodeView<'a> for #ref_ident #view_generic_names {
                         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
                             #validation
-                            Ok(Self { bytes })
+                            Ok(#struct_init)
                         }
                     }
                 }
@@ -2220,6 +2317,20 @@ impl ClassDef {
                             quote! {
                                 #field_name: self.#field_name().expect("valid view").to_owned().expect("valid view")
                             }
+                        }
+                    }
+                    TypeResolutionKind::Unresolved => {
+                        // For unresolved types (generics), to_owned() returns the owned type directly
+                        // (not a Result) because they're calling the custom to_owned() impl
+                        quote! {
+                            #field_name: self.#field_name().expect("valid view").to_owned()
+                        }
+                    }
+                    TypeResolutionKind::Class(_) => {
+                        // For class types (including generic classes like RawMerkleProof[H]),
+                        // to_owned() returns the owned type directly, not a Result
+                        quote! {
+                            #field_name: self.#field_name().expect("valid view").to_owned()
                         }
                     }
                     _ => {
