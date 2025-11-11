@@ -50,7 +50,9 @@ fn ty_to_token_stream(ty: &Ty) -> TokenStream {
                     TyExpr::Ty(ty) => Some(ty_to_token_stream(ty)),
                     TyExpr::Int(val) => {
                         let num = val.eval();
-                        Some(quote! { #num })
+                        // Use usize suffix for numeric type parameters (for List, Vector, etc.)
+                        let lit = syn::LitInt::new(&format!("{}usize", num), Span::call_site());
+                        Some(quote! { #lit })
                     }
                     TyExpr::None => None,
                 })
