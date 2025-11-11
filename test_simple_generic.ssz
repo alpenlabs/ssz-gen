@@ -1,0 +1,4 @@
+# Simple generic test
+class Box[T](Container):
+    value: T
+    count: uint64

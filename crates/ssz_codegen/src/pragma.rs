@@ -1,5 +1,7 @@
 //! Pragma parsing and processing utilities
 
+use std::collections::HashMap;
+
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{Ident, parse_str};
@@ -13,6 +15,9 @@ pub struct ParsedPragma {
     pub struct_attrs: Vec<TokenStream>,
     /// Field-level attributes (applied to all fields, or via field-specific pragmas)
     pub field_attrs: Vec<TokenStream>,
+    /// Type parameter bounds (e.g., "H: MerkleHash")
+    /// Maps type parameter name to list of trait bounds
+    pub type_param_bounds: HashMap<String, Vec<String>>,
 }
 
 impl ParsedPragma {
@@ -21,6 +26,7 @@ impl ParsedPragma {
         let mut derives = Vec::new();
         let mut struct_attrs = Vec::new();
         let mut field_attrs = Vec::new();
+        let mut type_param_bounds = HashMap::new();
 
         for pragma in pragmas {
             let trimmed = pragma.trim();
@@ -51,12 +57,32 @@ impl ParsedPragma {
                     field_attrs.push(attr);
                 }
             }
+            // Parse bound: H: MerkleHash (type parameter bounds)
+            else if let Some(rest) = trimmed.strip_prefix("bound:") {
+                let bound_str = rest.trim();
+                // Parse "H: MerkleHash" or "H: Trait1 + Trait2"
+                if let Some(colon_pos) = bound_str.find(':') {
+                    let param_name = bound_str[..colon_pos].trim().to_string();
+                    let bounds_str = bound_str[colon_pos + 1..].trim();
+                    let bounds: Vec<String> = bounds_str
+                        .split('+')
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .collect();
+
+                    type_param_bounds
+                        .entry(param_name)
+                        .or_insert_with(Vec::new)
+                        .extend(bounds);
+                }
+            }
         }
 
         Self {
             derives,
             struct_attrs,
             field_attrs,
+            type_param_bounds,
         }
     }
 
@@ -80,6 +106,19 @@ impl ParsedPragma {
         let mut combined_field = other.field_attrs.clone();
         combined_field.extend(self.field_attrs.iter().cloned());
         self.field_attrs = combined_field;
+
+        // For type parameter bounds, merge and deduplicate
+        for (param, bounds) in other.type_param_bounds {
+            self.type_param_bounds
+                .entry(param)
+                .or_default()
+                .extend(bounds);
+        }
+        // Deduplicate bounds for each type parameter
+        for bounds in self.type_param_bounds.values_mut() {
+            let mut seen = std::collections::HashSet::new();
+            bounds.retain(|b| seen.insert(b.clone()));
+        }
     }
 
     /// Build additional derive attributes from pragmas

@@ -230,6 +230,22 @@ impl TypeResolution {
                 // Generate FixedBytes for consistency with Vector[byte, N]
                 parse_quote!(FixedBytes<#size>)
             }
+            TypeResolutionKind::External => {
+                // For external types, use the stored syn::Type
+                if let Some(ty) = &self.ty {
+                    ty.clone()
+                } else {
+                    panic!("External type without stored syn::Type")
+                }
+            }
+            TypeResolutionKind::Unresolved => {
+                // For unresolved types (type parameters), use the stored syn::Type
+                if let Some(ty) = &self.ty {
+                    ty.clone()
+                } else {
+                    panic!("Unresolved type without stored syn::Type")
+                }
+            }
             _ => panic!("Expected type resolution to be a type"),
         }
     }
@@ -326,18 +342,50 @@ impl TypeResolution {
                     if let Some(converted_path) = convert_crate_ssz_to_super(path) {
                         path_segments = converted_path.segments;
                     }
+
+                    // Extract generic arguments from the last segment if present
+                    let generic_args = if let Some(last_segment) = path_segments.last() {
+                        if let syn::PathArguments::AngleBracketed(args) = &last_segment.arguments {
+                            Some(args.args.clone())
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    };
+
                     if let Some(last_segment) = path_segments.last_mut() {
                         let ref_ident = Ident::new(
                             &format!("{}Ref", last_segment.ident),
                             last_segment.ident.span(),
                         );
                         last_segment.ident = ref_ident;
+
+                        // Build new generic arguments: <'a, ...existing_args>
+                        use syn::{GenericArgument, Lifetime};
+                        let lifetime =
+                            GenericArgument::Lifetime(Lifetime::new("'a", Span::call_site()));
+                        let mut new_args = syn::punctuated::Punctuated::new();
+                        new_args.push(lifetime);
+
+                        if let Some(args) = generic_args {
+                            new_args.extend(args);
+                        }
+
+                        last_segment.arguments = syn::PathArguments::AngleBracketed(
+                            syn::AngleBracketedGenericArguments {
+                                colon2_token: None,
+                                lt_token: syn::token::Lt::default(),
+                                args: new_args,
+                                gt_token: syn::token::Gt::default(),
+                            },
+                        );
                     }
                     let view_path = Path {
                         leading_colon: path.leading_colon,
                         segments: path_segments,
                     };
-                    parse_quote! { #view_path<'a> }
+                    parse_quote! { #view_path }
                 } else {
                     let ref_ident = Ident::new(&format!("{}Ref", class), Span::call_site());
                     parse_quote!(#ref_ident<'a>)
@@ -455,6 +503,84 @@ impl TypeResolution {
                         _ => self.unwrap_type(),
                     }
                 } else {
+                    self.unwrap_type()
+                }
+            }
+            TypeResolutionKind::Unresolved => {
+                // For unresolved types, we need to distinguish between:
+                // 1. Simple type parameters like `H` - use as-is
+                // 2. Generic class references like `RawMerkleProof<H>` - convert to view type
+
+                if let Some(Type::Path(TypePath { path, .. })) = &self.ty {
+                    let last_segment = path.segments.last();
+
+                    // Check if this looks like a class reference (not a simple type parameter)
+                    // Simple type parameters are single identifiers, while class references might
+                    // have:
+                    // - Multiple segments (e.g., `module::Class`)
+                    // - Or generic arguments (e.g., `Class<T>`)
+                    let is_likely_class = path.segments.len() > 1
+                        || (last_segment.is_some()
+                            && matches!(
+                                last_segment.unwrap().arguments,
+                                syn::PathArguments::AngleBracketed(_)
+                            ));
+
+                    if is_likely_class {
+                        // This looks like a generic class reference, convert to view type
+                        let mut path_segments = path.segments.clone();
+
+                        // Extract generic arguments from the last segment if present
+                        let generic_args = if let Some(last_seg) = path_segments.last() {
+                            if let syn::PathArguments::AngleBracketed(args) = &last_seg.arguments {
+                                Some(args.args.clone())
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        };
+
+                        if let Some(last_segment) = path_segments.last_mut() {
+                            // Change class name to ClassRef
+                            let ref_ident = Ident::new(
+                                &format!("{}Ref", last_segment.ident),
+                                last_segment.ident.span(),
+                            );
+                            last_segment.ident = ref_ident;
+
+                            // Build new generic arguments: <'a, ...existing_args>
+                            use syn::{GenericArgument, Lifetime};
+                            let lifetime =
+                                GenericArgument::Lifetime(Lifetime::new("'a", Span::call_site()));
+                            let mut new_args = syn::punctuated::Punctuated::new();
+                            new_args.push(lifetime);
+
+                            if let Some(args) = generic_args {
+                                new_args.extend(args);
+                            }
+
+                            last_segment.arguments = syn::PathArguments::AngleBracketed(
+                                syn::AngleBracketedGenericArguments {
+                                    colon2_token: None,
+                                    lt_token: syn::token::Lt::default(),
+                                    args: new_args,
+                                    gt_token: syn::token::Gt::default(),
+                                },
+                            );
+                        }
+
+                        let view_path = Path {
+                            leading_colon: path.leading_colon,
+                            segments: path_segments,
+                        };
+                        parse_quote! { #view_path }
+                    } else {
+                        // Simple type parameter, use as-is
+                        self.unwrap_type()
+                    }
+                } else {
+                    // No stored type, use as-is
                     self.unwrap_type()
                 }
             }
@@ -672,6 +798,24 @@ pub struct ClassFieldDef {
     pub doc_comment: Option<String>,
 }
 
+/// Type parameter in a generic class definition
+#[derive(Clone, Debug)]
+pub struct TypeParam {
+    /// Name of the type parameter (e.g., "H", "T", "N")
+    pub name: String,
+    /// Type of the parameter (Type or Const)
+    pub kind: TypeParamKind,
+}
+
+/// Kind of type parameter
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum TypeParamKind {
+    /// Type variable (e.g., T, U, H)
+    Type,
+    /// Const variable (e.g., N for array sizes)
+    Const,
+}
+
 /// Definition of a class with its base type and fields
 #[derive(Clone, Debug)]
 pub struct ClassDef {
@@ -689,9 +833,227 @@ pub struct ClassDef {
     pub doc_comment: Option<String>,
     /// Docstring for the class (from """ docstrings)
     pub doc: Option<String>,
+    /// Type parameters for generic classes
+    pub type_params: Vec<TypeParam>,
 }
 
 impl ClassDef {
+    /// Build generic type parameters with trait bounds
+    ///
+    /// Returns a TokenStream for generic parameters like `<H: MerkleHash, N: usize>`
+    fn build_generic_params(&self, pragmas: &crate::pragma::ParsedPragma) -> TokenStream {
+        use syn::Ident;
+
+        if self.type_params.is_empty() {
+            return quote! {};
+        }
+
+        let params: Vec<TokenStream> = self
+            .type_params
+            .iter()
+            .map(|tp| {
+                let param_ident = Ident::new(&tp.name, Span::call_site());
+
+                match tp.kind {
+                    TypeParamKind::Type => {
+                        // Type parameters get trait bounds from pragmas
+                        // Default bounds: Encode + Decode for all type params
+                        let mut bounds = vec!["Encode".to_string(), "Decode".to_string()];
+
+                        // Add custom bounds from pragmas
+                        if let Some(pragma_bounds) = pragmas.type_param_bounds.get(&tp.name) {
+                            bounds.extend(pragma_bounds.iter().cloned());
+                        }
+
+                        // Deduplicate bounds
+                        let mut seen = std::collections::HashSet::new();
+                        let unique_bounds: Vec<String> = bounds
+                            .into_iter()
+                            .filter(|b| seen.insert(b.clone()))
+                            .collect();
+
+                        let bound_idents: Vec<Ident> = unique_bounds
+                            .iter()
+                            .map(|b| Ident::new(b, Span::call_site()))
+                            .collect();
+
+                        quote! { #param_ident: #(#bound_idents)+* }
+                    }
+                    TypeParamKind::Const => {
+                        // Const parameters are always usize
+                        quote! { const #param_ident: usize }
+                    }
+                }
+            })
+            .collect();
+
+        quote! { <#(#params),*> }
+    }
+
+    /// Build generic parameters for view structs (includes lifetime + type params)
+    fn build_view_generic_params(&self, pragmas: &crate::pragma::ParsedPragma) -> TokenStream {
+        use syn::Ident;
+
+        if self.type_params.is_empty() {
+            // No type params, just lifetime
+            return quote! { <'a> };
+        }
+
+        // Build type parameters with bounds
+        let type_params: Vec<TokenStream> = self
+            .type_params
+            .iter()
+            .map(|tp| {
+                let param_ident = Ident::new(&tp.name, Span::call_site());
+
+                match tp.kind {
+                    TypeParamKind::Type => {
+                        // Type parameters get trait bounds from pragmas
+                        // Default bounds: Encode + Decode for all type params
+                        let mut bounds = vec!["Encode".to_string(), "Decode".to_string()];
+
+                        // Add custom bounds from pragmas
+                        if let Some(pragma_bounds) = pragmas.type_param_bounds.get(&tp.name) {
+                            bounds.extend(pragma_bounds.iter().cloned());
+                        }
+
+                        // Deduplicate bounds
+                        let mut seen = std::collections::HashSet::new();
+                        let unique_bounds: Vec<String> = bounds
+                            .into_iter()
+                            .filter(|b| seen.insert(b.clone()))
+                            .collect();
+
+                        let bound_idents: Vec<Ident> = unique_bounds
+                            .iter()
+                            .map(|b| Ident::new(b, Span::call_site()))
+                            .collect();
+
+                        quote! { #param_ident: #(#bound_idents)+* }
+                    }
+                    TypeParamKind::Const => {
+                        // Const parameters are always usize
+                        quote! { const #param_ident: usize }
+                    }
+                }
+            })
+            .collect();
+
+        // View structs have lifetime 'a first, then type params
+        quote! { <'a, #(#type_params),*> }
+    }
+
+    /// Build generic parameters without bounds for type references (just names for instantiation)
+    fn build_view_generic_names(&self) -> TokenStream {
+        use syn::Ident;
+
+        if self.type_params.is_empty() {
+            // No type params, just lifetime
+            return quote! { <'a> };
+        }
+
+        // Build just the parameter names without bounds
+        let param_names: Vec<TokenStream> = self
+            .type_params
+            .iter()
+            .map(|tp| {
+                let param_ident = Ident::new(&tp.name, Span::call_site());
+                match tp.kind {
+                    TypeParamKind::Type => quote! { #param_ident },
+                    TypeParamKind::Const => quote! { #param_ident },
+                }
+            })
+            .collect();
+
+        // View type names have: <'a, type_param_names>
+        quote! { <'a, #(#param_names),*> }
+    }
+
+    /// Build generic parameter names for owned types (without bounds)
+    fn build_generic_names(&self, _pragmas: &crate::pragma::ParsedPragma) -> TokenStream {
+        use syn::Ident;
+
+        if self.type_params.is_empty() {
+            return quote! {};
+        }
+
+        // Build just the parameter names without bounds
+        let param_names: Vec<TokenStream> = self
+            .type_params
+            .iter()
+            .map(|tp| {
+                let param_ident = Ident::new(&tp.name, Span::call_site());
+                match tp.kind {
+                    TypeParamKind::Type => quote! { #param_ident },
+                    TypeParamKind::Const => quote! { #param_ident },
+                }
+            })
+            .collect();
+
+        quote! { <#(#param_names),*> }
+    }
+
+    /// Build generic parameters for TreeHash impl of view structs (includes 'a, H, and type params)
+    fn build_tree_hash_view_generic_params(
+        &self,
+        pragmas: &crate::pragma::ParsedPragma,
+    ) -> TokenStream {
+        use syn::Ident;
+
+        if self.type_params.is_empty() {
+            // No type params, just 'a and H
+            return quote! { <'a, H: tree_hash::TreeHashDigest> };
+        }
+
+        // Build type parameters with bounds
+        let type_params: Vec<TokenStream> = self
+            .type_params
+            .iter()
+            .map(|tp| {
+                let param_ident = Ident::new(&tp.name, Span::call_site());
+
+                match tp.kind {
+                    TypeParamKind::Type => {
+                        // Type parameters get trait bounds from pragmas
+                        // For TreeHash, we need TreeHash<H> bound in addition to custom bounds
+                        let mut bounds = vec!["tree_hash::TreeHash<H>".to_string()];
+
+                        // Add custom bounds from pragmas (but not Encode/Decode for TreeHash)
+                        if let Some(pragma_bounds) = pragmas.type_param_bounds.get(&tp.name) {
+                            bounds.extend(pragma_bounds.iter().cloned());
+                        }
+
+                        // Deduplicate bounds
+                        let mut seen = std::collections::HashSet::new();
+                        let unique_bounds: Vec<String> = bounds
+                            .into_iter()
+                            .filter(|b| seen.insert(b.clone()))
+                            .collect();
+
+                        // Parse the bounds as paths
+                        let bound_tokens: Vec<TokenStream> = unique_bounds
+                            .iter()
+                            .map(|b| {
+                                let tokens: proc_macro2::TokenStream =
+                                    b.parse().expect("valid bound");
+                                quote! { #tokens }
+                            })
+                            .collect();
+
+                        quote! { #param_ident: #(#bound_tokens)+* }
+                    }
+                    TypeParamKind::Const => {
+                        // Const parameters are always usize
+                        quote! { const #param_ident: usize }
+                    }
+                }
+            })
+            .collect();
+
+        // TreeHash impl has: <'a, H: TreeHashDigest, type_params>
+        quote! { <'a, H: tree_hash::TreeHashDigest, #(#type_params),*> }
+    }
+
     /// Returns true if this class is a Container
     ///
     /// # Returns
@@ -798,6 +1160,9 @@ impl ClassDef {
             quote! {}
         };
 
+        // Build generic type parameters with bounds
+        let generics = self.build_generic_params(&pragmas);
+
         // Format doc comment for the struct
         // Merge doc (""") and doc_comment (###) with doc taking priority
         let doc_comments = match (&self.doc, &self.doc_comment) {
@@ -824,7 +1189,7 @@ impl ClassDef {
                     #owned_derive
                     #struct_attrs
                     #[ssz(struct_behaviour="container")]
-                    pub struct #ident {
+                    pub struct #ident #generics {
                         #(#field_tokens),*
                     }
                 }
@@ -836,7 +1201,7 @@ impl ClassDef {
                     #owned_derive
                     #struct_attrs
                     #[ssz(struct_behaviour="stable_container", max_fields=#max)]
-                    pub struct #ident {
+                    pub struct #ident #generics {
                         #(#field_tokens),*
                     }
                 }
@@ -847,7 +1212,7 @@ impl ClassDef {
                     #owned_derive
                     #struct_attrs
                     #[ssz(struct_behaviour="profile")]
-                    pub struct #ident {
+                    pub struct #ident #generics {
                         #(#field_tokens),*
                     }
                 }
@@ -1040,6 +1405,9 @@ impl ClassDef {
         let view_derive =
             derive_cfg.view_derive_attr_with_pragmas_filtered(&type_name, &pragmas, is_container);
 
+        // Build generic parameters for view struct (includes lifetime + type params)
+        let view_generics = self.build_view_generic_params(&pragmas);
+
         // All view structs are now thin wrappers around bytes
         match self.base {
             BaseClass::Container | BaseClass::StableContainer(_) | BaseClass::Profile(_) => {
@@ -1047,7 +1415,7 @@ impl ClassDef {
                     #doc_comments
                     #[allow(dead_code, reason = "generated code using ssz-gen")]
                     #view_derive
-                    pub struct #ref_ident<'a> {
+                    pub struct #ref_ident #view_generics {
                         bytes: &'a [u8],
                     }
                 }
@@ -1067,7 +1435,14 @@ impl ClassDef {
     ///
     /// A [`TokenStream`] containing the TreeHash implementation.
     pub fn to_view_tree_hash_impl(&self, ident: &Ident) -> TokenStream {
+        use crate::pragma::ParsedPragma;
+
         let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
+        let pragmas = ParsedPragma::parse(&self.pragmas);
+
+        // Build generic params for TreeHash impl (includes 'a, H, and type params)
+        let tree_hash_impl_generics = self.build_tree_hash_view_generic_params(&pragmas);
+        let view_generic_names = self.build_view_generic_names();
 
         match self.base {
             BaseClass::Container => {
@@ -1110,7 +1485,7 @@ impl ClassDef {
                     .collect();
 
                 quote! {
-                    impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ref_ident<'a> {
+                    impl #tree_hash_impl_generics tree_hash::TreeHash<H> for #ref_ident #view_generic_names {
                         fn tree_hash_type() -> tree_hash::TreeHashType {
                             tree_hash::TreeHashType::Container
                         }
@@ -1143,7 +1518,7 @@ impl ClassDef {
                     .collect();
 
                 quote! {
-                    impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ref_ident<'a> {
+                    impl #tree_hash_impl_generics tree_hash::TreeHash<H> for #ref_ident #view_generic_names {
                         fn tree_hash_type() -> tree_hash::TreeHashType {
                             tree_hash::TreeHashType::StableContainer
                         }
@@ -1181,7 +1556,7 @@ impl ClassDef {
                 let indices: Vec<usize> = self.fields.iter().map(|f| f.index).collect();
 
                 quote! {
-                    impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ref_ident<'a> {
+                    impl #tree_hash_impl_generics tree_hash::TreeHash<H> for #ref_ident #view_generic_names {
                         fn tree_hash_type() -> tree_hash::TreeHashType {
                             tree_hash::TreeHashType::Container
                         }
@@ -1364,7 +1739,12 @@ impl ClassDef {
     ///
     /// A [`TokenStream`] containing the impl block with getter methods.
     pub fn to_view_getters(&self, ident: &Ident) -> TokenStream {
+        use crate::pragma::ParsedPragma;
+
         let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
+        let pragmas = ParsedPragma::parse(&self.pragmas);
+        let view_generics = self.build_view_generic_params(&pragmas);
+        let view_generic_names = self.build_view_generic_names();
         let (fixed_portion_size, _, num_variable_fields) = self.compute_layout();
 
         // Check if we need to account for bitvector (StableContainer/Profile with Optional fields)
@@ -1492,7 +1872,7 @@ impl ClassDef {
 
         quote! {
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> #ref_ident<'a> {
+            impl #view_generics #ref_ident #view_generic_names {
                 #(#getters)*
             }
         }
@@ -1510,7 +1890,12 @@ impl ClassDef {
     ///
     /// A [`TokenStream`] containing the [`DecodeView`](ssz::view::DecodeView) implementation
     pub fn to_view_decode_impl(&self, ident: &Ident) -> TokenStream {
+        use crate::pragma::ParsedPragma;
+
         let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
+        let pragmas = ParsedPragma::parse(&self.pragmas);
+        let view_generics = self.build_view_generic_params(&pragmas);
+        let view_generic_names = self.build_view_generic_names();
         let (fixed_portion_size, fixed_size, num_variable_fields) = self.compute_layout();
 
         match self.base {
@@ -1567,7 +1952,7 @@ impl ClassDef {
                 };
 
                 quote! {
-                    impl<'a> ssz::view::DecodeView<'a> for #ref_ident<'a> {
+                    impl #view_generics ssz::view::DecodeView<'a> for #ref_ident #view_generic_names {
                         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
                             #validation
                             Ok(Self { bytes })
@@ -1669,7 +2054,7 @@ impl ClassDef {
                 };
 
                 quote! {
-                    impl<'a> ssz::view::DecodeView<'a> for #ref_ident<'a> {
+                    impl #view_generics ssz::view::DecodeView<'a> for #ref_ident #view_generic_names {
                         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
                             #validation
                             Ok(Self { bytes })
@@ -1695,14 +2080,19 @@ impl ClassDef {
     ///
     /// A [`TokenStream`] containing the [`SszTypeInfo`](ssz::view::SszTypeInfo) implementation.
     pub fn to_view_ssz_type_info_impl(&self, ident: &Ident) -> TokenStream {
+        use crate::pragma::ParsedPragma;
+
         let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
+        let pragmas = ParsedPragma::parse(&self.pragmas);
+        let view_generics = self.build_view_generic_params(&pragmas);
+        let view_generic_names = self.build_view_generic_names();
         let (_, fixed_size, _) = self.compute_layout();
 
         match fixed_size {
             Some(size) => {
                 // Fixed-size container
                 quote! {
-                    impl<'a> ssz::view::SszTypeInfo for #ref_ident<'a> {
+                    impl #view_generics ssz::view::SszTypeInfo for #ref_ident #view_generic_names {
                         fn is_ssz_fixed_len() -> bool {
                             true
                         }
@@ -1716,7 +2106,7 @@ impl ClassDef {
             None => {
                 // Variable-size container
                 quote! {
-                    impl<'a> ssz::view::SszTypeInfo for #ref_ident<'a> {
+                    impl #view_generics ssz::view::SszTypeInfo for #ref_ident #view_generic_names {
                         fn is_ssz_fixed_len() -> bool {
                             false
                         }
@@ -1745,14 +2135,20 @@ impl ClassDef {
     ///
     /// A [`TokenStream`] containing the [`ToOwnedSsz`](ssz_types::view::ToOwnedSsz) implementation.
     pub fn to_view_to_owned_ssz_impl(&self, ident: &Ident) -> TokenStream {
+        use crate::pragma::ParsedPragma;
+
         let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
+        let pragmas = ParsedPragma::parse(&self.pragmas);
+        let view_generics = self.build_view_generic_params(&pragmas);
+        let view_generic_names = self.build_view_generic_names();
+        let owned_generic_names = self.build_generic_names(&pragmas);
 
         quote! {
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> ssz_types::view::ToOwnedSsz<#ident> for #ref_ident<'a> {
+            impl #view_generics ssz_types::view::ToOwnedSsz<#ident #owned_generic_names> for #ref_ident #view_generic_names {
                 #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
-                fn to_owned(&self) -> #ident {
-                    <#ref_ident<'a>>::to_owned(self)
+                fn to_owned(&self) -> #ident #owned_generic_names {
+                    <#ref_ident #view_generic_names>::to_owned(self)
                 }
             }
         }
@@ -1770,7 +2166,15 @@ impl ClassDef {
     ///
     /// A [`TokenStream`] containing the `to_owned` method implementation.
     pub fn to_view_to_owned_impl(&self, ident: &Ident) -> TokenStream {
+        use crate::pragma::ParsedPragma;
+
         let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
+        let pragmas = ParsedPragma::parse(&self.pragmas);
+        let view_generics = self.build_view_generic_params(&pragmas);
+        let view_generic_names = self.build_view_generic_names();
+
+        // For the return type, we need the owned struct's generic param names (without bounds)
+        let owned_generic_names = self.build_generic_names(&pragmas);
 
         // Generate field conversions using getter methods
         let field_conversions: Vec<TokenStream> = self
@@ -1830,9 +2234,9 @@ impl ClassDef {
 
         quote! {
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> #ref_ident<'a> {
+            impl #view_generics #ref_ident #view_generic_names {
                 #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
-                pub fn to_owned(&self) -> #ident {
+                pub fn to_owned(&self) -> #ident #owned_generic_names {
                     #ident {
                         #(#field_conversions),*
                     }
@@ -1869,6 +2273,7 @@ pub enum TypeDefinition {
 
 /// Represents the different class definitions that can be used
 #[derive(Clone, Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum ClassDefinition {
     /// Standard container class
     Container,

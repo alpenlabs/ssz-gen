@@ -150,12 +150,30 @@ pub(crate) enum AssignExpr {
     Value(ConstValue),
 }
 
+/// Represents a type parameter in a class definition.
+#[derive(Clone, Debug)]
+pub(crate) struct TypeParam {
+    pub(crate) name: Identifier,
+    pub(crate) kind: TypeParamKind,
+}
+
+/// Distinguishes between type and const parameters.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum TypeParamKind {
+    /// Type variable (e.g., T, U)
+    Type,
+    /// Const variable (e.g., N for sizes)
+    #[allow(dead_code)]
+    Const,
+}
+
 /// A class definition.
 ///
 /// Classes must always have parent types.
 #[derive(Clone, Debug)]
 pub(crate) struct ClassDefEntry {
     name: Identifier,
+    type_params: Vec<TypeParam>,
     parent_ty: TyExprSpec,
     doc: Option<String>,
     doc_comment: Option<String>,
@@ -172,6 +190,25 @@ impl ClassDefEntry {
     ) -> Self {
         Self {
             name,
+            type_params: Vec::new(),
+            parent_ty,
+            doc,
+            doc_comment: None,
+            pragmas: Vec::new(),
+            fields,
+        }
+    }
+
+    pub(crate) fn new_with_type_params(
+        name: Identifier,
+        type_params: Vec<TypeParam>,
+        parent_ty: TyExprSpec,
+        doc: Option<String>,
+        fields: Vec<FieldDef>,
+    ) -> Self {
+        Self {
+            name,
+            type_params,
             parent_ty,
             doc,
             doc_comment: None,
@@ -182,6 +219,10 @@ impl ClassDefEntry {
 
     pub(crate) fn name(&self) -> &Identifier {
         &self.name
+    }
+
+    pub(crate) fn type_params(&self) -> &[TypeParam] {
+        &self.type_params
     }
 
     pub(crate) fn parent_ty(&self) -> &TyExprSpec {
@@ -684,7 +725,60 @@ fn parse_class(
     // differently) For now, we'll collect comments from the current position backwards
     // conceptually but in practice, comments should be collected before we reach this function
     // Let's collect them after the class keyword is found
+
+    // Try to parse with type parameters first: class Name[T, U](Parent):
     match gob.view() {
+        [
+            Class(_),
+            Identifier(_, name),
+            BracketBlock(_, type_param_data),
+            ParenBlock(_, ty_data),
+            Colon(_),
+            ..,
+        ] => {
+            // Parse class with type parameters
+            let name = name.clone();
+
+            // Parse type parameters
+            let mut param_gob = Gobbler::new(type_param_data.children());
+            let type_params = parse_type_params(&mut param_gob)?;
+
+            // Parse parent type
+            let mut ty_gob = Gobbler::new(ty_data.children());
+            let parent_ty = parse_ty(&mut ty_gob, import_map)?;
+
+            // Then extract the body and parse it.
+            gob.gobble_until(is_toktr_newline);
+            gob.gobble_until(is_toktr_not_newline);
+
+            let body_data = match gob.get() {
+                Some(IndentBlock(_, d)) => d,
+                Some(t) => return Err(ParseError::UnexpectedToken(*t.tag())),
+                Option::None => return Err(ParseError::UnexpectedEnd),
+            };
+
+            let mut body_gob = Gobbler::new(body_data.children());
+            let body = parse_class_body(&mut body_gob, import_map)?;
+            gob.gobble_one();
+
+            let mut cd = ClassDefEntry::new_with_type_params(
+                name,
+                type_params,
+                parent_ty,
+                body.doc,
+                body.fields,
+            );
+            // Attach comments if any were collected
+            if let Some(doc) = comment_buffer.take_doc_comment() {
+                cd.set_doc_comment(Some(doc));
+            }
+            let pragmas = comment_buffer.take_pragmas();
+            if !pragmas.is_empty() {
+                cd.set_pragmas(pragmas);
+            }
+            Ok(cd)
+        }
+
         [
             Class(_),
             Identifier(_, name),
@@ -692,7 +786,7 @@ fn parse_class(
             Colon(_),
             ..,
         ] => {
-            // Parse basic information out of the header.
+            // Parse class without type parameters (original behavior)
             let name = name.clone();
             let mut ty_gob = Gobbler::new(ty_data.children());
             let parent_ty = parse_ty(&mut ty_gob, import_map)?;
@@ -725,6 +819,47 @@ fn parse_class(
 
         _ => Err(ParseError::MalformedBlock(sp)),
     }
+}
+
+/// Parses type parameters from a bracket block (e.g., [T, U, N]).
+fn parse_type_params(gob: &mut Gobbler<'_, SrcToktr>) -> Result<Vec<TypeParam>, ParseError> {
+    use TaggedToktr::*;
+
+    let mut params = Vec::new();
+
+    while gob.has_entry() {
+        // Parse identifier (T, U, N, etc.)
+        let param_name = match gob.get() {
+            Some(Identifier(_, name)) => {
+                let name = name.clone();
+                gob.gobble_one();
+                name
+            }
+            Some(t) => return Err(ParseError::UnexpectedToken(*t.tag())),
+            None => break,
+        };
+
+        // For now, all type parameters are Type kind
+        // In the future, we could add syntax to distinguish const parameters
+        let kind = TypeParamKind::Type;
+
+        params.push(TypeParam {
+            name: param_name,
+            kind,
+        });
+
+        // Try to consume comma
+        match gob.get() {
+            Some(Comma(_)) => {
+                gob.gobble_one();
+                continue;
+            }
+            None => break,
+            Some(_) => break, // Allow other tokens to signal end
+        }
+    }
+
+    Ok(params)
 }
 
 /// Parses a type specification out of a gobbler.
@@ -1758,6 +1893,76 @@ class Foo(Container):
                 "Expected StandaloneDocComment or StandaloneDocstring error, got: {:?}",
                 other
             ),
+        }
+    }
+
+    #[test]
+    fn test_ast_parse_generic_class() {
+        let s = r#"
+class Box[T](Container):
+    value: T
+    metadata: uint64
+"#;
+
+        let arr = s.chars().collect::<Vec<_>>();
+        let toks = parse_char_array_to_tokens(&arr).expect("test: tokenize string");
+        let tt = parse_tokens_to_toktrs(&toks).expect("test: treeize tokens");
+
+        let mut module_manager = ModuleManager::new(&[]);
+        module_manager.add_module(Path::new(""), false);
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager).expect("test: parse");
+
+        let entries = module_manager
+            .get_module_mut(Path::new(""))
+            .unwrap()
+            .mut_entries();
+
+        assert_eq!(entries.len(), 1);
+        if let crate::ast::ModuleEntry::Class(class_def) = &entries[0] {
+            assert_eq!(class_def.name().0, "Box");
+            assert_eq!(class_def.type_params().len(), 1);
+            assert_eq!(class_def.type_params()[0].name.0, "T");
+            assert_eq!(
+                class_def.type_params()[0].kind,
+                crate::ast::TypeParamKind::Type
+            );
+            assert_eq!(class_def.fields().len(), 2);
+            assert_eq!(class_def.fields()[0].name().0, "value");
+            assert_eq!(class_def.fields()[1].name().0, "metadata");
+        } else {
+            panic!("Expected Class entry");
+        }
+    }
+
+    #[test]
+    fn test_ast_parse_generic_class_multiple_params() {
+        let s = r#"
+class Pair[T, U](Container):
+    first: T
+    second: U
+"#;
+
+        let arr = s.chars().collect::<Vec<_>>();
+        let toks = parse_char_array_to_tokens(&arr).expect("test: tokenize string");
+        let tt = parse_tokens_to_toktrs(&toks).expect("test: treeize tokens");
+
+        let mut module_manager = ModuleManager::new(&[]);
+        module_manager.add_module(Path::new(""), false);
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager).expect("test: parse");
+
+        let entries = module_manager
+            .get_module_mut(Path::new(""))
+            .unwrap()
+            .mut_entries();
+
+        assert_eq!(entries.len(), 1);
+        if let crate::ast::ModuleEntry::Class(class_def) = &entries[0] {
+            assert_eq!(class_def.name().0, "Pair");
+            assert_eq!(class_def.type_params().len(), 2);
+            assert_eq!(class_def.type_params()[0].name.0, "T");
+            assert_eq!(class_def.type_params()[1].name.0, "U");
+        } else {
+            panic!("Expected Class entry");
         }
     }
 }

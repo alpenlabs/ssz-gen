@@ -1,0 +1,18 @@
+# Test generic type generation
+
+# Generic RawMerkleProof with type parameter H for hash type
+#~# bound: H: MerkleHash
+class RawMerkleProof[H](Container):
+    cohashes: List[H, 1024]
+
+# Generic MerkleProof that uses RawMerkleProof[H]
+#~# bound: H: MerkleHash
+class MerkleProof[H](Container):
+    inner: RawMerkleProof[H]
+    index: uint64
+
+# CompactMmr64 structure (non-generic)
+class CompactMmr64(Container):
+    entries: uint64
+    cap_log2: uint8
+    roots: List[Vector[byte, 32], 64]

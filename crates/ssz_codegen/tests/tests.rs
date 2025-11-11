@@ -1254,3 +1254,50 @@ fn test_three_way_dependency() {
         container_c_count
     );
 }
+
+#[test]
+fn test_generics() {
+    use ssz_codegen::{ModuleGeneration, build_ssz_files};
+
+    build_ssz_files(
+        &["test_generics.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_generics.rs",
+        ModuleGeneration::SingleModule,
+    )
+    .expect("Failed to generate SSZ types with generics");
+
+    // Verify the output compiles and contains generic types
+    let output = std::fs::read_to_string("tests/output/test_generics.rs")
+        .expect("Failed to read generated output");
+
+    // Check that RawMerkleProof has generic parameter H with MerkleHash bound
+    assert!(output.contains("pub struct RawMerkleProof<H: Encode + Decode + MerkleHash>"));
+
+    // Check that MerkleProof has generic parameter H with MerkleHash bound
+    assert!(output.contains("pub struct MerkleProof<H: Encode + Decode + MerkleHash>"));
+
+    // Check that CompactMmr64 is non-generic
+    assert!(output.contains("pub struct CompactMmr64 {"));
+    assert!(!output.contains("CompactMmr64<"));
+}
+
+#[test]
+fn test_single_generic() {
+    use ssz_codegen::{ModuleGeneration, build_ssz_files};
+
+    build_ssz_files(
+        &["test_single_generic.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_single_generic.rs",
+        ModuleGeneration::SingleModule,
+    )
+    .expect("Failed to generate SSZ types with single generic");
+
+    let output = std::fs::read_to_string("tests/output/test_single_generic.rs")
+        .expect("Failed to read generated output");
+
+    assert!(output.contains("pub struct RawMerkleProof<H: Encode + Decode + MerkleHash>"));
+}

@@ -48,18 +48,22 @@ pub(crate) struct TypeData {
     // TODO
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub(crate) struct TypeCtorData {
     /// The signature.
-    sig: CtorSig,
+    pub(crate) sig: CtorSig,
 
-    /// Data for the type when we instantiate it.
-    type_data: TypeData,
+    /// Optional generic class definition for user-defined generics
+    #[allow(dead_code)]
+    pub(crate) generic_class_def: Option<crate::ast::ClassDefEntry>,
 }
 
 impl TypeCtorData {
-    pub(crate) fn new(sig: CtorSig, type_data: TypeData) -> Self {
-        Self { sig, type_data }
+    pub(crate) fn new(sig: CtorSig, _type_data: TypeData) -> Self {
+        Self {
+            sig,
+            generic_class_def: None,
+        }
     }
 
     pub(crate) fn _sig(&self) -> &CtorSig {
@@ -67,7 +71,7 @@ impl TypeCtorData {
     }
 
     pub(crate) fn _type_data(&self) -> &TypeData {
-        &self.type_data
+        &TypeData {}
     }
 }
 
@@ -97,6 +101,7 @@ pub enum CtorArg {
 
 /// Describes something an identifier can point to.
 #[derive(Clone, Debug)]
+#[allow(clippy::large_enum_variant)]
 pub(crate) enum IdentTarget {
     Const(ConstValue),
     Ty(TypeData),
@@ -191,6 +196,18 @@ impl<'a> TypeResolver<'a> {
             ident,
             IdentTarget::TyCtor(TypeCtorData::new(ctor, TypeData {})),
         );
+        Ok(())
+    }
+
+    /// Inserts a type constructor with full TypeCtorData (including generic_class_def).
+    #[allow(dead_code)]
+    pub(crate) fn insert_type_ctor_with_data(
+        &mut self,
+        ident: Identifier,
+        ctor_data: TypeCtorData,
+    ) -> Result<(), ResolverError> {
+        self.check_name_unused(&ident)?;
+        self.idents.insert(ident, IdentTarget::TyCtor(ctor_data));
         Ok(())
     }
 

@@ -17,7 +17,7 @@ mod src_pos;
 pub use src_pos::{LineColPos, PosTbl, SrcPos, SrcSpan};
 
 mod schema;
-pub use schema::{AliasDef, ClassDef, ClassFieldDef, SszSchema};
+pub use schema::{AliasDef, ClassDef, ClassFieldDef, SszSchema, TypeParam, TypeParamKind};
 
 mod ty_resolver;
 

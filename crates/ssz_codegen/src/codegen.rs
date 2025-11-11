@@ -15,7 +15,7 @@ use crate::{
     ModuleGeneration,
     derive_config::DeriveConfig,
     types::{
-        BaseClass, ClassDef, ClassDefinition, ClassFieldDef, TypeResolutionKind,
+        BaseClass, ClassDef, ClassDefinition, ClassFieldDef, TypeResolution, TypeResolutionKind,
         resolver::TypeResolver,
     },
 };
@@ -27,6 +27,47 @@ enum AliasOrClass<'a> {
     Alias(&'a ParserAliasDef),
     /// Reference to a class definition
     Class(&'a ParserClassDef),
+}
+
+/// Convert a parser Ty to a TokenStream for use in generic contexts
+/// This is a simplified conversion that handles common cases
+fn ty_to_token_stream(ty: &Ty) -> TokenStream {
+    use sizzle_parser::tysys::TyExpr;
+
+    match ty {
+        Ty::Simple(ident) => {
+            let name = &ident.0;
+            let ident = Ident::new(name, Span::call_site());
+            quote! { #ident }
+        }
+        Ty::Complex(base, args) => {
+            let base_name = &base.0;
+            let base_ident = Ident::new(base_name, Span::call_site());
+
+            let arg_tokens: Vec<TokenStream> = args
+                .iter()
+                .filter_map(|arg| match arg {
+                    TyExpr::Ty(ty) => Some(ty_to_token_stream(ty)),
+                    TyExpr::Int(val) => {
+                        let num = val.eval();
+                        Some(quote! { #num })
+                    }
+                    TyExpr::None => None,
+                })
+                .collect();
+
+            if arg_tokens.is_empty() {
+                quote! { #base_ident }
+            } else {
+                quote! { #base_ident<#(#arg_tokens),*> }
+            }
+        }
+        Ty::Imported(_, ident, _) => {
+            let name = &ident.0;
+            let ident = Ident::new(name, Span::call_site());
+            quote! { #ident }
+        }
+    }
 }
 
 /// Helper struct for processing interdependent type definitions.
@@ -149,6 +190,19 @@ impl<'a> CircleBufferCodegen<'a> {
         parent_class_def.doc_comment = class.doc_comment().map(|s| s.to_string());
         parent_class_def.doc = class.doc().map(|s| s.to_string());
 
+        // Convert type parameters from parser ClassDef to codegen TypeParam
+        parent_class_def.type_params = class
+            .type_params()
+            .iter()
+            .map(|tp| crate::types::TypeParam {
+                name: tp.name().0.clone(),
+                kind: match tp.kind() {
+                    sizzle_parser::TypeParamKind::Type => crate::types::TypeParamKind::Type,
+                    sizzle_parser::TypeParamKind::Const => crate::types::TypeParamKind::Const,
+                },
+            })
+            .collect();
+
         let success = match parent_class_def.base {
             BaseClass::Container | BaseClass::StableContainer(_) => {
                 self.process_simple_inheritance(&mut parent_class_def, class, type_resolver)
@@ -170,7 +224,7 @@ impl<'a> CircleBufferCodegen<'a> {
             self.tokens
                 .push(parent_class_def.to_owned_tree_hash_impl(&ident));
 
-            // Generate view struct (thin wrapper)
+            // Generate view struct (thin wrapper) - now supports generics
             self.tokens
                 .push(parent_class_def.to_view_struct(&ident, self.derive_cfg));
 
@@ -220,6 +274,45 @@ impl<'a> CircleBufferCodegen<'a> {
         let vec_len = self.items.len();
         if vec_len == 0 {
             return self.tokens;
+        }
+
+        // Pre-register all generic class names so they can be referenced before being fully
+        // processed
+        for item in &self.items {
+            if let AliasOrClass::Class(class) = item
+                && !class.type_params().is_empty()
+            {
+                let ident = Ident::new(&class.name().0, Span::call_site());
+                let parent_ty = class.parent_ty();
+                if let Some(parent_class) = type_resolver.resolve_class(parent_ty) {
+                    // Register a stub ClassDef with just the base type and type params
+                    let stub_class = ClassDef {
+                        base: parent_class.base.clone(),
+                        fields: vec![],
+                        field_tokens: vec![],
+                        field_index: HashMap::new(),
+                        pragmas: vec![],
+                        doc_comment: None,
+                        doc: None,
+                        type_params: class
+                            .type_params()
+                            .iter()
+                            .map(|tp| crate::types::TypeParam {
+                                name: tp.name().0.clone(),
+                                kind: match tp.kind() {
+                                    sizzle_parser::TypeParamKind::Type => {
+                                        crate::types::TypeParamKind::Type
+                                    }
+                                    sizzle_parser::TypeParamKind::Const => {
+                                        crate::types::TypeParamKind::Const
+                                    }
+                                },
+                            })
+                            .collect(),
+                    };
+                    type_resolver.add_class(&ident, stub_class);
+                }
+            }
         }
 
         let mut start = 0;
@@ -303,30 +396,55 @@ impl<'a> CircleBufferCodegen<'a> {
             let field_ident = Ident::new(&field.name().0, Span::call_site());
 
             let field_ty = field.ty();
-            let field_type = type_resolver.resolve_type(field_ty, None);
-            if field_type.is_unresolved() {
+            let mut field_type = type_resolver.resolve_type(field_ty, None);
+            // For generic classes, allow unresolved types (they might be type parameters)
+            if field_type.is_unresolved() && parent_class_def.type_params.is_empty() {
                 return false;
             }
 
+            // If unresolved and this is a generic class, try to generate a TokenStream anyway
+            let field_ty_token = if field_type.is_unresolved() {
+                // For generic classes with unresolved field types, convert the parser Ty to a
+                // TokenStream
+                let ty_token = ty_to_token_stream(field_ty);
+                // Store the syn::Type in the field_type for later use
+                let ty: syn::Type = syn::parse2(ty_token.clone()).expect("valid type");
+                field_type = TypeResolution {
+                    resolution: TypeResolutionKind::Unresolved,
+                    ty: Some(ty),
+                };
+                ty_token
+            } else {
+                let ty = field_type.unwrap_type();
+                quote! { #ty }
+            };
+
             // Make sure the field is compatible with the parent class
-            match parent_class_def.base {
-                BaseClass::Container => {
-                    if matches!(field_type.resolution, TypeResolutionKind::Optional(_)) {
-                        panic!("Optional fields are not allowed in Container classes");
+            // Skip validation for generic classes with unresolved types
+            if !field_type.is_unresolved() {
+                match parent_class_def.base {
+                    BaseClass::Container => {
+                        if matches!(field_type.resolution, TypeResolutionKind::Optional(_)) {
+                            panic!("Optional fields are not allowed in Container classes");
+                        }
                     }
-                }
-                BaseClass::StableContainer(_) => {
-                    if !matches!(field_type.resolution, TypeResolutionKind::Optional(_))
-                        && !matches!(field_type.resolution, TypeResolutionKind::External)
-                    {
-                        panic!("All fields in StableContainer classes must be optional");
+                    BaseClass::StableContainer(_) => {
+                        if !matches!(field_type.resolution, TypeResolutionKind::Optional(_))
+                            && !matches!(field_type.resolution, TypeResolutionKind::External)
+                        {
+                            panic!("All fields in StableContainer classes must be optional");
+                        }
                     }
+                    _ => panic!(
+                        "Simple inheritance is only allowed for Container and StableContainer"
+                    ),
                 }
-                _ => panic!("Simple inheritance is only allowed for Container and StableContainer"),
             }
 
-            if field_type.is_type() {
-                let field_ty = field_type.unwrap_type();
+            // For generic classes, we allow unresolved types (type parameters)
+            if field_type.is_type()
+                || (field_type.is_unresolved() && !parent_class_def.type_params.is_empty())
+            {
                 let new_field = ClassFieldDef {
                     index: curr_index,
                     name: field.name().0.to_string(),
@@ -348,16 +466,16 @@ impl<'a> CircleBufferCodegen<'a> {
                     quote! {
                         #field_doc
                         #(#attrs)*
-                        pub #field_ident: #field_ty
+                        pub #field_ident: #field_ty_token
                     }
                 } else if has_field_doc {
                     quote! {
                         #field_doc
-                        pub #field_ident: #field_ty
+                        pub #field_ident: #field_ty_token
                     }
                 } else {
-                    parse_quote! {
-                        pub #field_ident: #field_ty
+                    quote! {
+                        pub #field_ident: #field_ty_token
                     }
                 };
 

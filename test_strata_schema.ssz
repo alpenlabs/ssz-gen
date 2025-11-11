@@ -1,0 +1,26 @@
+# Test schema from strata-common PR #36 - WITH GENERICS!
+
+# Generic RawMerkleProof with type parameter H for hash type
+class RawMerkleProof[H](Container):
+    cohashes: List[H, 64]
+
+# Generic MerkleProof that uses RawMerkleProof[H]
+class MerkleProof[H](Container):
+    inner: RawMerkleProof[H]
+    index: uint64
+
+# Instantiate with concrete hash type (32-byte hash)
+Bytes32 = Vector[byte, 32]
+RawMerkleProof32 = RawMerkleProof[Bytes32]
+MerkleProof32 = MerkleProof[Bytes32]
+
+# CompactMmr64 structure (non-generic)
+class CompactMmr64(Container):
+    entries: uint64
+    cap_log2: uint8
+    roots: List[Bytes32, 64]
+
+# Usage example - a container that uses the instantiated types
+class ProofBundle(Container):
+    proof: MerkleProof32
+    mmr: CompactMmr64
