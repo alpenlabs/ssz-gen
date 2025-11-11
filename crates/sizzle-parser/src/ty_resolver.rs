@@ -26,14 +26,20 @@ pub enum ResolverError {
     #[error("unknown identifier '{0:?}'")]
     UnknownIdent(Identifier),
 
-    #[error("mismatched arg in type '{0:?}' (wanted {1:?}, got {2:?})")]
-    MismatchedArg(Identifier, CtorArg, TyArgSpec),
+    #[error("type '{0:?}' argument at position {1}: expected {2:?}, got {3:?}")]
+    MismatchedArg(Identifier, usize, CtorArg, TyArgSpec),
 
-    #[error("mismatched arg (in type based on '{0:?}')")]
-    MismatchedArgKind(Identifier),
+    #[error("mismatched arg kind in type '{0:?}' at position {1}: expected {2:?}")]
+    MismatchedArgKind(Identifier, usize, CtorArg),
 
-    #[error("mismatched arity for type '{0:?}'")]
-    MismatchTypeArity(Identifier),
+    #[error("type '{0:?}' expects {1} type argument(s), got {2}")]
+    MismatchTypeArity(Identifier, usize, usize),
+
+    #[error("generic type '{0:?}' requires type arguments (e.g., '{0:?}[...]')")]
+    GenericTypeRequiresArgs(Identifier),
+
+    #[error("wrong number of type arguments for '{0:?}': expected {1}, got {2}")]
+    WrongGenericArity(Identifier, usize, usize),
 
     #[error("used args on const identifier '{0:?}'")]
     ArgsOnConst(Identifier),
@@ -48,18 +54,25 @@ pub(crate) struct TypeData {
     // TODO
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub(crate) struct TypeCtorData {
     /// The signature.
-    sig: CtorSig,
+    pub(crate) sig: CtorSig,
 
-    /// Data for the type when we instantiate it.
-    type_data: TypeData,
+    /// Optional generic class definition for user-defined generics
+    #[expect(
+        dead_code,
+        reason = "Reserved for future const generics implementation"
+    )]
+    pub(crate) generic_class_def: Option<crate::ast::ClassDefEntry>,
 }
 
 impl TypeCtorData {
-    pub(crate) fn new(sig: CtorSig, type_data: TypeData) -> Self {
-        Self { sig, type_data }
+    pub(crate) fn new(sig: CtorSig, _type_data: TypeData) -> Self {
+        Self {
+            sig,
+            generic_class_def: None,
+        }
     }
 
     pub(crate) fn _sig(&self) -> &CtorSig {
@@ -67,7 +80,7 @@ impl TypeCtorData {
     }
 
     pub(crate) fn _type_data(&self) -> &TypeData {
-        &self.type_data
+        &TypeData {}
     }
 }
 
@@ -97,6 +110,7 @@ pub enum CtorArg {
 
 /// Describes something an identifier can point to.
 #[derive(Clone, Debug)]
+#[allow(clippy::large_enum_variant)]
 pub(crate) enum IdentTarget {
     Const(ConstValue),
     Ty(TypeData),
@@ -194,6 +208,21 @@ impl<'a> TypeResolver<'a> {
         Ok(())
     }
 
+    /// Inserts a type constructor with full TypeCtorData (including generic_class_def).
+    #[expect(
+        dead_code,
+        reason = "Reserved for future monomorphization implementation"
+    )]
+    pub(crate) fn insert_type_ctor_with_data(
+        &mut self,
+        ident: Identifier,
+        ctor_data: TypeCtorData,
+    ) -> Result<(), ResolverError> {
+        self.check_name_unused(&ident)?;
+        self.idents.insert(ident, IdentTarget::TyCtor(ctor_data));
+        Ok(())
+    }
+
     /// Declares a user type (which is a `Unit` type which does not accept
     /// arguments).
     pub(crate) fn decl_user_type(&mut self, ident: Identifier) -> Result<(), ResolverError> {
@@ -236,7 +265,11 @@ impl<'a> TypeResolver<'a> {
             .ok_or_else(|| ResolverError::UnknownIdent(ident.clone()))?
         {
             IdentTarget::Ty(td) => Ok(td),
-            _ => Err(ResolverError::MismatchedArgKind(ident.clone())),
+            _ => Err(ResolverError::MismatchedArgKind(
+                ident.clone(),
+                0,
+                CtorArg::Ty,
+            )),
         }
     }
 
@@ -249,7 +282,13 @@ impl<'a> TypeResolver<'a> {
             return Ok(match s {
                 IdentTarget::Ty(td) => td,
                 IdentTarget::TyCtor(ctor) => ctor._type_data(),
-                _ => return Err(ResolverError::MismatchedArgKind(ident.clone())),
+                _ => {
+                    return Err(ResolverError::MismatchedArgKind(
+                        ident.clone(),
+                        0,
+                        CtorArg::Ty,
+                    ));
+                }
             });
         }
 
@@ -272,7 +311,11 @@ impl<'a> TypeResolver<'a> {
             .ok_or_else(|| ResolverError::UnknownIdent(ident.clone()))?
         {
             IdentTarget::Const(v) => Ok(v),
-            _ => Err(ResolverError::MismatchedArgKind(ident.clone())),
+            _ => Err(ResolverError::MismatchedArgKind(
+                ident.clone(),
+                0,
+                CtorArg::Int,
+            )),
         }
     }
 
@@ -292,8 +335,12 @@ impl<'a> TypeResolver<'a> {
             match alias {
                 AliasRef::Direct(ty) => {
                     // Just make sure we have no args.
-                    if args.is_some() {
-                        return Err(ResolverError::MismatchTypeArity(ident.clone()));
+                    if let Some(args_slice) = args {
+                        return Err(ResolverError::MismatchTypeArity(
+                            ident.clone(),
+                            0,
+                            args_slice.len(),
+                        ));
                     }
 
                     // re-construct the type
@@ -304,6 +351,12 @@ impl<'a> TypeResolver<'a> {
 
         // Otherwise, we do normal resolution.
         let Some(target) = self.get_ident_referent(ident) else {
+            // Check if this might be a generic type that needs arguments
+            if let Some(ty_ctor) = self.idents.get(ident)
+                && matches!(ty_ctor, IdentTarget::TyCtor(_))
+            {
+                return Err(ResolverError::GenericTypeRequiresArgs(ident.clone()));
+            }
             return Err(ResolverError::UnknownIdent(ident.clone()));
         };
 
@@ -327,24 +380,40 @@ impl<'a> TypeResolver<'a> {
             }
 
             IdentTarget::Ty(_td) => {
-                if args.is_none() {
-                    Ok(TyExpr::Ty(Ty::Simple(ident.clone())))
+                if let Some(args_slice) = args {
+                    Err(ResolverError::MismatchTypeArity(
+                        ident.clone(),
+                        0,
+                        args_slice.len(),
+                    ))
                 } else {
-                    Err(ResolverError::MismatchTypeArity(ident.clone()))
+                    Ok(TyExpr::Ty(Ty::Simple(ident.clone())))
                 }
             }
 
             IdentTarget::TyCtor(cd) => match (&cd.sig, args) {
                 // This is types that take a specific number of arguments of varying kinds.
                 (CtorSig::Fixed(sig_args), Some(spec_args)) => {
+                    // Check arity first
+                    if sig_args.len() != spec_args.len() {
+                        return Err(ResolverError::WrongGenericArity(
+                            ident.clone(),
+                            sig_args.len(),
+                            spec_args.len(),
+                        ));
+                    }
+
                     let mut args: Vec<TyExpr> = Vec::new();
 
                     // Go through each arg and make sure it matches the description.
-                    for (sig_arg, spec_arg) in sig_args.iter().zip(spec_args.iter()) {
+                    for (idx, (sig_arg, spec_arg)) in
+                        sig_args.iter().zip(spec_args.iter()).enumerate()
+                    {
                         let arg: TyExpr = match (sig_arg, spec_arg) {
                             (CtorArg::Ty, TyArgSpec::None) | (CtorArg::Int, TyArgSpec::None) => {
                                 return Err(ResolverError::MismatchedArg(
                                     ident.clone(),
+                                    idx,
                                     sig_arg.clone(),
                                     spec_arg.clone(),
                                 ));
@@ -356,6 +425,8 @@ impl<'a> TypeResolver<'a> {
                                     _ => {
                                         return Err(ResolverError::MismatchedArgKind(
                                             ident.clone(),
+                                            idx,
+                                            sig_arg.clone(),
                                         ));
                                     }
                                 }
@@ -377,6 +448,7 @@ impl<'a> TypeResolver<'a> {
                             (CtorArg::Ty, TyArgSpec::IntLiteral(_)) => {
                                 return Err(ResolverError::MismatchedArg(
                                     ident.clone(),
+                                    idx,
                                     sig_arg.clone(),
                                     spec_arg.clone(),
                                 ));
@@ -388,12 +460,18 @@ impl<'a> TypeResolver<'a> {
                                     _ => {
                                         return Err(ResolverError::MismatchedArgKind(
                                             ident.clone(),
+                                            idx,
+                                            sig_arg.clone(),
                                         ));
                                     }
                                 }
                             }
                             (CtorArg::Int, TyArgSpec::Complex(_)) => {
-                                return Err(ResolverError::MismatchedArgKind(ident.clone()));
+                                return Err(ResolverError::MismatchedArgKind(
+                                    ident.clone(),
+                                    idx,
+                                    sig_arg.clone(),
+                                ));
                             }
                             (CtorArg::Int, TyArgSpec::IntLiteral(v)) => {
                                 TyExpr::Int(ConstValue::Int(*v))
@@ -434,6 +512,8 @@ impl<'a> TypeResolver<'a> {
                                         _ => {
                                             return Err(ResolverError::MismatchedArgKind(
                                                 ident.clone(),
+                                                idx,
+                                                sig_arg.clone(),
                                             ));
                                         }
                                     }
@@ -475,6 +555,8 @@ impl<'a> TypeResolver<'a> {
                                         _ => {
                                             return Err(ResolverError::MismatchedArgKind(
                                                 ident.clone(),
+                                                idx,
+                                                sig_arg.clone(),
                                             ));
                                         }
                                     }
@@ -507,7 +589,12 @@ impl<'a> TypeResolver<'a> {
                                 TyExpr::Int(_) => panic!("tyresolv: complex type resolved to int"),
                             },
                             TyArgSpec::IntLiteral(_) => {
-                                return Err(ResolverError::MismatchedArgKind(ident.clone()));
+                                // VariableTy expects only type arguments, not int literals
+                                return Err(ResolverError::MismatchedArgKind(
+                                    ident.clone(),
+                                    0, // Position not meaningful for VariableTy
+                                    CtorArg::Ty,
+                                ));
                             }
                             TyArgSpec::Imported(imported) => {
                                 let Some(ident_targets) =
@@ -545,6 +632,8 @@ impl<'a> TypeResolver<'a> {
                                         _ => {
                                             return Err(ResolverError::MismatchedArgKind(
                                                 ident.clone(),
+                                                0, // Position not meaningful for VariableTy
+                                                CtorArg::Ty,
                                             ));
                                         }
                                     }
@@ -559,7 +648,15 @@ impl<'a> TypeResolver<'a> {
                 }
 
                 // All other cases are mismatched arity in some way or another.
-                _ => Err(ResolverError::MismatchTypeArity(ident.clone())),
+                (CtorSig::Fixed(sig_args), None) => Err(ResolverError::MismatchTypeArity(
+                    ident.clone(),
+                    sig_args.len(),
+                    0,
+                )),
+                (CtorSig::VariableTy, None) => {
+                    // VariableTy can accept no args, so this is valid
+                    Ok(TyExpr::Ty(Ty::Complex(ident.clone(), Vec::new())))
+                }
             },
         }
     }
@@ -608,9 +705,11 @@ impl<'a> TypeResolver<'a> {
         // And then just make sure it's a const.
         match expr {
             TyExpr::Ty(ty) => Ok(ty),
-            TyExpr::Int(_) | TyExpr::None => {
-                Err(ResolverError::MismatchedArgKind(spec.base_name().clone()))
-            }
+            TyExpr::Int(_) | TyExpr::None => Err(ResolverError::MismatchedArgKind(
+                spec.base_name().clone(),
+                0,
+                CtorArg::Ty,
+            )),
         }
     }
 }

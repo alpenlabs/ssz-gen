@@ -15,7 +15,7 @@ use crate::{
     ModuleGeneration,
     derive_config::DeriveConfig,
     types::{
-        BaseClass, ClassDef, ClassDefinition, ClassFieldDef, TypeResolutionKind,
+        BaseClass, ClassDef, ClassDefinition, ClassFieldDef, TypeResolution, TypeResolutionKind,
         resolver::TypeResolver,
     },
 };
@@ -27,6 +27,58 @@ enum AliasOrClass<'a> {
     Alias(&'a ParserAliasDef),
     /// Reference to a class definition
     Class(&'a ParserClassDef),
+}
+
+/// Convert a parser Ty to a TokenStream for use in generic contexts
+/// This is a simplified conversion that handles common cases and maps SSZ types to Rust types
+fn ty_to_token_stream(ty: &Ty) -> TokenStream {
+    use sizzle_parser::tysys::TyExpr;
+
+    match ty {
+        Ty::Simple(ident) => {
+            let name = &ident.0;
+            let ident = Ident::new(name, Span::call_site());
+            quote! { #ident }
+        }
+        Ty::Complex(base, args) => {
+            let base_name = &base.0;
+
+            // Map SSZ schema types to their Rust equivalents
+            let rust_type_name = match base_name.as_str() {
+                "List" => "VariableList",
+                "Vector" => "FixedVector",
+                "Bitlist" => "Bitlist",
+                "Bitvector" => "Bitvector",
+                _ => base_name.as_str(),
+            };
+            let base_ident = Ident::new(rust_type_name, Span::call_site());
+
+            let arg_tokens: Vec<TokenStream> = args
+                .iter()
+                .filter_map(|arg| match arg {
+                    TyExpr::Ty(ty) => Some(ty_to_token_stream(ty)),
+                    TyExpr::Int(val) => {
+                        let num = val.eval();
+                        // Use usize suffix for numeric type parameters (for List, Vector, etc.)
+                        let lit = syn::LitInt::new(&format!("{}usize", num), Span::call_site());
+                        Some(quote! { #lit })
+                    }
+                    TyExpr::None => None,
+                })
+                .collect();
+
+            if arg_tokens.is_empty() {
+                quote! { #base_ident }
+            } else {
+                quote! { #base_ident<#(#arg_tokens),*> }
+            }
+        }
+        Ty::Imported(_, ident, _) => {
+            let name = &ident.0;
+            let ident = Ident::new(name, Span::call_site());
+            quote! { #ident }
+        }
+    }
 }
 
 /// Helper struct for processing interdependent type definitions.
@@ -149,6 +201,19 @@ impl<'a> CircleBufferCodegen<'a> {
         parent_class_def.doc_comment = class.doc_comment().map(|s| s.to_string());
         parent_class_def.doc = class.doc().map(|s| s.to_string());
 
+        // Convert type parameters from parser ClassDef to codegen TypeParam
+        parent_class_def.type_params = class
+            .type_params()
+            .iter()
+            .map(|tp| crate::types::TypeParam {
+                name: tp.name().0.clone(),
+                kind: match tp.kind() {
+                    sizzle_parser::TypeParamKind::Type => crate::types::TypeParamKind::Type,
+                    sizzle_parser::TypeParamKind::Const => crate::types::TypeParamKind::Const,
+                },
+            })
+            .collect();
+
         let success = match parent_class_def.base {
             BaseClass::Container | BaseClass::StableContainer(_) => {
                 self.process_simple_inheritance(&mut parent_class_def, class, type_resolver)
@@ -170,7 +235,7 @@ impl<'a> CircleBufferCodegen<'a> {
             self.tokens
                 .push(parent_class_def.to_owned_tree_hash_impl(&ident));
 
-            // Generate view struct (thin wrapper)
+            // Generate view struct (thin wrapper) - now supports generics
             self.tokens
                 .push(parent_class_def.to_view_struct(&ident, self.derive_cfg));
 
@@ -220,6 +285,45 @@ impl<'a> CircleBufferCodegen<'a> {
         let vec_len = self.items.len();
         if vec_len == 0 {
             return self.tokens;
+        }
+
+        // Pre-register all generic class names so they can be referenced before being fully
+        // processed
+        for item in &self.items {
+            if let AliasOrClass::Class(class) = item
+                && !class.type_params().is_empty()
+            {
+                let ident = Ident::new(&class.name().0, Span::call_site());
+                let parent_ty = class.parent_ty();
+                if let Some(parent_class) = type_resolver.resolve_class(parent_ty) {
+                    // Register a stub ClassDef with just the base type and type params
+                    let stub_class = ClassDef {
+                        base: parent_class.base.clone(),
+                        fields: vec![],
+                        field_tokens: vec![],
+                        field_index: HashMap::new(),
+                        pragmas: vec![],
+                        doc_comment: None,
+                        doc: None,
+                        type_params: class
+                            .type_params()
+                            .iter()
+                            .map(|tp| crate::types::TypeParam {
+                                name: tp.name().0.clone(),
+                                kind: match tp.kind() {
+                                    sizzle_parser::TypeParamKind::Type => {
+                                        crate::types::TypeParamKind::Type
+                                    }
+                                    sizzle_parser::TypeParamKind::Const => {
+                                        crate::types::TypeParamKind::Const
+                                    }
+                                },
+                            })
+                            .collect(),
+                    };
+                    type_resolver.add_class(&ident, stub_class);
+                }
+            }
         }
 
         let mut start = 0;
@@ -276,10 +380,16 @@ impl<'a> CircleBufferCodegen<'a> {
         let capacity = match parent_class_def.base {
             BaseClass::StableContainer(Some(cap)) => cap,
             BaseClass::StableContainer(None) => {
-                panic!("Expected parent class used for inheritance to have all arguments")
+                panic!(
+                    "Expected parent class used for inheritance to have all arguments: class '{}'",
+                    class.name().0
+                )
             }
             BaseClass::Container => u64::MAX,
-            _ => panic!("Simple inheritance is only allowed for Container and StableContainer"),
+            _ => panic!(
+                "Simple inheritance is only allowed for Container and StableContainer: class '{}'",
+                class.name().0
+            ),
         };
 
         let mut curr_index = 0;
@@ -287,7 +397,11 @@ impl<'a> CircleBufferCodegen<'a> {
             // If name overlap -> replace field type
             if let Some(parent_field_index) = parent_class_def.field_index.get(&field.name().0) {
                 if *parent_field_index < curr_index {
-                    panic!("Inheritance field order violation");
+                    panic!(
+                        "Inheritance field order violation: field '{}' in class '{}'",
+                        field.name().0,
+                        class.name().0
+                    );
                 }
                 curr_index = *parent_field_index;
             } else {
@@ -296,37 +410,76 @@ impl<'a> CircleBufferCodegen<'a> {
 
             // Check for capacity overflow
             if curr_index >= capacity as usize {
-                panic!("Capacity overflow");
+                panic!(
+                    "Capacity overflow: field '{}' in class '{}' exceeds capacity {}",
+                    field.name().0,
+                    class.name().0,
+                    capacity
+                );
             }
 
             // Resolve the field type
             let field_ident = Ident::new(&field.name().0, Span::call_site());
 
             let field_ty = field.ty();
-            let field_type = type_resolver.resolve_type(field_ty, None);
-            if field_type.is_unresolved() {
+            let mut field_type = type_resolver.resolve_type(field_ty, None);
+            // For generic classes, allow unresolved types (they might be type parameters)
+            if field_type.is_unresolved() && parent_class_def.type_params.is_empty() {
                 return false;
             }
 
+            // If unresolved and this is a generic class, try to generate a TokenStream anyway
+            let field_ty_token = if field_type.is_unresolved() {
+                // For generic classes with unresolved field types, convert the parser Ty to a
+                // TokenStream
+                let ty_token = ty_to_token_stream(field_ty);
+                // Store the syn::Type in the field_type for later use
+                let ty: syn::Type = syn::parse2(ty_token.clone()).expect("valid type");
+                field_type = TypeResolution {
+                    resolution: TypeResolutionKind::Unresolved,
+                    ty: Some(ty),
+                };
+                ty_token
+            } else {
+                let ty = field_type.unwrap_type();
+                quote! { #ty }
+            };
+
             // Make sure the field is compatible with the parent class
-            match parent_class_def.base {
-                BaseClass::Container => {
-                    if matches!(field_type.resolution, TypeResolutionKind::Optional(_)) {
-                        panic!("Optional fields are not allowed in Container classes");
+            // Skip validation for generic classes with unresolved types
+            if !field_type.is_unresolved() {
+                match parent_class_def.base {
+                    BaseClass::Container => {
+                        if matches!(field_type.resolution, TypeResolutionKind::Optional(_)) {
+                            panic!(
+                                "Optional fields are not allowed in Container classes: field '{}' in class '{}'",
+                                field.name().0,
+                                class.name().0
+                            );
+                        }
                     }
-                }
-                BaseClass::StableContainer(_) => {
-                    if !matches!(field_type.resolution, TypeResolutionKind::Optional(_))
-                        && !matches!(field_type.resolution, TypeResolutionKind::External)
-                    {
-                        panic!("All fields in StableContainer classes must be optional");
+                    BaseClass::StableContainer(_) => {
+                        if !matches!(field_type.resolution, TypeResolutionKind::Optional(_))
+                            && !matches!(field_type.resolution, TypeResolutionKind::External)
+                        {
+                            panic!(
+                                "All fields in StableContainer classes must be optional: field '{}' in class '{}'",
+                                field.name().0,
+                                class.name().0
+                            );
+                        }
                     }
+                    _ => panic!(
+                        "Simple inheritance is only allowed for Container and StableContainer: class '{}'",
+                        class.name().0
+                    ),
                 }
-                _ => panic!("Simple inheritance is only allowed for Container and StableContainer"),
             }
 
-            if field_type.is_type() {
-                let field_ty = field_type.unwrap_type();
+            // For generic classes, we allow unresolved types (type parameters)
+            if field_type.is_type()
+                || (field_type.is_unresolved() && !parent_class_def.type_params.is_empty())
+            {
                 let new_field = ClassFieldDef {
                     index: curr_index,
                     name: field.name().0.to_string(),
@@ -348,16 +501,16 @@ impl<'a> CircleBufferCodegen<'a> {
                     quote! {
                         #field_doc
                         #(#attrs)*
-                        pub #field_ident: #field_ty
+                        pub #field_ident: #field_ty_token
                     }
                 } else if has_field_doc {
                     quote! {
                         #field_doc
-                        pub #field_ident: #field_ty
+                        pub #field_ident: #field_ty_token
                     }
                 } else {
-                    parse_quote! {
-                        pub #field_ident: #field_ty
+                    quote! {
+                        pub #field_ident: #field_ty_token
                     }
                 };
 
@@ -374,7 +527,11 @@ impl<'a> CircleBufferCodegen<'a> {
                         .insert(field.name().0.to_string(), curr_index);
                 }
             } else {
-                panic!("Expected field type to be a type or base class");
+                panic!(
+                    "Expected field type to be a type or base class: field '{}' in class '{}'",
+                    field.name().0,
+                    class.name().0
+                );
             }
         }
         true
@@ -391,7 +548,10 @@ impl<'a> CircleBufferCodegen<'a> {
         // Needed in case we're inheriting from a profile class into a new profile class
         let stable_contaienr_name = match &parent_class_def.base {
             BaseClass::Profile(Some((name, _))) => name,
-            _ => panic!("Expected profile to inherit from a stable container"),
+            _ => panic!(
+                "Expected profile to inherit from a stable container: class '{}'",
+                class.name().0
+            ),
         };
 
         // If it's imported, we need to get the original stable container's definition from another
@@ -405,11 +565,19 @@ impl<'a> CircleBufferCodegen<'a> {
         };
 
         if stable_container_def.is_none() {
-            panic!("Expected stable container parent of profile class to be defined");
+            panic!(
+                "Expected stable container parent '{}' of profile class '{}' to be defined",
+                stable_contaienr_name,
+                class.name().0
+            );
         }
         let stable_container_def = match stable_container_def.unwrap() {
             ClassDefinition::Custom(class_def) => class_def,
-            _ => panic!("Expected stable container parent of profile class to be defined"),
+            _ => panic!(
+                "Expected stable container parent '{}' of profile class '{}' to be defined",
+                stable_contaienr_name,
+                class.name().0
+            ),
         };
 
         // Profile classes are not allowed to add extra fields to their parent class
@@ -434,12 +602,20 @@ impl<'a> CircleBufferCodegen<'a> {
                 // Check if field exists in original stable container
                 original_field_index = *stable_field_index;
             } else {
-                panic!("Profile classes cannot add new fields to their parent classes");
+                panic!(
+                    "Profile classes cannot add new fields to their parent classes: field '{}' in class '{}'",
+                    field.name().0,
+                    class.name().0
+                );
             }
 
             // Make sure ordering is maintained
             if original_field_index < curr_index {
-                panic!("Inheritance field order violation");
+                panic!(
+                    "Inheritance field order violation: field '{}' in class '{}'",
+                    field.name().0,
+                    class.name().0
+                );
             }
             curr_index = original_field_index;
 
@@ -498,7 +674,11 @@ impl<'a> CircleBufferCodegen<'a> {
                 new_fields.push(new_field.clone());
                 new_field_tokens.push(field_attr_tokens);
             } else {
-                panic!("Expected field type to be a type or base class");
+                panic!(
+                    "Expected field type to be a type or base class: field '{}' in class '{}'",
+                    field.name().0,
+                    class.name().0
+                );
             }
         }
 

@@ -1,0 +1,4 @@
+# Single generic class test
+#~# bound: H: MerkleHash
+class RawMerkleProof[H](Container):
+    cohashes: List[H, 1024]

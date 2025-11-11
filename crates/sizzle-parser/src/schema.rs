@@ -77,10 +77,39 @@ impl ConstDef {
     }
 }
 
+/// Type parameter in a generic class definition.
+#[derive(Clone, Debug)]
+pub struct TypeParam {
+    name: Identifier,
+    kind: TypeParamKind,
+}
+
+impl TypeParam {
+    /// Name of the type parameter.
+    pub fn name(&self) -> &Identifier {
+        &self.name
+    }
+
+    /// Kind of the type parameter (Type or Const).
+    pub fn kind(&self) -> TypeParamKind {
+        self.kind
+    }
+}
+
+/// Kind of type parameter.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TypeParamKind {
+    /// Type variable (e.g., T, U, H)
+    Type,
+    /// Const variable (e.g., N for array sizes)
+    Const,
+}
+
 /// Class definition.
 #[derive(Clone, Debug)]
 pub struct ClassDef {
     name: Identifier,
+    type_params: Vec<TypeParam>,
     parent_ty: Ty,
     doc: Option<String>,
     doc_comment: Option<String>,
@@ -92,6 +121,11 @@ impl ClassDef {
     /// Name of the class.
     pub fn name(&self) -> &Identifier {
         &self.name
+    }
+
+    /// Type parameters of the class (empty for non-generic classes).
+    pub fn type_params(&self) -> &[TypeParam] {
+        &self.type_params
     }
 
     /// Parent type of the class.
@@ -183,6 +217,7 @@ pub(crate) fn conv_module_to_schema<'a>(
     let mut constants = Vec::new();
     let mut class_defs = Vec::new();
     let mut aliases = Vec::new();
+
     for d in m.entries() {
         let name = d.name();
         if idents.contains_key(name) {
@@ -271,6 +306,7 @@ pub(crate) fn conv_module_to_schema<'a>(
 
                 // Complex types we can also handle.
                 AssignExpr::Complex(complex) => {
+                    // Handle as a regular type alias
                     let resolved_expr = resolver
                         .resolve_ident_with_args(complex.base_name(), Some(complex.args()))?;
                     let ty = match resolved_expr {
@@ -304,8 +340,33 @@ pub(crate) fn conv_module_to_schema<'a>(
                 }
             },
             ModuleEntry::Class(def) => {
-                resolver.decl_user_type(name.clone())?;
-                idents.insert(name.clone(), IdentTarget::Ty(TypeData {}));
+                // If this is a generic class, register as type constructor for resolution
+                if !def.type_params().is_empty() {
+                    use crate::ty_resolver::{CtorArg, CtorSig};
+                    let sig = CtorSig::Fixed(
+                        def.type_params()
+                            .iter()
+                            .map(|p| match p.kind {
+                                crate::ast::TypeParamKind::Type => CtorArg::Ty,
+                                crate::ast::TypeParamKind::Const => CtorArg::Int,
+                            })
+                            .collect(),
+                    );
+                    resolver.insert_type_ctor(name.clone(), sig.clone())?;
+                    idents.insert(
+                        name.clone(),
+                        IdentTarget::TyCtor(crate::ty_resolver::TypeCtorData {
+                            sig,
+                            generic_class_def: None, // Don't store - we're not monomorphizing
+                        }),
+                    );
+                } else {
+                    // Non-generic class, register as regular type
+                    resolver.decl_user_type(name.clone())?;
+                    idents.insert(name.clone(), IdentTarget::Ty(TypeData {}));
+                }
+
+                // Add to class definitions for code generation
                 class_defs.push(def);
             }
         }
@@ -336,12 +397,31 @@ pub(crate) fn conv_module_to_schema<'a>(
     Ok((schema, idents))
 }
 
+/// Convert AST ClassDefEntry to schema ClassDef.
 fn conv_classdef<'a>(
     def: &ClassDefEntry,
     resolv: &'a TypeResolver<'a>,
 ) -> Result<ClassDef, SchemaError> {
     let mut field_names = HashSet::new();
     let mut fields = Vec::new();
+
+    // Create a temporary resolver that includes type parameters in scope
+    let mut temp_resolv = resolv.clone();
+
+    // Add type parameters to the temporary resolver so they can be used in field types
+    for tp in def.type_params() {
+        match tp.kind {
+            crate::ast::TypeParamKind::Type => {
+                // Register type parameter as a simple type
+                temp_resolv.decl_user_type(tp.name.clone())?;
+            }
+            crate::ast::TypeParamKind::Const => {
+                // Register const parameter as a const with placeholder value
+                // The actual value will be provided when the generic is instantiated
+                temp_resolv.decl_const(tp.name.clone(), crate::tysys::ConstValue::Int(0))?;
+            }
+        }
+    }
 
     for d in def.fields() {
         let name = d.name().clone();
@@ -351,7 +431,8 @@ fn conv_classdef<'a>(
 
         field_names.insert(name.clone());
 
-        let ty = resolv.resolve_spec_as_ty(d.ty())?;
+        // Use temp_resolv which has type parameters in scope
+        let ty = temp_resolv.resolve_spec_as_ty(d.ty())?;
         fields.push(ClassFieldDef {
             name,
             ty,
@@ -360,8 +441,22 @@ fn conv_classdef<'a>(
         })
     }
 
+    // Convert AST type parameters to schema type parameters
+    let type_params = def
+        .type_params()
+        .iter()
+        .map(|tp| TypeParam {
+            name: tp.name.clone(),
+            kind: match tp.kind {
+                crate::ast::TypeParamKind::Type => TypeParamKind::Type,
+                crate::ast::TypeParamKind::Const => TypeParamKind::Const,
+            },
+        })
+        .collect();
+
     Ok(ClassDef {
         name: def.name().clone(),
+        type_params,
         parent_ty: resolv.resolve_spec_as_ty(def.parent_ty())?,
         doc: def.doc().map(|s| s.to_owned()),
         doc_comment: def.doc_comment().map(|s| s.to_owned()),

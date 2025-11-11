@@ -1,0 +1,12 @@
+# Test nested generics - generic class using another generic class
+
+# Generic inner class
+class Inner[T](Container):
+    value: T
+    count: uint64
+
+# Generic outer class that uses Inner[T]
+class Outer[T](Container):
+    inner: Inner[T]
+    metadata: uint32
+
