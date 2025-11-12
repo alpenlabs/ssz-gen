@@ -58,10 +58,18 @@ fn ty_to_token_stream(ty: &Ty) -> TokenStream {
                 .filter_map(|arg| match arg {
                     TyExpr::Ty(ty) => Some(ty_to_token_stream(ty)),
                     TyExpr::Int(val) => {
-                        let num = val.eval();
-                        // Use usize suffix for numeric type parameters (for List, Vector, etc.)
-                        let lit = syn::LitInt::new(&format!("{}usize", num), Span::call_site());
-                        Some(quote! { #lit })
+                        // If this is a named constant reference, use the constant name with usize
+                        // cast Otherwise, use the numeric literal
+                        if let Some(const_name) = val.const_name() {
+                            let const_ident = Ident::new(const_name, Span::call_site());
+                            // Cast to usize since VariableList expects usize type parameters
+                            Some(quote! { { #const_ident as usize } })
+                        } else {
+                            let num = val.eval();
+                            // Use usize suffix for numeric type parameters (for List, Vector, etc.)
+                            let lit = syn::LitInt::new(&format!("{}usize", num), Span::call_site());
+                            Some(quote! { #lit })
+                        }
                     }
                     TyExpr::None => None,
                 })

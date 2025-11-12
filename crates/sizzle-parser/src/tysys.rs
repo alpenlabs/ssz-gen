@@ -95,6 +95,10 @@ pub enum ConstValue {
     /// An integer value shifted to the left by another integer value.  This is
     /// useful for very large numbers like 2**256 - 1.
     Binop(Binop, u64, u64),
+
+    /// A named constant reference that preserves the original constant name.
+    /// This is used to generate code that references the constant by name.
+    ConstRef(String, u64),
 }
 
 /// A binary operation.
@@ -120,6 +124,15 @@ impl ConstValue {
                 Binop::Mul => a * b,
                 Binop::Shl => a << b,
             },
+            ConstValue::ConstRef(_, v) => *v,
+        }
+    }
+
+    /// Get the constant name if this is a named constant reference.
+    pub fn const_name(&self) -> Option<&str> {
+        match self {
+            ConstValue::ConstRef(name, _) => Some(name),
+            _ => None,
         }
     }
 }

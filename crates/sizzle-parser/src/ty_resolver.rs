@@ -373,7 +373,10 @@ impl<'a> TypeResolver<'a> {
         match target {
             IdentTarget::Const(v) => {
                 if args.is_none() {
-                    Ok(TyExpr::Int(v.clone()))
+                    // Create a ConstRef to preserve the constant name for code generation
+                    let const_name = ident.0.clone();
+                    let const_val = v.eval();
+                    Ok(TyExpr::Int(ConstValue::ConstRef(const_name, const_val)))
                 } else {
                     Err(ResolverError::ArgsOnConst(ident.clone()))
                 }
