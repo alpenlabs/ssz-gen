@@ -203,8 +203,8 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> Alpha {
                     Alpha {
-                        a: self.a().expect("valid view").to_owned(),
-                        b: self.b().expect("valid view").to_owned(),
+                        a: self.a().expect("valid view").to_owned().expect("valid view"),
+                        b: self.b().expect("valid view").to_owned().expect("valid view"),
                     }
                 }
             }
@@ -487,10 +487,10 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> InnerBase {
                     InnerBase {
-                        x: self.x().expect("valid view").to_owned(),
-                        y: self.y().expect("valid view").to_owned(),
-                        z: self.z().expect("valid view").to_owned(),
-                        w: self.w().expect("valid view").to_owned(),
+                        x: self.x().expect("valid view").to_owned().expect("valid view"),
+                        y: self.y().expect("valid view").to_owned().expect("valid view"),
+                        z: self.z().expect("valid view").to_owned().expect("valid view"),
+                        w: self.w().expect("valid view").to_owned().expect("valid view"),
                     }
                 }
             }
@@ -779,9 +779,9 @@ pub mod tests {
                 pub fn to_owned(&self) -> InnerProfile1 {
                     InnerProfile1 {
                         x: self.x().expect("valid view"),
-                        y: self.y().expect("valid view").to_owned(),
-                        z: self.z().expect("valid view").to_owned(),
-                        w: self.w().expect("valid view").to_owned(),
+                        y: self.y().expect("valid view").to_owned().expect("valid view"),
+                        z: self.z().expect("valid view").to_owned().expect("valid view"),
+                        w: self.w().expect("valid view").to_owned().expect("valid view"),
                     }
                 }
             }
@@ -1021,9 +1021,9 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> InnerProfile2 {
                     InnerProfile2 {
-                        x: self.x().expect("valid view").to_owned(),
+                        x: self.x().expect("valid view").to_owned().expect("valid view"),
                         y: self.y().expect("valid view").to_owned().into(),
-                        z: self.z().expect("valid view").to_owned(),
+                        z: self.z().expect("valid view").to_owned().expect("valid view"),
                     }
                 }
             }
@@ -1219,7 +1219,7 @@ pub mod tests {
                 pub fn to_owned(&self) -> AlphaProfile {
                     AlphaProfile {
                         a: self.a().expect("valid view"),
-                        b: self.b().expect("valid view").to_owned(),
+                        b: self.b().expect("valid view").to_owned().expect("valid view"),
                     }
                 }
             }
@@ -1583,7 +1583,7 @@ pub mod tests {
                 pub fn to_owned(&self) -> InnerProfile4 {
                     InnerProfile4 {
                         y: self.y().expect("valid view").to_owned().into(),
-                        z: self.z().expect("valid view").to_owned(),
+                        z: self.z().expect("valid view").to_owned().expect("valid view"),
                     }
                 }
             }
@@ -1821,7 +1821,7 @@ pub mod tests {
                 pub fn to_owned(&self) -> InnerProfile5 {
                     InnerProfile5 {
                         x: self.x().expect("valid view"),
-                        z: self.z().expect("valid view").to_owned(),
+                        z: self.z().expect("valid view").to_owned().expect("valid view"),
                         w: self.w().expect("valid view").to_owned(),
                     }
                 }
@@ -2025,7 +2025,7 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> ProfileProfile {
                     ProfileProfile {
-                        x: self.x().expect("valid view").to_owned(),
+                        x: self.x().expect("valid view").to_owned().expect("valid view"),
                         w: self.w().expect("valid view").to_owned(),
                     }
                 }
@@ -2483,14 +2483,14 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> ContainerContainer {
                     ContainerContainer {
-                        x: self.x().expect("valid view").to_owned(),
-                        y: self.y().expect("valid view").to_owned(),
-                        z: self.z().expect("valid view").to_owned(),
-                        w: self.w().expect("valid view").to_owned(),
-                        a: self.a().expect("valid view").to_owned(),
-                        b: self.b().expect("valid view").to_owned(),
-                        c: self.c().expect("valid view").to_owned(),
-                        d: self.d().expect("valid view").to_owned(),
+                        x: self.x().expect("valid view").to_owned().expect("valid view"),
+                        y: self.y().expect("valid view").to_owned().expect("valid view"),
+                        z: self.z().expect("valid view").to_owned().expect("valid view"),
+                        w: self.w().expect("valid view").to_owned().expect("valid view"),
+                        a: self.a().expect("valid view").to_owned().expect("valid view"),
+                        b: self.b().expect("valid view").to_owned().expect("valid view"),
+                        c: self.c().expect("valid view").to_owned().expect("valid view"),
+                        d: self.d().expect("valid view").to_owned().expect("valid view"),
                     }
                 }
             }

@@ -410,8 +410,16 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> ExternalContainer {
                     ExternalContainer {
-                        field_a: self.field_a().expect("valid view").to_owned(),
-                        field_b: self.field_b().expect("valid view").to_owned(),
+                        field_a: self
+                            .field_a()
+                            .expect("valid view")
+                            .to_owned()
+                            .expect("valid view"),
+                        field_b: self
+                            .field_b()
+                            .expect("valid view")
+                            .to_owned()
+                            .expect("valid view"),
                     }
                 }
             }

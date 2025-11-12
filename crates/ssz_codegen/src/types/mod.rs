@@ -2324,10 +2324,24 @@ impl ClassDef {
                         }
                     }
                     TypeResolutionKind::Unresolved => {
-                        // For unresolved types (generics), to_owned() returns the owned type directly
-                        // (not a Result) because they're calling the custom to_owned() impl
-                        quote! {
-                            #field_name: self.#field_name().expect("valid view").to_owned()
+                        // For unresolved types, check if it's a collection with generic inner type
+                        // Collections (List[H], Vector[H]) return Result from to_owned()
+                        // while custom types return the owned type directly
+                        let is_collection = field.ty.ty.as_ref().is_some_and(|ty| {
+                            let ty_str = quote!(#ty).to_string();
+                            ty_str.contains("VariableList") || ty_str.contains("FixedVector")
+                        });
+
+                        if is_collection {
+                            // Collections with generic inner types return Result
+                            quote! {
+                                #field_name: self.#field_name().expect("valid view").to_owned().expect("valid view")
+                            }
+                        } else {
+                            // Custom types with generic parameters return owned type directly
+                            quote! {
+                                #field_name: self.#field_name().expect("valid view").to_owned()
+                            }
                         }
                     }
                     TypeResolutionKind::Class(_) => {
@@ -2339,17 +2353,42 @@ impl ClassDef {
                     }
                     _ => {
                         // For other complex types, call getter and then to_owned()
+                        // Collections typically return Result, so we add .expect()
                         quote! {
-                            #field_name: self.#field_name().expect("valid view").to_owned()
+                            #field_name: self.#field_name().expect("valid view").to_owned().expect("valid view")
                         }
                     }
                 }
             })
             .collect();
 
+        // Build where clause for to_owned method - add ToOwnedSsz bound for type params
+        let where_clause = if !self.type_params.is_empty() {
+            let type_where_clauses: Vec<TokenStream> = self
+                .type_params
+                .iter()
+                .filter_map(|tp| {
+                    if matches!(tp.kind, TypeParamKind::Type) {
+                        let param_ident = Ident::new(&tp.name, Span::call_site());
+                        Some(quote! { #param_ident: ssz_types::view::ToOwnedSsz<#param_ident> })
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
+            if type_where_clauses.is_empty() {
+                quote! {}
+            } else {
+                quote! { where #(#type_where_clauses),* }
+            }
+        } else {
+            quote! {}
+        };
+
         quote! {
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl #view_generics #ref_ident #view_generic_names {
+            impl #view_generics #ref_ident #view_generic_names #where_clause {
                 #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
                 pub fn to_owned(&self) -> #ident #owned_generic_names {
                     #ident {

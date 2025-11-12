@@ -671,9 +671,21 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> ContainerWithBigUnions {
                     ContainerWithBigUnions {
-                        big: self.big().expect("valid view").to_owned(),
-                        same: self.same().expect("valid view").to_owned(),
-                        mixed: self.mixed().expect("valid view").to_owned(),
+                        big: self
+                            .big()
+                            .expect("valid view")
+                            .to_owned()
+                            .expect("valid view"),
+                        same: self
+                            .same()
+                            .expect("valid view")
+                            .to_owned()
+                            .expect("valid view"),
+                        mixed: self
+                            .mixed()
+                            .expect("valid view")
+                            .to_owned()
+                            .expect("valid view"),
                     }
                 }
             }

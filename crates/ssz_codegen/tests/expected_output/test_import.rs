@@ -296,8 +296,8 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> StableContainerClass {
                     StableContainerClass {
-                        a: self.a().expect("valid view").to_owned(),
-                        b: self.b().expect("valid view").to_owned(),
+                        a: self.a().expect("valid view").to_owned().expect("valid view"),
+                        b: self.b().expect("valid view").to_owned().expect("valid view"),
                     }
                 }
             }
@@ -587,7 +587,7 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> StableContainerClass {
                     StableContainerClass {
-                        a: self.a().expect("valid view").to_owned(),
+                        a: self.a().expect("valid view").to_owned().expect("valid view"),
                     }
                 }
             }
@@ -792,7 +792,7 @@ pub mod tests {
                 pub fn to_owned(&self) -> ProfileInehritance {
                     ProfileInehritance {
                         a: self.a().expect("valid view"),
-                        b: self.b().expect("valid view").to_owned(),
+                        b: self.b().expect("valid view").to_owned().expect("valid view"),
                     }
                 }
             }

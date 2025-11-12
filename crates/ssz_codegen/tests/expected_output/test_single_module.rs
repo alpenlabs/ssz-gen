@@ -1131,8 +1131,8 @@ impl<'a> GammaRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> Gamma {
         Gamma {
-            g: self.g().expect("valid view").to_owned(),
-            h: self.h().expect("valid view").to_owned(),
+            g: self.g().expect("valid view").to_owned().expect("valid view"),
+            h: self.h().expect("valid view").to_owned().expect("valid view"),
         }
     }
 }
@@ -1519,10 +1519,10 @@ impl<'a> EpsilonRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> Epsilon {
         Epsilon {
-            g: self.g().expect("valid view").to_owned(),
-            h: self.h().expect("valid view").to_owned(),
-            i: self.i().expect("valid view").to_owned(),
-            j: self.j().expect("valid view").to_owned(),
+            g: self.g().expect("valid view").to_owned().expect("valid view"),
+            h: self.h().expect("valid view").to_owned().expect("valid view"),
+            i: self.i().expect("valid view").to_owned().expect("valid view"),
+            j: self.j().expect("valid view").to_owned().expect("valid view"),
         }
     }
 }
@@ -1702,8 +1702,8 @@ impl<'a> ZetaRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> Zeta {
         Zeta {
-            u: self.u().expect("valid view").to_owned(),
-            v: self.v().expect("valid view").to_owned(),
+            u: self.u().expect("valid view").to_owned().expect("valid view"),
+            v: self.v().expect("valid view").to_owned().expect("valid view"),
         }
     }
 }
@@ -2065,7 +2065,7 @@ impl<'a> EtaRef<'a> {
         Eta {
             l: self.l().expect("valid view").to_owned(),
             m: self.m().expect("valid view").to_owned(),
-            n: self.n().expect("valid view").to_owned(),
+            n: self.n().expect("valid view").to_owned().expect("valid view"),
         }
     }
 }
@@ -2246,8 +2246,8 @@ impl<'a> ThetaRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> Theta {
         Theta {
-            o: self.o().expect("valid view").to_owned(),
-            p: self.p().expect("valid view").to_owned(),
+            o: self.o().expect("valid view").to_owned().expect("valid view"),
+            p: self.p().expect("valid view").to_owned().expect("valid view"),
             q: ssz_types::FixedBytes(self.q().expect("valid view").to_owned()),
         }
     }
@@ -2588,12 +2588,12 @@ impl<'a> IotaRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> Iota {
         Iota {
-            g: self.g().expect("valid view").to_owned(),
-            h: self.h().expect("valid view").to_owned(),
-            i: self.i().expect("valid view").to_owned(),
-            j: self.j().expect("valid view").to_owned(),
-            r: self.r().expect("valid view").to_owned(),
-            s: self.s().expect("valid view").to_owned(),
+            g: self.g().expect("valid view").to_owned().expect("valid view"),
+            h: self.h().expect("valid view").to_owned().expect("valid view"),
+            i: self.i().expect("valid view").to_owned().expect("valid view"),
+            j: self.j().expect("valid view").to_owned().expect("valid view"),
+            r: self.r().expect("valid view").to_owned().expect("valid view"),
+            s: self.s().expect("valid view").to_owned().expect("valid view"),
         }
     }
 }
@@ -2776,7 +2776,7 @@ impl<'a> KappaRef<'a> {
         Kappa {
             t: self.t().expect("valid view").to_owned(),
             u: self.u().expect("valid view").to_owned(),
-            v: self.v().expect("valid view").to_owned(),
+            v: self.v().expect("valid view").to_owned().expect("valid view"),
         }
     }
 }
@@ -2956,8 +2956,8 @@ impl<'a> LambdaRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> Lambda {
         Lambda {
-            w: self.w().expect("valid view").to_owned(),
-            x: self.x().expect("valid view").to_owned(),
+            w: self.w().expect("valid view").to_owned().expect("valid view"),
+            x: self.x().expect("valid view").to_owned().expect("valid view"),
         }
     }
 }
@@ -3116,7 +3116,7 @@ impl<'a> MuRef<'a> {
     pub fn to_owned(&self) -> Mu {
         Mu {
             y: self.y().expect("valid view").to_owned(),
-            z: self.z().expect("valid view").to_owned(),
+            z: self.z().expect("valid view").to_owned().expect("valid view"),
         }
     }
 }
@@ -3330,8 +3330,8 @@ impl<'a> NuRef<'a> {
         Nu {
             zz: self.zz().expect("valid view").to_owned(),
             aaa: self.aaa().expect("valid view").to_owned().expect("valid view"),
-            bbb: self.bbb().expect("valid view").to_owned(),
-            test: self.test().expect("valid view").to_owned(),
+            bbb: self.bbb().expect("valid view").to_owned().expect("valid view"),
+            test: self.test().expect("valid view").to_owned().expect("valid view"),
         }
     }
 }

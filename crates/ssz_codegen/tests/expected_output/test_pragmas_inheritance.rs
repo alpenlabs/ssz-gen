@@ -202,8 +202,8 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> Parent {
                     Parent {
-                        a: self.a().expect("valid view").to_owned(),
-                        b: self.b().expect("valid view").to_owned(),
+                        a: self.a().expect("valid view").to_owned().expect("valid view"),
+                        b: self.b().expect("valid view").to_owned().expect("valid view"),
                     }
                 }
             }
@@ -442,9 +442,9 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> Child {
                     Child {
-                        a: self.a().expect("valid view").to_owned(),
-                        b: self.b().expect("valid view").to_owned(),
-                        c: self.c().expect("valid view").to_owned(),
+                        a: self.a().expect("valid view").to_owned().expect("valid view"),
+                        b: self.b().expect("valid view").to_owned().expect("valid view"),
+                        c: self.c().expect("valid view").to_owned().expect("valid view"),
                     }
                 }
             }

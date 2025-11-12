@@ -871,12 +871,36 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> UnionEdgeCases {
                     UnionEdgeCases {
-                        simple: self.simple().expect("valid view").to_owned(),
-                        nested: self.nested().expect("valid view").to_owned(),
-                        complex: self.complex().expect("valid view").to_owned(),
-                        opt_simple: self.opt_simple().expect("valid view").to_owned(),
-                        opt_complex: self.opt_complex().expect("valid view").to_owned(),
-                        opt_union: self.opt_union().expect("valid view").to_owned(),
+                        simple: self
+                            .simple()
+                            .expect("valid view")
+                            .to_owned()
+                            .expect("valid view"),
+                        nested: self
+                            .nested()
+                            .expect("valid view")
+                            .to_owned()
+                            .expect("valid view"),
+                        complex: self
+                            .complex()
+                            .expect("valid view")
+                            .to_owned()
+                            .expect("valid view"),
+                        opt_simple: self
+                            .opt_simple()
+                            .expect("valid view")
+                            .to_owned()
+                            .expect("valid view"),
+                        opt_complex: self
+                            .opt_complex()
+                            .expect("valid view")
+                            .to_owned()
+                            .expect("valid view"),
+                        opt_union: self
+                            .opt_union()
+                            .expect("valid view")
+                            .to_owned()
+                            .expect("valid view"),
                     }
                 }
             }
@@ -1087,9 +1111,21 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> AllUnions {
                     AllUnions {
-                        union1: self.union1().expect("valid view").to_owned(),
-                        union2: self.union2().expect("valid view").to_owned(),
-                        union3: self.union3().expect("valid view").to_owned(),
+                        union1: self
+                            .union1()
+                            .expect("valid view")
+                            .to_owned()
+                            .expect("valid view"),
+                        union2: self
+                            .union2()
+                            .expect("valid view")
+                            .to_owned()
+                            .expect("valid view"),
+                        union3: self
+                            .union3()
+                            .expect("valid view")
+                            .to_owned()
+                            .expect("valid view"),
                     }
                 }
             }
