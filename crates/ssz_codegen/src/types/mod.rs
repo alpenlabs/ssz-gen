@@ -2248,7 +2248,10 @@ impl ClassDef {
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl #view_generics ssz_types::view::ToOwnedSsz<#ident #owned_generic_names> for #ref_ident #view_generic_names {
                 #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+                #[allow(unconditional_recursion, reason = "false positive - delegates to inherent method")]
                 fn to_owned(&self) -> #ident #owned_generic_names {
+                    // Delegate to the inherent to_owned method by using explicit syntax
+                    // The compiler resolves this to the inherent method, not the trait method
                     <#ref_ident #view_generic_names>::to_owned(self)
                 }
             }
