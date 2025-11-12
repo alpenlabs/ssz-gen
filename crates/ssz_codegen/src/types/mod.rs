@@ -1012,10 +1012,12 @@ impl ClassDef {
 
                 match tp.kind {
                     TypeParamKind::Type => {
-                        // Start with TreeHashDigest, TreeHash and Encode/Decode bounds
+                        // Start with TreeHashDigest and Encode/Decode bounds
+                        // Note: We use TreeHash<Self> to create a recursive bound
+                        // This is needed for VariableList<H> to implement TreeHash<H>
                         let mut bounds: Vec<TokenStream> = vec![
                             parse_quote!(tree_hash::TreeHashDigest),
-                            parse_quote!(tree_hash::TreeHash),
+                            parse_quote!(tree_hash::TreeHash<#param_ident>),
                             parse_quote!(ssz::Encode),
                             parse_quote!(ssz::Decode),
                         ];
@@ -1064,10 +1066,12 @@ impl ClassDef {
 
                 match tp.kind {
                     TypeParamKind::Type => {
-                        // Start with TreeHashDigest, TreeHash, and SSZ bounds for all type params
+                        // Start with TreeHashDigest and SSZ bounds for all type params
+                        // Note: We use TreeHash<Self> to create a recursive bound
+                        // This is needed for VariableListRef<H> to implement TreeHash<H>
                         let mut bounds: Vec<TokenStream> = vec![
                             parse_quote!(tree_hash::TreeHashDigest),
-                            parse_quote!(tree_hash::TreeHash),
+                            parse_quote!(tree_hash::TreeHash<#param_ident>),
                             parse_quote!(ssz::Encode),
                             parse_quote!(ssz::Decode),
                             parse_quote!(ssz::view::DecodeView<'a>),
