@@ -582,47 +582,7 @@ impl<'a> TypeResolver<'a> {
             }
             TypeDefinition::Bytes(size) => TypeResolutionKind::Bytes(*size),
             TypeDefinition::CustomType(res) => {
-                // If this is a class type with generic arguments, build the full generic path
-                if let TypeResolutionKind::Class(class_name) = &res.resolution {
-                    if !args.is_empty() {
-                        // Build generic arguments for the syn::Type
-                        let generic_args: Vec<syn::GenericArgument> = args
-                            .iter()
-                            .map(|arg| {
-                                let arg_ty = arg.unwrap_type();
-                                syn::GenericArgument::Type(arg_ty)
-                            })
-                            .collect();
-
-                        // Create Path with generic arguments
-                        let class_ident =
-                            syn::Ident::new(class_name, proc_macro2::Span::call_site());
-                        let mut segments = syn::punctuated::Punctuated::new();
-                        segments.push(syn::PathSegment {
-                            ident: class_ident,
-                            arguments: syn::PathArguments::AngleBracketed(
-                                syn::AngleBracketedGenericArguments {
-                                    colon2_token: None,
-                                    lt_token: Default::default(),
-                                    args: generic_args.into_iter().collect(),
-                                    gt_token: Default::default(),
-                                },
-                            ),
-                        });
-
-                        resolved_ty = Some(syn::Type::Path(syn::TypePath {
-                            qself: None,
-                            path: syn::Path {
-                                leading_colon: None,
-                                segments,
-                            },
-                        }));
-                    } else {
-                        resolved_ty = res.ty.clone();
-                    }
-                } else {
-                    resolved_ty = res.ty.clone();
-                }
+                resolved_ty = res.ty.clone();
                 res.resolution.clone()
             }
         };
@@ -681,7 +641,6 @@ impl<'a> TypeResolver<'a> {
                 pragmas: vec![],
                 doc_comment: None,
                 doc: None,
-                type_params: vec![],
             },
             ClassDefinition::StableContainer => {
                 let max = match args.first() {
@@ -699,7 +658,6 @@ impl<'a> TypeResolver<'a> {
                     pragmas: vec![],
                     doc_comment: None,
                     doc: None,
-                    type_params: vec![],
                 }
             }
             ClassDefinition::Profile => {
@@ -726,7 +684,6 @@ impl<'a> TypeResolver<'a> {
                         pragmas: class_def.pragmas,
                         doc_comment: class_def.doc_comment,
                         doc: class_def.doc,
-                        type_params: class_def.type_params,
                     }
                 } else {
                     panic!("Expected profile to inherit from a stable container");
@@ -784,7 +741,6 @@ impl<'a> TypeResolver<'a> {
                     pragmas: vec![],
                     doc_comment: None,
                     doc: None,
-                    type_params: vec![],
                 }),
                 BaseClass::StableContainer(Some(max)) => ClassDefinition::Custom(ClassDef {
                     base: BaseClass::StableContainer(Some(*max)),
@@ -794,7 +750,6 @@ impl<'a> TypeResolver<'a> {
                     pragmas: vec![],
                     doc_comment: None,
                     doc: None,
-                    type_params: vec![],
                 }),
                 BaseClass::Profile(Some((name, max))) => {
                     let resolvers = self.resolvers.borrow();
@@ -813,7 +768,6 @@ impl<'a> TypeResolver<'a> {
                         pragmas: resolved_def.pragmas,
                         doc_comment: resolved_def.doc_comment,
                         doc: resolved_def.doc,
-                        type_params: resolved_def.type_params,
                     })
                 }
                 _ => panic!(
