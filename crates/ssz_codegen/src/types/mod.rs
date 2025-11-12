@@ -2354,6 +2354,13 @@ impl ClassDef {
                             #field_name: self.#field_name().expect("valid view").to_owned()
                         }
                     }
+                    TypeResolutionKind::External => {
+                        // For external types (like BitcoinAmount, AccountId), to_owned() returns
+                        // the owned type directly, not a Result
+                        quote! {
+                            #field_name: self.#field_name().expect("valid view").to_owned()
+                        }
+                    }
                     _ => {
                         // For other complex types, call getter and then to_owned()
                         // Collections typically return Result, so we add .expect()
