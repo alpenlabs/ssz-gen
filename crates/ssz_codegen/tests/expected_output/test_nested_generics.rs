@@ -171,6 +171,10 @@ impl<
         + 'a,
 > ssz_types::view::ToOwnedSsz<Inner<T>> for InnerRef<'a, T> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> Inner<T> {
         <InnerRef<'a, T>>::to_owned(self)
     }
@@ -360,6 +364,10 @@ impl<
         + 'a,
 > ssz_types::view::ToOwnedSsz<Outer<T>> for OuterRef<'a, T> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> Outer<T> {
         <OuterRef<'a, T>>::to_owned(self)
     }

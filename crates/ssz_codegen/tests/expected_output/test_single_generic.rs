@@ -155,6 +155,10 @@ impl<
         + 'a + MerkleHash,
 > ssz_types::view::ToOwnedSsz<RawMerkleProof<H>> for RawMerkleProofRef<'a, H> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> RawMerkleProof<H> {
         <RawMerkleProofRef<'a, H>>::to_owned(self)
     }

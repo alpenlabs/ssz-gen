@@ -882,6 +882,10 @@ pub mod tests {
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
+                )]
                 fn to_owned(&self) -> Alpha {
                     <AlphaRef<'a>>::to_owned(self)
                 }
@@ -1078,6 +1082,10 @@ pub mod tests {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
+                )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
                 )]
                 fn to_owned(&self) -> Beta {
                     <BetaRef<'a>>::to_owned(self)
@@ -1281,6 +1289,10 @@ pub mod tests {
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
+                )]
                 fn to_owned(&self) -> Gamma {
                     <GammaRef<'a>>::to_owned(self)
                 }
@@ -1422,6 +1434,10 @@ pub mod tests {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
+                )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
                 )]
                 fn to_owned(&self) -> Delta {
                     <DeltaRef<'a>>::to_owned(self)
@@ -1710,6 +1726,10 @@ pub mod tests {
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
+                )]
                 fn to_owned(&self) -> Epsilon {
                     <EpsilonRef<'a>>::to_owned(self)
                 }
@@ -1910,6 +1930,10 @@ pub mod tests {
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
+                )]
                 fn to_owned(&self) -> Zeta {
                     <ZetaRef<'a>>::to_owned(self)
                 }
@@ -2105,6 +2129,10 @@ pub mod tests {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
+                )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
                 )]
                 fn to_owned(&self) -> TestType {
                     <TestTypeRef<'a>>::to_owned(self)
@@ -2323,6 +2351,10 @@ pub mod tests {
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
+                )]
                 fn to_owned(&self) -> Eta {
                     <EtaRef<'a>>::to_owned(self)
                 }
@@ -2528,6 +2560,10 @@ pub mod tests {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
+                )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
                 )]
                 fn to_owned(&self) -> Theta {
                     <ThetaRef<'a>>::to_owned(self)
@@ -2910,6 +2946,10 @@ pub mod tests {
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
+                )]
                 fn to_owned(&self) -> Iota {
                     <IotaRef<'a>>::to_owned(self)
                 }
@@ -3119,6 +3159,10 @@ pub mod tests {
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
+                )]
                 fn to_owned(&self) -> Kappa {
                     <KappaRef<'a>>::to_owned(self)
                 }
@@ -3316,6 +3360,10 @@ pub mod tests {
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
+                )]
                 fn to_owned(&self) -> Lambda {
                     <LambdaRef<'a>>::to_owned(self)
                 }
@@ -3493,6 +3541,10 @@ pub mod tests {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
+                )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
                 )]
                 fn to_owned(&self) -> Mu {
                     <MuRef<'a>>::to_owned(self)
@@ -3733,6 +3785,10 @@ pub mod tests {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
+                )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
                 )]
                 fn to_owned(&self) -> Nu {
                     <NuRef<'a>>::to_owned(self)

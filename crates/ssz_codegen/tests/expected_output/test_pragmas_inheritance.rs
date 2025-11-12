@@ -190,6 +190,10 @@ pub mod tests {
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
+                )]
                 fn to_owned(&self) -> Parent {
                     <ParentRef<'a>>::to_owned(self)
                 }
@@ -429,6 +433,10 @@ pub mod tests {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
+                )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
                 )]
                 fn to_owned(&self) -> Child {
                     <ChildRef<'a>>::to_owned(self)

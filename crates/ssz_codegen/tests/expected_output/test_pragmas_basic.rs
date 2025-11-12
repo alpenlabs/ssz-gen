@@ -114,6 +114,10 @@ pub mod tests {
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
+                )]
                 fn to_owned(&self) -> BasicContainer {
                     <BasicContainerRef<'a>>::to_owned(self)
                 }

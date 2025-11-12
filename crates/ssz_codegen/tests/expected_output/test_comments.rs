@@ -162,6 +162,10 @@ pub mod tests {
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
+                )]
                 fn to_owned(&self) -> Point {
                     <PointRef<'a>>::to_owned(self)
                 }
@@ -309,6 +313,10 @@ pub mod tests {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
+                )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
                 )]
                 fn to_owned(&self) -> CoordinateContainer {
                     <CoordinateContainerRef<'a>>::to_owned(self)

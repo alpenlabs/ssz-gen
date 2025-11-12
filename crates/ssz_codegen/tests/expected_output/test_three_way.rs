@@ -148,6 +148,10 @@ impl<'a> ssz::view::SszTypeInfo for ContainerARef<'a> {
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<ContainerA> for ContainerARef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> ContainerA {
         <ContainerARef<'a>>::to_owned(self)
     }
@@ -305,6 +309,10 @@ impl<'a> ssz::view::SszTypeInfo for ContainerBRef<'a> {
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<ContainerB> for ContainerBRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> ContainerB {
         <ContainerBRef<'a>>::to_owned(self)
     }
@@ -413,6 +421,10 @@ impl<'a> ssz::view::SszTypeInfo for ContainerCRef<'a> {
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<ContainerC> for ContainerCRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> ContainerC {
         <ContainerCRef<'a>>::to_owned(self)
     }

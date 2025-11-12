@@ -766,6 +766,10 @@ impl<'a> ssz::view::SszTypeInfo for AlphaRef<'a> {
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<Alpha> for AlphaRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> Alpha {
         <AlphaRef<'a>>::to_owned(self)
     }
@@ -938,6 +942,10 @@ impl<'a> ssz::view::SszTypeInfo for BetaRef<'a> {
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<Beta> for BetaRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> Beta {
         <BetaRef<'a>>::to_owned(self)
     }
@@ -1122,6 +1130,10 @@ impl<'a> ssz::view::SszTypeInfo for GammaRef<'a> {
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<Gamma> for GammaRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> Gamma {
         <GammaRef<'a>>::to_owned(self)
     }
@@ -1249,6 +1261,10 @@ impl<'a> ssz::view::SszTypeInfo for DeltaRef<'a> {
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<Delta> for DeltaRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> Delta {
         <DeltaRef<'a>>::to_owned(self)
     }
@@ -1510,6 +1526,10 @@ impl<'a> ssz::view::SszTypeInfo for EpsilonRef<'a> {
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<Epsilon> for EpsilonRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> Epsilon {
         <EpsilonRef<'a>>::to_owned(self)
     }
@@ -1693,6 +1713,10 @@ impl<'a> ssz::view::SszTypeInfo for ZetaRef<'a> {
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<Zeta> for ZetaRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> Zeta {
         <ZetaRef<'a>>::to_owned(self)
     }
@@ -1864,6 +1888,10 @@ impl<'a> ssz::view::SszTypeInfo for TestTypeRef<'a> {
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<TestType> for TestTypeRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> TestType {
         <TestTypeRef<'a>>::to_owned(self)
     }
@@ -2054,6 +2082,10 @@ impl<'a> ssz::view::SszTypeInfo for EtaRef<'a> {
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<Eta> for EtaRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> Eta {
         <EtaRef<'a>>::to_owned(self)
     }
@@ -2237,6 +2269,10 @@ impl<'a> ssz::view::SszTypeInfo for ThetaRef<'a> {
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<Theta> for ThetaRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> Theta {
         <ThetaRef<'a>>::to_owned(self)
     }
@@ -2579,6 +2615,10 @@ impl<'a> ssz::view::SszTypeInfo for IotaRef<'a> {
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<Iota> for IotaRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> Iota {
         <IotaRef<'a>>::to_owned(self)
     }
@@ -2765,6 +2805,10 @@ impl<'a> ssz::view::SszTypeInfo for KappaRef<'a> {
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<Kappa> for KappaRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> Kappa {
         <KappaRef<'a>>::to_owned(self)
     }
@@ -2947,6 +2991,10 @@ impl<'a> ssz::view::SszTypeInfo for LambdaRef<'a> {
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<Lambda> for LambdaRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> Lambda {
         <LambdaRef<'a>>::to_owned(self)
     }
@@ -3106,6 +3154,10 @@ impl<'a> ssz::view::SszTypeInfo for MuRef<'a> {
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<Mu> for MuRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> Mu {
         <MuRef<'a>>::to_owned(self)
     }
@@ -3319,6 +3371,10 @@ impl<'a> ssz::view::SszTypeInfo for NuRef<'a> {
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<Nu> for NuRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> Nu {
         <NuRef<'a>>::to_owned(self)
     }

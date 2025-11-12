@@ -173,6 +173,10 @@ impl<
         + 'a,
 > ssz_types::view::ToOwnedSsz<Box<T>> for BoxRef<'a, T> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> Box<T> {
         <BoxRef<'a, T>>::to_owned(self)
     }
@@ -330,6 +334,10 @@ impl<'a> ssz::view::SszTypeInfo for WarehouseRef<'a> {
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<Warehouse> for WarehouseRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> Warehouse {
         <WarehouseRef<'a>>::to_owned(self)
     }

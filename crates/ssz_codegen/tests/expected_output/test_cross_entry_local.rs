@@ -111,6 +111,10 @@ pub mod tests {
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
+                )]
                 fn to_owned(&self) -> CommonTypeA {
                     <CommonTypeARef<'a>>::to_owned(self)
                 }
@@ -227,6 +231,10 @@ pub mod tests {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
+                )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
                 )]
                 fn to_owned(&self) -> CommonTypeB {
                     <CommonTypeBRef<'a>>::to_owned(self)
@@ -431,6 +439,10 @@ pub mod tests {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
+                )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
                 )]
                 fn to_owned(&self) -> ContainerA {
                     <ContainerARef<'a>>::to_owned(self)

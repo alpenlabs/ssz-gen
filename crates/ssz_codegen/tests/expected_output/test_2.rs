@@ -191,6 +191,10 @@ pub mod tests {
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
+                )]
                 fn to_owned(&self) -> Alpha {
                     <AlphaRef<'a>>::to_owned(self)
                 }
@@ -474,6 +478,10 @@ pub mod tests {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
+                )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
                 )]
                 fn to_owned(&self) -> InnerBase {
                     <InnerBaseRef<'a>>::to_owned(self)
@@ -766,6 +774,10 @@ pub mod tests {
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
+                )]
                 fn to_owned(&self) -> InnerProfile1 {
                     <InnerProfile1Ref<'a>>::to_owned(self)
                 }
@@ -1009,6 +1021,10 @@ pub mod tests {
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
+                )]
                 fn to_owned(&self) -> InnerProfile2 {
                     <InnerProfile2Ref<'a>>::to_owned(self)
                 }
@@ -1206,6 +1222,10 @@ pub mod tests {
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
+                )]
                 fn to_owned(&self) -> AlphaProfile {
                     <AlphaProfileRef<'a>>::to_owned(self)
                 }
@@ -1369,6 +1389,10 @@ pub mod tests {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
+                )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
                 )]
                 fn to_owned(&self) -> InnerProfile3 {
                     <InnerProfile3Ref<'a>>::to_owned(self)
@@ -1569,6 +1593,10 @@ pub mod tests {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
+                )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
                 )]
                 fn to_owned(&self) -> InnerProfile4 {
                     <InnerProfile4Ref<'a>>::to_owned(self)
@@ -1808,6 +1836,10 @@ pub mod tests {
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
+                )]
                 fn to_owned(&self) -> InnerProfile5 {
                     <InnerProfile5Ref<'a>>::to_owned(self)
                 }
@@ -2012,6 +2044,10 @@ pub mod tests {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
+                )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
                 )]
                 fn to_owned(&self) -> ProfileProfile {
                     <ProfileProfileRef<'a>>::to_owned(self)
@@ -2470,6 +2506,10 @@ pub mod tests {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
+                )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
                 )]
                 fn to_owned(&self) -> ContainerContainer {
                     <ContainerContainerRef<'a>>::to_owned(self)

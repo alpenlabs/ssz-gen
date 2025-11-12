@@ -122,6 +122,10 @@ impl<'a> ssz::view::SszTypeInfo for StateRef<'a> {
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<State> for StateRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> State {
         <StateRef<'a>>::to_owned(self)
     }
@@ -311,6 +315,10 @@ impl<'a> ssz::view::SszTypeInfo for UpdateRef<'a> {
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<Update> for UpdateRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> Update {
         <UpdateRef<'a>>::to_owned(self)
     }

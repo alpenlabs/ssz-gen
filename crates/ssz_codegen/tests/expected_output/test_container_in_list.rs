@@ -118,6 +118,10 @@ impl<'a> ssz::view::SszTypeInfo for ExportEntryRef<'a> {
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<ExportEntry> for ExportEntryRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> ExportEntry {
         <ExportEntryRef<'a>>::to_owned(self)
     }
@@ -271,6 +275,10 @@ impl<'a> ssz::view::SszTypeInfo for ExportContainerRef<'a> {
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<ExportContainer> for ExportContainerRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> ExportContainer {
         <ExportContainerRef<'a>>::to_owned(self)
     }

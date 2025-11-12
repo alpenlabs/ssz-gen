@@ -155,6 +155,10 @@ impl<
         + 'a + MerkleHash,
 > ssz_types::view::ToOwnedSsz<RawMerkleProof<H>> for RawMerkleProofRef<'a, H> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> RawMerkleProof<H> {
         <RawMerkleProofRef<'a, H>>::to_owned(self)
     }
@@ -346,6 +350,10 @@ impl<
         + 'a + MerkleHash,
 > ssz_types::view::ToOwnedSsz<MerkleProof<H>> for MerkleProofRef<'a, H> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> MerkleProof<H> {
         <MerkleProofRef<'a, H>>::to_owned(self)
     }
@@ -531,6 +539,10 @@ impl<'a> ssz::view::SszTypeInfo for CompactMmr64Ref<'a> {
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ssz_types::view::ToOwnedSsz<CompactMmr64> for CompactMmr64Ref<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> CompactMmr64 {
         <CompactMmr64Ref<'a>>::to_owned(self)
     }

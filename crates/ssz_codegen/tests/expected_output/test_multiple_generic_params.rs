@@ -193,6 +193,10 @@ impl<
         + 'a,
 > ssz_types::view::ToOwnedSsz<Pair<T, U>> for PairRef<'a, T, U> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> Pair<T, U> {
         <PairRef<'a, T, U>>::to_owned(self)
     }
@@ -473,6 +477,10 @@ impl<
         + 'a,
 > ssz_types::view::ToOwnedSsz<Triple<T, U, V>> for TripleRef<'a, T, U, V> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    #[allow(
+        unconditional_recursion,
+        reason = "false positive - delegates to inherent method"
+    )]
     fn to_owned(&self) -> Triple<T, U, V> {
         <TripleRef<'a, T, U, V>>::to_owned(self)
     }

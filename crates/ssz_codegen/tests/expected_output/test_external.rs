@@ -398,6 +398,10 @@ pub mod tests {
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
+                #[allow(
+                    unconditional_recursion,
+                    reason = "false positive - delegates to inherent method"
+                )]
                 fn to_owned(&self) -> ExternalContainer {
                     <ExternalContainerRef<'a>>::to_owned(self)
                 }
@@ -410,16 +414,8 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> ExternalContainer {
                     ExternalContainer {
-                        field_a: self
-                            .field_a()
-                            .expect("valid view")
-                            .to_owned()
-                            .expect("valid view"),
-                        field_b: self
-                            .field_b()
-                            .expect("valid view")
-                            .to_owned()
-                            .expect("valid view"),
+                        field_a: self.field_a().expect("valid view").to_owned(),
+                        field_b: self.field_b().expect("valid view").to_owned(),
                     }
                 }
             }
