@@ -507,7 +507,7 @@ pub mod tests {
             >;
             pub type AliasListImportedConstant = VariableList<
                 crate::tests::input::test_common::AliasUint8,
-                5usize,
+                { CONSTANT_VALUE_IMPORTED as usize },
             >;
             pub type AliasClassStableContainer = crate::tests::input::test_common::StableContainerClass;
             pub type AliasUint8 = crate::tests::input::test_common::AliasUint8;

@@ -21,8 +21,11 @@ pub mod tests {
             pub type C = B;
             pub type D = VariableList<C, 10usize>;
             pub type E = FixedVector<D, 5usize>;
-            pub type F = VariableList<A, 10usize>;
-            pub type G = FixedVector<F, 10usize>;
+            pub type F = VariableList<A, { SIZE_3 as usize }>;
+            pub type G = FixedVector<
+                VariableList<A, { SIZE_3 as usize }>,
+                { SIZE_1 as usize },
+            >;
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
             pub struct NestedAliasContainer {

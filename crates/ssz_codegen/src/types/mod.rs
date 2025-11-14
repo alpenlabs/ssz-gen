@@ -9,6 +9,30 @@ use syn::{Ident, Path, Type, TypePath, parse_quote};
 use crate::{derive_config::DeriveConfig, types::resolver::TypeResolver};
 pub mod resolver;
 
+/// Represents a size expression for type parameters
+///
+/// This captures size arguments in SSZ types like `List[T, N]` where N can be
+/// either a literal value or a named constant reference.
+#[derive(Clone, Debug, PartialEq)]
+pub enum SizeExpr {
+    /// Literal size value (e.g., `42`)
+    Literal(u64),
+    /// Named constant reference with its resolved value.
+    ///
+    /// Stores the constant name (e.g., `"VAL_X"`) and its resolved value (e.g., `42`).
+    /// Used to preserve constant names in generated code like `BitList<{ VAL_X as usize }>`.
+    ConstRef(String, u64),
+}
+
+impl SizeExpr {
+    /// Get the resolved numeric value
+    pub fn value(&self) -> u64 {
+        match self {
+            SizeExpr::Literal(v) | SizeExpr::ConstRef(_, v) => *v,
+        }
+    }
+}
+
 /// Converts a primitive type name into a Rust [`Type`].
 ///
 /// # Arguments
@@ -91,14 +115,14 @@ pub enum TypeResolutionKind {
     Boolean,
     /// Unsigned integer with specified bit width
     UInt(usize),
-    /// Fixed-length vector
-    Vector(Box<TypeResolution>, u64),
-    /// Variable-length list
-    List(Box<TypeResolution>, u64),
-    /// Fixed-length vector of bits
-    Bitvector(u64),
-    /// Variable-length list of bits
-    Bitlist(u64),
+    /// Fixed-length vector (element type, size expression)
+    Vector(Box<TypeResolution>, SizeExpr),
+    /// Variable-length list (element type, size expression)
+    List(Box<TypeResolution>, SizeExpr),
+    /// Fixed-length vector of bits (size expression)
+    Bitvector(SizeExpr),
+    /// Variable-length list of bits (size expression)
+    Bitlist(SizeExpr),
     /// Optional type (can be None) for use in stable containers only
     Optional(Box<TypeResolution>),
     /// Special for Union[None, T]
@@ -189,8 +213,8 @@ impl TypeResolution {
             }
             TypeResolutionKind::Boolean => primitive_rust_type("bool"),
             TypeResolutionKind::UInt(size) => primitive_rust_type(&format!("u{size}")),
-            TypeResolutionKind::Vector(ty, size) => {
-                let size = *size as usize;
+            TypeResolutionKind::Vector(ty, size_expr) => {
+                let size = size_expr.value() as usize;
                 // Special case: Vector[byte, N] -> FixedBytes<N>
                 // This ensures proper trait implementations (SszTypeInfo, ToOwnedSsz) when used in
                 // Lists
@@ -201,17 +225,17 @@ impl TypeResolution {
                     parse_quote!(FixedVector<#ty, #size>)
                 }
             }
-            TypeResolutionKind::List(ty, size) => {
+            TypeResolutionKind::List(ty, size_expr) => {
                 let ty = ty.unwrap_type();
-                let size = *size as usize;
+                let size = size_expr.value() as usize;
                 parse_quote!(VariableList<#ty, #size>)
             }
-            TypeResolutionKind::Bitvector(size) => {
-                let size = *size as usize;
+            TypeResolutionKind::Bitvector(size_expr) => {
+                let size = size_expr.value() as usize;
                 parse_quote!(BitVector<#size>)
             }
-            TypeResolutionKind::Bitlist(size) => {
-                let size = *size as usize;
+            TypeResolutionKind::Bitlist(size_expr) => {
+                let size = size_expr.value() as usize;
                 parse_quote!(BitList<#size>)
             }
             TypeResolutionKind::Optional(ty) => {
@@ -231,6 +255,121 @@ impl TypeResolution {
                 parse_quote!(FixedBytes<#size>)
             }
             _ => panic!("Expected type resolution to be a type"),
+        }
+    }
+
+    /// Check if this type contains any constant references in size parameters
+    pub fn contains_const_ref(&self) -> bool {
+        match &self.resolution {
+            TypeResolutionKind::Vector(ty, size_expr) | TypeResolutionKind::List(ty, size_expr) => {
+                matches!(size_expr, SizeExpr::ConstRef(_, _)) || ty.contains_const_ref()
+            }
+            TypeResolutionKind::Bitvector(size_expr) | TypeResolutionKind::Bitlist(size_expr) => {
+                matches!(size_expr, SizeExpr::ConstRef(_, _))
+            }
+            TypeResolutionKind::Optional(ty) | TypeResolutionKind::Option(ty) => {
+                ty.contains_const_ref()
+            }
+            _ => false,
+        }
+    }
+
+    /// Unwrap with constant preservation if needed, otherwise regular unwrap
+    fn unwrap_with_const_check(&self) -> Type {
+        if self.contains_const_ref() {
+            self.unwrap_type_preserving_const_names()
+        } else {
+            self.unwrap_type()
+        }
+    }
+
+    /// Unwraps a type, preserving constant names in size parameters as `{ CONST as usize }`.
+    /// Expands type aliases only when they contain constants.
+    pub fn unwrap_type_preserving_const_names(&self) -> Type {
+        match &self.resolution {
+            TypeResolutionKind::Vector(ty, size_expr) => {
+                let elem_ty = ty.unwrap_with_const_check();
+                match size_expr {
+                    SizeExpr::Literal(size)
+                        if matches!(ty.resolution, TypeResolutionKind::UInt(8)) =>
+                    {
+                        let size = *size as usize;
+                        parse_quote!(FixedBytes<#size>)
+                    }
+                    SizeExpr::ConstRef(name, _)
+                        if matches!(ty.resolution, TypeResolutionKind::UInt(8)) =>
+                    {
+                        let const_ident = Ident::new(name, Span::call_site());
+                        parse_quote!(FixedBytes<{ #const_ident as usize }>)
+                    }
+                    SizeExpr::Literal(size) => {
+                        let size = *size as usize;
+                        parse_quote!(FixedVector<#elem_ty, #size>)
+                    }
+                    SizeExpr::ConstRef(name, _) => {
+                        let const_ident = Ident::new(name, Span::call_site());
+                        parse_quote!(FixedVector<#elem_ty, { #const_ident as usize }>)
+                    }
+                }
+            }
+            TypeResolutionKind::List(ty, size_expr) => {
+                let elem_ty = ty.unwrap_with_const_check();
+                match size_expr {
+                    SizeExpr::Literal(size) => {
+                        let size = *size as usize;
+                        parse_quote!(VariableList<#elem_ty, #size>)
+                    }
+                    SizeExpr::ConstRef(name, _) => {
+                        let const_ident = Ident::new(name, Span::call_site());
+                        parse_quote!(VariableList<#elem_ty, { #const_ident as usize }>)
+                    }
+                }
+            }
+            TypeResolutionKind::Bitvector(size_expr) | TypeResolutionKind::Bitlist(size_expr) => {
+                let type_name = if matches!(self.resolution, TypeResolutionKind::Bitvector(_)) {
+                    "BitVector"
+                } else {
+                    "BitList"
+                };
+                match size_expr {
+                    SizeExpr::Literal(size) => {
+                        let size = *size as usize;
+                        let ident = Ident::new(type_name, Span::call_site());
+                        parse_quote!(#ident<#size>)
+                    }
+                    SizeExpr::ConstRef(name, _) => {
+                        let const_ident = Ident::new(name, Span::call_site());
+                        let ident = Ident::new(type_name, Span::call_site());
+                        parse_quote!(#ident<{ #const_ident as usize }>)
+                    }
+                }
+            }
+            TypeResolutionKind::Optional(ty) => {
+                let ty = ty.unwrap_with_const_check();
+                parse_quote!(Optional<#ty>)
+            }
+            TypeResolutionKind::Option(ty) => {
+                let ty = ty.unwrap_with_const_check();
+                parse_quote!(Option<#ty>)
+            }
+            TypeResolutionKind::Class(class) => {
+                let class = Ident::new(class, Span::call_site());
+                parse_quote!(#class)
+            }
+            TypeResolutionKind::Boolean => primitive_rust_type("bool"),
+            TypeResolutionKind::UInt(size) => primitive_rust_type(&format!("u{size}")),
+            TypeResolutionKind::Union(ident, _) => {
+                let ident = Ident::new(ident, Span::call_site());
+                parse_quote!(#ident)
+            }
+            TypeResolutionKind::Bytes(size) => parse_quote!(FixedBytes<#size>),
+            TypeResolutionKind::External => self.unwrap_type(),
+            TypeResolutionKind::BaseClass(_)
+            | TypeResolutionKind::None
+            | TypeResolutionKind::Constant(_)
+            | TypeResolutionKind::Unresolved => {
+                panic!("Expected type resolution to be a type")
+            }
         }
     }
 
@@ -288,11 +427,11 @@ impl TypeResolution {
             TypeResolutionKind::Boolean => 1,
             TypeResolutionKind::UInt(bits) => bits / 8,
             TypeResolutionKind::Bytes(n) => *n,
-            TypeResolutionKind::Bitvector(bits) => (*bits as usize).div_ceil(8), /* Round up to */
+            TypeResolutionKind::Bitvector(size_expr) => (size_expr.value() as usize).div_ceil(8), /* Round up to */
             // bytes
-            TypeResolutionKind::Vector(inner, count) => {
+            TypeResolutionKind::Vector(inner, size_expr) => {
                 if inner.is_fixed_size() {
-                    inner.fixed_size() * (*count as usize)
+                    inner.fixed_size() * (size_expr.value() as usize)
                 } else {
                     // Vector of variable-size items: offsets + data
                     panic!("Cannot get fixed size of vector with variable-size items")
@@ -350,8 +489,8 @@ impl TypeResolution {
             }
             TypeResolutionKind::Boolean => primitive_rust_type("bool"),
             TypeResolutionKind::UInt(size) => primitive_rust_type(&format!("u{size}")),
-            TypeResolutionKind::Vector(ty, size) => {
-                let size = *size as usize;
+            TypeResolutionKind::Vector(ty, size_expr) => {
+                let size = size_expr.value() as usize;
                 // Special case: Vector[byte, N] -> FixedBytesRef<'a, N>
                 // This ensures proper trait implementations when used in Lists
                 if matches!(ty.resolution, TypeResolutionKind::UInt(8)) {
@@ -361,9 +500,9 @@ impl TypeResolution {
                     parse_quote!(FixedVectorRef<'a, #inner_view_ty, #size>)
                 }
             }
-            TypeResolutionKind::List(ty, size) => {
+            TypeResolutionKind::List(ty, size_expr) => {
                 let inner = &**ty;
-                let size = *size as usize;
+                let size = size_expr.value() as usize;
 
                 // Special case: List<u8, N> -> BytesRef<'a>
                 if matches!(inner.resolution, TypeResolutionKind::UInt(8)) {
@@ -373,12 +512,12 @@ impl TypeResolution {
                     parse_quote!(VariableListRef<'a, #inner_view_ty, #size>)
                 }
             }
-            TypeResolutionKind::Bitvector(size) => {
-                let size = *size as usize;
+            TypeResolutionKind::Bitvector(size_expr) => {
+                let size = size_expr.value() as usize;
                 parse_quote!(BitVectorRef<'a, #size>)
             }
-            TypeResolutionKind::Bitlist(size) => {
-                let size = *size as usize;
+            TypeResolutionKind::Bitlist(size_expr) => {
+                let size = size_expr.value() as usize;
                 parse_quote!(BitListRef<'a, #size>)
             }
             TypeResolutionKind::Optional(ty) => {

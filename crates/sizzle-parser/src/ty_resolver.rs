@@ -328,7 +328,8 @@ impl<'a> TypeResolver<'a> {
         match target {
             IdentTarget::Const(v) => {
                 if args.is_none() {
-                    Ok(TyExpr::Int(v.clone()))
+                    // Preserve constant name for codegen
+                    Ok(TyExpr::ConstRef(ident.clone(), v.eval()))
                 } else {
                     Err(ResolverError::ArgsOnConst(ident.clone()))
                 }
@@ -377,6 +378,9 @@ impl<'a> TypeResolver<'a> {
                                     TyExpr::Int(_) => {
                                         panic!("tyresolv: complex type resolved as const")
                                     }
+                                    TyExpr::ConstRef(_, _) => {
+                                        panic!("tyresolv: complex type resolved as const ref")
+                                    }
                                     TyExpr::None => {
                                         panic!("tyresolv: complex type resolved as none")
                                     }
@@ -393,6 +397,7 @@ impl<'a> TypeResolver<'a> {
                                 let expr = self.resolve_ident_with_args(arg_ident, None)?;
                                 match expr {
                                     TyExpr::Int(v) => TyExpr::Int(v),
+                                    TyExpr::ConstRef(id, value) => TyExpr::ConstRef(id, value),
                                     _ => {
                                         return Err(ResolverError::MismatchedArgKind(
                                             ident.clone(),
@@ -517,6 +522,9 @@ impl<'a> TypeResolver<'a> {
                                 TyExpr::None => TyExpr::None,
                                 a @ TyExpr::Ty(_) => a,
                                 TyExpr::Int(_) => panic!("tyresolv: complex type resolved to int"),
+                                TyExpr::ConstRef(_, _) => {
+                                    panic!("tyresolv: complex type resolved to const ref")
+                                }
                             },
                             TyArgSpec::IntLiteral(_) => {
                                 return Err(ResolverError::MismatchedArgKind(ident.clone()));
@@ -619,10 +627,10 @@ impl<'a> TypeResolver<'a> {
             }
         };
 
-        // And then just make sure it's a const.
+        // And then just make sure it's a type (not a const or None).
         match expr {
             TyExpr::Ty(ty) => Ok(ty),
-            TyExpr::Int(_) | TyExpr::None => {
+            TyExpr::Int(_) | TyExpr::ConstRef(_, _) | TyExpr::None => {
                 Err(ResolverError::MismatchedArgKind(spec.base_name().clone()))
             }
         }

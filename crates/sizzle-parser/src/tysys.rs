@@ -17,11 +17,18 @@ pub enum TyExpr {
     /// A type.
     Ty(Ty),
 
-    /// A value, possibly resolved from a const.
+    /// A concrete value expression.
     ///
     /// This isn't a normal type, but it's valid and we can resolve to it from
     /// things that look like types and then would proceed to error from that.
     Int(ConstValue),
+
+    /// A reference to a named constant.
+    ///
+    /// This preserves the constant identifier for codegen purposes while also
+    /// storing the evaluated value. The identifier is kept as an unresolved
+    /// reference that codegen can resolve to the appropriate constant name.
+    ConstRef(Identifier, u64),
 }
 
 impl TyExpr {
@@ -40,6 +47,7 @@ impl TyExpr {
         // FIXME I couldn't figure out how to make this no-alloc.
         let idents = match self {
             TyExpr::Ty(t) => t.iter_idents().collect::<Vec<_>>(),
+            TyExpr::ConstRef(id, _) => vec![id],
             TyExpr::Int(_) | TyExpr::None => Vec::new(),
         };
 

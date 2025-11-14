@@ -18,12 +18,12 @@ pub mod tests {
             pub const LARGE_SIZE: u64 = 256u64;
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const POWER_OF_TWO: u64 = 128u64;
-            pub type TinyBitlist = BitList<1usize>;
-            pub type StandardBitlist = BitList<64usize>;
-            pub type LargeBitlist = BitList<256usize>;
-            pub type TinyBitvector = BitVector<1usize>;
-            pub type StandardBitvector = BitVector<64usize>;
-            pub type LargeBitvector = BitVector<128usize>;
+            pub type TinyBitlist = BitList<{ SMALL_SIZE as usize }>;
+            pub type StandardBitlist = BitList<{ MEDIUM_SIZE as usize }>;
+            pub type LargeBitlist = BitList<{ LARGE_SIZE as usize }>;
+            pub type TinyBitvector = BitVector<{ SMALL_SIZE as usize }>;
+            pub type StandardBitvector = BitVector<{ MEDIUM_SIZE as usize }>;
+            pub type LargeBitvector = BitVector<{ POWER_OF_TWO as usize }>;
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
             pub struct BitfieldContainer {
