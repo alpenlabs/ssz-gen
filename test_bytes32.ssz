@@ -1,6 +1,0 @@
-Bytes32 = Vector[byte, 32]
-
-class Test[H](Container):
-    value: H
-
-TestBytes = Test[Bytes32]
