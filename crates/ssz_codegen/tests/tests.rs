@@ -223,6 +223,49 @@ fn test_external_type_ref_variants() {
 }
 
 #[test]
+fn test_pragma_external_kind() {
+    // Test external_kind pragma for annotating external types as containers or primitives
+    build_ssz_files(
+        &["test_external_pragma.ssz"],
+        "tests/input",
+        &["external_ssz"],
+        "tests/output/test_external_pragma.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types");
+
+    let output =
+        fs::read_to_string("tests/output/test_external_pragma.rs").expect("Failed to read output");
+
+    // Container types with pragma should use Ref variants
+    assert!(
+        output.contains("ChainStateRef") || output.contains("Result<external_ssz::ChainStateRef"),
+        "Container type ChainState should use Ref variant"
+    );
+
+    assert!(
+        output.contains("BlockHeaderRef"),
+        "Container type BlockHeader in Vector should use Ref variant"
+    );
+
+    assert!(
+        output.contains("TransactionRef"),
+        "Container type Transaction in List should use Ref variant"
+    );
+
+    // Primitive types without pragma should not use Ref variants
+    assert!(
+        output.contains("Result<external_ssz::Balance") && !output.contains("BalanceRef"),
+        "Primitive type Balance should not use Ref variant"
+    );
+
+    assert!(
+        output.contains("external_ssz::AccountId") && !output.contains("AccountIdRef"),
+        "Primitive type AccountId in List should not use Ref variant"
+    );
+}
+
+#[test]
 #[should_panic(expected = "CyclicTypedefs")]
 fn test_circular_dep() {
     build_ssz_files(

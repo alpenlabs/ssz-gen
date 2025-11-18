@@ -1,0 +1,21 @@
+import external_ssz
+
+### Test external_kind pragma for container vs primitive external types
+class ExternalPragmaTest(Container):
+    ### External container type - needs Ref variant
+    #~# external_kind: container
+    state: external_ssz.ChainState
+
+    ### External primitive type - no Ref variant (default behavior)
+    balance: external_ssz.Balance
+
+    ### External container in Vector - needs Ref variant for inner type
+    #~# external_kind: container
+    headers: Vector[external_ssz.BlockHeader, 10]
+
+    ### External container in List - needs Ref variant for inner type
+    #~# external_kind: container
+    transactions: List[external_ssz.Transaction, 100]
+
+    ### External primitive in List - no annotation needed
+    account_ids: List[external_ssz.AccountId, 50]
