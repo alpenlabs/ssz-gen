@@ -1,0 +1,9 @@
+import existing_module
+
+### Test container that references types from an existing Rust module
+class TestExistingModule(Container):
+    ### Field using type from existing module (no .ssz file)
+    existing_field: existing_module.ExistingType
+
+    ### Another field
+    slot: uint64

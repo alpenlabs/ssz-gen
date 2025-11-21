@@ -1094,22 +1094,45 @@ fn parse_import<P: AsRef<Path>>(
             {
                 panic!("import: duplicate import alias: {import_alias:?}");
             }
-            let add_module_result = module_manager.add_module(&path, is_external);
+            // Check if .ssz file exists first to determine the correct module path
+            let ssz_path = path.with_extension("ssz");
+            let (final_path, has_schema) = if ssz_path.exists() {
+                (path.clone(), true)
+            } else if !is_external {
+                // If .ssz file doesn't exist and not external, this is an existing Rust module at
+                // crate root. Strip parent directories to get just the module name
+                // (e.g., "ssz/ol" -> "ol")
+                let module_name = path
+                    .file_name()
+                    .expect("module path should have a file name");
+                let stripped_path = PathBuf::from(module_name);
+
+                // Update import_map to use the stripped path for existing Rust modules
+                import_map.insert(import_alias.clone(), stripped_path.clone());
+
+                (stripped_path, false)
+            } else {
+                // External module without .ssz file - keep full path
+                (path.clone(), false)
+            };
+
+            let add_module_result = module_manager.add_module(&final_path, is_external);
             if !add_module_result || is_external {
                 return Ok(());
             }
 
-            // Read the import module file
-            let file_content = std::fs::read_to_string(path.with_extension("ssz"))
-                .expect("Failed to read import module file");
-
-            // Parse the import module file into module entries
-            let chars = file_content.chars().collect::<Vec<_>>();
-            let toks =
-                crate::token::parse_char_array_to_tokens(&chars).expect("import: tokenize string");
-            let tt =
-                crate::token_tree::parse_tokens_to_toktrs(&toks).expect("import: treeize tokens");
-            parse_module_from_toktrs(&tt, &path, module_manager).expect("import: parse toktrs");
+            // Parse .ssz file if it exists
+            if has_schema {
+                let file_content =
+                    std::fs::read_to_string(&ssz_path).expect("Failed to read import module file");
+                let chars = file_content.chars().collect::<Vec<_>>();
+                let toks = crate::token::parse_char_array_to_tokens(&chars)
+                    .expect("import: tokenize string");
+                let tt = crate::token_tree::parse_tokens_to_toktrs(&toks)
+                    .expect("import: treeize tokens");
+                parse_module_from_toktrs(&tt, &final_path, module_manager)
+                    .expect("import: parse toktrs");
+            }
 
             // Return the import module
             Ok(())

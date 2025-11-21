@@ -16,6 +16,20 @@ use toml as _;
 use tree_hash as _;
 use tree_hash_derive as _;
 
+/// Module simulating existing Rust code with types referenced by generated SSZ code
+pub(crate) mod existing_module {
+    use ssz_derive::{Decode, Encode};
+    use tree_hash_derive::TreeHash;
+
+    /// Existing type for testing
+    #[derive(Debug, Clone, PartialEq, Eq, Encode, Decode, TreeHash)]
+    #[allow(dead_code, reason = "used for testing")]
+    pub(crate) struct ExistingType {
+        /// Dummy value
+        value: u64,
+    }
+}
+
 #[test]
 fn test_basic_codegen() {
     build_ssz_files(
@@ -158,6 +172,33 @@ fn test_external_import() {
     let actual_output =
         fs::read_to_string("tests/output/test_external.rs").expect("Failed to read actual output");
     assert_eq!(expected_output, actual_output);
+}
+
+#[test]
+fn test_existing_rust_module() {
+    // Test that importing from a module without a .ssz file (existing Rust module)
+    // generates references to crate::module::Type
+    build_ssz_files(
+        &["test_existing_rust_module.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_existing_rust_module.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types for existing Rust module");
+
+    // Verify the generated output contains references to existing_module types
+    let actual_output = fs::read_to_string("tests/output/test_existing_rust_module.rs")
+        .expect("Failed to read actual output");
+
+    // Check that it references the existing module's type as
+    // crate::tests::input::existing_module::ExistingType The path will be based on where the
+    // .ssz file is located
+    assert!(
+        actual_output.contains("existing_module") && actual_output.contains("ExistingType"),
+        "Generated code should reference existing_module::ExistingType. Actual output:\n{}",
+        actual_output
+    );
 }
 
 #[test]
