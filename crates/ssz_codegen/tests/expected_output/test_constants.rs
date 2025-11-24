@@ -5,12 +5,36 @@ use ssz_derive::{Encode, Decode};
 use tree_hash::TreeHashDigest;
 use tree_hash_derive::TreeHash;
 use ssz::view::*;
-#[derive(Encode, Decode, TreeHash)]
+#[derive(Encode, Decode)]
 #[ssz(enum_behaviour = "union")]
-#[tree_hash(enum_behaviour = "union")]
 pub enum AliasOptionUnion {
     Selector0(u8),
     Selector1(Option<u16>),
+}
+impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for AliasOptionUnion {
+    fn tree_hash_type() -> tree_hash::TreeHashType {
+        tree_hash::TreeHashType::Container
+    }
+    fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+        unreachable!("Union should never be packed")
+    }
+    fn tree_hash_packing_factor() -> usize {
+        unreachable!("Union should never be packed")
+    }
+    fn tree_hash_root(&self) -> H::Output {
+        match self {
+            AliasOptionUnion::Selector0(inner) => {
+                let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
+                tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
+                    .expect("valid selector")
+            }
+            AliasOptionUnion::Selector1(inner) => {
+                let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
+                tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
+                    .expect("valid selector")
+            }
+        }
+    }
 }
 #[derive(Debug, Copy, Clone)]
 pub struct AliasOptionUnionRef<'a> {
@@ -87,12 +111,36 @@ for AliasOptionUnionRef<'a> {
         }
     }
 }
-#[derive(Encode, Decode, TreeHash)]
+#[derive(Encode, Decode)]
 #[ssz(enum_behaviour = "union")]
-#[tree_hash(enum_behaviour = "union")]
 pub enum FirstUnion {
     Selector0(u8),
     Selector1(u16),
+}
+impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for FirstUnion {
+    fn tree_hash_type() -> tree_hash::TreeHashType {
+        tree_hash::TreeHashType::Container
+    }
+    fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+        unreachable!("Union should never be packed")
+    }
+    fn tree_hash_packing_factor() -> usize {
+        unreachable!("Union should never be packed")
+    }
+    fn tree_hash_root(&self) -> H::Output {
+        match self {
+            FirstUnion::Selector0(inner) => {
+                let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
+                tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
+                    .expect("valid selector")
+            }
+            FirstUnion::Selector1(inner) => {
+                let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
+                tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
+                    .expect("valid selector")
+            }
+        }
+    }
 }
 #[derive(Debug, Copy, Clone)]
 pub struct FirstUnionRef<'a> {
@@ -162,13 +210,43 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for FirstUnionRef<
         }
     }
 }
-#[derive(Encode, Decode, TreeHash)]
+#[derive(Encode, Decode)]
 #[ssz(enum_behaviour = "union")]
-#[tree_hash(enum_behaviour = "union")]
 pub enum TestUnion {
     Selector0,
     Selector1(u8),
     Selector2(u16),
+}
+impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for TestUnion {
+    fn tree_hash_type() -> tree_hash::TreeHashType {
+        tree_hash::TreeHashType::Container
+    }
+    fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+        unreachable!("Union should never be packed")
+    }
+    fn tree_hash_packing_factor() -> usize {
+        unreachable!("Union should never be packed")
+    }
+    fn tree_hash_root(&self) -> H::Output {
+        match self {
+            TestUnion::Selector0 => {
+                tree_hash::mix_in_selector_with_hasher::<
+                    H,
+                >(&tree_hash::Hash256::ZERO, 0u8)
+                    .expect("valid selector")
+            }
+            TestUnion::Selector1(inner) => {
+                let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
+                tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
+                    .expect("valid selector")
+            }
+            TestUnion::Selector2(inner) => {
+                let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
+                tree_hash::mix_in_selector_with_hasher::<H>(&root, 2u8)
+                    .expect("valid selector")
+            }
+        }
+    }
 }
 #[derive(Debug, Copy, Clone)]
 pub struct TestUnionRef<'a> {
@@ -258,13 +336,42 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for TestUnionRef<'
         }
     }
 }
-#[derive(Encode, Decode, TreeHash)]
+#[derive(Encode, Decode)]
 #[ssz(enum_behaviour = "union")]
-#[tree_hash(enum_behaviour = "union")]
 pub enum UnionA {
     Selector0(u8),
     Selector1(u8),
     Selector2(u16),
+}
+impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for UnionA {
+    fn tree_hash_type() -> tree_hash::TreeHashType {
+        tree_hash::TreeHashType::Container
+    }
+    fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+        unreachable!("Union should never be packed")
+    }
+    fn tree_hash_packing_factor() -> usize {
+        unreachable!("Union should never be packed")
+    }
+    fn tree_hash_root(&self) -> H::Output {
+        match self {
+            UnionA::Selector0(inner) => {
+                let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
+                tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
+                    .expect("valid selector")
+            }
+            UnionA::Selector1(inner) => {
+                let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
+                tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
+                    .expect("valid selector")
+            }
+            UnionA::Selector2(inner) => {
+                let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
+                tree_hash::mix_in_selector_with_hasher::<H>(&root, 2u8)
+                    .expect("valid selector")
+            }
+        }
+    }
 }
 #[derive(Debug, Copy, Clone)]
 pub struct UnionARef<'a> {
@@ -350,14 +457,48 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for UnionARef<'a> 
         }
     }
 }
-#[derive(Encode, Decode, TreeHash)]
+#[derive(Encode, Decode)]
 #[ssz(enum_behaviour = "union")]
-#[tree_hash(enum_behaviour = "union")]
 pub enum UnionB {
     Selector0(u8),
     Selector1(UnionA),
     Selector2(u32),
     Selector3(VariableList<u8, 12usize>),
+}
+impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for UnionB {
+    fn tree_hash_type() -> tree_hash::TreeHashType {
+        tree_hash::TreeHashType::Container
+    }
+    fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+        unreachable!("Union should never be packed")
+    }
+    fn tree_hash_packing_factor() -> usize {
+        unreachable!("Union should never be packed")
+    }
+    fn tree_hash_root(&self) -> H::Output {
+        match self {
+            UnionB::Selector0(inner) => {
+                let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
+                tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
+                    .expect("valid selector")
+            }
+            UnionB::Selector1(inner) => {
+                let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
+                tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
+                    .expect("valid selector")
+            }
+            UnionB::Selector2(inner) => {
+                let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
+                tree_hash::mix_in_selector_with_hasher::<H>(&root, 2u8)
+                    .expect("valid selector")
+            }
+            UnionB::Selector3(inner) => {
+                let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
+                tree_hash::mix_in_selector_with_hasher::<H>(&root, 3u8)
+                    .expect("valid selector")
+            }
+        }
+    }
 }
 #[derive(Debug, Copy, Clone)]
 pub struct UnionBRef<'a> {
@@ -467,12 +608,36 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for UnionBRef<'a> 
         }
     }
 }
-#[derive(Encode, Decode, TreeHash)]
+#[derive(Encode, Decode)]
 #[ssz(enum_behaviour = "union")]
-#[tree_hash(enum_behaviour = "union")]
 pub enum UnionC {
     Selector0(AliasUintAlias),
     Selector1(AliasUintAlias),
+}
+impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for UnionC {
+    fn tree_hash_type() -> tree_hash::TreeHashType {
+        tree_hash::TreeHashType::Container
+    }
+    fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+        unreachable!("Union should never be packed")
+    }
+    fn tree_hash_packing_factor() -> usize {
+        unreachable!("Union should never be packed")
+    }
+    fn tree_hash_root(&self) -> H::Output {
+        match self {
+            UnionC::Selector0(inner) => {
+                let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
+                tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
+                    .expect("valid selector")
+            }
+            UnionC::Selector1(inner) => {
+                let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
+                tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
+                    .expect("valid selector")
+            }
+        }
+    }
 }
 #[derive(Debug, Copy, Clone)]
 pub struct UnionCRef<'a> {
@@ -542,12 +707,36 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for UnionCRef<'a> 
         }
     }
 }
-#[derive(Encode, Decode, TreeHash)]
+#[derive(Encode, Decode)]
 #[ssz(enum_behaviour = "union")]
-#[tree_hash(enum_behaviour = "union")]
 pub enum UnionD {
     Selector0(AliasUintAlias),
     Selector1(AliasUintAlias),
+}
+impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for UnionD {
+    fn tree_hash_type() -> tree_hash::TreeHashType {
+        tree_hash::TreeHashType::Container
+    }
+    fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+        unreachable!("Union should never be packed")
+    }
+    fn tree_hash_packing_factor() -> usize {
+        unreachable!("Union should never be packed")
+    }
+    fn tree_hash_root(&self) -> H::Output {
+        match self {
+            UnionD::Selector0(inner) => {
+                let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
+                tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
+                    .expect("valid selector")
+            }
+            UnionD::Selector1(inner) => {
+                let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
+                tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
+                    .expect("valid selector")
+            }
+        }
+    }
 }
 #[derive(Debug, Copy, Clone)]
 pub struct UnionDRef<'a> {

@@ -396,15 +396,68 @@ impl<'a> TypeResolver<'a> {
                         })
                         .collect::<Vec<_>>();
 
-                    // Generate owned union enum
+                    // Generate TreeHash match arms for owned union enum
+                    let owned_tree_hash_arms: Vec<TokenStream> = args
+                        .iter()
+                        .enumerate()
+                        .map(|(i, ty)| {
+                            let selector_value = i as u8;
+                            let variant_ident = Ident::new(&format!("Selector{i}"), Span::call_site());
+
+                            match ty.resolution {
+                                TypeResolutionKind::None => {
+                                    quote! {
+                                        #ident::#variant_ident => {
+                                            tree_hash::mix_in_selector_with_hasher::<H>(
+                                                &tree_hash::Hash256::ZERO,
+                                                #selector_value
+                                            ).expect("valid selector")
+                                        }
+                                    }
+                                }
+                                _ => {
+                                    quote! {
+                                        #ident::#variant_ident(inner) => {
+                                            let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
+                                            tree_hash::mix_in_selector_with_hasher::<H>(
+                                                &root,
+                                                #selector_value
+                                            ).expect("valid selector")
+                                        }
+                                    }
+                                }
+                            }
+                        })
+                        .collect();
+
+                    // Generate owned union enum with manual generic TreeHash impl
                     self.union_tracker.borrow_mut().insert(
                         ident_str.clone(),
                         quote! {
-                            #[derive(Encode, Decode, TreeHash)]
+                            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
                             #[ssz(enum_behaviour="union")]
-                            #[tree_hash(enum_behaviour="union")]
                             pub enum #ident {
                             #(#variants),*
+                            }
+
+                            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ident {
+                                fn tree_hash_type() -> tree_hash::TreeHashType {
+                                    tree_hash::TreeHashType::Container
+                                }
+
+                                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                                    unreachable!("Union should never be packed")
+                                }
+
+                                fn tree_hash_packing_factor() -> usize {
+                                    unreachable!("Union should never be packed")
+                                }
+
+                                fn tree_hash_root(&self) -> H::Output {
+                                    match self {
+                                        #(#owned_tree_hash_arms,)*
+                                    }
+                                }
                             }
                         },
                     );
@@ -513,7 +566,7 @@ impl<'a> TypeResolver<'a> {
                                         #selector_value => {
                                             let value = self.#method_name().expect("valid selector");
                                             tree_hash::mix_in_selector_with_hasher::<H>(
-                                                &value.tree_hash_root(),
+                                                &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
                                                 #selector_value
                                             ).expect("valid selector")
                                         }

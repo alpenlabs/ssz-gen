@@ -10,13 +10,48 @@ pub mod tests {
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
-            #[derive(Encode, Decode, TreeHash)]
+            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(enum_behaviour = "union")]
-            #[tree_hash(enum_behaviour = "union")]
             pub enum ExternalUnionA {
                 Selector0,
                 Selector1(external_ssz::A),
                 Selector2(external_ssz::module_a::module_b::B),
+            }
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
+            for ExternalUnionA {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Container
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Union should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Union should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    match self {
+                        ExternalUnionA::Selector0 => {
+                            tree_hash::mix_in_selector_with_hasher::<
+                                H,
+                            >(&tree_hash::Hash256::ZERO, 0u8)
+                                .expect("valid selector")
+                        }
+                        ExternalUnionA::Selector1(inner) => {
+                            let root = <_ as tree_hash::TreeHash<
+                                H,
+                            >>::tree_hash_root(inner);
+                            tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
+                                .expect("valid selector")
+                        }
+                        ExternalUnionA::Selector2(inner) => {
+                            let root = <_ as tree_hash::TreeHash<
+                                H,
+                            >>::tree_hash_root(inner);
+                            tree_hash::mix_in_selector_with_hasher::<H>(&root, 2u8)
+                                .expect("valid selector")
+                        }
+                    }
+                }
             }
             #[derive(Debug, Copy, Clone)]
             pub struct ExternalUnionARef<'a> {
@@ -107,27 +142,68 @@ pub mod tests {
                             let value = self.as_selector1().expect("valid selector");
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
-                            >(&value.tree_hash_root(), 1u8)
+                            >(
+                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    1u8,
+                                )
                                 .expect("valid selector")
                         }
                         2u8 => {
                             let value = self.as_selector2().expect("valid selector");
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
-                            >(&value.tree_hash_root(), 2u8)
+                            >(
+                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    2u8,
+                                )
                                 .expect("valid selector")
                         }
                         _ => panic!("Invalid union selector: {}", self.selector()),
                     }
                 }
             }
-            #[derive(Encode, Decode, TreeHash)]
+            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(enum_behaviour = "union")]
-            #[tree_hash(enum_behaviour = "union")]
             pub enum ExternalUnionB {
                 Selector0,
                 Selector1(TestA),
                 Selector2(TestB),
+            }
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
+            for ExternalUnionB {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Container
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Union should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Union should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    match self {
+                        ExternalUnionB::Selector0 => {
+                            tree_hash::mix_in_selector_with_hasher::<
+                                H,
+                            >(&tree_hash::Hash256::ZERO, 0u8)
+                                .expect("valid selector")
+                        }
+                        ExternalUnionB::Selector1(inner) => {
+                            let root = <_ as tree_hash::TreeHash<
+                                H,
+                            >>::tree_hash_root(inner);
+                            tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
+                                .expect("valid selector")
+                        }
+                        ExternalUnionB::Selector2(inner) => {
+                            let root = <_ as tree_hash::TreeHash<
+                                H,
+                            >>::tree_hash_root(inner);
+                            tree_hash::mix_in_selector_with_hasher::<H>(&root, 2u8)
+                                .expect("valid selector")
+                        }
+                    }
+                }
             }
             #[derive(Debug, Copy, Clone)]
             pub struct ExternalUnionBRef<'a> {
@@ -216,14 +292,20 @@ pub mod tests {
                             let value = self.as_selector1().expect("valid selector");
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
-                            >(&value.tree_hash_root(), 1u8)
+                            >(
+                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    1u8,
+                                )
                                 .expect("valid selector")
                         }
                         2u8 => {
                             let value = self.as_selector2().expect("valid selector");
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
-                            >(&value.tree_hash_root(), 2u8)
+                            >(
+                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    2u8,
+                                )
                                 .expect("valid selector")
                         }
                         _ => panic!("Invalid union selector: {}", self.selector()),
