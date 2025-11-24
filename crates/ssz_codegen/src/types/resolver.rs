@@ -20,6 +20,23 @@ use syn::{Ident, parse_quote};
 use super::{BaseClass, ClassDef, ClassDefinition, TypeDefinition, TypeResolution};
 use crate::types::TypeResolutionKind;
 
+/// Extract a simple type name from a TypeResolution for use as a variant name.
+/// Returns None if the type doesn't have a simple extractable name (e.g., for None or complex
+/// types).
+fn extract_variant_name(ty_resolution: &TypeResolution) -> Option<String> {
+    match &ty_resolution.ty {
+        Some(syn::Type::Path(type_path)) if type_path.qself.is_none() => {
+            // Get the last segment of the path (e.g., "Foo" from "crate::module::Foo")
+            type_path
+                .path
+                .segments
+                .last()
+                .map(|seg| seg.ident.to_string())
+        }
+        _ => None,
+    }
+}
+
 /// Converts a primitive type name into a Rust syn::Type
 ///
 /// # Arguments
@@ -368,16 +385,18 @@ impl<'a> TypeResolver<'a> {
                     let ident = alias_ident.unwrap().clone();
                     let ident_str = ident.to_string();
 
-                    // Generate the enum variants Selector0, Selector1, etc. and insert the union
-                    // into our union tracker
+                    // Generate the enum variants using type names when available, falling back to
+                    // Selector{i}
                     let variants: Vec<syn::Variant> = args
                         .iter()
                         .enumerate()
                         .map(|(i, ty)| {
-                            let ident = syn::Ident::new(
-                                &format!("Selector{i}"),
-                                proc_macro2::Span::call_site(),
-                            );
+                            // Try to extract a meaningful name from the type, otherwise use
+                            // Selector{i}
+                            let variant_name =
+                                extract_variant_name(ty).unwrap_or_else(|| format!("Selector{i}"));
+                            let ident =
+                                syn::Ident::new(&variant_name, proc_macro2::Span::call_site());
                             match ty.resolution {
                                 TypeResolutionKind::None => {
                                     if i == 0 {
@@ -396,15 +415,70 @@ impl<'a> TypeResolver<'a> {
                         })
                         .collect::<Vec<_>>();
 
-                    // Generate owned union enum
+                    // Generate TreeHash match arms for owned union enum
+                    let owned_tree_hash_arms: Vec<TokenStream> = args
+                        .iter()
+                        .enumerate()
+                        .map(|(i, ty)| {
+                            let selector_value = i as u8;
+                            let variant_name = extract_variant_name(ty)
+                                .unwrap_or_else(|| format!("Selector{i}"));
+                            let variant_ident = Ident::new(&variant_name, Span::call_site());
+
+                            match ty.resolution {
+                                TypeResolutionKind::None => {
+                                    quote! {
+                                        #ident::#variant_ident => {
+                                            tree_hash::mix_in_selector_with_hasher::<H>(
+                                                &tree_hash::Hash256::ZERO,
+                                                #selector_value
+                                            ).expect("valid selector")
+                                        }
+                                    }
+                                }
+                                _ => {
+                                    quote! {
+                                        #ident::#variant_ident(inner) => {
+                                            let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
+                                            tree_hash::mix_in_selector_with_hasher::<H>(
+                                                &root,
+                                                #selector_value
+                                            ).expect("valid selector")
+                                        }
+                                    }
+                                }
+                            }
+                        })
+                        .collect();
+
+                    // Generate owned union enum with manual generic TreeHash impl
                     self.union_tracker.borrow_mut().insert(
                         ident_str.clone(),
                         quote! {
-                            #[derive(Encode, Decode, TreeHash)]
+                            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
                             #[ssz(enum_behaviour="union")]
-                            #[tree_hash(enum_behaviour="union")]
                             pub enum #ident {
                             #(#variants),*
+                            }
+
+                            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ident {
+                                fn tree_hash_type() -> tree_hash::TreeHashType {
+                                    tree_hash::TreeHashType::Container
+                                }
+
+                                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                                    unreachable!("Union should never be packed")
+                                }
+
+                                fn tree_hash_packing_factor() -> usize {
+                                    unreachable!("Union should never be packed")
+                                }
+
+                                fn tree_hash_root(&self) -> H::Output {
+                                    match self {
+                                        #(#owned_tree_hash_arms,)*
+                                    }
+                                }
                             }
                         },
                     );
@@ -457,8 +531,9 @@ impl<'a> TypeResolver<'a> {
                         .enumerate()
                         .map(|(i, ty)| {
                             let selector_value = i as u8;
-                            let variant_ident =
-                                Ident::new(&format!("Selector{i}"), Span::call_site());
+                            let variant_name =
+                                extract_variant_name(ty).unwrap_or_else(|| format!("Selector{i}"));
+                            let variant_ident = Ident::new(&variant_name, Span::call_site());
                             let method_name =
                                 Ident::new(&format!("as_selector{i}"), Span::call_site());
 
@@ -513,7 +588,7 @@ impl<'a> TypeResolver<'a> {
                                         #selector_value => {
                                             let value = self.#method_name().expect("valid selector");
                                             tree_hash::mix_in_selector_with_hasher::<H>(
-                                                &value.tree_hash_root(),
+                                                &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
                                                 #selector_value
                                             ).expect("valid selector")
                                         }
