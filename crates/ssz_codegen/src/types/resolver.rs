@@ -20,6 +20,23 @@ use syn::{Ident, parse_quote};
 use super::{BaseClass, ClassDef, ClassDefinition, TypeDefinition, TypeResolution};
 use crate::types::TypeResolutionKind;
 
+/// Extract a simple type name from a TypeResolution for use as a variant name.
+/// Returns None if the type doesn't have a simple extractable name (e.g., for None or complex
+/// types).
+fn extract_variant_name(ty_resolution: &TypeResolution) -> Option<String> {
+    match &ty_resolution.ty {
+        Some(syn::Type::Path(type_path)) if type_path.qself.is_none() => {
+            // Get the last segment of the path (e.g., "Foo" from "crate::module::Foo")
+            type_path
+                .path
+                .segments
+                .last()
+                .map(|seg| seg.ident.to_string())
+        }
+        _ => None,
+    }
+}
+
 /// Converts a primitive type name into a Rust syn::Type
 ///
 /// # Arguments
@@ -368,16 +385,18 @@ impl<'a> TypeResolver<'a> {
                     let ident = alias_ident.unwrap().clone();
                     let ident_str = ident.to_string();
 
-                    // Generate the enum variants Selector0, Selector1, etc. and insert the union
-                    // into our union tracker
+                    // Generate the enum variants using type names when available, falling back to
+                    // Selector{i}
                     let variants: Vec<syn::Variant> = args
                         .iter()
                         .enumerate()
                         .map(|(i, ty)| {
-                            let ident = syn::Ident::new(
-                                &format!("Selector{i}"),
-                                proc_macro2::Span::call_site(),
-                            );
+                            // Try to extract a meaningful name from the type, otherwise use
+                            // Selector{i}
+                            let variant_name =
+                                extract_variant_name(ty).unwrap_or_else(|| format!("Selector{i}"));
+                            let ident =
+                                syn::Ident::new(&variant_name, proc_macro2::Span::call_site());
                             match ty.resolution {
                                 TypeResolutionKind::None => {
                                     if i == 0 {
@@ -402,7 +421,9 @@ impl<'a> TypeResolver<'a> {
                         .enumerate()
                         .map(|(i, ty)| {
                             let selector_value = i as u8;
-                            let variant_ident = Ident::new(&format!("Selector{i}"), Span::call_site());
+                            let variant_name = extract_variant_name(ty)
+                                .unwrap_or_else(|| format!("Selector{i}"));
+                            let variant_ident = Ident::new(&variant_name, Span::call_site());
 
                             match ty.resolution {
                                 TypeResolutionKind::None => {
@@ -510,8 +531,9 @@ impl<'a> TypeResolver<'a> {
                         .enumerate()
                         .map(|(i, ty)| {
                             let selector_value = i as u8;
-                            let variant_ident =
-                                Ident::new(&format!("Selector{i}"), Span::call_site());
+                            let variant_name =
+                                extract_variant_name(ty).unwrap_or_else(|| format!("Selector{i}"));
+                            let variant_ident = Ident::new(&variant_name, Span::call_site());
                             let method_name =
                                 Ident::new(&format!("as_selector{i}"), Span::call_site());
 

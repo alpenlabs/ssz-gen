@@ -137,7 +137,7 @@ pub mod tests {
             pub enum ComplexUnion {
                 Selector0(VariableList<u8, 10usize>),
                 Selector1(FixedVector<u16, 5usize>),
-                Selector2(SimpleUnion),
+                SimpleUnion(SimpleUnion),
                 Selector3(BitVector<32usize>),
             }
             impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ComplexUnion {
@@ -166,7 +166,7 @@ pub mod tests {
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
                                 .expect("valid selector")
                         }
-                        ComplexUnion::Selector2(inner) => {
+                        ComplexUnion::SimpleUnion(inner) => {
                             let root = <_ as tree_hash::TreeHash<
                                 H,
                             >>::tree_hash_root(inner);
@@ -250,7 +250,7 @@ pub mod tests {
                             )
                         }
                         2u8 => {
-                            ComplexUnion::Selector2(
+                            ComplexUnion::SimpleUnion(
                                 self.as_selector2().expect("valid selector").to_owned(),
                             )
                         }
@@ -478,8 +478,8 @@ pub mod tests {
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(enum_behaviour = "union")]
             pub enum NestedUnion {
-                Selector0(SimpleUnion),
-                Selector1(AnotherSimple),
+                SimpleUnion(SimpleUnion),
+                AnotherSimple(AnotherSimple),
                 Selector2(u64),
             }
             impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for NestedUnion {
@@ -494,14 +494,14 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     match self {
-                        NestedUnion::Selector0(inner) => {
+                        NestedUnion::SimpleUnion(inner) => {
                             let root = <_ as tree_hash::TreeHash<
                                 H,
                             >>::tree_hash_root(inner);
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
                                 .expect("valid selector")
                         }
-                        NestedUnion::Selector1(inner) => {
+                        NestedUnion::AnotherSimple(inner) => {
                             let root = <_ as tree_hash::TreeHash<
                                 H,
                             >>::tree_hash_root(inner);
@@ -563,12 +563,12 @@ pub mod tests {
                 pub fn to_owned(&self) -> NestedUnion {
                     match self.selector() {
                         0u8 => {
-                            NestedUnion::Selector0(
+                            NestedUnion::SimpleUnion(
                                 self.as_selector0().expect("valid selector").to_owned(),
                             )
                         }
                         1u8 => {
-                            NestedUnion::Selector1(
+                            NestedUnion::AnotherSimple(
                                 self.as_selector1().expect("valid selector").to_owned(),
                             )
                         }
