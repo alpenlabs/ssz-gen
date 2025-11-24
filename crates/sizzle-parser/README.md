@@ -12,6 +12,7 @@ It supports:
   * without decorators
 * type alias assignments
 * integer constant assignments
+* `import` statements (local files, external crates, and existing Rust modules)
 
 ## Comments
 
