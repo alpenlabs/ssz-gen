@@ -14,7 +14,7 @@ pub mod tests {
             #[ssz(enum_behaviour = "union")]
             pub enum AliasUnionUnion {
                 Selector0(u8),
-                Selector1(AliasUnion),
+                AliasUnion(AliasUnion),
             }
             impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for AliasUnionUnion {
@@ -36,7 +36,7 @@ pub mod tests {
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
                                 .expect("valid selector")
                         }
-                        AliasUnionUnion::Selector1(inner) => {
+                        AliasUnionUnion::AliasUnion(inner) => {
                             let root = <_ as tree_hash::TreeHash<
                                 H,
                             >>::tree_hash_root(inner);
@@ -82,7 +82,7 @@ pub mod tests {
                             )
                         }
                         1u8 => {
-                            AliasUnionUnion::Selector1(
+                            AliasUnionUnion::AliasUnion(
                                 self.as_selector1().expect("valid selector").to_owned(),
                             )
                         }
@@ -349,8 +349,8 @@ pub mod tests {
             #[ssz(enum_behaviour = "union")]
             pub enum AliasUnionUnion {
                 Selector0,
-                Selector1(crate::tests::input::test_common::AliasUint8),
-                Selector2(crate::tests::input::test_common::AliasUnion),
+                AliasUint8(crate::tests::input::test_common::AliasUint8),
+                AliasUnion(crate::tests::input::test_common::AliasUnion),
             }
             impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for AliasUnionUnion {
@@ -371,14 +371,14 @@ pub mod tests {
                             >(&tree_hash::Hash256::ZERO, 0u8)
                                 .expect("valid selector")
                         }
-                        AliasUnionUnion::Selector1(inner) => {
+                        AliasUnionUnion::AliasUint8(inner) => {
                             let root = <_ as tree_hash::TreeHash<
                                 H,
                             >>::tree_hash_root(inner);
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
                                 .expect("valid selector")
                         }
-                        AliasUnionUnion::Selector2(inner) => {
+                        AliasUnionUnion::AliasUnion(inner) => {
                             let root = <_ as tree_hash::TreeHash<
                                 H,
                             >>::tree_hash_root(inner);
@@ -433,12 +433,12 @@ pub mod tests {
                             AliasUnionUnion::Selector0
                         }
                         1u8 => {
-                            AliasUnionUnion::Selector1(
+                            AliasUnionUnion::AliasUint8(
                                 self.as_selector1().expect("valid selector"),
                             )
                         }
                         2u8 => {
-                            AliasUnionUnion::Selector2(
+                            AliasUnionUnion::AliasUnion(
                                 self.as_selector2().expect("valid selector").to_owned(),
                             )
                         }

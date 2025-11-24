@@ -486,7 +486,7 @@ pub mod test_1 {
     #[ssz(enum_behaviour = "union")]
     pub enum UnionB {
         Selector0(u8),
-        Selector1(UnionA),
+        UnionA(UnionA),
         Selector2(u32),
         Selector3(VariableList<u8, 12usize>),
     }
@@ -507,7 +507,7 @@ pub mod test_1 {
                     tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
                         .expect("valid selector")
                 }
-                UnionB::Selector1(inner) => {
+                UnionB::UnionA(inner) => {
                     let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
                     tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
                         .expect("valid selector")
@@ -577,7 +577,7 @@ pub mod test_1 {
             match self.selector() {
                 0u8 => UnionB::Selector0(self.as_selector0().expect("valid selector")),
                 1u8 => {
-                    UnionB::Selector1(
+                    UnionB::UnionA(
                         self.as_selector1().expect("valid selector").to_owned(),
                     )
                 }
@@ -644,8 +644,8 @@ pub mod test_1 {
     #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
     #[ssz(enum_behaviour = "union")]
     pub enum UnionC {
-        Selector0(AliasUintAlias),
-        Selector1(AliasUintAlias),
+        AliasUintAlias(AliasUintAlias),
+        AliasUintAlias(AliasUintAlias),
     }
     impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for UnionC {
         fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -659,12 +659,12 @@ pub mod test_1 {
         }
         fn tree_hash_root(&self) -> H::Output {
             match self {
-                UnionC::Selector0(inner) => {
+                UnionC::AliasUintAlias(inner) => {
                     let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
                     tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
                         .expect("valid selector")
                 }
-                UnionC::Selector1(inner) => {
+                UnionC::AliasUintAlias(inner) => {
                     let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
                     tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
                         .expect("valid selector")
@@ -702,8 +702,12 @@ pub mod test_1 {
         }
         pub fn to_owned(&self) -> UnionC {
             match self.selector() {
-                0u8 => UnionC::Selector0(self.as_selector0().expect("valid selector")),
-                1u8 => UnionC::Selector1(self.as_selector1().expect("valid selector")),
+                0u8 => {
+                    UnionC::AliasUintAlias(self.as_selector0().expect("valid selector"))
+                }
+                1u8 => {
+                    UnionC::AliasUintAlias(self.as_selector1().expect("valid selector"))
+                }
                 _ => panic!("Invalid union selector: {}", self.selector()),
             }
         }
@@ -747,8 +751,8 @@ pub mod test_1 {
     #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
     #[ssz(enum_behaviour = "union")]
     pub enum UnionD {
-        Selector0(AliasUintAlias),
-        Selector1(AliasUintAlias),
+        AliasUintAlias(AliasUintAlias),
+        AliasUintAlias(AliasUintAlias),
     }
     impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for UnionD {
         fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -762,12 +766,12 @@ pub mod test_1 {
         }
         fn tree_hash_root(&self) -> H::Output {
             match self {
-                UnionD::Selector0(inner) => {
+                UnionD::AliasUintAlias(inner) => {
                     let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
                     tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
                         .expect("valid selector")
                 }
-                UnionD::Selector1(inner) => {
+                UnionD::AliasUintAlias(inner) => {
                     let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
                     tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
                         .expect("valid selector")
@@ -805,8 +809,12 @@ pub mod test_1 {
         }
         pub fn to_owned(&self) -> UnionD {
             match self.selector() {
-                0u8 => UnionD::Selector0(self.as_selector0().expect("valid selector")),
-                1u8 => UnionD::Selector1(self.as_selector1().expect("valid selector")),
+                0u8 => {
+                    UnionD::AliasUintAlias(self.as_selector0().expect("valid selector"))
+                }
+                1u8 => {
+                    UnionD::AliasUintAlias(self.as_selector1().expect("valid selector"))
+                }
                 _ => panic!("Invalid union selector: {}", self.selector()),
             }
         }

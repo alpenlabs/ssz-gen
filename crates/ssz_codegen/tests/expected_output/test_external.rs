@@ -14,8 +14,8 @@ pub mod tests {
             #[ssz(enum_behaviour = "union")]
             pub enum ExternalUnionA {
                 Selector0,
-                Selector1(external_ssz::A),
-                Selector2(external_ssz::module_a::module_b::B),
+                A(external_ssz::A),
+                B(external_ssz::module_a::module_b::B),
             }
             impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for ExternalUnionA {
@@ -36,14 +36,14 @@ pub mod tests {
                             >(&tree_hash::Hash256::ZERO, 0u8)
                                 .expect("valid selector")
                         }
-                        ExternalUnionA::Selector1(inner) => {
+                        ExternalUnionA::A(inner) => {
                             let root = <_ as tree_hash::TreeHash<
                                 H,
                             >>::tree_hash_root(inner);
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
                                 .expect("valid selector")
                         }
-                        ExternalUnionA::Selector2(inner) => {
+                        ExternalUnionA::B(inner) => {
                             let root = <_ as tree_hash::TreeHash<
                                 H,
                             >>::tree_hash_root(inner);
@@ -100,12 +100,12 @@ pub mod tests {
                             ExternalUnionA::Selector0
                         }
                         1u8 => {
-                            ExternalUnionA::Selector1(
+                            ExternalUnionA::A(
                                 self.as_selector1().expect("valid selector").to_owned(),
                             )
                         }
                         2u8 => {
-                            ExternalUnionA::Selector2(
+                            ExternalUnionA::B(
                                 self.as_selector2().expect("valid selector").to_owned(),
                             )
                         }
@@ -166,8 +166,8 @@ pub mod tests {
             #[ssz(enum_behaviour = "union")]
             pub enum ExternalUnionB {
                 Selector0,
-                Selector1(TestA),
-                Selector2(TestB),
+                TestA(TestA),
+                TestB(TestB),
             }
             impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for ExternalUnionB {
@@ -188,14 +188,14 @@ pub mod tests {
                             >(&tree_hash::Hash256::ZERO, 0u8)
                                 .expect("valid selector")
                         }
-                        ExternalUnionB::Selector1(inner) => {
+                        ExternalUnionB::TestA(inner) => {
                             let root = <_ as tree_hash::TreeHash<
                                 H,
                             >>::tree_hash_root(inner);
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
                                 .expect("valid selector")
                         }
-                        ExternalUnionB::Selector2(inner) => {
+                        ExternalUnionB::TestB(inner) => {
                             let root = <_ as tree_hash::TreeHash<
                                 H,
                             >>::tree_hash_root(inner);
@@ -250,12 +250,12 @@ pub mod tests {
                             ExternalUnionB::Selector0
                         }
                         1u8 => {
-                            ExternalUnionB::Selector1(
+                            ExternalUnionB::TestA(
                                 self.as_selector1().expect("valid selector").to_owned(),
                             )
                         }
                         2u8 => {
-                            ExternalUnionB::Selector2(
+                            ExternalUnionB::TestB(
                                 self.as_selector2().expect("valid selector").to_owned(),
                             )
                         }
