@@ -939,7 +939,6 @@ impl<'a> TypeResolver<'a> {
             };
         }
         let resolver = resolvers.get(path).unwrap();
-        let name_str = &name.0;
 
         // Check if it's a base_class
         let base_class = resolver.resolve_base_class(&Ty::Simple(name.clone()));
@@ -948,40 +947,42 @@ impl<'a> TypeResolver<'a> {
         }
 
         let mut type_resolution = resolver.resolve_type(&Ty::Simple(name.clone()), None);
-        if type_resolution.ty.is_none() {
-            panic!("Imported value {name_str} is not defined in the module at {path:?}");
-        } else {
-            let path = path.clone();
-            let path_str = path.to_str().unwrap();
 
-            // Create a path with the crate prefix
-            // crate::folder1::folder2
-            let mut path_segments = syn::punctuated::Punctuated::new();
-            path_segments.push(syn::PathSegment {
-                ident: syn::Ident::new("crate", proc_macro2::Span::call_site()),
-                arguments: syn::PathArguments::None,
-            });
-            path_segments.extend(path_str.split(std::path::MAIN_SEPARATOR).map(|s| {
-                syn::PathSegment {
+        // Create a path with the crate prefix for internal imports
+        // crate::folder1::folder2::name
+        let path = path.clone();
+        let path_str = path.to_str().unwrap();
+        let mut path_segments = syn::punctuated::Punctuated::new();
+        path_segments.push(syn::PathSegment {
+            ident: syn::Ident::new("crate", proc_macro2::Span::call_site()),
+            arguments: syn::PathArguments::None,
+        });
+        path_segments.extend(
+            path_str
+                .split(std::path::MAIN_SEPARATOR)
+                .map(|s| syn::PathSegment {
                     ident: syn::Ident::new(s, proc_macro2::Span::call_site()),
                     arguments: syn::PathArguments::None,
-                }
-            }));
-            // Add the name of the imported type
-            // crate::folder1::folder2::name
-            path_segments.push(syn::PathSegment {
-                ident: syn::Ident::new(&name.0, proc_macro2::Span::call_site()),
-                arguments: syn::PathArguments::None,
-            });
+                }),
+        );
+        path_segments.push(syn::PathSegment {
+            ident: syn::Ident::new(&name.0, proc_macro2::Span::call_site()),
+            arguments: syn::PathArguments::None,
+        });
 
-            type_resolution.ty = Some(syn::Type::Path(syn::TypePath {
-                qself: None,
-                path: syn::Path {
-                    leading_colon: None,
-                    segments: path_segments,
-                },
-            }));
+        type_resolution.ty = Some(syn::Type::Path(syn::TypePath {
+            qself: None,
+            path: syn::Path {
+                leading_colon: None,
+                segments: path_segments,
+            },
+        }));
+
+        // If the type was not found (empty internal module), treat as External
+        if type_resolution.resolution == TypeResolutionKind::Unresolved {
+            type_resolution.resolution = TypeResolutionKind::External;
         }
+
         type_resolution
     }
 }

@@ -97,6 +97,9 @@ The parser supports four types of comments:
   - `derive: Trait1, Trait2, ...` - Adds additional derive macros to the generated type. These are merged with configured derives and required SSZ derives (Encode, Decode, TreeHash).
   - `attr: #[attribute]` - Adds struct-level attributes (e.g., `#[repr(C)]`, `#[cfg(test)]`).
   - `field_attr: #[attribute]` - Adds field-level attributes (e.g., `#[serde(rename = "field_name")]`).
+  - `external_kind: <kind>` - (Field-level) Controls `Ref` type generation for external types.
+    - `container`: Generates a Ref variant (e.g. `MyTypeRef`) for the field. Use this for external container types that need zero-copy views.
+    - `primitive`: Uses the type directly without a Ref wrapper. Use this for external primitive types.
   
   Multiple pragmas can be specified on separate lines:
   ```python
@@ -198,7 +201,7 @@ class Foo(Container):
 alias = Union[uint8, alias_union]
 ```
 
-The variants within the enum are named `Selector{index}`.
+The variants within the enum are named using the inner type name (e.g., `MyType(MyType)`). If the type is a primitive or the name cannot be determined, it falls back to `Selector{index}` (e.g., `Selector0(u8)`).
 
 ### Imports
 You can import definitions from other files using `import FILE` or `IMPORT FILE as IDENT` or from other crates using `IMPORT CRATE.MODULE`. To import from other crates the crate must be provided to `build_ssz_files` in the `crates` argument.
@@ -210,6 +213,11 @@ You can import definitions from other files using `import FILE` or `IMPORT FILE 
     - Make sure `ssz_types` is included in the `crates` argument of `build_ssz_files`.
     - On top of your SSZ schema file add `import ssz_types.containers as external_containers`
     - Now you can use `ContainerA` the following way: `ImportedContainer = external_containers.ContainerA`
+
+- In case of importing from existing Rust modules (without `.ssz` files):
+    - Works similarly to external crate imports but for modules within your workspace or dependencies that don't use `ssz-gen`.
+    - The import path is treated as a Rust module path.
+    - Example: `import my_crate.existing_module as existing` allows using `existing.MyType` which resolves to `my_crate::existing_module::MyType`.
 
 `common.ssz`:
 ```python

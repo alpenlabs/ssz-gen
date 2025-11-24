@@ -16,6 +16,20 @@ use toml as _;
 use tree_hash as _;
 use tree_hash_derive as _;
 
+/// Module simulating existing Rust code with types referenced by generated SSZ code
+pub(crate) mod existing_module {
+    use ssz_derive::{Decode, Encode};
+    use tree_hash_derive::TreeHash;
+
+    /// Existing type for testing
+    #[derive(Debug, Clone, PartialEq, Eq, Encode, Decode, TreeHash)]
+    #[allow(dead_code, reason = "used for testing")]
+    pub(crate) struct ExistingType {
+        /// Dummy value
+        value: u64,
+    }
+}
+
 #[test]
 fn test_basic_codegen() {
     build_ssz_files(
@@ -161,6 +175,33 @@ fn test_external_import() {
 }
 
 #[test]
+fn test_existing_rust_module() {
+    // Test that importing from a module without a .ssz file (existing Rust module)
+    // generates references to crate::module::Type
+    build_ssz_files(
+        &["test_existing_rust_module.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_existing_rust_module.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types for existing Rust module");
+
+    // Verify the generated output contains references to existing_module types
+    let actual_output = fs::read_to_string("tests/output/test_existing_rust_module.rs")
+        .expect("Failed to read actual output");
+
+    // Check that it references the existing module's type as
+    // crate::tests::input::existing_module::ExistingType The path will be based on where the
+    // .ssz file is located
+    assert!(
+        actual_output.contains("existing_module") && actual_output.contains("ExistingType"),
+        "Generated code should reference existing_module::ExistingType. Actual output:\n{}",
+        actual_output
+    );
+}
+
+#[test]
 fn test_cross_entry_local_paths() {
     // Test that locally generated types use super:: paths when referenced
     // across entry points (not crate::ssz::)
@@ -219,6 +260,49 @@ fn test_external_type_ref_variants() {
     assert!(
         output.contains("Result<external_ssz::AccountId") && !output.contains("AccountIdRef"),
         "Primitive-like type AccountId should use the type itself, not Ref variant"
+    );
+}
+
+#[test]
+fn test_pragma_external_kind() {
+    // Test external_kind pragma for annotating external types as containers or primitives
+    build_ssz_files(
+        &["test_external_pragma.ssz"],
+        "tests/input",
+        &["external_ssz"],
+        "tests/output/test_external_pragma.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types");
+
+    let output =
+        fs::read_to_string("tests/output/test_external_pragma.rs").expect("Failed to read output");
+
+    // Container types with pragma should use Ref variants
+    assert!(
+        output.contains("ChainStateRef") || output.contains("Result<external_ssz::ChainStateRef"),
+        "Container type ChainState should use Ref variant"
+    );
+
+    assert!(
+        output.contains("BlockHeaderRef"),
+        "Container type BlockHeader in Vector should use Ref variant"
+    );
+
+    assert!(
+        output.contains("TransactionRef"),
+        "Container type Transaction in List should use Ref variant"
+    );
+
+    // Primitive types without pragma should not use Ref variants
+    assert!(
+        output.contains("Result<external_ssz::Balance") && !output.contains("BalanceRef"),
+        "Primitive type Balance should not use Ref variant"
+    );
+
+    assert!(
+        output.contains("external_ssz::AccountId") && !output.contains("AccountIdRef"),
+        "Primitive type AccountId in List should not use Ref variant"
     );
 }
 

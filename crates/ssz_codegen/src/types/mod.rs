@@ -308,7 +308,12 @@ impl TypeResolution {
     ///
     /// A [`Type`] representing the view type (e.g., `BytesRef`, `FixedBytesRef`)
     pub fn to_view_type(&self) -> Type {
-        self.to_view_type_inner(false)
+        self.to_view_type_with_pragmas(&[])
+    }
+
+    /// Generate the view type with pragma information for external type handling
+    pub fn to_view_type_with_pragmas(&self, pragmas: &[String]) -> Type {
+        self.to_view_type_inner(false, pragmas)
     }
 
     /// Internal helper that can distinguish between direct field context and list/vector context
@@ -316,7 +321,7 @@ impl TypeResolution {
         clippy::only_used_in_recursion,
         reason = "Parameter is intentionally passed through to nested types"
     )]
-    fn to_view_type_inner(&self, in_collection: bool) -> Type {
+    fn to_view_type_inner(&self, in_collection: bool, pragmas: &[String]) -> Type {
         match &self.resolution {
             TypeResolutionKind::Class(class) => {
                 if let Some(Type::Path(TypePath { path, .. })) = &self.ty {
@@ -352,7 +357,7 @@ impl TypeResolution {
                 if matches!(ty.resolution, TypeResolutionKind::UInt(8)) {
                     parse_quote!(FixedBytesRef<'a, #size>)
                 } else {
-                    let inner_view_ty = ty.to_view_type_inner(true);
+                    let inner_view_ty = ty.to_view_type_inner(true, pragmas);
                     parse_quote!(FixedVectorRef<'a, #inner_view_ty, #size>)
                 }
             }
@@ -364,7 +369,7 @@ impl TypeResolution {
                 if matches!(inner.resolution, TypeResolutionKind::UInt(8)) {
                     parse_quote!(BytesRef<'a>)
                 } else {
-                    let inner_view_ty = ty.to_view_type_inner(true);
+                    let inner_view_ty = ty.to_view_type_inner(true, pragmas);
                     parse_quote!(VariableListRef<'a, #inner_view_ty, #size>)
                 }
             }
@@ -377,11 +382,11 @@ impl TypeResolution {
                 parse_quote!(BitListRef<'a, #size>)
             }
             TypeResolutionKind::Optional(ty) => {
-                let inner_view_ty = ty.to_view_type_inner(in_collection);
+                let inner_view_ty = ty.to_view_type_inner(in_collection, pragmas);
                 parse_quote!(Optional<#inner_view_ty>)
             }
             TypeResolutionKind::Option(ty) => {
-                let inner_view_ty = ty.to_view_type_inner(in_collection);
+                let inner_view_ty = ty.to_view_type_inner(in_collection, pragmas);
                 parse_quote!(Option<#inner_view_ty>)
             }
             TypeResolutionKind::Union(ident, _) => {
@@ -413,48 +418,42 @@ impl TypeResolution {
                 parse_quote!(FixedBytesRef<'a, #size>)
             }
             TypeResolutionKind::External => {
-                // For external types, use Ref variant if the type name suggests it's a container
-                // (ends with "Payload", "Message", "State", "Proof", "Claim", etc.)
-                // Otherwise, use the type itself (for primitive-like types that implement
-                // DecodeView directly)
-                if let Some(ty) = &self.ty {
-                    match ty {
-                        Type::Path(TypePath { path, .. }) => {
-                            if let Some(last_segment) = path.segments.last() {
-                                let name = last_segment.ident.to_string();
-                                // Check if type name suggests it's a container that needs Ref
-                                if name.ends_with("Payload")
-                                    || name.ends_with("Message")
-                                    || name.ends_with("State")
-                                    || name.ends_with("Proof")
-                                    || name.ends_with("Claim")
-                                {
-                                    let mut path_segments = path.segments.clone();
-                                    if let Some(last_segment) = path_segments.last_mut() {
-                                        let ref_ident = Ident::new(
-                                            &format!("{}Ref", last_segment.ident),
-                                            last_segment.ident.span(),
-                                        );
-                                        last_segment.ident = ref_ident;
-                                    }
-                                    let view_path = Path {
-                                        leading_colon: path.leading_colon,
-                                        segments: path_segments,
-                                    };
-                                    parse_quote! {
-                                        #view_path<'a>
-                                    }
-                                } else {
-                                    // For primitive-like types, use the type itself
-                                    self.unwrap_type()
-                                }
-                            } else {
-                                self.unwrap_type()
-                            }
+                // Check pragma to determine if external type is a container or primitive
+                let is_container = pragmas.iter().any(|p| {
+                    let trimmed = p.trim();
+                    trimmed == "external_kind: container"
+                });
+
+                let is_primitive = pragmas.iter().any(|p| {
+                    let trimmed = p.trim();
+                    trimmed == "external_kind: primitive"
+                });
+
+                // Generate Ref variant if marked as container
+                if is_container {
+                    if let Some(Type::Path(TypePath { path, .. })) = &self.ty {
+                        let mut path_segments = path.segments.clone();
+                        if let Some(last_segment) = path_segments.last_mut() {
+                            let ref_ident = Ident::new(
+                                &format!("{}Ref", last_segment.ident),
+                                last_segment.ident.span(),
+                            );
+                            last_segment.ident = ref_ident;
                         }
-                        _ => self.unwrap_type(),
+                        let view_path = Path {
+                            leading_colon: path.leading_colon,
+                            segments: path_segments,
+                        };
+                        parse_quote! { #view_path<'a> }
+                    } else {
+                        self.unwrap_type()
                     }
+                } else if is_primitive {
+                    // Use type directly for primitives
+                    self.unwrap_type()
                 } else {
+                    // Default: use type directly (conservative - won't break existing code)
+                    // Users should add pragma if they need Ref variant
                     self.unwrap_type()
                 }
             }
@@ -1387,7 +1386,7 @@ impl ClassDef {
             .enumerate()
             .map(|(idx, field)| {
                 let field_name = Ident::new(&field.name, Span::call_site());
-                let view_ty = field.ty.to_view_type();
+                let view_ty = field.ty.to_view_type_with_pragmas(&field.pragmas);
                 let (offset_expr, is_fixed, size_expr) = self.generate_field_layout(idx);
 
                 if is_fixed {

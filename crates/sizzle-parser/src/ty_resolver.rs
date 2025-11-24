@@ -122,6 +122,14 @@ impl ModuleTypeMap {
         matches!(self, Self::External)
     }
 
+    /// Returns true if this is an empty internal module (existing Rust module with no schema)
+    pub(crate) fn is_empty_internal(&self) -> bool {
+        match self {
+            Self::External => false,
+            Self::Internal(idents) => idents.is_empty(),
+        }
+    }
+
     pub(crate) fn get(&self, ident: &Identifier) -> Option<&IdentTarget> {
         match self {
             Self::External => None,
@@ -407,8 +415,10 @@ impl<'a> TypeResolver<'a> {
                                     ));
                                 };
 
-                                // If external just skip and pretend it works.
-                                if ident_targets.is_external() {
+                                // If external or empty internal (existing Rust module), skip
+                                // validation
+                                if ident_targets.is_external() || ident_targets.is_empty_internal()
+                                {
                                     TyExpr::Ty(Ty::Imported(
                                         imported.module_path().clone(),
                                         imported.base_name().clone(),
@@ -448,8 +458,10 @@ impl<'a> TypeResolver<'a> {
                                     ));
                                 };
 
-                                // If external just skip and pretend it works.
-                                if ident_targets.is_external() {
+                                // If external or empty internal (existing Rust module), skip
+                                // validation
+                                if ident_targets.is_external() || ident_targets.is_empty_internal()
+                                {
                                     TyExpr::Ty(Ty::Imported(
                                         imported.module_path().clone(),
                                         imported.base_name().clone(),
@@ -518,8 +530,10 @@ impl<'a> TypeResolver<'a> {
                                     ));
                                 };
 
-                                // If external just skip and pretend it works.
-                                if ident_targets.is_external() {
+                                // If external or empty internal (existing Rust module), skip
+                                // validation
+                                if ident_targets.is_external() || ident_targets.is_empty_internal()
+                                {
                                     TyExpr::Ty(Ty::Imported(
                                         imported.module_path().clone(),
                                         imported.base_name().clone(),
@@ -580,8 +594,8 @@ impl<'a> TypeResolver<'a> {
                     return Err(ResolverError::UnknownImport(imported.module_name().clone()));
                 };
 
-                // If external just skip and pretend it works.
-                if ident_targets.is_external() {
+                // If external or empty internal (existing Rust module), skip validation
+                if ident_targets.is_external() || ident_targets.is_empty_internal() {
                     return Ok(Ty::Imported(
                         imported.module_path().clone(),
                         imported.base_name().clone(),
