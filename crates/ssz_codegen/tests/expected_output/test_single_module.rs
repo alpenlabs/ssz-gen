@@ -849,7 +849,7 @@ pub type AliasVecA = FixedBytes<10usize>;
 pub type AliasVecB = AliasVecA;
 pub type AliasListAlias = VariableList<u8, 5usize>;
 pub type AliasNested = AliasUintAlias;
-pub type BitAlias = BitList<42usize>;
+pub type BitAlias = BitList<{ VAL_X as usize }>;
 pub type UnionE = UnionD;
 #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
 #[ssz(struct_behaviour = "container")]

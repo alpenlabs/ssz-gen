@@ -266,6 +266,17 @@ pub(crate) fn conv_module_to_schema<'a>(
                             value: v,
                         })
                     }
+                    TyExpr::ConstRef(_id, value) => {
+                        // Resolve constant reference to its concrete value
+                        let const_value = ConstValue::Int(value);
+                        resolver.decl_const(name.clone(), const_value.clone())?;
+
+                        idents.insert(name.clone(), IdentTarget::Const(const_value.clone()));
+                        constants.push(ConstDef {
+                            name: name.clone(),
+                            value: const_value,
+                        })
+                    }
                     TyExpr::None => panic!("schema: assignment to None"),
                 },
 
@@ -277,6 +288,9 @@ pub(crate) fn conv_module_to_schema<'a>(
                         TyExpr::Ty(ty) => ty,
                         TyExpr::Int(_) => {
                             panic!("schema: resolver generated int for complex tyspec")
+                        }
+                        TyExpr::ConstRef(_, _) => {
+                            panic!("schema: resolver generated const ref for complex tyspec")
                         }
                         TyExpr::None => {
                             panic!("schema: resolver generated None for complex tyspec")

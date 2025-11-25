@@ -98,14 +98,18 @@ impl<'a> CircleBufferCodegen<'a> {
                 .borrow()
                 .contains_key(&ident.to_string())
         {
-            let ty = type_def.unwrap_type();
-
             if type_def.is_constant() {
+                let ty = type_def.unwrap_type();
                 self.tokens.push(quote! {
                     #[allow(dead_code, reason = "generated code using ssz-gen")]
                     pub const #ident: u64 = #ty;
                 });
             } else {
+                let ty = if type_def.contains_const_ref() {
+                    type_def.unwrap_type_preserving_const_names()
+                } else {
+                    type_def.unwrap_type()
+                };
                 self.tokens.push(quote! {
                     pub type #ident = #ty;
                 });
@@ -308,6 +312,9 @@ impl<'a> CircleBufferCodegen<'a> {
                 return false;
             }
 
+            let ty = field_type.unwrap_type();
+            let field_ty_token = quote! { #ty };
+
             // Make sure the field is compatible with the parent class
             match parent_class_def.base {
                 BaseClass::Container => {
@@ -326,7 +333,6 @@ impl<'a> CircleBufferCodegen<'a> {
             }
 
             if field_type.is_type() {
-                let field_ty = field_type.unwrap_type();
                 let new_field = ClassFieldDef {
                     index: curr_index,
                     name: field.name().0.to_string(),
@@ -348,16 +354,16 @@ impl<'a> CircleBufferCodegen<'a> {
                     quote! {
                         #field_doc
                         #(#attrs)*
-                        pub #field_ident: #field_ty
+                        pub #field_ident: #field_ty_token
                     }
                 } else if has_field_doc {
                     quote! {
                         #field_doc
-                        pub #field_ident: #field_ty
+                        pub #field_ident: #field_ty_token
                     }
                 } else {
                     parse_quote! {
-                        pub #field_ident: #field_ty
+                        pub #field_ident: #field_ty_token
                     }
                 };
 

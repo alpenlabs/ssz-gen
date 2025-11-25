@@ -17,7 +17,7 @@ use sizzle_parser::{
 };
 use syn::{Ident, parse_quote};
 
-use super::{BaseClass, ClassDef, ClassDefinition, TypeDefinition, TypeResolution};
+use super::{BaseClass, ClassDef, ClassDefinition, SizeExpr, TypeDefinition, TypeResolution};
 use crate::types::TypeResolutionKind;
 
 /// Extract a simple type name from a TypeResolution for use as a variant name.
@@ -34,6 +34,25 @@ fn extract_variant_name(ty_resolution: &TypeResolution) -> Option<String> {
                 .map(|seg| seg.ident.to_string())
         }
         _ => None,
+    }
+}
+
+/// Converts a TyExpr to a SizeExpr, extracting size information for type parameters.
+/// For imported constants or other complex expressions, falls back to the resolved value.
+fn ty_expr_to_size_expr(expr: &TyExpr, resolved: &TypeResolution) -> SizeExpr {
+    match expr {
+        TyExpr::Int(val) => SizeExpr::Literal(val.eval()),
+        TyExpr::ConstRef(ident, value) => SizeExpr::ConstRef(ident.0.clone(), *value),
+        _ => {
+            // For imported constants or other expressions, extract the resolved value
+            match &resolved.resolution {
+                TypeResolutionKind::Constant(value) => SizeExpr::Literal(*value),
+                _ => panic!(
+                    "Expected size parameter to resolve to a constant, got: {:?}",
+                    resolved.resolution
+                ),
+            }
+        }
     }
 }
 
@@ -222,8 +241,12 @@ impl<'a> TypeResolver<'a> {
 
         // Resolve the type definition using the type arguments
         let type_def = self.types.get(ty.base_name().0.as_str());
+        let original_args = match ty {
+            Ty::Complex(_, args) => args.as_slice(),
+            _ => &[],
+        };
         match type_def {
-            Some(def) => self.resolve_type_definition(def, args, alias_ident),
+            Some(def) => self.resolve_type_definition(def, args, original_args, alias_ident),
             None => TypeResolution {
                 ty: None,
                 resolution: TypeResolutionKind::Unresolved,
@@ -247,6 +270,13 @@ impl<'a> TypeResolver<'a> {
                 ty: None,
                 resolution: TypeResolutionKind::Constant(int.eval()),
             },
+            TyExpr::ConstRef(_ident, value) => {
+                // Resolve to constant value; name is preserved in TyExpr for codegen
+                TypeResolution {
+                    ty: None,
+                    resolution: TypeResolutionKind::Constant(*value),
+                }
+            }
             TyExpr::None => TypeResolution {
                 ty: None,
                 resolution: TypeResolutionKind::None,
@@ -277,6 +307,7 @@ impl<'a> TypeResolver<'a> {
                     }
                     Ty::Complex(_, args) => match args.first() {
                         Some(TyExpr::Int(int)) => int.eval(),
+                        Some(TyExpr::ConstRef(_, value)) => *value,
                         _ => {
                             panic!("Stable container must have a max field count as first argument")
                         }
@@ -333,7 +364,8 @@ impl<'a> TypeResolver<'a> {
     /// # Arguments
     ///
     /// * `def` - The type definition to resolve
-    /// * `args` - The type arguments for the definition
+    /// * `args` - The resolved type arguments
+    /// * `original_args` - The original TyExpr arguments (for preserving constant names)
     ///
     /// # Returns
     ///
@@ -342,6 +374,7 @@ impl<'a> TypeResolver<'a> {
         &self,
         def: &TypeDefinition,
         args: Vec<TypeResolution>,
+        original_args: &[TyExpr],
         alias_ident: Option<&syn::Ident>,
     ) -> TypeResolution {
         let mut resolved_ty = None;
@@ -349,32 +382,20 @@ impl<'a> TypeResolver<'a> {
             TypeDefinition::Boolean => TypeResolutionKind::Boolean,
             TypeDefinition::UInt(size) => TypeResolutionKind::UInt(*size),
             TypeDefinition::Vector => {
-                let size = match args[1].resolution {
-                    TypeResolutionKind::Constant(size) => size,
-                    _ => panic!("Expected constant value for vector size"),
-                };
-                TypeResolutionKind::Vector(Box::new(args[0].clone()), size)
+                let size_expr = ty_expr_to_size_expr(&original_args[1], &args[1]);
+                TypeResolutionKind::Vector(Box::new(args[0].clone()), size_expr)
             }
             TypeDefinition::List => {
-                let size = match args[1].resolution {
-                    TypeResolutionKind::Constant(size) => size,
-                    _ => panic!("Expected constant value for list size"),
-                };
-                TypeResolutionKind::List(Box::new(args[0].clone()), size)
+                let size_expr = ty_expr_to_size_expr(&original_args[1], &args[1]);
+                TypeResolutionKind::List(Box::new(args[0].clone()), size_expr)
             }
             TypeDefinition::Bitvector => {
-                let size = match args[0].resolution {
-                    TypeResolutionKind::Constant(size) => size,
-                    _ => panic!("Expected constant value for bitvector size"),
-                };
-                TypeResolutionKind::Bitvector(size)
+                let size_expr = ty_expr_to_size_expr(&original_args[0], &args[0]);
+                TypeResolutionKind::Bitvector(size_expr)
             }
             TypeDefinition::Bitlist => {
-                let size = match args[0].resolution {
-                    TypeResolutionKind::Constant(size) => size,
-                    _ => panic!("Expected constant value for bitlist size"),
-                };
-                TypeResolutionKind::Bitlist(size)
+                let size_expr = ty_expr_to_size_expr(&original_args[0], &args[0]);
+                TypeResolutionKind::Bitlist(size_expr)
             }
             TypeDefinition::Optional => TypeResolutionKind::Optional(Box::new(args[0].clone())),
             TypeDefinition::Union => {
@@ -720,6 +741,7 @@ impl<'a> TypeResolver<'a> {
             ClassDefinition::StableContainer => {
                 let max = match args.first() {
                     Some(TyExpr::Int(int)) => int.eval(),
+                    Some(TyExpr::ConstRef(_, value)) => *value,
                     _ => panic!(
                         "Expected stable container to have a max field count as first argument"
                     ),
