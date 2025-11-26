@@ -12,12 +12,13 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.8.1"
+version = "0.8.2"
 edition = "2024"
 authors = [
   "Trey Del Bonis <trey@alpenlabs.io>",
   "Ali Rezai <ali.baghbidi@nethermind.io>",
   "Jose Storopoli <jose@alpenlabs.io>",
+  "Dilli Raj Paudel <dilli@alpenlabs.io>",
 ]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
