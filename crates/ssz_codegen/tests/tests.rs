@@ -1338,3 +1338,44 @@ fn test_three_way_dependency() {
         container_c_count
     );
 }
+
+/// Test that view type aliases are generated for type aliases used in union variants.
+#[test]
+fn test_union_type_alias_view_types() {
+    build_ssz_files(
+        &["test_union_type_alias.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_union_type_alias.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types");
+
+    let generated = fs::read_to_string("tests/output/test_union_type_alias.rs")
+        .expect("Failed to read generated output");
+
+    // Print first 500 chars for debugging
+    eprintln!(
+        "Generated output (first 500 chars):\n{}",
+        &generated.chars().take(500).collect::<String>()
+    );
+
+    // Verify that the view type alias is generated for the type alias used in union
+    assert!(
+        generated.contains("pub type TypeAliasRef<'a> = UnderlyingTypeRef<'a>;"),
+        "View type alias TypeAliasRef should be generated. Generated output:\n{}",
+        &generated.chars().take(1000).collect::<String>()
+    );
+
+    // Verify that the union view type uses the alias
+    assert!(
+        generated.contains("TypeAliasRef"),
+        "Union view type should reference TypeAliasRef"
+    );
+
+    // Verify that the underlying type is also generated
+    assert!(
+        generated.contains("pub struct UnderlyingTypeRef<'a>"),
+        "Underlying type view should be generated"
+    );
+}

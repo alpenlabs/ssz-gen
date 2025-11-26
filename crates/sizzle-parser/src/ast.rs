@@ -488,6 +488,7 @@ pub(crate) fn parse_module_from_toktrs<P: AsRef<Path>>(
     toktrs: &[SrcToktr],
     path: P,
     module_manager: &mut ModuleManager,
+    entry_point_files: Option<&HashMap<PathBuf, String>>,
 ) -> Result<(), ParseError> {
     let path = path.as_ref();
     let mut gob = Gobbler::new(toktrs);
@@ -537,7 +538,13 @@ pub(crate) fn parse_module_from_toktrs<P: AsRef<Path>>(
             TaggedToktr::Import(_) => {
                 consecutive_newlines = 0;
                 comment_buffer.clear(); // Clear comments before imports
-                parse_import(&mut gob, path, module_manager, &mut import_map)?;
+                parse_import(
+                    &mut gob,
+                    path,
+                    module_manager,
+                    &mut import_map,
+                    entry_point_files,
+                )?;
             }
 
             // Lines that start with identifiers are probably assignments.
@@ -1006,6 +1013,7 @@ fn parse_import<P: AsRef<Path>>(
     path: P,
     module_manager: &mut ModuleManager,
     import_map: &mut HashMap<Identifier, PathBuf>,
+    entry_point_files: Option<&HashMap<PathBuf, String>>,
 ) -> Result<(), ParseError> {
     use TaggedToktr::*;
 
@@ -1094,14 +1102,48 @@ fn parse_import<P: AsRef<Path>>(
             {
                 panic!("import: duplicate import alias: {import_alias:?}");
             }
-            // Check if .ssz file exists first to determine the correct module path
+            // Check if this is an entry point first, then check filesystem
             let ssz_path = path.with_extension("ssz");
-            let (final_path, has_schema) = if ssz_path.exists() {
-                (path.clone(), true)
+            // Normalize path for comparison (remove extension, as entry points are stored without
+            // .ssz)
+            let path_normalized = path.with_extension("");
+            let (final_path, has_schema, file_content_opt) = if let Some(entry_files) =
+                entry_point_files
+            {
+                // Check if the resolved path matches any entry point
+                // Entry points are stored without .ssz extension, so compare normalized paths
+                // Use get() for O(1) lookup instead of iterating (more efficient and deterministic)
+                let matching_entry = entry_files.get(&path_normalized);
+
+                if let Some(file_content) = matching_entry {
+                    // Use the entry point path and content
+                    (path_normalized.clone(), true, Some(file_content.clone()))
+                } else if ssz_path.exists() {
+                    // Fall back to filesystem check
+                    (path.clone(), true, None)
+                } else if !is_external {
+                    // If .ssz file doesn't exist and not external, this is an existing Rust
+                    // module at crate root. Strip parent directories to
+                    // get just the module name (e.g., "ssz/ol" -> "ol")
+                    let module_name = path
+                        .file_name()
+                        .expect("module path should have a file name");
+                    let stripped_path = PathBuf::from(module_name);
+
+                    // Update import_map to use the stripped path for existing Rust modules
+                    import_map.insert(import_alias.clone(), stripped_path.clone());
+
+                    (stripped_path, false, None)
+                } else {
+                    // External module without .ssz file - keep full path
+                    (path.clone(), false, None)
+                }
+            } else if ssz_path.exists() {
+                (path.clone(), true, None)
             } else if !is_external {
-                // If .ssz file doesn't exist and not external, this is an existing Rust module at
-                // crate root. Strip parent directories to get just the module name
-                // (e.g., "ssz/ol" -> "ol")
+                // If .ssz file doesn't exist and not external, this is an existing Rust module
+                // at crate root. Strip parent directories to get just the
+                // module name (e.g., "ssz/ol" -> "ol")
                 let module_name = path
                     .file_name()
                     .expect("module path should have a file name");
@@ -1110,10 +1152,10 @@ fn parse_import<P: AsRef<Path>>(
                 // Update import_map to use the stripped path for existing Rust modules
                 import_map.insert(import_alias.clone(), stripped_path.clone());
 
-                (stripped_path, false)
+                (stripped_path, false, None)
             } else {
                 // External module without .ssz file - keep full path
-                (path.clone(), false)
+                (path.clone(), false, None)
             };
 
             let add_module_result = module_manager.add_module(&final_path, is_external);
@@ -1123,14 +1165,17 @@ fn parse_import<P: AsRef<Path>>(
 
             // Parse .ssz file if it exists
             if has_schema {
-                let file_content =
-                    std::fs::read_to_string(&ssz_path).expect("Failed to read import module file");
+                let file_content = if let Some(content) = file_content_opt {
+                    content
+                } else {
+                    std::fs::read_to_string(&ssz_path).expect("Failed to read import module file")
+                };
                 let chars = file_content.chars().collect::<Vec<_>>();
                 let toks = crate::token::parse_char_array_to_tokens(&chars)
                     .expect("import: tokenize string");
                 let tt = crate::token_tree::parse_tokens_to_toktrs(&toks)
                     .expect("import: treeize tokens");
-                parse_module_from_toktrs(&tt, &final_path, module_manager)
+                parse_module_from_toktrs(&tt, &final_path, module_manager, entry_point_files)
                     .expect("import: parse toktrs");
             }
 
@@ -1185,7 +1230,7 @@ FARB_NORB = 4 * 8
 
         let mut module_manager = ModuleManager::new(&[]);
         module_manager.add_module(Path::new(""), false);
-        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager, None)
             .expect("test: parse toktrs");
         eprintln!("module {module_manager:#?}");
     }
@@ -1207,7 +1252,7 @@ class Foo(Container):
 
         let mut module_manager = ModuleManager::new(&[]);
         module_manager.add_module(Path::new(""), false);
-        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager, None)
             .expect("test: parse toktrs");
         eprintln!("module {module_manager:#?}");
     }
@@ -1236,7 +1281,7 @@ class Foo(StableContainer[16]):
 
         let mut module_manager = ModuleManager::new(&[]);
         module_manager.add_module(Path::new(""), false);
-        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager, None)
             .expect("test: parse toktrs");
         eprintln!("module {module_manager:#?}");
     }
@@ -1263,8 +1308,13 @@ class Foo(test.A):
 
         let mut module_manager = ModuleManager::new(&[]);
         module_manager.add_module(Path::new("tests/non_existent"), false);
-        parse_module_from_toktrs(&tt, Path::new("tests/non_existent"), &mut module_manager)
-            .expect("test: parse toktrs");
+        parse_module_from_toktrs(
+            &tt,
+            Path::new("tests/non_existent"),
+            &mut module_manager,
+            None,
+        )
+        .expect("test: parse toktrs");
         eprintln!("module {module_manager:#?}");
     }
 
@@ -1284,7 +1334,7 @@ class Point(Container):
 
         let mut module_manager = ModuleManager::new(&[]);
         module_manager.add_module(Path::new(""), false);
-        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager, None)
             .expect("test: parse toktrs");
 
         let entries = module_manager
@@ -1319,7 +1369,7 @@ class Point(Container):
 
         let mut module_manager = ModuleManager::new(&[]);
         module_manager.add_module(Path::new(""), false);
-        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager, None)
             .expect("test: parse toktrs");
 
         let entries = module_manager
@@ -1368,7 +1418,7 @@ class Point(Container):
 
         let mut module_manager = ModuleManager::new(&[]);
         module_manager.add_module(Path::new(""), false);
-        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager, None)
             .expect("test: parse toktrs");
 
         let entries = module_manager
@@ -1414,7 +1464,7 @@ class Point(Container):
 
         let mut module_manager = ModuleManager::new(&[]);
         module_manager.add_module(Path::new(""), false);
-        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager, None)
             .expect("test: parse toktrs");
 
         let entries = module_manager
@@ -1449,7 +1499,7 @@ class Point(Container):
 
         let mut module_manager = ModuleManager::new(&[]);
         module_manager.add_module(Path::new(""), false);
-        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager, None)
             .expect("test: parse toktrs");
 
         let entries = module_manager
@@ -1483,7 +1533,7 @@ class Point(Container):
 
         let mut module_manager = ModuleManager::new(&[]);
         module_manager.add_module(Path::new(""), false);
-        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager, None)
             .expect("test: parse toktrs");
 
         let entries = module_manager
@@ -1520,7 +1570,7 @@ class Point(Container):
 
         let mut module_manager = ModuleManager::new(&[]);
         module_manager.add_module(Path::new(""), false);
-        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager, None)
             .expect("test: parse toktrs");
 
         let entries = module_manager
@@ -1558,7 +1608,7 @@ class Point(Container):
 
         let mut module_manager = ModuleManager::new(&[]);
         module_manager.add_module(Path::new(""), false);
-        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager, None)
             .expect("test: parse toktrs");
 
         let entries = module_manager
@@ -1605,7 +1655,7 @@ class Point(Container):
 
         let mut module_manager = ModuleManager::new(&[]);
         module_manager.add_module(Path::new(""), false);
-        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager, None)
             .expect("test: parse toktrs");
 
         let entries = module_manager
@@ -1640,7 +1690,7 @@ class Point(Container):
 
         let mut module_manager = ModuleManager::new(&[]);
         module_manager.add_module(Path::new(""), false);
-        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager)
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager, None)
             .expect("test: parse toktrs");
 
         let entries = module_manager
@@ -1677,7 +1727,7 @@ class Foo(Container):
 
         let mut module_manager = ModuleManager::new(&[]);
         module_manager.add_module(Path::new(""), false);
-        let result = parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager);
+        let result = parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager, None);
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -1704,7 +1754,7 @@ class Foo(Container):
 
         let mut module_manager = ModuleManager::new(&[]);
         module_manager.add_module(Path::new(""), false);
-        let result = parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager);
+        let result = parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager, None);
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -1733,7 +1783,7 @@ class Foo(Container):
 
         let mut module_manager = ModuleManager::new(&[]);
         module_manager.add_module(Path::new(""), false);
-        let result = parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager);
+        let result = parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager, None);
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -1766,7 +1816,7 @@ class Foo(Container):
 
         let mut module_manager = ModuleManager::new(&[]);
         module_manager.add_module(Path::new(""), false);
-        let result = parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager);
+        let result = parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager, None);
 
         assert!(result.is_err());
         // The doc comment is detected first as standalone due to multiple newlines
