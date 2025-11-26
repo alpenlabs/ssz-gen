@@ -916,7 +916,29 @@ pub mod tests {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
                     let bytes = &self.bytes[start..end];
-                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                    if bytes.is_empty() {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: 0,
+                            expected: 1,
+                        });
+                    }
+                    let selector = bytes[0];
+                    match selector {
+                        0 => Ok(None),
+                        1 => {
+                            let inner = <u8 as ssz::view::DecodeView>::from_ssz_bytes(
+                                &bytes[1..],
+                            )?;
+                            Ok(Some(inner))
+                        }
+                        _ => {
+                            Err(
+                                ssz::DecodeError::BytesInvalid(
+                                    format!("Invalid union selector for Option: {}", selector),
+                                ),
+                            )
+                        }
+                    }
                 }
                 pub fn opt_complex(
                     &self,
@@ -937,7 +959,31 @@ pub mod tests {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
                     let bytes = &self.bytes[start..end];
-                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                    if bytes.is_empty() {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: 0,
+                            expected: 1,
+                        });
+                    }
+                    let selector = bytes[0];
+                    match selector {
+                        0 => Ok(None),
+                        1 => {
+                            let inner = <VariableListRef<
+                                'a,
+                                u16,
+                                8usize,
+                            > as ssz::view::DecodeView>::from_ssz_bytes(&bytes[1..])?;
+                            Ok(Some(inner))
+                        }
+                        _ => {
+                            Err(
+                                ssz::DecodeError::BytesInvalid(
+                                    format!("Invalid union selector for Option: {}", selector),
+                                ),
+                            )
+                        }
+                    }
                 }
                 pub fn opt_union(
                     &self,
@@ -958,7 +1004,29 @@ pub mod tests {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
                     let bytes = &self.bytes[start..end];
-                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                    if bytes.is_empty() {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: 0,
+                            expected: 1,
+                        });
+                    }
+                    let selector = bytes[0];
+                    match selector {
+                        0 => Ok(None),
+                        1 => {
+                            let inner = <SimpleUnionRef<
+                                'a,
+                            > as ssz::view::DecodeView>::from_ssz_bytes(&bytes[1..])?;
+                            Ok(Some(inner))
+                        }
+                        _ => {
+                            Err(
+                                ssz::DecodeError::BytesInvalid(
+                                    format!("Invalid union selector for Option: {}", selector),
+                                ),
+                            )
+                        }
+                    }
                 }
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
@@ -1080,9 +1148,18 @@ pub mod tests {
                         simple: self.simple().expect("valid view").to_owned(),
                         nested: self.nested().expect("valid view").to_owned(),
                         complex: self.complex().expect("valid view").to_owned(),
-                        opt_simple: self.opt_simple().expect("valid view").to_owned(),
-                        opt_complex: self.opt_complex().expect("valid view").to_owned(),
-                        opt_union: self.opt_union().expect("valid view").to_owned(),
+                        opt_simple: self
+                            .opt_simple()
+                            .expect("valid view")
+                            .map(|inner| inner.to_owned()),
+                        opt_complex: self
+                            .opt_complex()
+                            .expect("valid view")
+                            .map(|inner| inner.to_owned()),
+                        opt_union: self
+                            .opt_union()
+                            .expect("valid view")
+                            .map(|inner| inner.to_owned()),
                     }
                 }
             }
@@ -1196,7 +1273,29 @@ pub mod tests {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
                     let bytes = &self.bytes[start..end];
-                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                    if bytes.is_empty() {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: 0,
+                            expected: 1,
+                        });
+                    }
+                    let selector = bytes[0];
+                    match selector {
+                        0 => Ok(None),
+                        1 => {
+                            let inner = <u8 as ssz::view::DecodeView>::from_ssz_bytes(
+                                &bytes[1..],
+                            )?;
+                            Ok(Some(inner))
+                        }
+                        _ => {
+                            Err(
+                                ssz::DecodeError::BytesInvalid(
+                                    format!("Invalid union selector for Option: {}", selector),
+                                ),
+                            )
+                        }
+                    }
                 }
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
@@ -1295,7 +1394,10 @@ pub mod tests {
                     AllUnions {
                         union1: self.union1().expect("valid view").to_owned(),
                         union2: self.union2().expect("valid view").to_owned(),
-                        union3: self.union3().expect("valid view").to_owned(),
+                        union3: self
+                            .union3()
+                            .expect("valid view")
+                            .map(|inner| inner.to_owned()),
                     }
                 }
             }

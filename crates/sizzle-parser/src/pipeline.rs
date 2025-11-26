@@ -51,7 +51,7 @@ pub fn parse_str_schema(
             let chars = content.chars().collect::<Vec<_>>();
             let tokens = token::parse_char_array_to_tokens(&chars)?;
             let toktrs = token_tree::parse_tokens_to_toktrs(&tokens)?;
-            ast::parse_module_from_toktrs(&toktrs, path, &mut module_manager)?;
+            ast::parse_module_from_toktrs(&toktrs, path, &mut module_manager, Some(files))?;
         }
     }
 

@@ -1,0 +1,10 @@
+### Test type alias used in union
+class UnderlyingType(Container):
+    value: uint64
+
+### Type alias for union variant
+TypeAlias = UnderlyingType
+
+### Union using type alias
+TestUnion = Union[TypeAlias]
+

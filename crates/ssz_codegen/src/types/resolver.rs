@@ -37,6 +37,18 @@ fn extract_variant_name(ty_resolution: &TypeResolution) -> Option<String> {
     }
 }
 
+/// Extract a variant name from a TyExpr (original type expression from schema).
+/// This preserves type alias names instead of resolving to underlying types.
+fn extract_variant_name_from_ty_expr(ty_expr: &TyExpr) -> Option<String> {
+    match ty_expr {
+        TyExpr::Ty(ty) => {
+            // Extract identifier from Ty - get the base name
+            Some(ty.base_name().0.clone())
+        }
+        _ => None,
+    }
+}
+
 /// Converts a TyExpr to a SizeExpr, extracting size information for type parameters.
 /// For imported constants or other complex expressions, falls back to the resolved value.
 fn ty_expr_to_size_expr(expr: &TyExpr, resolved: &TypeResolution) -> SizeExpr {
@@ -506,6 +518,92 @@ impl<'a> TypeResolver<'a> {
 
                     let ref_ident = Ident::new(&format!("{}Ref", ident_str), Span::call_site());
 
+                    // Generate view type aliases for type aliases used in union variants
+                    // When a variant name (from type alias) differs from underlying type name,
+                    // we need to create a view type alias (e.g., AliasNameRef = UnderlyingTypeRef)
+                    let mut view_type_aliases: Vec<TokenStream> = Vec::new();
+                    let mut variant_view_types: Vec<(String, TokenStream)> = Vec::new();
+
+                    for (i, ty) in args.iter().enumerate() {
+                        // Skip None types - they don't have view types and don't need aliases
+                        if ty.resolution == TypeResolutionKind::None {
+                            variant_view_types.push(("None".to_string(), quote! { () }));
+                            continue;
+                        }
+
+                        // Extract variant name from original type expression to preserve type alias
+                        // names
+                        let variant_name_from_expr = original_args
+                            .get(i)
+                            .and_then(extract_variant_name_from_ty_expr);
+
+                        // Extract the underlying type name from the resolution
+                        // For a class type, resolution is TypeResolutionKind::Class(class_name)
+                        let underlying_type_name = match &ty.resolution {
+                            TypeResolutionKind::Class(class_name) => Some(class_name.clone()),
+                            _ => None,
+                        };
+
+                        // Get the view type: always use ty.to_view_type() to preserve existing
+                        // behavior
+                        let underlying_view_ty = ty.to_view_type();
+
+                        // Determine if we need an alias: only when a type alias is used as a
+                        // variant name This means: variant name from
+                        // original expression differs from underlying type name
+                        // AND the underlying type is a class (not None, Option, etc.)
+                        // AND the underlying type is in the types map (meaning it's a type alias,
+                        // not an imported type or direct class reference)
+                        let underlying_name_opt = underlying_type_name.as_ref();
+                        let underlying_type_resolution = underlying_name_opt
+                            .and_then(|name| self.types.get(name))
+                            .and_then(|def| match def {
+                                TypeDefinition::CustomType(res) => Some(res),
+                                _ => None,
+                            });
+
+                        let needs_alias = variant_name_from_expr.is_some()
+                            && underlying_name_opt.is_some()
+                            && variant_name_from_expr.as_ref() != underlying_name_opt
+                            && matches!(ty.resolution, TypeResolutionKind::Class(_))
+                            && underlying_type_resolution.is_some();
+
+                        // If we need an alias, get the underlying type's view type from the types
+                        // map We already checked that
+                        // underlying_type_resolution exists above
+                        let underlying_view_ty = if needs_alias {
+                            // We already verified this exists in the needs_alias check
+                            underlying_type_resolution.unwrap().to_view_type()
+                        } else {
+                            underlying_view_ty
+                        };
+
+                        // Use the name from the original expression if available (preserves type
+                        // alias names), otherwise extract from resolved type
+                        let variant_name_from_resolved = extract_variant_name(ty);
+                        let variant_name = variant_name_from_expr
+                            .as_ref()
+                            .or(variant_name_from_resolved.as_ref())
+                            .cloned()
+                            .unwrap_or_else(|| format!("Selector{i}"));
+
+                        if needs_alias {
+                            // Generate alias: pub type {variant_name}Ref<'a> =
+                            // {underlying_view_ty};
+                            let alias_name =
+                                Ident::new(&format!("{}Ref", variant_name), Span::call_site());
+                            view_type_aliases.push(quote! {
+                                pub type #alias_name<'a> = #underlying_view_ty;
+                            });
+                            // Include lifetime parameter when using the alias
+                            variant_view_types
+                                .push((variant_name.clone(), quote! { #alias_name<'_> }));
+                        } else {
+                            variant_view_types
+                                .push((variant_name.clone(), quote! { #underlying_view_ty }));
+                        }
+                    }
+
                     // Generate selector methods for lazy variant access
                     let selector_methods: Vec<TokenStream> = args
                         .iter()
@@ -530,7 +628,8 @@ impl<'a> TypeResolver<'a> {
                                     }
                                 }
                                 _ => {
-                                    let view_ty = ty.to_view_type();
+                                    // Use the view type we determined above (either alias or underlying)
+                                    let (_, view_ty) = variant_view_types.get(i).unwrap();
                                     quote! {
                                         pub fn #method_name(&self) -> Result<#view_ty, ssz::DecodeError> {
                                             if self.selector() != #selector_value {
@@ -623,6 +722,8 @@ impl<'a> TypeResolver<'a> {
                     self.union_tracker.borrow_mut().insert(
                         format!("{}Ref", ident_str),
                         quote! {
+                            #(#view_type_aliases)*
+
                             #[derive(Debug, Copy, Clone)]
                             pub struct #ref_ident<'a> {
                                 bytes: &'a [u8],

@@ -1528,7 +1528,175 @@ impl ClassDef {
                 let view_ty = field.ty.to_view_type_with_pragmas(&field.pragmas);
                 let (offset_expr, is_fixed, size_expr) = self.generate_field_layout(idx);
 
-                if is_fixed {
+                // Special handling for Option types (from Union[null, T])
+                // These are encoded as unions with a selector byte
+                if matches!(field.ty.resolution, TypeResolutionKind::Option(_)) {
+                    let inner_ty = match &field.ty.resolution {
+                        TypeResolutionKind::Option(inner) => inner,
+                        _ => unreachable!(),
+                    };
+                    let inner_view_ty = inner_ty.to_view_type_with_pragmas(&field.pragmas);
+
+                    if is_fixed {
+                        let size = size_expr.unwrap();
+                        if bitvector_offset > 0 {
+                            quote! {
+                                pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
+                                    let bitvector_offset = #bitvector_offset;
+                                    let offset = bitvector_offset + #offset_expr;
+                                    let end = offset + #size;
+                                    if end > self.bytes.len() {
+                                        return Err(ssz::DecodeError::InvalidByteLength {
+                                            len: self.bytes.len(),
+                                            expected: end,
+                                        });
+                                    }
+                                    let bytes = &self.bytes[offset..end];
+                                    if bytes.is_empty() {
+                                        return Err(ssz::DecodeError::InvalidByteLength {
+                                            len: 0,
+                                            expected: 1,
+                                        });
+                                    }
+                                    let selector = bytes[0];
+                                    match selector {
+                                        0 => Ok(None),
+                                        1 => {
+                                            let inner = <#inner_view_ty as ssz::view::DecodeView>::from_ssz_bytes(&bytes[1..])?;
+                                            Ok(Some(inner))
+                                        }
+                                        _ => Err(ssz::DecodeError::BytesInvalid(
+                                            format!("Invalid union selector for Option: {}", selector)
+                                        ))
+                                    }
+                                }
+                            }
+                        } else {
+                            quote! {
+                                pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
+                                    let offset = #offset_expr;
+                                    let end = offset + #size;
+                                    if end > self.bytes.len() {
+                                        return Err(ssz::DecodeError::InvalidByteLength {
+                                            len: self.bytes.len(),
+                                            expected: end,
+                                        });
+                                    }
+                                    let bytes = &self.bytes[offset..end];
+                                    if bytes.is_empty() {
+                                        return Err(ssz::DecodeError::InvalidByteLength {
+                                            len: 0,
+                                            expected: 1,
+                                        });
+                                    }
+                                    let selector = bytes[0];
+                                    match selector {
+                                        0 => Ok(None),
+                                        1 => {
+                                            let inner = <#inner_view_ty as ssz::view::DecodeView>::from_ssz_bytes(&bytes[1..])?;
+                                            Ok(Some(inner))
+                                        }
+                                        _ => Err(ssz::DecodeError::BytesInvalid(
+                                            format!("Invalid union selector for Option: {}", selector)
+                                        ))
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Variable-length Option field
+                        let mut variable_index = 0usize;
+                        for (i, f) in self.fields.iter().enumerate() {
+                            if i == idx {
+                                break;
+                            }
+                            if !f.ty.is_fixed_size() {
+                                variable_index += 1;
+                            }
+                        }
+                        let next_variable_index = variable_index + 1;
+
+                        if bitvector_offset > 0 {
+                            quote! {
+                                pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
+                                    let bitvector_offset = #bitvector_offset;
+                                    let container_bytes = &self.bytes[bitvector_offset..];
+                                    let start = ssz::layout::read_variable_offset(
+                                        container_bytes,
+                                        #fixed_portion_size,
+                                        #num_variable_fields,
+                                        #variable_index
+                                    )?;
+                                    let end = ssz::layout::read_variable_offset_or_end(
+                                        container_bytes,
+                                        #fixed_portion_size,
+                                        #num_variable_fields,
+                                        #next_variable_index
+                                    )?;
+                                    if start > end || end > container_bytes.len() {
+                                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+                                    }
+                                    let bytes = &container_bytes[start..end];
+                                    if bytes.is_empty() {
+                                        return Err(ssz::DecodeError::InvalidByteLength {
+                                            len: 0,
+                                            expected: 1,
+                                        });
+                                    }
+                                    let selector = bytes[0];
+                                    match selector {
+                                        0 => Ok(None),
+                                        1 => {
+                                            let inner = <#inner_view_ty as ssz::view::DecodeView>::from_ssz_bytes(&bytes[1..])?;
+                                            Ok(Some(inner))
+                                        }
+                                        _ => Err(ssz::DecodeError::BytesInvalid(
+                                            format!("Invalid union selector for Option: {}", selector)
+                                        ))
+                                    }
+                                }
+                            }
+                        } else {
+                            quote! {
+                                pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
+                                    let start = ssz::layout::read_variable_offset(
+                                        self.bytes,
+                                        #fixed_portion_size,
+                                        #num_variable_fields,
+                                        #variable_index
+                                    )?;
+                                    let end = ssz::layout::read_variable_offset_or_end(
+                                        self.bytes,
+                                        #fixed_portion_size,
+                                        #num_variable_fields,
+                                        #next_variable_index
+                                    )?;
+                                    if start > end || end > self.bytes.len() {
+                                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+                                    }
+                                    let bytes = &self.bytes[start..end];
+                                    if bytes.is_empty() {
+                                        return Err(ssz::DecodeError::InvalidByteLength {
+                                            len: 0,
+                                            expected: 1,
+                                        });
+                                    }
+                                    let selector = bytes[0];
+                                    match selector {
+                                        0 => Ok(None),
+                                        1 => {
+                                            let inner = <#inner_view_ty as ssz::view::DecodeView>::from_ssz_bytes(&bytes[1..])?;
+                                            Ok(Some(inner))
+                                        }
+                                        _ => Err(ssz::DecodeError::BytesInvalid(
+                                            format!("Invalid union selector for Option: {}", selector)
+                                        ))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if is_fixed {
                     let size = size_expr.unwrap();
                     if bitvector_offset > 0 {
                         // Account for bitvector at start
@@ -1920,6 +2088,13 @@ impl ClassDef {
                 // All fields now use getter methods and expect()
                 // We expect because if the view was constructed successfully, getters should work
                 match &field.ty.resolution {
+                    TypeResolutionKind::Option(_) => {
+                        // Option types (from Union[null, T]) - getter returns Result<Option<TRef>, Error>
+                        // Need to convert Option<TRef> to Option<T> by calling to_owned() on inner if Some
+                        quote! {
+                            #field_name: self.#field_name().expect("valid view").map(|inner| inner.to_owned())
+                        }
+                    }
                     TypeResolutionKind::Boolean | TypeResolutionKind::UInt(_) => {
                         // Primitives can be copied directly from getter
                         quote! {

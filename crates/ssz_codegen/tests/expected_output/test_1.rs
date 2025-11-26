@@ -3918,7 +3918,29 @@ pub mod tests {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
                     let bytes = &self.bytes[start..end];
-                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                    if bytes.is_empty() {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: 0,
+                            expected: 1,
+                        });
+                    }
+                    let selector = bytes[0];
+                    match selector {
+                        0 => Ok(None),
+                        1 => {
+                            let inner = <AliasMuRef<
+                                'a,
+                            > as ssz::view::DecodeView>::from_ssz_bytes(&bytes[1..])?;
+                            Ok(Some(inner))
+                        }
+                        _ => {
+                            Err(
+                                ssz::DecodeError::BytesInvalid(
+                                    format!("Invalid union selector for Option: {}", selector),
+                                ),
+                            )
+                        }
+                    }
                 }
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for NuRef<'a> {
@@ -4028,7 +4050,10 @@ pub mod tests {
                             .to_owned()
                             .expect("valid view"),
                         bbb: self.bbb().expect("valid view").to_owned(),
-                        test: self.test().expect("valid view").to_owned(),
+                        test: self
+                            .test()
+                            .expect("valid view")
+                            .map(|inner| inner.to_owned()),
                     }
                 }
             }
