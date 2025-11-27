@@ -99,6 +99,8 @@ impl<'b, T> Gobbler<'b, T> {
     /// The returned slice does not contain the entry that satisfied the
     /// condition.  The `.get()` entry will be the entry that satisfied the
     /// condition.
+    #[deprecated(note = "use gobble_slice_up_to_or_end instead")]
+    #[expect(dead_code, reason = "deprecated")]
     pub(crate) fn gobble_slice_up_to(&mut self, cond: impl Fn(&T) -> bool) -> Option<&[T]> {
         let start = self.at;
 
@@ -114,6 +116,31 @@ impl<'b, T> Gobbler<'b, T> {
 
         self.at = start;
         None
+    }
+
+    /// Scans forwards until finding an entry satisfying a condition. Gobbles
+    /// those entries and returns a slice over those entries. If we reach the
+    /// end of the entries without finding a satisfying entry, returns all
+    /// remaining entries from the start position to the end.
+    ///
+    /// The returned slice does not contain the entry that satisfied the
+    /// condition (if found).  The `.get()` entry will be the entry that satisfied
+    /// the condition, or `None` if we reached the end.
+    pub(crate) fn gobble_slice_up_to_or_end(&mut self, cond: impl Fn(&T) -> bool) -> &[T] {
+        let start = self.at;
+
+        while self.has_entry() {
+            let e = self.get_expect();
+
+            if cond(e) {
+                return &self.buf[start..self.at];
+            }
+
+            self.gobble_one();
+        }
+
+        // Reached the end without finding the condition - return all remaining
+        &self.buf[start..self.at]
     }
 
     /// Gets the item we're currently at.

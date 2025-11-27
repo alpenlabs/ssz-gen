@@ -610,4 +610,17 @@ mod tests {
 
         eprintln!("{toks:#?}");
     }
+
+    #[test]
+    fn test_parse_without_trailing_newline() {
+        // Test that parsing works when file doesn't end with newline
+        let s = "class Point(Container):\n  x_pos: int32\n  y_pos: int32";
+
+        let chars = s.chars().collect::<Vec<_>>();
+
+        let toks =
+            parse_char_array_to_tokens(&chars).expect("test: invoke parse_char_array_to_tokens");
+
+        eprintln!("{toks:#?}");
+    }
 }
