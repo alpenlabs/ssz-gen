@@ -612,8 +612,8 @@ fn parse_assignment(
 ) -> Result<AssignEntry, ParseError> {
     use TaggedToktr::*;
 
-    let ident = match gob.gobble_slice_up_to(is_toktr_eq) {
-        Some([Identifier(_, ident)]) => ident.clone(),
+    let ident = match gob.gobble_slice_up_to_or_end(is_toktr_eq) {
+        [Identifier(_, ident)] => ident.clone(),
         _ => return Err(ParseError::UnexpectedEnd),
     };
 
@@ -625,9 +625,7 @@ fn parse_assignment(
     );
     gob.gobble_one();
 
-    let Some(expr_slice) = gob.gobble_slice_up_to(is_toktr_newline) else {
-        return Err(ParseError::UnexpectedEnd);
-    };
+    let expr_slice = gob.gobble_slice_up_to_or_end(is_toktr_newline);
     let val = parse_assign_expr(expr_slice, import_map)?;
 
     Ok(AssignEntry::new(ident, val))
@@ -916,22 +914,20 @@ fn parse_class_body(
             _ => {}
         }
 
-        match gob.gobble_slice_up_to(is_toktr_newline) {
-            Some([DocString(_, d)]) => {
+        match gob.gobble_slice_up_to_or_end(is_toktr_newline) {
+            [DocString(_, d)] => {
                 if doc.is_some() {
                     return Err(ParseError::MultipleDocStrings);
                 }
                 doc = Some(d.clone());
             }
 
-            Some(
-                [
-                    Identifier(_, fname),
-                    Colon(_),
-                    Identifier(_, tyname),
-                    BracketBlock(_, tyarg_data),
-                ],
-            ) => {
+            [
+                Identifier(_, fname),
+                Colon(_),
+                Identifier(_, tyname),
+                BracketBlock(_, tyarg_data),
+            ] => {
                 let mut arg_gob = Gobbler::new(tyarg_data.children());
                 let ty_args = parse_ty_args(&mut arg_gob, import_map)?;
                 let ty = TyExprSpec::Complex(ComplexTySpec::new(tyname.clone(), ty_args));
@@ -948,15 +944,13 @@ fn parse_class_body(
                 comment_buffer.clear();
             }
 
-            Some(
-                [
-                    Identifier(_, fname),
-                    Colon(_),
-                    Identifier(_, first_ident),
-                    Dot(_),
-                    Identifier(_, second_ident),
-                ],
-            ) => {
+            [
+                Identifier(_, fname),
+                Colon(_),
+                Identifier(_, first_ident),
+                Dot(_),
+                Identifier(_, second_ident),
+            ] => {
                 let module_path = import_map.get(first_ident).unwrap();
                 let ty = TyExprSpec::Imported(ImportedTySpec::new(
                     module_path.clone(),
@@ -975,7 +969,7 @@ fn parse_class_body(
                 comment_buffer.clear();
             }
 
-            Some([Identifier(_, fname), Colon(_), Identifier(_, tyname)]) => {
+            [Identifier(_, fname), Colon(_), Identifier(_, tyname)] => {
                 let ty = TyExprSpec::Simple(tyname.clone());
                 let mut field = FieldDef::new(fname.clone(), ty);
                 // Attach comments to the field
@@ -990,12 +984,12 @@ fn parse_class_body(
                 comment_buffer.clear();
             }
 
-            Some([t, ..]) => return Err(ParseError::UnexpectedToken(*t.tag())),
+            [t, ..] => return Err(ParseError::UnexpectedToken(*t.tag())),
 
-            _ => {
-                // Ignore extra newlines and comments that don't precede a field
+            [] => {
+                // Empty slice means we hit a sequence of newlines or reached the end
+                // Just continue to the next iteration
                 comment_buffer.clear();
-                gob.gobble_until(is_toktr_not_newline);
                 continue;
             }
         }
@@ -1023,10 +1017,7 @@ fn parse_import<P: AsRef<Path>>(
     match gob.view() {
         [Import(_), ..] => {
             gob.gobble_one();
-            let path_tokens = match gob.gobble_slice_up_to(is_toktr_newline) {
-                Some(p) => Ok(p),
-                _ => return Err(ParseError::UnexpectedEnd),
-            }?;
+            let path_tokens = gob.gobble_slice_up_to_or_end(is_toktr_newline);
 
             let mut path = path
                 .parent()

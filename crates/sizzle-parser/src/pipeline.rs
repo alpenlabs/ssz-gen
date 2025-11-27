@@ -269,4 +269,68 @@ TestB = mod_b.TypeB
             "External crate paths should be constructed correctly and not cause UnknownImport"
         );
     }
+
+    #[test]
+    fn test_schema_without_trailing_newline() {
+        // Test that parsing works when the file doesn't end with a newline
+        // This was causing an infinite loop in parse_class_body
+        const SCHEMA: &str = "class Point2d(Container):\n  x_coord: uint32\n  y_coord: uint32";
+
+        let files = HashMap::from([(Path::new("test.ssz").to_path_buf(), SCHEMA.to_string())]);
+
+        let result = parse_str_schema(&files, &[]);
+        assert!(
+            result.is_ok(),
+            "Schema without trailing newline should parse successfully"
+        );
+    }
+
+    #[test]
+    fn test_assignment_without_trailing_newline() {
+        // Test that parsing works when an assignment doesn't end with a newline
+        const SCHEMA: &str = "MyAlias = uint32";
+
+        let files = HashMap::from([(Path::new("test.ssz").to_path_buf(), SCHEMA.to_string())]);
+
+        let result = parse_str_schema(&files, &[]);
+        assert!(
+            result.is_ok(),
+            "Assignment without trailing newline should parse successfully"
+        );
+    }
+
+    #[test]
+    fn test_import_without_trailing_newline() {
+        // Test that parsing works when an import doesn't end with a newline
+        const SCHEMA: &str = "import ssz_external";
+
+        let files = HashMap::from([(Path::new("test.ssz").to_path_buf(), SCHEMA.to_string())]);
+
+        let result = parse_str_schema(&files, &["ssz_external"]);
+        assert!(
+            result.is_ok(),
+            "Import without trailing newline should parse successfully"
+        );
+    }
+
+    #[test]
+    fn test_complex_schema_without_trailing_newline() {
+        // Test a more complex schema without trailing newline
+        const SCHEMA: &str = r"
+Epoch = uint32
+SomeVec = List[Epoch, 1337]
+
+class Header(Container):
+    slot: uint64
+    epoch: Epoch
+    vec: SomeVec";
+
+        let files = HashMap::from([(Path::new("test.ssz").to_path_buf(), SCHEMA.to_string())]);
+
+        let result = parse_str_schema(&files, &[]);
+        assert!(
+            result.is_ok(),
+            "Complex schema without trailing newline should parse successfully"
+        );
+    }
 }
