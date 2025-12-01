@@ -1420,7 +1420,7 @@ impl ClassDef {
                     .map(|(idx, _)| {
                         let field_name = &field_names[idx];
                         quote! {
-                            if let Some(ref #field_name) = self.#field_name {
+                            if let ssz_types::Optional::Some(ref #field_name) = self.#field_name {
                                 hasher.write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(#field_name).as_ref())
                                     .expect("tree hash derive should not apply too many leaves");
                             } else {

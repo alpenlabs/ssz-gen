@@ -41,7 +41,7 @@ pub mod tests {
                             .expect("Should not be out of bounds");
                     }
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
-                    if let Some(ref a) = self.a {
+                    if let ssz_types::Optional::Some(ref a) = self.a {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(a).as_ref(),
@@ -52,7 +52,7 @@ pub mod tests {
                             .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
-                    if let Some(ref b) = self.b {
+                    if let ssz_types::Optional::Some(ref b) = self.b {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(b).as_ref(),
@@ -251,7 +251,7 @@ pub mod tests {
                             .expect("Should not be out of bounds");
                     }
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(8usize);
-                    if let Some(ref x) = self.x {
+                    if let ssz_types::Optional::Some(ref x) = self.x {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(x).as_ref(),
@@ -262,7 +262,7 @@ pub mod tests {
                             .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
-                    if let Some(ref y) = self.y {
+                    if let ssz_types::Optional::Some(ref y) = self.y {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(y).as_ref(),
@@ -273,7 +273,7 @@ pub mod tests {
                             .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
-                    if let Some(ref z) = self.z {
+                    if let ssz_types::Optional::Some(ref z) = self.z {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(z).as_ref(),
@@ -284,7 +284,7 @@ pub mod tests {
                             .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
-                    if let Some(ref w) = self.w {
+                    if let ssz_types::Optional::Some(ref w) = self.w {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(w).as_ref(),
@@ -537,7 +537,7 @@ pub mod tests {
                             .expect("Should not be out of bounds");
                     }
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(8usize);
-                    if let Some(ref x) = self.x {
+                    if let ssz_types::Optional::Some(ref x) = self.x {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(x).as_ref(),
@@ -548,7 +548,7 @@ pub mod tests {
                             .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
-                    if let Some(ref y) = self.y {
+                    if let ssz_types::Optional::Some(ref y) = self.y {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(y).as_ref(),
@@ -559,7 +559,7 @@ pub mod tests {
                             .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
-                    if let Some(ref z) = self.z {
+                    if let ssz_types::Optional::Some(ref z) = self.z {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(z).as_ref(),
@@ -570,7 +570,7 @@ pub mod tests {
                             .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
-                    if let Some(ref w) = self.w {
+                    if let ssz_types::Optional::Some(ref w) = self.w {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(w).as_ref(),
@@ -822,7 +822,7 @@ pub mod tests {
                             .expect("Should not be out of bounds");
                     }
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(8usize);
-                    if let Some(ref x) = self.x {
+                    if let ssz_types::Optional::Some(ref x) = self.x {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(x).as_ref(),
@@ -833,7 +833,7 @@ pub mod tests {
                             .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
-                    if let Some(ref y) = self.y {
+                    if let ssz_types::Optional::Some(ref y) = self.y {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(y).as_ref(),
@@ -844,7 +844,7 @@ pub mod tests {
                             .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
-                    if let Some(ref z) = self.z {
+                    if let ssz_types::Optional::Some(ref z) = self.z {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(z).as_ref(),
@@ -1058,7 +1058,7 @@ pub mod tests {
                             .expect("Should not be out of bounds");
                     }
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
-                    if let Some(ref a) = self.a {
+                    if let ssz_types::Optional::Some(ref a) = self.a {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(a).as_ref(),
@@ -1069,7 +1069,7 @@ pub mod tests {
                             .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
-                    if let Some(ref b) = self.b {
+                    if let ssz_types::Optional::Some(ref b) = self.b {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(b).as_ref(),
@@ -1248,7 +1248,7 @@ pub mod tests {
                             .expect("Should not be out of bounds");
                     }
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(8usize);
-                    if let Some(ref w) = self.w {
+                    if let ssz_types::Optional::Some(ref w) = self.w {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(w).as_ref(),
@@ -1417,7 +1417,7 @@ pub mod tests {
                             .expect("Should not be out of bounds");
                     }
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(8usize);
-                    if let Some(ref y) = self.y {
+                    if let ssz_types::Optional::Some(ref y) = self.y {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(y).as_ref(),
@@ -1428,7 +1428,7 @@ pub mod tests {
                             .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
-                    if let Some(ref z) = self.z {
+                    if let ssz_types::Optional::Some(ref z) = self.z {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(z).as_ref(),
@@ -1624,7 +1624,7 @@ pub mod tests {
                             .expect("Should not be out of bounds");
                     }
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(8usize);
-                    if let Some(ref x) = self.x {
+                    if let ssz_types::Optional::Some(ref x) = self.x {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(x).as_ref(),
@@ -1635,7 +1635,7 @@ pub mod tests {
                             .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
-                    if let Some(ref z) = self.z {
+                    if let ssz_types::Optional::Some(ref z) = self.z {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(z).as_ref(),
@@ -1646,7 +1646,7 @@ pub mod tests {
                             .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
-                    if let Some(ref w) = self.w {
+                    if let ssz_types::Optional::Some(ref w) = self.w {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(w).as_ref(),
@@ -1858,7 +1858,7 @@ pub mod tests {
                             .expect("Should not be out of bounds");
                     }
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(8usize);
-                    if let Some(ref x) = self.x {
+                    if let ssz_types::Optional::Some(ref x) = self.x {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(x).as_ref(),
@@ -1869,7 +1869,7 @@ pub mod tests {
                             .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
-                    if let Some(ref w) = self.w {
+                    if let ssz_types::Optional::Some(ref w) = self.w {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(w).as_ref(),
@@ -2098,7 +2098,7 @@ pub mod tests {
                             .expect("Should not be out of bounds");
                     }
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(8usize);
-                    if let Some(ref x) = self.x {
+                    if let ssz_types::Optional::Some(ref x) = self.x {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(x).as_ref(),
@@ -2109,7 +2109,7 @@ pub mod tests {
                             .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
-                    if let Some(ref y) = self.y {
+                    if let ssz_types::Optional::Some(ref y) = self.y {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(y).as_ref(),
@@ -2120,7 +2120,7 @@ pub mod tests {
                             .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
-                    if let Some(ref z) = self.z {
+                    if let ssz_types::Optional::Some(ref z) = self.z {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(z).as_ref(),
@@ -2131,7 +2131,7 @@ pub mod tests {
                             .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
-                    if let Some(ref w) = self.w {
+                    if let ssz_types::Optional::Some(ref w) = self.w {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(w).as_ref(),
@@ -2142,7 +2142,7 @@ pub mod tests {
                             .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
-                    if let Some(ref a) = self.a {
+                    if let ssz_types::Optional::Some(ref a) = self.a {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(a).as_ref(),
@@ -2153,7 +2153,7 @@ pub mod tests {
                             .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
-                    if let Some(ref b) = self.b {
+                    if let ssz_types::Optional::Some(ref b) = self.b {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(b).as_ref(),
@@ -2164,7 +2164,7 @@ pub mod tests {
                             .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
-                    if let Some(ref c) = self.c {
+                    if let ssz_types::Optional::Some(ref c) = self.c {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(c).as_ref(),
@@ -2175,7 +2175,7 @@ pub mod tests {
                             .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
-                    if let Some(ref d) = self.d {
+                    if let ssz_types::Optional::Some(ref d) = self.d {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(d).as_ref(),

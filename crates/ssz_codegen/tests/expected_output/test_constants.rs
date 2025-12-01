@@ -5,7 +5,7 @@ use ssz_derive::{Encode, Decode};
 use tree_hash::TreeHashDigest;
 use tree_hash_derive::TreeHash;
 use ssz::view::*;
-#[derive(Encode, Decode)]
+#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
 #[ssz(enum_behaviour = "union")]
 pub enum AliasOptionUnion {
     Selector0(u8),
@@ -99,19 +99,23 @@ for AliasOptionUnionRef<'a> {
         match self.selector() {
             0u8 => {
                 let value = self.as_selector0().expect("valid selector");
-                tree_hash::mix_in_selector_with_hasher::<H>(&value.tree_hash_root(), 0u8)
+                tree_hash::mix_in_selector_with_hasher::<
+                    H,
+                >(&<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value), 0u8)
                     .expect("valid selector")
             }
             1u8 => {
                 let value = self.as_selector1().expect("valid selector");
-                tree_hash::mix_in_selector_with_hasher::<H>(&value.tree_hash_root(), 1u8)
+                tree_hash::mix_in_selector_with_hasher::<
+                    H,
+                >(&<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value), 1u8)
                     .expect("valid selector")
             }
             _ => panic!("Invalid union selector: {}", self.selector()),
         }
     }
 }
-#[derive(Encode, Decode)]
+#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
 #[ssz(enum_behaviour = "union")]
 pub enum FirstUnion {
     Selector0(u8),
@@ -198,19 +202,23 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for FirstUnionRef<
         match self.selector() {
             0u8 => {
                 let value = self.as_selector0().expect("valid selector");
-                tree_hash::mix_in_selector_with_hasher::<H>(&value.tree_hash_root(), 0u8)
+                tree_hash::mix_in_selector_with_hasher::<
+                    H,
+                >(&<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value), 0u8)
                     .expect("valid selector")
             }
             1u8 => {
                 let value = self.as_selector1().expect("valid selector");
-                tree_hash::mix_in_selector_with_hasher::<H>(&value.tree_hash_root(), 1u8)
+                tree_hash::mix_in_selector_with_hasher::<
+                    H,
+                >(&<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value), 1u8)
                     .expect("valid selector")
             }
             _ => panic!("Invalid union selector: {}", self.selector()),
         }
     }
 }
-#[derive(Encode, Decode)]
+#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
 #[ssz(enum_behaviour = "union")]
 pub enum TestUnion {
     Selector0,
@@ -324,19 +332,23 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for TestUnionRef<'
             }
             1u8 => {
                 let value = self.as_selector1().expect("valid selector");
-                tree_hash::mix_in_selector_with_hasher::<H>(&value.tree_hash_root(), 1u8)
+                tree_hash::mix_in_selector_with_hasher::<
+                    H,
+                >(&<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value), 1u8)
                     .expect("valid selector")
             }
             2u8 => {
                 let value = self.as_selector2().expect("valid selector");
-                tree_hash::mix_in_selector_with_hasher::<H>(&value.tree_hash_root(), 2u8)
+                tree_hash::mix_in_selector_with_hasher::<
+                    H,
+                >(&<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value), 2u8)
                     .expect("valid selector")
             }
             _ => panic!("Invalid union selector: {}", self.selector()),
         }
     }
 }
-#[derive(Encode, Decode)]
+#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
 #[ssz(enum_behaviour = "union")]
 pub enum UnionA {
     Selector0(u8),
@@ -440,28 +452,34 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for UnionARef<'a> 
         match self.selector() {
             0u8 => {
                 let value = self.as_selector0().expect("valid selector");
-                tree_hash::mix_in_selector_with_hasher::<H>(&value.tree_hash_root(), 0u8)
+                tree_hash::mix_in_selector_with_hasher::<
+                    H,
+                >(&<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value), 0u8)
                     .expect("valid selector")
             }
             1u8 => {
                 let value = self.as_selector1().expect("valid selector");
-                tree_hash::mix_in_selector_with_hasher::<H>(&value.tree_hash_root(), 1u8)
+                tree_hash::mix_in_selector_with_hasher::<
+                    H,
+                >(&<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value), 1u8)
                     .expect("valid selector")
             }
             2u8 => {
                 let value = self.as_selector2().expect("valid selector");
-                tree_hash::mix_in_selector_with_hasher::<H>(&value.tree_hash_root(), 2u8)
+                tree_hash::mix_in_selector_with_hasher::<
+                    H,
+                >(&<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value), 2u8)
                     .expect("valid selector")
             }
             _ => panic!("Invalid union selector: {}", self.selector()),
         }
     }
 }
-#[derive(Encode, Decode)]
+#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
 #[ssz(enum_behaviour = "union")]
 pub enum UnionB {
     Selector0(u8),
-    Selector1(UnionA),
+    UnionA(UnionA),
     Selector2(u32),
     Selector3(VariableList<u8, 12usize>),
 }
@@ -482,7 +500,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for UnionB {
                 tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
                     .expect("valid selector")
             }
-            UnionB::Selector1(inner) => {
+            UnionB::UnionA(inner) => {
                 let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
                 tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
                     .expect("valid selector")
@@ -552,9 +570,7 @@ impl<'a> UnionBRef<'a> {
         match self.selector() {
             0u8 => UnionB::Selector0(self.as_selector0().expect("valid selector")),
             1u8 => {
-                UnionB::Selector1(
-                    self.as_selector1().expect("valid selector").to_owned(),
-                )
+                UnionB::UnionA(self.as_selector1().expect("valid selector").to_owned())
             }
             2u8 => UnionB::Selector2(self.as_selector2().expect("valid selector")),
             3u8 => {
@@ -586,33 +602,41 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for UnionBRef<'a> 
         match self.selector() {
             0u8 => {
                 let value = self.as_selector0().expect("valid selector");
-                tree_hash::mix_in_selector_with_hasher::<H>(&value.tree_hash_root(), 0u8)
+                tree_hash::mix_in_selector_with_hasher::<
+                    H,
+                >(&<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value), 0u8)
                     .expect("valid selector")
             }
             1u8 => {
                 let value = self.as_selector1().expect("valid selector");
-                tree_hash::mix_in_selector_with_hasher::<H>(&value.tree_hash_root(), 1u8)
+                tree_hash::mix_in_selector_with_hasher::<
+                    H,
+                >(&<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value), 1u8)
                     .expect("valid selector")
             }
             2u8 => {
                 let value = self.as_selector2().expect("valid selector");
-                tree_hash::mix_in_selector_with_hasher::<H>(&value.tree_hash_root(), 2u8)
+                tree_hash::mix_in_selector_with_hasher::<
+                    H,
+                >(&<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value), 2u8)
                     .expect("valid selector")
             }
             3u8 => {
                 let value = self.as_selector3().expect("valid selector");
-                tree_hash::mix_in_selector_with_hasher::<H>(&value.tree_hash_root(), 3u8)
+                tree_hash::mix_in_selector_with_hasher::<
+                    H,
+                >(&<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value), 3u8)
                     .expect("valid selector")
             }
             _ => panic!("Invalid union selector: {}", self.selector()),
         }
     }
 }
-#[derive(Encode, Decode)]
+#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
 #[ssz(enum_behaviour = "union")]
 pub enum UnionC {
-    Selector0(AliasUintAlias),
-    Selector1(AliasUintAlias),
+    AliasUintAlias(AliasUintAlias),
+    AliasUintAlias(AliasUintAlias),
 }
 impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for UnionC {
     fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -626,12 +650,12 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for UnionC {
     }
     fn tree_hash_root(&self) -> H::Output {
         match self {
-            UnionC::Selector0(inner) => {
+            UnionC::AliasUintAlias(inner) => {
                 let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
                 tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
                     .expect("valid selector")
             }
-            UnionC::Selector1(inner) => {
+            UnionC::AliasUintAlias(inner) => {
                 let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
                 tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
                     .expect("valid selector")
@@ -669,8 +693,8 @@ impl<'a> UnionCRef<'a> {
     }
     pub fn to_owned(&self) -> UnionC {
         match self.selector() {
-            0u8 => UnionC::Selector0(self.as_selector0().expect("valid selector")),
-            1u8 => UnionC::Selector1(self.as_selector1().expect("valid selector")),
+            0u8 => UnionC::AliasUintAlias(self.as_selector0().expect("valid selector")),
+            1u8 => UnionC::AliasUintAlias(self.as_selector1().expect("valid selector")),
             _ => panic!("Invalid union selector: {}", self.selector()),
         }
     }
@@ -695,23 +719,27 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for UnionCRef<'a> 
         match self.selector() {
             0u8 => {
                 let value = self.as_selector0().expect("valid selector");
-                tree_hash::mix_in_selector_with_hasher::<H>(&value.tree_hash_root(), 0u8)
+                tree_hash::mix_in_selector_with_hasher::<
+                    H,
+                >(&<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value), 0u8)
                     .expect("valid selector")
             }
             1u8 => {
                 let value = self.as_selector1().expect("valid selector");
-                tree_hash::mix_in_selector_with_hasher::<H>(&value.tree_hash_root(), 1u8)
+                tree_hash::mix_in_selector_with_hasher::<
+                    H,
+                >(&<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value), 1u8)
                     .expect("valid selector")
             }
             _ => panic!("Invalid union selector: {}", self.selector()),
         }
     }
 }
-#[derive(Encode, Decode)]
+#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
 #[ssz(enum_behaviour = "union")]
 pub enum UnionD {
-    Selector0(AliasUintAlias),
-    Selector1(AliasUintAlias),
+    AliasUintAlias(AliasUintAlias),
+    AliasUintAlias(AliasUintAlias),
 }
 impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for UnionD {
     fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -725,12 +753,12 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for UnionD {
     }
     fn tree_hash_root(&self) -> H::Output {
         match self {
-            UnionD::Selector0(inner) => {
+            UnionD::AliasUintAlias(inner) => {
                 let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
                 tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
                     .expect("valid selector")
             }
-            UnionD::Selector1(inner) => {
+            UnionD::AliasUintAlias(inner) => {
                 let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
                 tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
                     .expect("valid selector")
@@ -768,8 +796,8 @@ impl<'a> UnionDRef<'a> {
     }
     pub fn to_owned(&self) -> UnionD {
         match self.selector() {
-            0u8 => UnionD::Selector0(self.as_selector0().expect("valid selector")),
-            1u8 => UnionD::Selector1(self.as_selector1().expect("valid selector")),
+            0u8 => UnionD::AliasUintAlias(self.as_selector0().expect("valid selector")),
+            1u8 => UnionD::AliasUintAlias(self.as_selector1().expect("valid selector")),
             _ => panic!("Invalid union selector: {}", self.selector()),
         }
     }
@@ -794,12 +822,16 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for UnionDRef<'a> 
         match self.selector() {
             0u8 => {
                 let value = self.as_selector0().expect("valid selector");
-                tree_hash::mix_in_selector_with_hasher::<H>(&value.tree_hash_root(), 0u8)
+                tree_hash::mix_in_selector_with_hasher::<
+                    H,
+                >(&<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value), 0u8)
                     .expect("valid selector")
             }
             1u8 => {
                 let value = self.as_selector1().expect("valid selector");
-                tree_hash::mix_in_selector_with_hasher::<H>(&value.tree_hash_root(), 1u8)
+                tree_hash::mix_in_selector_with_hasher::<
+                    H,
+                >(&<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value), 1u8)
                     .expect("valid selector")
             }
             _ => panic!("Invalid union selector: {}", self.selector()),
@@ -817,7 +849,7 @@ pub type AliasVecA = FixedBytes<10usize>;
 pub type AliasVecB = AliasVecA;
 pub type AliasListAlias = VariableList<u8, 5usize>;
 pub type AliasNested = AliasUintAlias;
-pub type BitAlias = BitList<42usize>;
+pub type BitAlias = BitList<{ VAL_X as usize }>;
 pub type UnionE = UnionD;
 #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
 #[ssz(struct_behaviour = "container")]
@@ -1169,7 +1201,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Gamma {
             active_fields.set(1usize, true).expect("Should not be out of bounds");
         }
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(42usize);
-        if let Some(ref g) = self.g {
+        if let ssz_types::Optional::Some(ref g) = self.g {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(g).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -1178,7 +1210,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Gamma {
                 .write(H::get_zero_hash_slice(0))
                 .expect("tree hash derive should not apply too many leaves");
         }
-        if let Some(ref h) = self.h {
+        if let ssz_types::Optional::Some(ref h) = self.h {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(h).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -1487,7 +1519,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Epsilon {
             active_fields.set(3usize, true).expect("Should not be out of bounds");
         }
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(42usize);
-        if let Some(ref g) = self.g {
+        if let ssz_types::Optional::Some(ref g) = self.g {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(g).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -1496,7 +1528,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Epsilon {
                 .write(H::get_zero_hash_slice(0))
                 .expect("tree hash derive should not apply too many leaves");
         }
-        if let Some(ref h) = self.h {
+        if let ssz_types::Optional::Some(ref h) = self.h {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(h).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -1505,7 +1537,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Epsilon {
                 .write(H::get_zero_hash_slice(0))
                 .expect("tree hash derive should not apply too many leaves");
         }
-        if let Some(ref i) = self.i {
+        if let ssz_types::Optional::Some(ref i) = self.i {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(i).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -1514,7 +1546,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Epsilon {
                 .write(H::get_zero_hash_slice(0))
                 .expect("tree hash derive should not apply too many leaves");
         }
-        if let Some(ref j) = self.j {
+        if let ssz_types::Optional::Some(ref j) = self.j {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(j).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -1742,7 +1774,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Zeta {
             active_fields.set(1usize, true).expect("Should not be out of bounds");
         }
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(128usize);
-        if let Some(ref u) = self.u {
+        if let ssz_types::Optional::Some(ref u) = self.u {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(u).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -1751,7 +1783,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Zeta {
                 .write(H::get_zero_hash_slice(0))
                 .expect("tree hash derive should not apply too many leaves");
         }
-        if let Some(ref v) = self.v {
+        if let ssz_types::Optional::Some(ref v) = self.v {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(v).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -2484,7 +2516,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Iota {
             active_fields.set(5usize, true).expect("Should not be out of bounds");
         }
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(42usize);
-        if let Some(ref g) = self.g {
+        if let ssz_types::Optional::Some(ref g) = self.g {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(g).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -2493,7 +2525,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Iota {
                 .write(H::get_zero_hash_slice(0))
                 .expect("tree hash derive should not apply too many leaves");
         }
-        if let Some(ref h) = self.h {
+        if let ssz_types::Optional::Some(ref h) = self.h {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(h).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -2502,7 +2534,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Iota {
                 .write(H::get_zero_hash_slice(0))
                 .expect("tree hash derive should not apply too many leaves");
         }
-        if let Some(ref i) = self.i {
+        if let ssz_types::Optional::Some(ref i) = self.i {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(i).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -2511,7 +2543,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Iota {
                 .write(H::get_zero_hash_slice(0))
                 .expect("tree hash derive should not apply too many leaves");
         }
-        if let Some(ref j) = self.j {
+        if let ssz_types::Optional::Some(ref j) = self.j {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(j).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -2520,7 +2552,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Iota {
                 .write(H::get_zero_hash_slice(0))
                 .expect("tree hash derive should not apply too many leaves");
         }
-        if let Some(ref r) = self.r {
+        if let ssz_types::Optional::Some(ref r) = self.r {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(r).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -2529,7 +2561,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Iota {
                 .write(H::get_zero_hash_slice(0))
                 .expect("tree hash derive should not apply too many leaves");
         }
-        if let Some(ref s) = self.s {
+        if let ssz_types::Optional::Some(ref s) = self.s {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(s).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -2996,7 +3028,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Lambda {
             active_fields.set(1usize, true).expect("Should not be out of bounds");
         }
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(4usize);
-        if let Some(ref w) = self.w {
+        if let ssz_types::Optional::Some(ref w) = self.w {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(w).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -3005,7 +3037,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Lambda {
                 .write(H::get_zero_hash_slice(0))
                 .expect("tree hash derive should not apply too many leaves");
         }
-        if let Some(ref x) = self.x {
+        if let ssz_types::Optional::Some(ref x) = self.x {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(x).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -3425,7 +3457,29 @@ impl<'a> NuRef<'a> {
             return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
         }
         let bytes = &self.bytes[start..end];
-        ssz::view::DecodeView::from_ssz_bytes(bytes)
+        if bytes.is_empty() {
+            return Err(ssz::DecodeError::InvalidByteLength {
+                len: 0,
+                expected: 1,
+            });
+        }
+        let selector = bytes[0];
+        match selector {
+            0 => Ok(None),
+            1 => {
+                let inner = <AliasMuRef<
+                    'a,
+                > as ssz::view::DecodeView>::from_ssz_bytes(&bytes[1..])?;
+                Ok(Some(inner))
+            }
+            _ => {
+                Err(
+                    ssz::DecodeError::BytesInvalid(
+                        format!("Invalid union selector for Option: {}", selector),
+                    ),
+                )
+            }
+        }
     }
 }
 impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for NuRef<'a> {
@@ -3520,7 +3574,7 @@ impl<'a> NuRef<'a> {
             zz: self.zz().expect("valid view").to_owned(),
             aaa: self.aaa().expect("valid view").to_owned().expect("valid view"),
             bbb: self.bbb().expect("valid view").to_owned(),
-            test: self.test().expect("valid view").to_owned(),
+            test: self.test().expect("valid view").map(|inner| inner.to_owned()),
         }
     }
 }
