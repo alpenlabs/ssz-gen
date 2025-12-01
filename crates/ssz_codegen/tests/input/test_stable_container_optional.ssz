@@ -1,0 +1,7 @@
+### Test StableContainer with Optional fields
+### This tests the bug where Optional<T> fields in StableContainer
+### are incorrectly decoded
+
+class TestStableContainer(StableContainer[16]):
+    field_a: Optional[uint64]
+    field_b: Optional[uint64]

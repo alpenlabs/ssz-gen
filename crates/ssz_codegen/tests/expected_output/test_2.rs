@@ -29,7 +29,7 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
-                    let mut active_fields = BitVector::<2u64>::new();
+                    let mut active_fields = BitVector::<2usize>::new();
                     if self.a.is_some() {
                         active_fields
                             .set(0usize, true)
@@ -158,6 +158,7 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for AlphaRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    use ssz::Decode;
                     let bitvector_length = 1usize;
                     if bytes.len() < bitvector_length {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -165,7 +166,7 @@ pub mod tests {
                             expected: bitvector_length,
                         });
                     }
-                    let _bitvector = ssz::BitVector::<
+                    let _bitvector = ssz_types::BitVector::<
                         2usize,
                     >::from_ssz_bytes(&bytes[0..bitvector_length])?;
                     if bytes.len() < bitvector_length {
@@ -203,8 +204,18 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> Alpha {
                     Alpha {
-                        a: self.a().expect("valid view").to_owned(),
-                        b: self.b().expect("valid view").to_owned(),
+                        a: match self.a().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        b: match self.b().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
                     }
                 }
             }
@@ -229,7 +240,7 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
-                    let mut active_fields = BitVector::<8u64>::new();
+                    let mut active_fields = BitVector::<8usize>::new();
                     if self.x.is_some() {
                         active_fields
                             .set(0usize, true)
@@ -442,6 +453,7 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for InnerBaseRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    use ssz::Decode;
                     let bitvector_length = 1usize;
                     if bytes.len() < bitvector_length {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -449,7 +461,7 @@ pub mod tests {
                             expected: bitvector_length,
                         });
                     }
-                    let _bitvector = ssz::BitVector::<
+                    let _bitvector = ssz_types::BitVector::<
                         8usize,
                     >::from_ssz_bytes(&bytes[0..bitvector_length])?;
                     if bytes.len() < bitvector_length {
@@ -487,10 +499,30 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> InnerBase {
                     InnerBase {
-                        x: self.x().expect("valid view").to_owned(),
-                        y: self.y().expect("valid view").to_owned(),
-                        z: self.z().expect("valid view").to_owned(),
-                        w: self.w().expect("valid view").to_owned(),
+                        x: match self.x().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        y: match self.y().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        z: match self.z().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        w: match self.w().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
                     }
                 }
             }
@@ -515,7 +547,7 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
-                    let mut active_fields = BitVector::<8u64>::new();
+                    let mut active_fields = BitVector::<8usize>::new();
                     if self.x.is_some() {
                         active_fields
                             .set(0usize, true)
@@ -732,6 +764,7 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for InnerProfile1Ref<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    use ssz::Decode;
                     let bitvector_length = 1usize;
                     if bytes.len() < bitvector_length {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -739,7 +772,7 @@ pub mod tests {
                             expected: bitvector_length,
                         });
                     }
-                    let _bitvector = ssz::BitVector::<
+                    let _bitvector = ssz_types::BitVector::<
                         8usize,
                     >::from_ssz_bytes(&bytes[0..bitvector_length])?;
                     if bytes.len() < bitvector_length {
@@ -779,9 +812,24 @@ pub mod tests {
                 pub fn to_owned(&self) -> InnerProfile1 {
                     InnerProfile1 {
                         x: self.x().expect("valid view"),
-                        y: self.y().expect("valid view").to_owned(),
-                        z: self.z().expect("valid view").to_owned(),
-                        w: self.w().expect("valid view").to_owned(),
+                        y: match self.y().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        z: match self.z().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        w: match self.w().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
                     }
                 }
             }
@@ -805,7 +853,7 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
-                    let mut active_fields = BitVector::<8u64>::new();
+                    let mut active_fields = BitVector::<8usize>::new();
                     if self.x.is_some() {
                         active_fields
                             .set(0usize, true)
@@ -975,6 +1023,7 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for InnerProfile2Ref<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    use ssz::Decode;
                     let bitvector_length = 1usize;
                     if bytes.len() < bitvector_length {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -982,7 +1031,7 @@ pub mod tests {
                             expected: bitvector_length,
                         });
                     }
-                    let _bitvector = ssz::BitVector::<
+                    let _bitvector = ssz_types::BitVector::<
                         8usize,
                     >::from_ssz_bytes(&bytes[0..bitvector_length])?;
                     if bytes.len() < bitvector_length {
@@ -1021,9 +1070,24 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> InnerProfile2 {
                     InnerProfile2 {
-                        x: self.x().expect("valid view").to_owned(),
-                        y: self.y().expect("valid view").to_owned().into(),
-                        z: self.z().expect("valid view").to_owned(),
+                        x: match self.x().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        y: match self.y().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        z: match self.z().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
                     }
                 }
             }
@@ -1046,7 +1110,7 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
-                    let mut active_fields = BitVector::<2u64>::new();
+                    let mut active_fields = BitVector::<2usize>::new();
                     if self.a.is_some() {
                         active_fields
                             .set(0usize, true)
@@ -1173,6 +1237,7 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for AlphaProfileRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    use ssz::Decode;
                     let bitvector_length = 1usize;
                     if bytes.len() < bitvector_length {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -1180,7 +1245,7 @@ pub mod tests {
                             expected: bitvector_length,
                         });
                     }
-                    let _bitvector = ssz::BitVector::<
+                    let _bitvector = ssz_types::BitVector::<
                         2usize,
                     >::from_ssz_bytes(&bytes[0..bitvector_length])?;
                     if bytes.len() < bitvector_length {
@@ -1219,7 +1284,12 @@ pub mod tests {
                 pub fn to_owned(&self) -> AlphaProfile {
                     AlphaProfile {
                         a: self.a().expect("valid view"),
-                        b: self.b().expect("valid view").to_owned(),
+                        b: match self.b().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
                     }
                 }
             }
@@ -1241,7 +1311,7 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
-                    let mut active_fields = BitVector::<8u64>::new();
+                    let mut active_fields = BitVector::<8usize>::new();
                     if self.w.is_some() {
                         active_fields
                             .set(0usize, true)
@@ -1382,7 +1452,12 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> InnerProfile3 {
                     InnerProfile3 {
-                        w: self.w().expect("valid view").to_owned(),
+                        w: match self.w().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
                     }
                 }
             }
@@ -1405,7 +1480,7 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
-                    let mut active_fields = BitVector::<8u64>::new();
+                    let mut active_fields = BitVector::<8usize>::new();
                     if self.y.is_some() {
                         active_fields
                             .set(0usize, true)
@@ -1582,8 +1657,18 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> InnerProfile4 {
                     InnerProfile4 {
-                        y: self.y().expect("valid view").to_owned().into(),
-                        z: self.z().expect("valid view").to_owned(),
+                        y: match self.y().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        z: match self.z().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
                     }
                 }
             }
@@ -1607,7 +1692,7 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
-                    let mut active_fields = BitVector::<8u64>::new();
+                    let mut active_fields = BitVector::<8usize>::new();
                     if self.x.is_some() {
                         active_fields
                             .set(0usize, true)
@@ -1821,8 +1906,18 @@ pub mod tests {
                 pub fn to_owned(&self) -> InnerProfile5 {
                     InnerProfile5 {
                         x: self.x().expect("valid view"),
-                        z: self.z().expect("valid view").to_owned(),
-                        w: self.w().expect("valid view").to_owned(),
+                        z: match self.z().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        w: match self.w().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
                     }
                 }
             }
@@ -1846,7 +1941,7 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
-                    let mut active_fields = BitVector::<8u64>::new();
+                    let mut active_fields = BitVector::<8usize>::new();
                     if self.x.is_some() {
                         active_fields
                             .set(0usize, true)
@@ -1979,6 +2074,7 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for ProfileProfileRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    use ssz::Decode;
                     let bitvector_length = 1usize;
                     if bytes.len() < bitvector_length {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -1986,7 +2082,7 @@ pub mod tests {
                             expected: bitvector_length,
                         });
                     }
-                    let _bitvector = ssz::BitVector::<
+                    let _bitvector = ssz_types::BitVector::<
                         8usize,
                     >::from_ssz_bytes(&bytes[0..bitvector_length])?;
                     if bytes.len() < bitvector_length {
@@ -2025,8 +2121,18 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> ProfileProfile {
                     ProfileProfile {
-                        x: self.x().expect("valid view").to_owned(),
-                        w: self.w().expect("valid view").to_owned(),
+                        x: match self.x().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        w: match self.w().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
                     }
                 }
             }
@@ -2056,7 +2162,7 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
-                    let mut active_fields = BitVector::<8u64>::new();
+                    let mut active_fields = BitVector::<8usize>::new();
                     if self.x.is_some() {
                         active_fields
                             .set(0usize, true)
@@ -2437,6 +2543,7 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for ContainerContainerRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    use ssz::Decode;
                     let bitvector_length = 1usize;
                     if bytes.len() < bitvector_length {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -2444,7 +2551,7 @@ pub mod tests {
                             expected: bitvector_length,
                         });
                     }
-                    let _bitvector = ssz::BitVector::<
+                    let _bitvector = ssz_types::BitVector::<
                         8usize,
                     >::from_ssz_bytes(&bytes[0..bitvector_length])?;
                     if bytes.len() < bitvector_length {
@@ -2483,14 +2590,54 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> ContainerContainer {
                     ContainerContainer {
-                        x: self.x().expect("valid view").to_owned(),
-                        y: self.y().expect("valid view").to_owned(),
-                        z: self.z().expect("valid view").to_owned(),
-                        w: self.w().expect("valid view").to_owned(),
-                        a: self.a().expect("valid view").to_owned(),
-                        b: self.b().expect("valid view").to_owned(),
-                        c: self.c().expect("valid view").to_owned(),
-                        d: self.d().expect("valid view").to_owned(),
+                        x: match self.x().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        y: match self.y().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        z: match self.z().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        w: match self.w().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        a: match self.a().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        b: match self.b().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        c: match self.c().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        d: match self.d().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
                     }
                 }
             }

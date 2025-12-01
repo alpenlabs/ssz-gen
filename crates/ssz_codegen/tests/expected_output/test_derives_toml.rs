@@ -1391,7 +1391,7 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
-                    let mut active_fields = BitVector::<42u64>::new();
+                    let mut active_fields = BitVector::<42usize>::new();
                     if self.g.is_some() {
                         active_fields
                             .set(0usize, true)
@@ -1523,6 +1523,7 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for GammaRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    use ssz::Decode;
                     let bitvector_length = 1usize;
                     if bytes.len() < bitvector_length {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -1530,7 +1531,7 @@ pub mod tests {
                             expected: bitvector_length,
                         });
                     }
-                    let _bitvector = ssz::BitVector::<
+                    let _bitvector = ssz_types::BitVector::<
                         42usize,
                     >::from_ssz_bytes(&bytes[0..bitvector_length])?;
                     if bytes.len() < bitvector_length {
@@ -1568,8 +1569,18 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> Gamma {
                     Gamma {
-                        g: self.g().expect("valid view").to_owned(),
-                        h: self.h().expect("valid view").to_owned(),
+                        g: match self.g().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        h: match self.h().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
                     }
                 }
             }
@@ -1736,7 +1747,7 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
-                    let mut active_fields = BitVector::<42u64>::new();
+                    let mut active_fields = BitVector::<42usize>::new();
                     if self.g.is_some() {
                         active_fields
                             .set(0usize, true)
@@ -1952,6 +1963,7 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for EpsilonRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    use ssz::Decode;
                     let bitvector_length = 1usize;
                     if bytes.len() < bitvector_length {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -1959,7 +1971,7 @@ pub mod tests {
                             expected: bitvector_length,
                         });
                     }
-                    let _bitvector = ssz::BitVector::<
+                    let _bitvector = ssz_types::BitVector::<
                         42usize,
                     >::from_ssz_bytes(&bytes[0..bitvector_length])?;
                     if bytes.len() < bitvector_length {
@@ -1997,10 +2009,30 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> Epsilon {
                     Epsilon {
-                        g: self.g().expect("valid view").to_owned(),
-                        h: self.h().expect("valid view").to_owned(),
-                        i: self.i().expect("valid view").to_owned(),
-                        j: self.j().expect("valid view").to_owned(),
+                        g: match self.g().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        h: match self.h().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        i: match self.i().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        j: match self.j().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
                     }
                 }
             }
@@ -2023,7 +2055,7 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
-                    let mut active_fields = BitVector::<128u64>::new();
+                    let mut active_fields = BitVector::<128usize>::new();
                     if self.u.is_some() {
                         active_fields
                             .set(0usize, true)
@@ -2152,6 +2184,7 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for ZetaRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    use ssz::Decode;
                     let bitvector_length = 1usize;
                     if bytes.len() < bitvector_length {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -2159,7 +2192,7 @@ pub mod tests {
                             expected: bitvector_length,
                         });
                     }
-                    let _bitvector = ssz::BitVector::<
+                    let _bitvector = ssz_types::BitVector::<
                         128usize,
                     >::from_ssz_bytes(&bytes[0..bitvector_length])?;
                     if bytes.len() < bitvector_length {
@@ -2197,8 +2230,18 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> Zeta {
                     Zeta {
-                        u: self.u().expect("valid view").to_owned(),
-                        v: self.v().expect("valid view").to_owned(),
+                        u: match self.u().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        v: match self.v().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
                     }
                 }
             }
@@ -2847,7 +2890,7 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
-                    let mut active_fields = BitVector::<42u64>::new();
+                    let mut active_fields = BitVector::<42usize>::new();
                     if self.g.is_some() {
                         active_fields
                             .set(0usize, true)
@@ -3152,6 +3195,7 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for IotaRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    use ssz::Decode;
                     let bitvector_length = 1usize;
                     if bytes.len() < bitvector_length {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -3159,7 +3203,7 @@ pub mod tests {
                             expected: bitvector_length,
                         });
                     }
-                    let _bitvector = ssz::BitVector::<
+                    let _bitvector = ssz_types::BitVector::<
                         42usize,
                     >::from_ssz_bytes(&bytes[0..bitvector_length])?;
                     if bytes.len() < bitvector_length {
@@ -3197,12 +3241,42 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> Iota {
                     Iota {
-                        g: self.g().expect("valid view").to_owned(),
-                        h: self.h().expect("valid view").to_owned(),
-                        i: self.i().expect("valid view").to_owned(),
-                        j: self.j().expect("valid view").to_owned(),
-                        r: self.r().expect("valid view").to_owned(),
-                        s: self.s().expect("valid view").to_owned(),
+                        g: match self.g().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        h: match self.h().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        i: match self.i().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        j: match self.j().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        r: match self.r().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        s: match self.s().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
                     }
                 }
             }
@@ -3431,7 +3505,7 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
-                    let mut active_fields = BitVector::<4u64>::new();
+                    let mut active_fields = BitVector::<4usize>::new();
                     if self.w.is_some() {
                         active_fields
                             .set(0usize, true)
@@ -3558,6 +3632,7 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for LambdaRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    use ssz::Decode;
                     let bitvector_length = 1usize;
                     if bytes.len() < bitvector_length {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -3565,7 +3640,7 @@ pub mod tests {
                             expected: bitvector_length,
                         });
                     }
-                    let _bitvector = ssz::BitVector::<
+                    let _bitvector = ssz_types::BitVector::<
                         4usize,
                     >::from_ssz_bytes(&bytes[0..bitvector_length])?;
                     if bytes.len() < bitvector_length {
@@ -3603,8 +3678,18 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> Lambda {
                     Lambda {
-                        w: self.w().expect("valid view").to_owned(),
-                        x: self.x().expect("valid view").to_owned(),
+                        w: match self.w().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        x: match self.x().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
                     }
                 }
             }
