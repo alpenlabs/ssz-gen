@@ -10,6 +10,7 @@ pub mod tests {
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
+            use serde::{Serialize, Deserialize};
             /// Test multiple pragmas on a class
             #[derive(
                 Clone,

@@ -10,6 +10,7 @@ pub mod tests {
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
+            use serde::{Serialize, Deserialize};
             /// Test pragmas with inheritance
             #[derive(Clone, Debug, PartialEq, Eq, Default, Encode, Decode)]
             #[ssz(struct_behaviour = "stable_container", max_fields = 5usize)]
