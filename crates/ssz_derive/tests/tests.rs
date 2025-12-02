@@ -470,3 +470,38 @@ fn optional_option_u64() {
         &[1, 4, 0, 0, 0, 1, 2],
     );
 }
+
+// Test auto-detection of newtype pattern (single-field tuple struct)
+#[derive(PartialEq, Debug, Encode, Decode)]
+struct AutoDetectedNewtype(Vec<u8>);
+
+#[test]
+fn auto_detected_newtype() {
+    // Should work without explicit #[ssz(struct_behaviour = "transparent")]
+    assert_encode_decode(
+        &AutoDetectedNewtype(vec![42_u8]),
+        &vec![42_u8].as_ssz_bytes(),
+    );
+}
+
+#[derive(PartialEq, Debug, Encode, Decode)]
+struct AutoDetectedNewtypeFixed(u8);
+
+#[test]
+fn auto_detected_newtype_fixed() {
+    // Should work for fixed-size types too
+    assert_encode_decode(&AutoDetectedNewtypeFixed(42), &[42]);
+}
+
+#[derive(PartialEq, Debug, Encode, Decode)]
+#[ssz(struct_behaviour = "transparent")]
+struct ExplicitTransparentNewtype(Vec<u8>);
+
+#[test]
+fn explicit_transparent_newtype() {
+    // Explicit transparent should still work
+    assert_encode_decode(
+        &ExplicitTransparentNewtype(vec![42_u8]),
+        &vec![42_u8].as_ssz_bytes(),
+    );
+}

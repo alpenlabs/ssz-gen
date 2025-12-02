@@ -16,9 +16,10 @@
 //!   value whilst ignoring outermost the `enum`.  decodes by attempting to decode each variant in
 //!   order and the first one that is successful is returned.
 //! - `#[ssz(struct_behaviour = "container")]`: encodes and decodes the `struct` as an SSZ
-//!   "container".
+//!   "container". This is the default behaviour for structs with named fields.
 //! - `#[ssz(struct_behaviour = "transparent")]`: encodes and decodes a `struct` with exactly one
-//!   non-skipped field as if the outermost `struct` does not exist.
+//!   non-skipped field as if the outermost `struct` does not exist. This is automatically applied
+//!   to newtype patterns (single-field tuple structs) when no explicit behaviour is specified.
 //!
 //! The following field attributes are available:
 //!
@@ -89,8 +90,10 @@
 //! );
 //!
 //! /// Represented as an SSZ "list" *without* an SSZ "container".
+//! /// Note: The `#[ssz(struct_behaviour = "transparent")]` attribute is optional for newtypes
+//! /// (single-field tuple structs) as they automatically default to transparent behaviour.
 //! #[derive(Encode, Decode)]
-//! #[ssz(struct_behaviour = "transparent")]
+//! // #[ssz(struct_behaviour = "transparent")] // Optional for newtypes
 //! struct NewType(Vec<u8>);
 //!
 //! assert_eq!(NewType(vec![42]).as_ssz_bytes(), vec![42]);
@@ -232,10 +235,28 @@ impl<'a> Procedure<'a> {
                 }
 
                 match opts.struct_behaviour.as_deref() {
-                    Some("container") | None => Procedure::Struct {
+                    Some("container") => Procedure::Struct {
                         data,
                         behaviour: StructBehaviour::Container,
                     },
+                    None => {
+                        // Auto-detect newtype pattern: single unnamed field
+                        let is_single_unnamed_field = matches!(
+                            &data.fields,
+                            syn::Fields::Unnamed(fields) if fields.unnamed.len() == 1
+                        );
+                        if is_single_unnamed_field {
+                            Procedure::Struct {
+                                data,
+                                behaviour: StructBehaviour::Transparent,
+                            }
+                        } else {
+                            Procedure::Struct {
+                                data,
+                                behaviour: StructBehaviour::Container,
+                            }
+                        }
+                    }
                     Some("stable_container") => {
                         if let Some(max_fields_value) = opts.max_fields {
                             Procedure::StableStruct {
