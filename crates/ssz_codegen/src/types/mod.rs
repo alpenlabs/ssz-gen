@@ -1420,7 +1420,7 @@ impl ClassDef {
                     .map(|(idx, _)| {
                         let field_name = &field_names[idx];
                         quote! {
-                            if let Some(ref #field_name) = self.#field_name {
+                            if let ssz_types::Optional::Some(ref #field_name) = self.#field_name {
                                 hasher.write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(#field_name).as_ref())
                                     .expect("tree hash derive should not apply too many leaves");
                             } else {
@@ -1464,7 +1464,7 @@ impl ClassDef {
                             use ssz_types::BitVector;
 
                             // Construct BitVector
-                            let mut active_fields = BitVector::<#max>::new();
+                            let mut active_fields = BitVector::<#max_fields>::new();
 
                             #(
                                 #set_active_fields
@@ -1947,6 +1947,9 @@ impl ClassDef {
                 } else {
                     // Has Optional fields - parse bitvector and validate
                     quote! {
+                        // Import Decode trait for BitVector::from_ssz_bytes
+                        use ssz::Decode;
+
                         // Parse bitvector
                         let bitvector_length = #bitvector_length;
                         if bytes.len() < bitvector_length {
@@ -1957,7 +1960,7 @@ impl ClassDef {
                         }
 
                         // Validate bitvector structure (don't need to store it)
-                        let _bitvector = ssz::BitVector::<#max_fields_usize>::from_ssz_bytes(
+                        let _bitvector = ssz_types::BitVector::<#max_fields_usize>::from_ssz_bytes(
                             &bytes[0..bitvector_length]
                         )?;
 
@@ -2078,6 +2081,12 @@ impl ClassDef {
     pub fn to_view_to_owned_impl(&self, ident: &Ident) -> TokenStream {
         let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
 
+        // Check if this is a StableContainer
+        let is_stable_container = matches!(
+            self.base,
+            BaseClass::StableContainer(_) | BaseClass::Profile(_)
+        );
+
         // Generate field conversions using getter methods
         let field_conversions: Vec<TokenStream> = self
             .fields
@@ -2085,56 +2094,89 @@ impl ClassDef {
             .map(|field| {
                 let field_name = Ident::new(&field.name, Span::call_site());
 
-                // All fields now use getter methods and expect()
-                // We expect because if the view was constructed successfully, getters should work
-                match &field.ty.resolution {
-                    TypeResolutionKind::Option(_) => {
-                        // Option types (from Union[null, T]) - getter returns Result<Option<TRef>, Error>
-                        // Need to convert Option<TRef> to Option<T> by calling to_owned() on inner if Some
-                        quote! {
-                            #field_name: self.#field_name().expect("valid view").map(|inner| inner.to_owned())
-                        }
-                    }
-                    TypeResolutionKind::Boolean | TypeResolutionKind::UInt(_) => {
-                        // Primitives can be copied directly from getter
-                        quote! {
-                            #field_name: self.#field_name().expect("valid view")
-                        }
-                    }
-                    TypeResolutionKind::List(ty, _size) => {
-                        // Check if it's List<u8, N> which uses BytesRef
-                        let inner = &**ty;
-                        if matches!(inner.resolution, TypeResolutionKind::UInt(8)) {
-                            // BytesRef::to_owned() returns Vec<u8>, need to convert to VariableList
+                // For StableContainer, fields are wrapped in ssz_types::Optional<T>
+                // Getter returns Result<Optional<TRef>, Error>
+                // We need to convert Optional<TRef> to Optional<T>
+                if is_stable_container {
+                    match &field.ty.resolution {
+                        TypeResolutionKind::Boolean | TypeResolutionKind::UInt(_) => {
+                            // Primitives: Optional<T> -> Optional<T> (just copy)
                             quote! {
-                                #field_name: self.#field_name().expect("valid view").to_owned().into()
-                            }
-                        } else {
-                            // VariableListRef::to_owned() returns Result<VariableList<T, N>, Error>
-                            quote! {
-                                #field_name: self.#field_name().expect("valid view").to_owned().expect("valid view")
+                                #field_name: self.#field_name().expect("valid view")
                             }
                         }
-                    }
-                    TypeResolutionKind::Vector(ty, _size) => {
-                        // Check if it's Vector[byte, N] which uses FixedBytesRef
-                        let inner = &**ty;
-                        if matches!(inner.resolution, TypeResolutionKind::UInt(8)) {
-                            // FixedBytesRef::to_owned() returns [u8; N], need to wrap in FixedBytes<N>
+                        TypeResolutionKind::Union(_, _) => {
+                            // Union types: getter returns Optional<UnionRef>
+                            // Need to map the Optional and convert UnionRef to Union
                             quote! {
-                                #field_name: ssz_types::FixedBytes(self.#field_name().expect("valid view").to_owned())
+                                #field_name: match self.#field_name().expect("valid view") {
+                                    ssz_types::Optional::Some(inner) => ssz_types::Optional::Some(inner.to_owned()),
+                                    ssz_types::Optional::None => ssz_types::Optional::None,
+                                }
                             }
-                        } else {
-                            // FixedVectorRef::to_owned() returns Result<FixedVector<T, N>, Error>
+                        }
+                        _ => {
+                            // Complex types: Optional<TRef> -> Optional<T>
+                            // Use match to convert inner TRef to T
                             quote! {
-                                #field_name: self.#field_name().expect("valid view").to_owned().expect("valid view")
+                                #field_name: match self.#field_name().expect("valid view") {
+                                    ssz_types::Optional::Some(inner) => ssz_types::Optional::Some(inner.to_owned()),
+                                    ssz_types::Optional::None => ssz_types::Optional::None,
+                                }
                             }
                         }
                     }
-                    _ => {
-                        // For other complex types, call getter and then to_owned()
-                        quote! {
-                            #field_name: self.#field_name().expect("valid view").to_owned()
+                } else {
+                    // Regular Container (non-StableContainer)
+                    match &field.ty.resolution {
+                        TypeResolutionKind::Option(_) => {
+                            // Option types (from Union[null, T]) - getter returns Result<Option<TRef>, Error>
+                            // Need to convert Option<TRef> to Option<T> by calling to_owned() on inner if Some
+                            quote! {
+                                #field_name: self.#field_name().expect("valid view").map(|inner| inner.to_owned())
+                            }
+                        }
+                        TypeResolutionKind::Boolean | TypeResolutionKind::UInt(_) => {
+                            // Primitives can be copied directly from getter
+                            quote! {
+                                #field_name: self.#field_name().expect("valid view")
+                            }
+                        }
+                        TypeResolutionKind::List(ty, _size) => {
+                            // Check if it's List<u8, N> which uses BytesRef
+                            let inner = &**ty;
+                            if matches!(inner.resolution, TypeResolutionKind::UInt(8)) {
+                                // BytesRef::to_owned() returns Vec<u8>, need to convert to VariableList
+                                quote! {
+                                    #field_name: self.#field_name().expect("valid view").to_owned().into()
+                                }
+                            } else {
+                                // VariableListRef::to_owned() returns Result<VariableList<T, N>, Error>
+                                quote! {
+                                    #field_name: self.#field_name().expect("valid view").to_owned().expect("valid view")
+                                }
+                            }
+                        }
+                        TypeResolutionKind::Vector(ty, _size) => {
+                            // Check if it's Vector[byte, N] which uses FixedBytesRef
+                            let inner = &**ty;
+                            if matches!(inner.resolution, TypeResolutionKind::UInt(8)) {
+                                // FixedBytesRef::to_owned() returns [u8; N], need to wrap in FixedBytes<N>
+                                quote! {
+                                    #field_name: ssz_types::FixedBytes(self.#field_name().expect("valid view").to_owned())
+                                }
+                            } else {
+                                // FixedVectorRef::to_owned() returns Result<FixedVector<T, N>, Error>
+                                quote! {
+                                    #field_name: self.#field_name().expect("valid view").to_owned().expect("valid view")
+                                }
+                            }
+                        }
+                        _ => {
+                            // For other complex types, call getter and then to_owned()
+                            quote! {
+                                #field_name: self.#field_name().expect("valid view").to_owned()
+                            }
                         }
                     }
                 }

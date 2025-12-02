@@ -30,6 +30,19 @@ pub(crate) mod existing_module {
     }
 }
 
+/// Helper function to extract derive attributes for a given struct from generated code
+fn get_struct_derives(generated: &str, struct_name: &str) -> Option<String> {
+    let struct_pattern = format!("pub struct {}", struct_name);
+    let struct_idx = generated.find(&struct_pattern)?;
+    let before_struct = &generated[..struct_idx];
+
+    // Find the last #[derive(...)] before the struct
+    let last_derive_idx = before_struct.rfind("#[derive")?;
+    let derive_line = &before_struct[last_derive_idx..];
+    let derive_end = derive_line.find(")]")?;
+    Some(derive_line[..=derive_end].to_string())
+}
+
 #[test]
 fn test_basic_codegen() {
     build_ssz_files(
@@ -1378,4 +1391,143 @@ fn test_union_type_alias_view_types() {
         generated.contains("pub struct UnderlyingTypeRef<'a>"),
         "Underlying type view should be generated"
     );
+}
+
+#[test]
+fn test_serde_derives() {
+    build_ssz_files(
+        &["test_serde_derives.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_serde_derives.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types");
+
+    let generated = fs::read_to_string("tests/output/test_serde_derives.rs")
+        .expect("Failed to read generated output");
+
+    // Verify serde import is added
+    assert!(
+        generated.contains("use serde::{Serialize, Deserialize};"),
+        "Serde import should be added when types use Serialize/Deserialize derives"
+    );
+
+    // Verify BlockCommitment has serde derives along with Copy and Hash
+    let block_commitment_derives = get_struct_derives(&generated, "BlockCommitment")
+        .expect("BlockCommitment should have derive attributes");
+
+    assert!(
+        block_commitment_derives.contains("Serialize")
+            && block_commitment_derives.contains("Deserialize"),
+        "BlockCommitment should have Serialize and Deserialize in derives"
+    );
+
+    assert!(
+        block_commitment_derives.contains("Copy") && block_commitment_derives.contains("Hash"),
+        "BlockCommitment should also have Copy and Hash derives"
+    );
+
+    // Verify OtherType does NOT have serde derives (but serde import is still present since
+    // BlockCommitment uses it)
+    if let Some(other_type_derives) = get_struct_derives(&generated, "OtherType") {
+        assert!(
+            !other_type_derives.contains("Serialize"),
+            "OtherType should not have Serialize derive"
+        );
+    }
+}
+
+#[test]
+fn test_serde_derives_single_module() {
+    build_ssz_files(
+        &["test_serde_derives.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_serde_derives_single.rs",
+        ModuleGeneration::SingleModule,
+    )
+    .expect("Failed to generate SSZ types");
+
+    let generated = fs::read_to_string("tests/output/test_serde_derives_single.rs")
+        .expect("Failed to read generated output");
+
+    // Verify serde import is added in SingleModule mode
+    assert!(
+        generated.contains("use serde::{Serialize, Deserialize};"),
+        "Serde import should be added in SingleModule mode when types use Serialize/Deserialize derives"
+    );
+
+    // Verify BlockCommitment has serde derives
+    let block_commitment_derives = get_struct_derives(&generated, "BlockCommitment")
+        .expect("BlockCommitment should have derive attributes");
+
+    assert!(
+        block_commitment_derives.contains("Serialize")
+            && block_commitment_derives.contains("Deserialize"),
+        "BlockCommitment should have Serialize and Deserialize derives in SingleModule mode"
+    );
+
+    assert!(
+        block_commitment_derives.contains("Copy") && block_commitment_derives.contains("Hash"),
+        "BlockCommitment should also have Copy and Hash derives"
+    );
+
+    // Verify OtherType does NOT have serde derives
+    if let Some(other_type_derives) = get_struct_derives(&generated, "OtherType") {
+        assert!(
+            !other_type_derives.contains("Serialize"),
+            "OtherType should not have Serialize derive"
+        );
+    }
+}
+
+#[test]
+fn test_serde_derives_flat_modules() {
+    build_ssz_files(
+        &["test_serde_derives.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_serde_derives_flat.rs",
+        ModuleGeneration::FlatModules,
+    )
+    .expect("Failed to generate SSZ types");
+
+    let generated = fs::read_to_string("tests/output/test_serde_derives_flat.rs")
+        .expect("Failed to read generated output");
+
+    // Verify serde import is added in FlatModules mode (inside the module)
+    assert!(
+        generated.contains("use serde::{Serialize, Deserialize};"),
+        "Serde import should be added in FlatModules mode when types use Serialize/Deserialize derives"
+    );
+
+    // Verify the module structure
+    assert!(
+        generated.contains("pub mod test_serde_derives"),
+        "FlatModules should generate a test_serde_derives module"
+    );
+
+    // Verify BlockCommitment has serde derives
+    let block_commitment_derives = get_struct_derives(&generated, "BlockCommitment")
+        .expect("BlockCommitment should have derive attributes");
+
+    assert!(
+        block_commitment_derives.contains("Serialize")
+            && block_commitment_derives.contains("Deserialize"),
+        "BlockCommitment should have Serialize and Deserialize derives in FlatModules mode"
+    );
+
+    assert!(
+        block_commitment_derives.contains("Copy") && block_commitment_derives.contains("Hash"),
+        "BlockCommitment should also have Copy and Hash derives"
+    );
+
+    // Verify OtherType does NOT have serde derives
+    if let Some(other_type_derives) = get_struct_derives(&generated, "OtherType") {
+        assert!(
+            !other_type_derives.contains("Serialize"),
+            "OtherType should not have Serialize derive"
+        );
+    }
 }

@@ -10,6 +10,7 @@ pub mod tests {
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
+            use serde::{Serialize, Deserialize};
             /// Test pragmas with inheritance
             #[derive(Clone, Debug, PartialEq, Eq, Default, Encode, Decode)]
             #[ssz(struct_behaviour = "stable_container", max_fields = 5usize)]
@@ -30,7 +31,7 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
-                    let mut active_fields = BitVector::<5u64>::new();
+                    let mut active_fields = BitVector::<5usize>::new();
                     if self.a.is_some() {
                         active_fields
                             .set(0usize, true)
@@ -42,7 +43,7 @@ pub mod tests {
                             .expect("Should not be out of bounds");
                     }
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(5usize);
-                    if let Some(ref a) = self.a {
+                    if let ssz_types::Optional::Some(ref a) = self.a {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(a).as_ref(),
@@ -53,7 +54,7 @@ pub mod tests {
                             .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
-                    if let Some(ref b) = self.b {
+                    if let ssz_types::Optional::Some(ref b) = self.b {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(b).as_ref(),
@@ -157,6 +158,7 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for ParentRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    use ssz::Decode;
                     let bitvector_length = 1usize;
                     if bytes.len() < bitvector_length {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -164,7 +166,7 @@ pub mod tests {
                             expected: bitvector_length,
                         });
                     }
-                    let _bitvector = ssz::BitVector::<
+                    let _bitvector = ssz_types::BitVector::<
                         5usize,
                     >::from_ssz_bytes(&bytes[0..bitvector_length])?;
                     if bytes.len() < bitvector_length {
@@ -202,8 +204,18 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> Parent {
                     Parent {
-                        a: self.a().expect("valid view").to_owned(),
-                        b: self.b().expect("valid view").to_owned(),
+                        a: match self.a().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        b: match self.b().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
                     }
                 }
             }
@@ -228,7 +240,7 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
-                    let mut active_fields = BitVector::<5u64>::new();
+                    let mut active_fields = BitVector::<5usize>::new();
                     if self.a.is_some() {
                         active_fields
                             .set(0usize, true)
@@ -245,7 +257,7 @@ pub mod tests {
                             .expect("Should not be out of bounds");
                     }
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(5usize);
-                    if let Some(ref a) = self.a {
+                    if let ssz_types::Optional::Some(ref a) = self.a {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(a).as_ref(),
@@ -256,7 +268,7 @@ pub mod tests {
                             .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
-                    if let Some(ref b) = self.b {
+                    if let ssz_types::Optional::Some(ref b) = self.b {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(b).as_ref(),
@@ -267,7 +279,7 @@ pub mod tests {
                             .write(H::get_zero_hash_slice(0))
                             .expect("tree hash derive should not apply too many leaves");
                     }
-                    if let Some(ref c) = self.c {
+                    if let ssz_types::Optional::Some(ref c) = self.c {
                         hasher
                             .write(
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(c).as_ref(),
@@ -397,6 +409,7 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for ChildRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    use ssz::Decode;
                     let bitvector_length = 1usize;
                     if bytes.len() < bitvector_length {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -404,7 +417,7 @@ pub mod tests {
                             expected: bitvector_length,
                         });
                     }
-                    let _bitvector = ssz::BitVector::<
+                    let _bitvector = ssz_types::BitVector::<
                         5usize,
                     >::from_ssz_bytes(&bytes[0..bitvector_length])?;
                     if bytes.len() < bitvector_length {
@@ -442,9 +455,24 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> Child {
                     Child {
-                        a: self.a().expect("valid view").to_owned(),
-                        b: self.b().expect("valid view").to_owned(),
-                        c: self.c().expect("valid view").to_owned(),
+                        a: match self.a().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        b: match self.b().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
+                        c: match self.c().expect("valid view") {
+                            ssz_types::Optional::Some(inner) => {
+                                ssz_types::Optional::Some(inner.to_owned())
+                            }
+                            ssz_types::Optional::None => ssz_types::Optional::None,
+                        },
                     }
                 }
             }

@@ -3,7 +3,6 @@
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-use tree_hash::Hash256;
 
 /// For `Optional` fields in used in `StableContainer` for SSZ
 /// We're using `Option<T>` for `Union[None, T]` so we need a separate type for this
@@ -86,9 +85,10 @@ impl<T: Clone> From<Optional<T>> for Option<T> {
     }
 }
 
-impl<T> tree_hash::TreeHash for Optional<T>
+impl<H, T> tree_hash::TreeHash<H> for Optional<T>
 where
-    T: tree_hash::TreeHash,
+    H: tree_hash::TreeHashDigest,
+    T: tree_hash::TreeHash<H>,
 {
     fn tree_hash_type() -> tree_hash::TreeHashType {
         T::tree_hash_type()
@@ -105,10 +105,23 @@ where
         T::tree_hash_packing_factor()
     }
 
-    fn tree_hash_root(&self) -> Hash256 {
+    fn tree_hash_root(&self) -> H::Output {
         match self {
             Optional::Some(inner) => inner.tree_hash_root(),
             Optional::None => unreachable!(),
+        }
+    }
+}
+
+impl<'a, T> ssz::view::DecodeView<'a> for Optional<T>
+where
+    T: ssz::view::DecodeView<'a>,
+{
+    fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+        if bytes.is_empty() {
+            Ok(Optional::None)
+        } else {
+            T::from_ssz_bytes(bytes).map(Optional::Some)
         }
     }
 }
@@ -206,7 +219,6 @@ impl<'a, T: arbitrary::Arbitrary<'a>> arbitrary::Arbitrary<'a> for Optional<T> {
 #[cfg(test)]
 mod test {
     use ssz::*;
-    use tree_hash::TreeHash;
 
     use super::*;
 
@@ -244,8 +256,9 @@ mod test {
     #[test]
     #[should_panic]
     fn tree_hash_none() {
+        use tree_hash::Sha256Hasher;
         let optional: Optional<u64> = Optional::None;
-        optional.tree_hash_root();
+        <Optional<u64> as tree_hash::TreeHash<Sha256Hasher>>::tree_hash_root(&optional);
     }
 
     #[test]

@@ -1193,7 +1193,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Gamma {
     fn tree_hash_root(&self) -> H::Output {
         use tree_hash::TreeHash;
         use ssz_types::BitVector;
-        let mut active_fields = BitVector::<42u64>::new();
+        let mut active_fields = BitVector::<42usize>::new();
         if self.g.is_some() {
             active_fields.set(0usize, true).expect("Should not be out of bounds");
         }
@@ -1201,7 +1201,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Gamma {
             active_fields.set(1usize, true).expect("Should not be out of bounds");
         }
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(42usize);
-        if let Some(ref g) = self.g {
+        if let ssz_types::Optional::Some(ref g) = self.g {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(g).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -1210,7 +1210,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Gamma {
                 .write(H::get_zero_hash_slice(0))
                 .expect("tree hash derive should not apply too many leaves");
         }
-        if let Some(ref h) = self.h {
+        if let ssz_types::Optional::Some(ref h) = self.h {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(h).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -1313,6 +1313,7 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for GammaRef<'a> {
 }
 impl<'a> ssz::view::DecodeView<'a> for GammaRef<'a> {
     fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+        use ssz::Decode;
         let bitvector_length = 1usize;
         if bytes.len() < bitvector_length {
             return Err(ssz::DecodeError::InvalidByteLength {
@@ -1320,7 +1321,7 @@ impl<'a> ssz::view::DecodeView<'a> for GammaRef<'a> {
                 expected: bitvector_length,
             });
         }
-        let _bitvector = ssz::BitVector::<
+        let _bitvector = ssz_types::BitVector::<
             42usize,
         >::from_ssz_bytes(&bytes[0..bitvector_length])?;
         if bytes.len() < bitvector_length {
@@ -1352,8 +1353,18 @@ impl<'a> GammaRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> Gamma {
         Gamma {
-            g: self.g().expect("valid view").to_owned(),
-            h: self.h().expect("valid view").to_owned(),
+            g: match self.g().expect("valid view") {
+                ssz_types::Optional::Some(inner) => {
+                    ssz_types::Optional::Some(inner.to_owned())
+                }
+                ssz_types::Optional::None => ssz_types::Optional::None,
+            },
+            h: match self.h().expect("valid view") {
+                ssz_types::Optional::Some(inner) => {
+                    ssz_types::Optional::Some(inner.to_owned())
+                }
+                ssz_types::Optional::None => ssz_types::Optional::None,
+            },
         }
     }
 }
@@ -1505,7 +1516,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Epsilon {
     fn tree_hash_root(&self) -> H::Output {
         use tree_hash::TreeHash;
         use ssz_types::BitVector;
-        let mut active_fields = BitVector::<42u64>::new();
+        let mut active_fields = BitVector::<42usize>::new();
         if self.g.is_some() {
             active_fields.set(0usize, true).expect("Should not be out of bounds");
         }
@@ -1519,7 +1530,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Epsilon {
             active_fields.set(3usize, true).expect("Should not be out of bounds");
         }
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(42usize);
-        if let Some(ref g) = self.g {
+        if let ssz_types::Optional::Some(ref g) = self.g {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(g).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -1528,7 +1539,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Epsilon {
                 .write(H::get_zero_hash_slice(0))
                 .expect("tree hash derive should not apply too many leaves");
         }
-        if let Some(ref h) = self.h {
+        if let ssz_types::Optional::Some(ref h) = self.h {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(h).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -1537,7 +1548,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Epsilon {
                 .write(H::get_zero_hash_slice(0))
                 .expect("tree hash derive should not apply too many leaves");
         }
-        if let Some(ref i) = self.i {
+        if let ssz_types::Optional::Some(ref i) = self.i {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(i).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -1546,7 +1557,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Epsilon {
                 .write(H::get_zero_hash_slice(0))
                 .expect("tree hash derive should not apply too many leaves");
         }
-        if let Some(ref j) = self.j {
+        if let ssz_types::Optional::Some(ref j) = self.j {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(j).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -1701,6 +1712,7 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for EpsilonRef<'a>
 }
 impl<'a> ssz::view::DecodeView<'a> for EpsilonRef<'a> {
     fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+        use ssz::Decode;
         let bitvector_length = 1usize;
         if bytes.len() < bitvector_length {
             return Err(ssz::DecodeError::InvalidByteLength {
@@ -1708,7 +1720,7 @@ impl<'a> ssz::view::DecodeView<'a> for EpsilonRef<'a> {
                 expected: bitvector_length,
             });
         }
-        let _bitvector = ssz::BitVector::<
+        let _bitvector = ssz_types::BitVector::<
             42usize,
         >::from_ssz_bytes(&bytes[0..bitvector_length])?;
         if bytes.len() < bitvector_length {
@@ -1740,10 +1752,30 @@ impl<'a> EpsilonRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> Epsilon {
         Epsilon {
-            g: self.g().expect("valid view").to_owned(),
-            h: self.h().expect("valid view").to_owned(),
-            i: self.i().expect("valid view").to_owned(),
-            j: self.j().expect("valid view").to_owned(),
+            g: match self.g().expect("valid view") {
+                ssz_types::Optional::Some(inner) => {
+                    ssz_types::Optional::Some(inner.to_owned())
+                }
+                ssz_types::Optional::None => ssz_types::Optional::None,
+            },
+            h: match self.h().expect("valid view") {
+                ssz_types::Optional::Some(inner) => {
+                    ssz_types::Optional::Some(inner.to_owned())
+                }
+                ssz_types::Optional::None => ssz_types::Optional::None,
+            },
+            i: match self.i().expect("valid view") {
+                ssz_types::Optional::Some(inner) => {
+                    ssz_types::Optional::Some(inner.to_owned())
+                }
+                ssz_types::Optional::None => ssz_types::Optional::None,
+            },
+            j: match self.j().expect("valid view") {
+                ssz_types::Optional::Some(inner) => {
+                    ssz_types::Optional::Some(inner.to_owned())
+                }
+                ssz_types::Optional::None => ssz_types::Optional::None,
+            },
         }
     }
 }
@@ -1766,7 +1798,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Zeta {
     fn tree_hash_root(&self) -> H::Output {
         use tree_hash::TreeHash;
         use ssz_types::BitVector;
-        let mut active_fields = BitVector::<128u64>::new();
+        let mut active_fields = BitVector::<128usize>::new();
         if self.u.is_some() {
             active_fields.set(0usize, true).expect("Should not be out of bounds");
         }
@@ -1774,7 +1806,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Zeta {
             active_fields.set(1usize, true).expect("Should not be out of bounds");
         }
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(128usize);
-        if let Some(ref u) = self.u {
+        if let ssz_types::Optional::Some(ref u) = self.u {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(u).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -1783,7 +1815,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Zeta {
                 .write(H::get_zero_hash_slice(0))
                 .expect("tree hash derive should not apply too many leaves");
         }
-        if let Some(ref v) = self.v {
+        if let ssz_types::Optional::Some(ref v) = self.v {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(v).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -1884,6 +1916,7 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ZetaRef<'a> {
 }
 impl<'a> ssz::view::DecodeView<'a> for ZetaRef<'a> {
     fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+        use ssz::Decode;
         let bitvector_length = 1usize;
         if bytes.len() < bitvector_length {
             return Err(ssz::DecodeError::InvalidByteLength {
@@ -1891,7 +1924,7 @@ impl<'a> ssz::view::DecodeView<'a> for ZetaRef<'a> {
                 expected: bitvector_length,
             });
         }
-        let _bitvector = ssz::BitVector::<
+        let _bitvector = ssz_types::BitVector::<
             128usize,
         >::from_ssz_bytes(&bytes[0..bitvector_length])?;
         if bytes.len() < bitvector_length {
@@ -1923,8 +1956,18 @@ impl<'a> ZetaRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> Zeta {
         Zeta {
-            u: self.u().expect("valid view").to_owned(),
-            v: self.v().expect("valid view").to_owned(),
+            u: match self.u().expect("valid view") {
+                ssz_types::Optional::Some(inner) => {
+                    ssz_types::Optional::Some(inner.to_owned())
+                }
+                ssz_types::Optional::None => ssz_types::Optional::None,
+            },
+            v: match self.v().expect("valid view") {
+                ssz_types::Optional::Some(inner) => {
+                    ssz_types::Optional::Some(inner.to_owned())
+                }
+                ssz_types::Optional::None => ssz_types::Optional::None,
+            },
         }
     }
 }
@@ -2496,7 +2539,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Iota {
     fn tree_hash_root(&self) -> H::Output {
         use tree_hash::TreeHash;
         use ssz_types::BitVector;
-        let mut active_fields = BitVector::<42u64>::new();
+        let mut active_fields = BitVector::<42usize>::new();
         if self.g.is_some() {
             active_fields.set(0usize, true).expect("Should not be out of bounds");
         }
@@ -2516,7 +2559,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Iota {
             active_fields.set(5usize, true).expect("Should not be out of bounds");
         }
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(42usize);
-        if let Some(ref g) = self.g {
+        if let ssz_types::Optional::Some(ref g) = self.g {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(g).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -2525,7 +2568,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Iota {
                 .write(H::get_zero_hash_slice(0))
                 .expect("tree hash derive should not apply too many leaves");
         }
-        if let Some(ref h) = self.h {
+        if let ssz_types::Optional::Some(ref h) = self.h {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(h).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -2534,7 +2577,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Iota {
                 .write(H::get_zero_hash_slice(0))
                 .expect("tree hash derive should not apply too many leaves");
         }
-        if let Some(ref i) = self.i {
+        if let ssz_types::Optional::Some(ref i) = self.i {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(i).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -2543,7 +2586,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Iota {
                 .write(H::get_zero_hash_slice(0))
                 .expect("tree hash derive should not apply too many leaves");
         }
-        if let Some(ref j) = self.j {
+        if let ssz_types::Optional::Some(ref j) = self.j {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(j).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -2552,7 +2595,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Iota {
                 .write(H::get_zero_hash_slice(0))
                 .expect("tree hash derive should not apply too many leaves");
         }
-        if let Some(ref r) = self.r {
+        if let ssz_types::Optional::Some(ref r) = self.r {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(r).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -2561,7 +2604,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Iota {
                 .write(H::get_zero_hash_slice(0))
                 .expect("tree hash derive should not apply too many leaves");
         }
-        if let Some(ref s) = self.s {
+        if let ssz_types::Optional::Some(ref s) = self.s {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(s).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -2770,6 +2813,7 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for IotaRef<'a> {
 }
 impl<'a> ssz::view::DecodeView<'a> for IotaRef<'a> {
     fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+        use ssz::Decode;
         let bitvector_length = 1usize;
         if bytes.len() < bitvector_length {
             return Err(ssz::DecodeError::InvalidByteLength {
@@ -2777,7 +2821,7 @@ impl<'a> ssz::view::DecodeView<'a> for IotaRef<'a> {
                 expected: bitvector_length,
             });
         }
-        let _bitvector = ssz::BitVector::<
+        let _bitvector = ssz_types::BitVector::<
             42usize,
         >::from_ssz_bytes(&bytes[0..bitvector_length])?;
         if bytes.len() < bitvector_length {
@@ -2809,12 +2853,42 @@ impl<'a> IotaRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> Iota {
         Iota {
-            g: self.g().expect("valid view").to_owned(),
-            h: self.h().expect("valid view").to_owned(),
-            i: self.i().expect("valid view").to_owned(),
-            j: self.j().expect("valid view").to_owned(),
-            r: self.r().expect("valid view").to_owned(),
-            s: self.s().expect("valid view").to_owned(),
+            g: match self.g().expect("valid view") {
+                ssz_types::Optional::Some(inner) => {
+                    ssz_types::Optional::Some(inner.to_owned())
+                }
+                ssz_types::Optional::None => ssz_types::Optional::None,
+            },
+            h: match self.h().expect("valid view") {
+                ssz_types::Optional::Some(inner) => {
+                    ssz_types::Optional::Some(inner.to_owned())
+                }
+                ssz_types::Optional::None => ssz_types::Optional::None,
+            },
+            i: match self.i().expect("valid view") {
+                ssz_types::Optional::Some(inner) => {
+                    ssz_types::Optional::Some(inner.to_owned())
+                }
+                ssz_types::Optional::None => ssz_types::Optional::None,
+            },
+            j: match self.j().expect("valid view") {
+                ssz_types::Optional::Some(inner) => {
+                    ssz_types::Optional::Some(inner.to_owned())
+                }
+                ssz_types::Optional::None => ssz_types::Optional::None,
+            },
+            r: match self.r().expect("valid view") {
+                ssz_types::Optional::Some(inner) => {
+                    ssz_types::Optional::Some(inner.to_owned())
+                }
+                ssz_types::Optional::None => ssz_types::Optional::None,
+            },
+            s: match self.s().expect("valid view") {
+                ssz_types::Optional::Some(inner) => {
+                    ssz_types::Optional::Some(inner.to_owned())
+                }
+                ssz_types::Optional::None => ssz_types::Optional::None,
+            },
         }
     }
 }
@@ -3020,7 +3094,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Lambda {
     fn tree_hash_root(&self) -> H::Output {
         use tree_hash::TreeHash;
         use ssz_types::BitVector;
-        let mut active_fields = BitVector::<4u64>::new();
+        let mut active_fields = BitVector::<4usize>::new();
         if self.w.is_some() {
             active_fields.set(0usize, true).expect("Should not be out of bounds");
         }
@@ -3028,7 +3102,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Lambda {
             active_fields.set(1usize, true).expect("Should not be out of bounds");
         }
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(4usize);
-        if let Some(ref w) = self.w {
+        if let ssz_types::Optional::Some(ref w) = self.w {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(w).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -3037,7 +3111,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Lambda {
                 .write(H::get_zero_hash_slice(0))
                 .expect("tree hash derive should not apply too many leaves");
         }
-        if let Some(ref x) = self.x {
+        if let ssz_types::Optional::Some(ref x) = self.x {
             hasher
                 .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(x).as_ref())
                 .expect("tree hash derive should not apply too many leaves");
@@ -3138,6 +3212,7 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for LambdaRef<'a> 
 }
 impl<'a> ssz::view::DecodeView<'a> for LambdaRef<'a> {
     fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+        use ssz::Decode;
         let bitvector_length = 1usize;
         if bytes.len() < bitvector_length {
             return Err(ssz::DecodeError::InvalidByteLength {
@@ -3145,7 +3220,7 @@ impl<'a> ssz::view::DecodeView<'a> for LambdaRef<'a> {
                 expected: bitvector_length,
             });
         }
-        let _bitvector = ssz::BitVector::<
+        let _bitvector = ssz_types::BitVector::<
             4usize,
         >::from_ssz_bytes(&bytes[0..bitvector_length])?;
         if bytes.len() < bitvector_length {
@@ -3177,8 +3252,18 @@ impl<'a> LambdaRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> Lambda {
         Lambda {
-            w: self.w().expect("valid view").to_owned(),
-            x: self.x().expect("valid view").to_owned(),
+            w: match self.w().expect("valid view") {
+                ssz_types::Optional::Some(inner) => {
+                    ssz_types::Optional::Some(inner.to_owned())
+                }
+                ssz_types::Optional::None => ssz_types::Optional::None,
+            },
+            x: match self.x().expect("valid view") {
+                ssz_types::Optional::Some(inner) => {
+                    ssz_types::Optional::Some(inner.to_owned())
+                }
+                ssz_types::Optional::None => ssz_types::Optional::None,
+            },
         }
     }
 }

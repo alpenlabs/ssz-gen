@@ -555,10 +555,30 @@ fn generate_module_code(
     }
 }
 
+/// Checks if any type in the schema uses serde derives
+fn schema_uses_serde(schema: &SszSchema) -> bool {
+    use crate::pragma::ParsedPragma;
+
+    // Check classes for serde derives in pragmas
+    for class in schema.classes() {
+        let pragmas = ParsedPragma::parse(class.pragmas());
+        if pragmas
+            .derives
+            .iter()
+            .any(|d| d == "Serialize" || d == "Deserialize")
+        {
+            return true;
+        }
+    }
+
+    false
+}
+
 /// Generates a single flat module with all definitions at the root level
 fn single_module_rust_code(
     schema_map: &HashMap<&PathBuf, TokenStream>,
     entry_point_paths: &HashSet<PathBuf>,
+    needs_serde: bool,
 ) -> TokenStream {
     let mut all_tokens = Vec::new();
 
@@ -575,6 +595,12 @@ fn single_module_rust_code(
         }
     }
 
+    let serde_imports = if needs_serde {
+        quote! { use serde::{Serialize, Deserialize}; }
+    } else {
+        quote! {}
+    };
+
     quote! {
         #![allow(unused_imports, reason = "generated code using ssz-gen")]
         use ssz_types::*;
@@ -583,6 +609,7 @@ fn single_module_rust_code(
         use tree_hash::TreeHashDigest;
         use tree_hash_derive::TreeHash;
         use ssz::view::*;
+        #serde_imports
 
         #(#all_tokens)*
     }
@@ -592,12 +619,19 @@ fn single_module_rust_code(
 fn flat_modules_rust_code(
     schema_map: &HashMap<&PathBuf, TokenStream>,
     entry_point_paths: &HashSet<PathBuf>,
+    needs_serde: bool,
 ) -> TokenStream {
     let mut modules = Vec::new();
 
     // Sort paths to ensure consistent ordering
     let mut paths: Vec<_> = schema_map.keys().collect();
     paths.sort();
+
+    let serde_imports = if needs_serde {
+        quote! { use serde::{Serialize, Deserialize}; }
+    } else {
+        quote! {}
+    };
 
     for path in paths {
         // Only include modules from actual entry points to avoid duplicates
@@ -615,6 +649,7 @@ fn flat_modules_rust_code(
                         use tree_hash::TreeHashDigest;
                         use tree_hash_derive::TreeHash;
                         use ssz::view::*;
+                        #serde_imports
 
                         #content_tokens
                     }
@@ -704,6 +739,12 @@ pub fn schema_map_to_rust_code(
     let mut module_content_tokens = HashMap::new(); // Content without imports for `SingleModule`
     let resolvers = RefCell::new(HashMap::new());
 
+    // Detect if any schema uses serde derives
+    let needs_serde = parsing_order
+        .iter()
+        .filter_map(|path| schema_map.get(path))
+        .any(schema_uses_serde);
+
     for path in parsing_order {
         let schema = schema_map.get(path).unwrap();
         let mut type_resolver = TypeResolver::new_with_builtins(&resolvers);
@@ -749,6 +790,13 @@ pub fn schema_map_to_rust_code(
         // Store content without imports for SingleModule mode
         module_content_tokens.insert(path, content_tokens.clone());
 
+        // Conditional serde import
+        let serde_imports = if needs_serde {
+            quote! { use serde::{Serialize, Deserialize}; }
+        } else {
+            quote! {}
+        };
+
         // Store full module with imports for other modes
         module_tokens.insert(
             path,
@@ -759,6 +807,7 @@ pub fn schema_map_to_rust_code(
                 use tree_hash::TreeHashDigest;
                 use tree_hash_derive::TreeHash;
                 use ssz::view::*;
+                #serde_imports
 
                 #content_tokens
             },
@@ -770,10 +819,10 @@ pub fn schema_map_to_rust_code(
 
     match module_generation {
         ModuleGeneration::SingleModule => {
-            single_module_rust_code(&module_content_tokens, entry_point_paths)
+            single_module_rust_code(&module_content_tokens, entry_point_paths, needs_serde)
         }
         ModuleGeneration::FlatModules => {
-            flat_modules_rust_code(&module_content_tokens, entry_point_paths)
+            flat_modules_rust_code(&module_content_tokens, entry_point_paths, needs_serde)
         }
         ModuleGeneration::NestedModules => module_tokens_to_rust_code(&module_tokens),
     }

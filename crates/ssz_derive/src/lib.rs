@@ -515,35 +515,38 @@ fn ssz_encode_derive_stable_container(
                 )
             });
         } else {
-            let _ = ty_inner_type("Optional", ty).expect("Use Optional<T> for StableContainer");
-            field_is_ssz_fixed_len.push(quote! { <#ty as ssz::Encode>::is_ssz_fixed_len() });
-            field_fixed_len.push(quote! { <#ty as ssz::Encode>::ssz_fixed_len() });
-            field_ssz_bytes_len.push(quote! { self.#ident.ssz_bytes_len() });
-            field_encoder_append.push(quote! { encoder.append(&self.#ident) });
+            let inner_ty =
+                ty_inner_type("Optional", ty).expect("Use Optional<T> for StableContainer");
+            field_is_ssz_fixed_len.push(quote! { <#inner_ty as ssz::Encode>::is_ssz_fixed_len() });
+            field_fixed_len.push(quote! { <#inner_ty as ssz::Encode>::ssz_fixed_len() });
+            field_ssz_bytes_len.push(quote! {
+                if let Optional::Some(ref inner) = self.#ident {
+                    inner.ssz_bytes_len()
+                } else {
+                    0
+                }
+            });
+            field_encoder_append.push(quote! {
+                if let Optional::Some(ref inner) = self.#ident {
+                    encoder.append(inner)
+                }
+            });
         }
     }
 
     let output = quote! {
         impl #impl_generics ssz::Encode for #name #ty_generics #where_clause {
             fn is_ssz_fixed_len() -> bool {
-                #(
-                    #field_is_ssz_fixed_len &&
-                )*
-                    true
+                // StableContainer is always variable-length because:
+                // 1. BitVector is prepended
+                // 2. Active fields vary at runtime
+                // 3. Size depends on which fields are Some vs None
+                false
             }
 
             fn ssz_fixed_len() -> usize {
-                if <Self as ssz::Encode>::is_ssz_fixed_len() {
-                    let mut len: usize = 0;
-                    #(
-                        len = len
-                            .checked_add(#field_fixed_len)
-                            .expect("encode ssz_fixed_len length overflow");
-                    )*
-                    len
-                } else {
-                    ssz::BYTES_PER_LENGTH_OFFSET
-                }
+                // StableContainer is always variable-length
+                ssz::BYTES_PER_LENGTH_OFFSET
             }
 
             fn ssz_bytes_len(&self) -> usize {
@@ -571,15 +574,37 @@ fn ssz_encode_derive_stable_container(
             }
 
             fn ssz_append(&self, buf: &mut Vec<u8>) {
+                // StableContainer serialization includes the bitvector
+                // Build the bitvector
+                let mut active_fields = BitVector::<#max_fields>::new();
+                let mut working_field: usize = 0;
+                #(
+                    if self.#struct_fields_vec.is_some() {
+                        active_fields.set(working_field, true).expect("Should not be out of bounds");
+                    }
+                    working_field += 1;
+                )*
+
+                // Append bitvector to output
+                buf.extend_from_slice(&active_fields.as_ssz_bytes());
+
+                // Calculate offset for container data (after fixed portion)
                 let mut offset: usize = 0;
                 #(
                     if self.#struct_fields_vec.is_some() {
-                    offset = offset
-                        .checked_add(#field_fixed_len)
-                        .expect("encode ssz_append offset overflow");
+                        if #field_is_ssz_fixed_len {
+                            offset = offset
+                                .checked_add(#field_fixed_len)
+                                .expect("encode ssz_append offset overflow");
+                        } else {
+                            offset = offset
+                                .checked_add(ssz::BYTES_PER_LENGTH_OFFSET)
+                                .expect("encode ssz_append offset overflow");
+                        }
                     }
                 )*
 
+                // Encode container data (offsets + variable data)
                 let mut encoder = ssz::SszEncoder::container(buf, offset);
 
                 #(
@@ -591,29 +616,12 @@ fn ssz_encode_derive_stable_container(
                 encoder.finalize();
             }
 
-            // Custom ssz_bytes implementation so that we prepend the BitVector.
+            // For StableContainer, as_ssz_bytes just delegates to ssz_append
+            // since ssz_append already includes the bitvector
             fn as_ssz_bytes(&self) -> Vec<u8> {
-                let mut active_fields = BitVector::<#max_fields>::new();
-
-                let mut working_field: usize = 0;
-                #(
-                    if self.#struct_fields_vec.is_some() {
-                        active_fields.set(working_field, true).expect("Should not be out of bounds");
-                    }
-                    working_field += 1;
-                )*
-
-                let mut bitvector = active_fields.as_ssz_bytes();
-
-
-                // We need to ensure the bitvector is not taken into account when computing
-                // offsets. So finalize the ssz struct before prepending.
                 let mut buf = vec![];
                 self.ssz_append(&mut buf);
-
-                bitvector.append(&mut buf);
-
-                bitvector
+                buf
             }
         }
     };
@@ -1413,20 +1421,21 @@ fn ssz_decode_derive_stable_container(
                 let #ident = decoder.decode_next_with(|slice| #module::from_ssz_bytes(slice))?;
             });
         } else {
-            let _ = ty_inner_type("Optional", ty).expect("Use Optional<T> for StableContainer");
+            let inner_ty =
+                ty_inner_type("Optional", ty).expect("Use Optional<T> for StableContainer");
 
-            is_ssz_fixed_len = quote! { <#ty as ssz::Decode>::is_ssz_fixed_len() };
-            ssz_fixed_len = quote! { <#ty as ssz::Decode>::ssz_fixed_len() };
-            from_ssz_bytes = quote! { <#ty as ssz::Decode>::from_ssz_bytes(slice) };
+            is_ssz_fixed_len = quote! { <#inner_ty as ssz::Decode>::is_ssz_fixed_len() };
+            ssz_fixed_len = quote! { <#inner_ty as ssz::Decode>::ssz_fixed_len() };
+            from_ssz_bytes = quote! { <#inner_ty as ssz::Decode>::from_ssz_bytes(slice) };
 
             register_types.push(quote! {
                 if bitvector.get(#working_index).unwrap() {
-                    builder.register_type::<#ty>()?;
+                    builder.register_type::<#inner_ty>()?;
                 }
             });
             decodes.push(quote! {
                 let #ident = if bitvector.get(#working_index).unwrap() {
-                    decoder.decode_next()?
+                    Optional::Some(decoder.decode_next()?)
                 } else {
                     Optional::None
                 };
@@ -1446,7 +1455,7 @@ fn ssz_decode_derive_stable_container(
                         len: bytes.len(),
                         expected: end
                     })?;
-                #from_ssz_bytes?
+                Optional::Some(#from_ssz_bytes?)
             } else {
                 Optional::None
             };
@@ -1460,24 +1469,16 @@ fn ssz_decode_derive_stable_container(
     let output = quote! {
         impl #impl_generics ssz::Decode for #name #ty_generics #where_clause {
             fn is_ssz_fixed_len() -> bool {
-                #(
-                    #is_fixed_lens &&
-                )*
-                    true
+                // StableContainer is always variable-length per EIP-7495
+                // See: https://eips.ethereum.org/EIPS/eip-7495
+                // "For the purpose of serialization, StableContainer[N] is always
+                // considered 'variable-size' regardless of the individual field types."
+                false
             }
 
             fn ssz_fixed_len() -> usize {
-                if <Self as ssz::Decode>::is_ssz_fixed_len() {
-                    let mut len: usize = 0;
-                    #(
-                        len = len
-                            .checked_add(#fixed_lens)
-                            .expect("decode ssz_fixed_len overflow");
-                    )*
-                    len
-                } else {
-                    ssz::BYTES_PER_LENGTH_OFFSET
-                }
+                // StableContainer is always variable-length
+                ssz::BYTES_PER_LENGTH_OFFSET
             }
 
             fn from_ssz_bytes(bytes: &[u8]) -> std::result::Result<Self, ssz::DecodeError> {
