@@ -1,8 +1,10 @@
 #![allow(unused_imports, reason = "ssz-gen generated code")]
+use ssz_primitives::{U128, U256};
 pub mod tests {
     pub mod input {
         pub mod test_derives {
             #![allow(unused_imports, reason = "ssz-gen generated code")]
+use ssz_primitives::{U128, U256};
             use ssz_types::*;
             use ssz_derive::{Encode, Decode};
             use tree_hash::TreeHashDigest;

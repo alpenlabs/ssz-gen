@@ -605,6 +605,7 @@ fn single_module_rust_code(
         #![allow(unused_imports, reason = "generated code using ssz-gen")]
         use ssz_types::*;
         use ssz_types::view::{FixedVectorRef, VariableListRef};
+        use ssz_primitives::{U128, U256};
         use ssz_derive::{Encode, Decode};
         use tree_hash::TreeHashDigest;
         use tree_hash_derive::TreeHash;
@@ -645,6 +646,7 @@ fn flat_modules_rust_code(
                         #![allow(unused_imports, reason = "generated code using ssz-gen")]
                         use ssz_types::*;
                         use ssz_types::view::{FixedVectorRef, VariableListRef};
+                        use ssz_primitives::{U128, U256};
                         use ssz_derive::{Encode, Decode};
                         use tree_hash::TreeHashDigest;
                         use tree_hash_derive::TreeHash;
@@ -803,6 +805,7 @@ pub fn schema_map_to_rust_code(
             quote! {
                 use ssz_types::*;
                 use ssz_types::view::{FixedVectorRef, VariableListRef};
+                use ssz_primitives::{U128, U256};
                 use ssz_derive::{Encode, Decode};
                 use tree_hash::TreeHashDigest;
                 use tree_hash_derive::TreeHash;

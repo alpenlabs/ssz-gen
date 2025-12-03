@@ -43,6 +43,8 @@ class TestType(Container):
     ccc: uint8
     ddd: byte
     eee: List[uint16, 3]
+    large_int_128: U128
+    large_int_256: U256
 
 FirstUnion = Union[uint8, uint16]
 

@@ -6,6 +6,7 @@ pub mod tests {
             #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
             use ssz_types::view::{FixedVectorRef, VariableListRef};
+            use ssz_primitives::{U128, U256};
             use ssz_derive::{Encode, Decode};
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
@@ -2251,6 +2252,8 @@ pub mod tests {
                 pub ccc: u8,
                 pub ddd: u8,
                 pub eee: VariableList<u16, 3usize>,
+                pub large_int_128: U128,
+                pub large_int_256: U256,
             }
             impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for TestType {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -2264,7 +2267,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(5usize);
                     hasher
                         .write(
                             <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.ccc)
@@ -2280,6 +2283,22 @@ pub mod tests {
                     hasher
                         .write(
                             <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.eee)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<
+                                H,
+                            >>::tree_hash_root(&self.large_int_128)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<
+                                H,
+                            >>::tree_hash_root(&self.large_int_256)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -2329,13 +2348,13 @@ pub mod tests {
                 ) -> Result<VariableListRef<'a, u16, 3usize>, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
                         self.bytes,
-                        6usize,
+                        54usize,
                         1usize,
                         0usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
                         self.bytes,
-                        6usize,
+                        54usize,
                         1usize,
                         1usize,
                     )?;
@@ -2343,6 +2362,30 @@ pub mod tests {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
                     let bytes = &self.bytes[start..end];
+                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                }
+                pub fn large_int_128(&self) -> Result<U128, ssz::DecodeError> {
+                    let offset = 6usize;
+                    let end = offset + 16usize;
+                    if end > self.bytes.len() {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: self.bytes.len(),
+                            expected: end,
+                        });
+                    }
+                    let bytes = &self.bytes[offset..end];
+                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                }
+                pub fn large_int_256(&self) -> Result<U256, ssz::DecodeError> {
+                    let offset = 22usize;
+                    let end = offset + 32usize;
+                    if end > self.bytes.len() {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: self.bytes.len(),
+                            expected: end,
+                        });
+                    }
+                    let bytes = &self.bytes[offset..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
@@ -2377,26 +2420,36 @@ pub mod tests {
                         >::tree_hash_root(&eee);
                         hasher.write(root.as_ref()).expect("write field");
                     }
+                    {
+                        let offset = 6usize;
+                        let field_bytes = &self.bytes[offset..offset + 16usize];
+                        hasher.write(field_bytes).expect("write field");
+                    }
+                    {
+                        let offset = 22usize;
+                        let field_bytes = &self.bytes[offset..offset + 32usize];
+                        hasher.write(field_bytes).expect("write field");
+                    }
                     hasher.finish().expect("finish hasher")
                 }
             }
             impl<'a> ssz::view::DecodeView<'a> for TestTypeRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    if bytes.len() < 6usize {
+                    if bytes.len() < 54usize {
                         return Err(ssz::DecodeError::InvalidByteLength {
                             len: bytes.len(),
-                            expected: 6usize,
+                            expected: 54usize,
                         });
                     }
                     let mut prev_offset: Option<usize> = None;
                     for i in 0..1usize {
                         let offset = ssz::layout::read_variable_offset(
                             bytes,
-                            6usize,
+                            54usize,
                             1usize,
                             i,
                         )?;
-                        if i == 0 && offset != 6usize {
+                        if i == 0 && offset != 54usize {
                             return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
                         }
                         if let Some(prev) = prev_offset && offset < prev {
@@ -2443,6 +2496,8 @@ pub mod tests {
                             .expect("valid view")
                             .to_owned()
                             .expect("valid view"),
+                        large_int_128: self.large_int_128().expect("valid view"),
+                        large_int_256: self.large_int_256().expect("valid view"),
                     }
                 }
             }
