@@ -43,6 +43,11 @@ pub(crate) fn populate_builtin_types<'a>(resolv: &mut TypeResolver<'a>) {
     insert_alias_simple(resolv, "bit", "boolean");
     insert_alias_simple(resolv, "byte", "uint8");
 
+    // While Rust has native u128, SSZ requires specific serialization via ruint::Uint
+    // U128 and U256 are type aliases to Uint<128, 2> and Uint<256, 4> for SSZ encoding
+    insert_alias_simple(resolv, "U128", "uint128");
+    insert_alias_simple(resolv, "U256", "uint256");
+
     let vector_ident = make_ident("Vector");
     let byte_ident = make_ident("uint8"); // really "byte", but this is what that resolves to
     for i in 1..64 {

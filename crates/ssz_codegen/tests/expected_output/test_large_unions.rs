@@ -6,6 +6,7 @@ pub mod tests {
             #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
             use ssz_types::view::{FixedVectorRef, VariableListRef};
+            use ssz_primitives::{U128, U256};
             use ssz_derive::{Encode, Decode};
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
@@ -17,8 +18,8 @@ pub mod tests {
                 Selector1(u16),
                 Selector2(u32),
                 Selector3(u64),
-                Selector4(u128),
-                Selector5(u256),
+                Selector4(U128),
+                Selector5(U256),
             }
             impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for BigUnion {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -125,7 +126,7 @@ pub mod tests {
                     }
                     ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
                 }
-                pub fn as_selector4(&self) -> Result<u128, ssz::DecodeError> {
+                pub fn as_selector4(&self) -> Result<U128, ssz::DecodeError> {
                     if self.selector() != 4u8 {
                         return Err(
                             ssz::DecodeError::BytesInvalid(
@@ -135,7 +136,7 @@ pub mod tests {
                     }
                     ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
                 }
-                pub fn as_selector5(&self) -> Result<u256, ssz::DecodeError> {
+                pub fn as_selector5(&self) -> Result<U256, ssz::DecodeError> {
                     if self.selector() != 5u8 {
                         return Err(
                             ssz::DecodeError::BytesInvalid(

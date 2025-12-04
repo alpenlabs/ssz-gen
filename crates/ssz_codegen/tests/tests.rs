@@ -59,6 +59,20 @@ fn test_basic_codegen() {
     let actual_output =
         fs::read_to_string("tests/output/test_1.rs").expect("Failed to read actual output");
     assert_eq!(expected_output, actual_output);
+
+    // Verify that U128 and U256 are properly supported
+    assert!(
+        actual_output.contains("use ssz_primitives::{U128, U256}"),
+        "Generated code should import U128 and U256"
+    );
+    assert!(
+        actual_output.contains("large_int_128: U128"),
+        "TestType should have a U128 field"
+    );
+    assert!(
+        actual_output.contains("large_int_256: U256"),
+        "TestType should have a U256 field"
+    );
 }
 
 #[test]

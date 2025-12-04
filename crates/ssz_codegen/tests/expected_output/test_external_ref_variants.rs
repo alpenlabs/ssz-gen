@@ -2,7 +2,7 @@ pub mod tests {
     #![allow(unused_imports, reason = "generated code using ssz-gen")]
     pub mod input {
         #![allow(unused_imports, reason = "generated code using ssz-gen")]
-        pub mod test_bitfields {
+        pub mod test_external_ref_variants {
             #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
             use ssz_types::view::{FixedVectorRef, VariableListRef};
@@ -11,32 +11,15 @@ pub mod tests {
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
-            #[allow(dead_code, reason = "generated code using ssz-gen")]
-            pub const SMALL_SIZE: u64 = 1u64;
-            #[allow(dead_code, reason = "generated code using ssz-gen")]
-            pub const MEDIUM_SIZE: u64 = 64u64;
-            #[allow(dead_code, reason = "generated code using ssz-gen")]
-            pub const LARGE_SIZE: u64 = 256u64;
-            #[allow(dead_code, reason = "generated code using ssz-gen")]
-            pub const POWER_OF_TWO: u64 = 128u64;
-            pub type TinyBitlist = BitList<{ SMALL_SIZE as usize }>;
-            pub type StandardBitlist = BitList<{ MEDIUM_SIZE as usize }>;
-            pub type LargeBitlist = BitList<{ LARGE_SIZE as usize }>;
-            pub type TinyBitvector = BitVector<{ SMALL_SIZE as usize }>;
-            pub type StandardBitvector = BitVector<{ MEDIUM_SIZE as usize }>;
-            pub type LargeBitvector = BitVector<{ POWER_OF_TWO as usize }>;
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            pub struct BitfieldContainer {
-                pub tiny_list: TinyBitlist,
-                pub std_list: StandardBitlist,
-                pub large_list: LargeBitlist,
-                pub tiny_vec: TinyBitvector,
-                pub std_vec: StandardBitvector,
-                pub large_vec: LargeBitvector,
+            pub struct ContainerWithExternal {
+                pub payload: external_ssz::MsgPayload,
+                pub account_id: external_ssz::AccountId,
+                pub messages: VariableList<external_ssz::MessagePayload, 10usize>,
             }
             impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for BitfieldContainer {
+            for ContainerWithExternal {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -48,18 +31,10 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(6usize);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<
-                                H,
-                            >>::tree_hash_root(&self.tiny_list)
-                                .as_ref(),
-                        )
-                        .expect("tree hash derive should not apply too many leaves");
-                    hasher
-                        .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.std_list)
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.payload)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -67,27 +42,13 @@ pub mod tests {
                         .write(
                             <_ as tree_hash::TreeHash<
                                 H,
-                            >>::tree_hash_root(&self.large_list)
+                            >>::tree_hash_root(&self.account_id)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.tiny_vec)
-                                .as_ref(),
-                        )
-                        .expect("tree hash derive should not apply too many leaves");
-                    hasher
-                        .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.std_vec)
-                                .as_ref(),
-                        )
-                        .expect("tree hash derive should not apply too many leaves");
-                    hasher
-                        .write(
-                            <_ as tree_hash::TreeHash<
-                                H,
-                            >>::tree_hash_root(&self.large_vec)
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.messages)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -96,30 +57,30 @@ pub mod tests {
                         .expect("tree hash derive should not have a remaining buffer")
                 }
             }
-            /// Zero-copy view over [`BitfieldContainer`].
+            /// Zero-copy view over [`ContainerWithExternal`].
             ///
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Clone, Debug, PartialEq, Eq, Copy)]
-            pub struct BitfieldContainerRef<'a> {
+            pub struct ContainerWithExternalRef<'a> {
                 bytes: &'a [u8],
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> BitfieldContainerRef<'a> {
-                pub fn tiny_list(
+            impl<'a> ContainerWithExternalRef<'a> {
+                pub fn payload(
                     &self,
-                ) -> Result<BitListRef<'a, 1usize>, ssz::DecodeError> {
+                ) -> Result<external_ssz::MsgPayloadRef<'a>, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
                         self.bytes,
-                        37usize,
+                        12usize,
                         3usize,
                         0usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
                         self.bytes,
-                        37usize,
+                        12usize,
                         3usize,
                         1usize,
                     )?;
@@ -129,18 +90,18 @@ pub mod tests {
                     let bytes = &self.bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
-                pub fn std_list(
+                pub fn account_id(
                     &self,
-                ) -> Result<BitListRef<'a, 64usize>, ssz::DecodeError> {
+                ) -> Result<external_ssz::AccountId, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
                         self.bytes,
-                        37usize,
+                        12usize,
                         3usize,
                         1usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
                         self.bytes,
-                        37usize,
+                        12usize,
                         3usize,
                         2usize,
                     )?;
@@ -150,18 +111,21 @@ pub mod tests {
                     let bytes = &self.bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
-                pub fn large_list(
+                pub fn messages(
                     &self,
-                ) -> Result<BitListRef<'a, 256usize>, ssz::DecodeError> {
+                ) -> Result<
+                    VariableListRef<'a, external_ssz::MessagePayloadRef<'a>, 10usize>,
+                    ssz::DecodeError,
+                > {
                     let start = ssz::layout::read_variable_offset(
                         self.bytes,
-                        37usize,
+                        12usize,
                         3usize,
                         2usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
                         self.bytes,
-                        37usize,
+                        12usize,
                         3usize,
                         3usize,
                     )?;
@@ -169,53 +133,11 @@ pub mod tests {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
                     let bytes = &self.bytes[start..end];
-                    ssz::view::DecodeView::from_ssz_bytes(bytes)
-                }
-                pub fn tiny_vec(
-                    &self,
-                ) -> Result<BitVectorRef<'a, 1usize>, ssz::DecodeError> {
-                    let offset = 12usize;
-                    let end = offset + 1usize;
-                    if end > self.bytes.len() {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: self.bytes.len(),
-                            expected: end,
-                        });
-                    }
-                    let bytes = &self.bytes[offset..end];
-                    ssz::view::DecodeView::from_ssz_bytes(bytes)
-                }
-                pub fn std_vec(
-                    &self,
-                ) -> Result<BitVectorRef<'a, 64usize>, ssz::DecodeError> {
-                    let offset = 13usize;
-                    let end = offset + 8usize;
-                    if end > self.bytes.len() {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: self.bytes.len(),
-                            expected: end,
-                        });
-                    }
-                    let bytes = &self.bytes[offset..end];
-                    ssz::view::DecodeView::from_ssz_bytes(bytes)
-                }
-                pub fn large_vec(
-                    &self,
-                ) -> Result<BitVectorRef<'a, 128usize>, ssz::DecodeError> {
-                    let offset = 21usize;
-                    let end = offset + 16usize;
-                    if end > self.bytes.len() {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: self.bytes.len(),
-                            expected: end,
-                        });
-                    }
-                    let bytes = &self.bytes[offset..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for BitfieldContainerRef<'a> {
+            for ContainerWithExternalRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -229,67 +151,46 @@ pub mod tests {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
                     {
-                        let tiny_list = self.tiny_list().expect("valid view");
+                        let payload = self.payload().expect("valid view");
                         let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
                             H,
-                        >::tree_hash_root(&tiny_list);
+                        >::tree_hash_root(&payload);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     {
-                        let std_list = self.std_list().expect("valid view");
+                        let account_id = self.account_id().expect("valid view");
                         let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
                             H,
-                        >::tree_hash_root(&std_list);
+                        >::tree_hash_root(&account_id);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     {
-                        let large_list = self.large_list().expect("valid view");
+                        let messages = self.messages().expect("valid view");
                         let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
                             H,
-                        >::tree_hash_root(&large_list);
-                        hasher.write(root.as_ref()).expect("write field");
-                    }
-                    {
-                        let tiny_vec = self.tiny_vec().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
-                            H,
-                        >::tree_hash_root(&tiny_vec);
-                        hasher.write(root.as_ref()).expect("write field");
-                    }
-                    {
-                        let std_vec = self.std_vec().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
-                            H,
-                        >::tree_hash_root(&std_vec);
-                        hasher.write(root.as_ref()).expect("write field");
-                    }
-                    {
-                        let large_vec = self.large_vec().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
-                            H,
-                        >::tree_hash_root(&large_vec);
+                        >::tree_hash_root(&messages);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }
             }
-            impl<'a> ssz::view::DecodeView<'a> for BitfieldContainerRef<'a> {
+            impl<'a> ssz::view::DecodeView<'a> for ContainerWithExternalRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    if bytes.len() < 37usize {
+                    if bytes.len() < 12usize {
                         return Err(ssz::DecodeError::InvalidByteLength {
                             len: bytes.len(),
-                            expected: 37usize,
+                            expected: 12usize,
                         });
                     }
                     let mut prev_offset: Option<usize> = None;
                     for i in 0..3usize {
                         let offset = ssz::layout::read_variable_offset(
                             bytes,
-                            37usize,
+                            12usize,
                             3usize,
                             i,
                         )?;
-                        if i == 0 && offset != 37usize {
+                        if i == 0 && offset != 12usize {
                             return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
                         }
                         if let Some(prev) = prev_offset && offset < prev {
@@ -303,7 +204,7 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
-            impl<'a> ssz::view::SszTypeInfo for BitfieldContainerRef<'a> {
+            impl<'a> ssz::view::SszTypeInfo for ContainerWithExternalRef<'a> {
                 fn is_ssz_fixed_len() -> bool {
                     false
                 }
@@ -312,30 +213,31 @@ pub mod tests {
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> ssz_types::view::ToOwnedSsz<BitfieldContainer>
-            for BitfieldContainerRef<'a> {
+            impl<'a> ssz_types::view::ToOwnedSsz<ContainerWithExternal>
+            for ContainerWithExternalRef<'a> {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
-                fn to_owned(&self) -> BitfieldContainer {
-                    <BitfieldContainerRef<'a>>::to_owned(self)
+                fn to_owned(&self) -> ContainerWithExternal {
+                    <ContainerWithExternalRef<'a>>::to_owned(self)
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> BitfieldContainerRef<'a> {
+            impl<'a> ContainerWithExternalRef<'a> {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
-                pub fn to_owned(&self) -> BitfieldContainer {
-                    BitfieldContainer {
-                        tiny_list: self.tiny_list().expect("valid view").to_owned(),
-                        std_list: self.std_list().expect("valid view").to_owned(),
-                        large_list: self.large_list().expect("valid view").to_owned(),
-                        tiny_vec: self.tiny_vec().expect("valid view").to_owned(),
-                        std_vec: self.std_vec().expect("valid view").to_owned(),
-                        large_vec: self.large_vec().expect("valid view").to_owned(),
+                pub fn to_owned(&self) -> ContainerWithExternal {
+                    ContainerWithExternal {
+                        payload: self.payload().expect("valid view").to_owned(),
+                        account_id: self.account_id().expect("valid view").to_owned(),
+                        messages: self
+                            .messages()
+                            .expect("valid view")
+                            .to_owned()
+                            .expect("valid view"),
                     }
                 }
             }
