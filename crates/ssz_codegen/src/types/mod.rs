@@ -213,10 +213,7 @@ impl TypeResolution {
             }
             TypeResolutionKind::Boolean => primitive_rust_type("bool"),
             TypeResolutionKind::UInt(size) => {
-                // REVIEW: uint128 encoding
                 // Use U128/U256 from ssz_primitives for SSZ-specific serialization
-                // While Rust has native u128, SSZ encoding requires ruint::Uint types
-                // Smaller integers (u8, u16, u32, u64) use native Rust types
                 match size {
                     128 => primitive_rust_type("U128"),
                     256 => primitive_rust_type("U256"),
@@ -369,8 +366,6 @@ impl TypeResolution {
             TypeResolutionKind::Boolean => primitive_rust_type("bool"),
             TypeResolutionKind::UInt(size) => {
                 // Use U128/U256 from ssz_primitives for SSZ-specific serialization
-                // While Rust has native u128, SSZ encoding requires ruint::Uint types
-                // Smaller integers (u8, u16, u32, u64) use native Rust types
                 match size {
                     128 => primitive_rust_type("U128"),
                     256 => primitive_rust_type("U256"),
@@ -509,8 +504,6 @@ impl TypeResolution {
             TypeResolutionKind::Boolean => primitive_rust_type("bool"),
             TypeResolutionKind::UInt(size) => {
                 // Use U128/U256 from ssz_primitives for SSZ-specific serialization
-                // While Rust has native u128, SSZ encoding requires ruint::Uint types
-                // Smaller integers (u8, u16, u32, u64) use native Rust types
                 match size {
                     128 => primitive_rust_type("U128"),
                     256 => primitive_rust_type("U256"),

@@ -43,8 +43,6 @@ pub(crate) fn populate_builtin_types<'a>(resolv: &mut TypeResolver<'a>) {
     insert_alias_simple(resolv, "bit", "boolean");
     insert_alias_simple(resolv, "byte", "uint8");
 
-    // Uppercase aliases for large uint types from ssz_primitives
-    // REVIEW: uint128 encoding
     // While Rust has native u128, SSZ requires specific serialization via ruint::Uint
     // U128 and U256 are type aliases to Uint<128, 2> and Uint<256, 4> for SSZ encoding
     insert_alias_simple(resolv, "U128", "uint128");
