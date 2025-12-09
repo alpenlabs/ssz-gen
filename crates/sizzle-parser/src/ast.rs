@@ -148,6 +148,9 @@ pub(crate) enum AssignExpr {
 
     /// An integer literal.
     Value(ConstValue),
+
+    /// A binary operation with a named operand (e.g., MAX_LEN + 1)
+    SymbolicBinop(Binop, Identifier, u64),
 }
 
 /// A class definition.
@@ -638,31 +641,68 @@ fn parse_assign_expr(
     toktrs: &[SrcToktr],
     import_map: &HashMap<Identifier, PathBuf>,
 ) -> Result<AssignExpr, ParseError> {
-    use TaggedToktr::*;
-
     let expr = match toktrs {
         // This is probably an alias.
-        [Identifier(_, name)] => AssignExpr::Name(name.clone()),
+        [TaggedToktr::Identifier(_, name)] => AssignExpr::Name(name.clone()),
 
-        [Identifier(_, name), BracketBlock(_, arg_toks)] => {
+        [
+            TaggedToktr::Identifier(_, name),
+            TaggedToktr::BracketBlock(_, arg_toks),
+        ] => {
             let mut gob = Gobbler::new(arg_toks.children());
             let args = parse_ty_args(&mut gob, import_map)?;
             AssignExpr::Complex(ComplexTySpec::new(name.clone(), args))
         }
 
         // Simple integer expression.
-        [IntegerLiteral(_, v)] => AssignExpr::Value(ConstValue::Int(*v)),
+        [TaggedToktr::IntegerLiteral(_, v)] => AssignExpr::Value(ConstValue::Int(*v)),
 
         // This is a shl value.
-        [IntegerLiteral(_, v), Shl(_), IntegerLiteral(_, shl_v)] => {
-            AssignExpr::Value(ConstValue::Binop(Binop::Shl, *v, *shl_v))
-        }
+        [
+            TaggedToktr::IntegerLiteral(_, v),
+            TaggedToktr::Shl(_),
+            TaggedToktr::IntegerLiteral(_, shl_v),
+        ] => AssignExpr::Value(ConstValue::Binop(Binop::Shl, *v, *shl_v)),
 
-        [IntegerLiteral(_, mul_l), Mul(_), IntegerLiteral(_, mul_r)] => {
-            AssignExpr::Value(ConstValue::Binop(Binop::Mul, *mul_l, *mul_r))
-        }
+        [
+            TaggedToktr::IntegerLiteral(_, mul_l),
+            TaggedToktr::Mul(_),
+            TaggedToktr::IntegerLiteral(_, mul_r),
+        ] => AssignExpr::Value(ConstValue::Binop(Binop::Mul, *mul_l, *mul_r)),
 
-        [Identifier(_, module_name), Dot(_), Identifier(_, ident)] => {
+        // Addition: Integer + Integer
+        [
+            TaggedToktr::IntegerLiteral(_, add_l),
+            TaggedToktr::Add(_),
+            TaggedToktr::IntegerLiteral(_, add_r),
+        ] => AssignExpr::Value(ConstValue::Binop(Binop::Add, *add_l, *add_r)),
+
+        // Subtraction: Integer - Integer
+        [
+            TaggedToktr::IntegerLiteral(_, sub_l),
+            TaggedToktr::Sub(_),
+            TaggedToktr::IntegerLiteral(_, sub_r),
+        ] => AssignExpr::Value(ConstValue::Binop(Binop::Sub, *sub_l, *sub_r)),
+
+        // Addition: Identifier + Integer (e.g., MAX_LEN + 1)
+        [
+            TaggedToktr::Identifier(_, name),
+            TaggedToktr::Add(_),
+            TaggedToktr::IntegerLiteral(_, v),
+        ] => AssignExpr::SymbolicBinop(Binop::Add, name.clone(), *v),
+
+        // Subtraction: Identifier - Integer (e.g., MAX_LEN - 1)
+        [
+            TaggedToktr::Identifier(_, name),
+            TaggedToktr::Sub(_),
+            TaggedToktr::IntegerLiteral(_, v),
+        ] => AssignExpr::SymbolicBinop(Binop::Sub, name.clone(), *v),
+
+        [
+            TaggedToktr::Identifier(_, module_name),
+            TaggedToktr::Dot(_),
+            TaggedToktr::Identifier(_, ident),
+        ] => {
             let module_path = import_map.get(module_name).unwrap();
             AssignExpr::Imported(ImportedTySpec::new(module_path.clone(), ident.clone()))
         }

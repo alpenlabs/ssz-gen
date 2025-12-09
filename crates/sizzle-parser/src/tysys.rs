@@ -111,6 +111,9 @@ pub enum Binop {
     /// Addition.
     Add,
 
+    /// Subtraction.
+    Sub,
+
     /// Multiplication.
     Mul,
 
@@ -125,6 +128,7 @@ impl ConstValue {
             ConstValue::Int(v) => *v,
             ConstValue::Binop(op, a, b) => match op {
                 Binop::Add => a + b,
+                Binop::Sub => a - b,
                 Binop::Mul => a * b,
                 Binop::Shl => a << b,
             },

@@ -54,6 +54,10 @@ pub enum TaggedToken<T> {
     Shl(T),
     /// `*` operator.
     Mul(T),
+    /// `+` operator.
+    Add(T),
+    /// `-` operator.
+    Sub(T),
 
     // Structural, these are treated specially in token trees later.
     /// `[` open bracket.
@@ -98,6 +102,8 @@ impl<T> TaggedToken<T> {
             Self::IntegerLiteral(t, _) => t,
             Self::Shl(t) => t,
             Self::Mul(t) => t,
+            Self::Add(t) => t,
+            Self::Sub(t) => t,
             Self::OpenBracket(t) => t,
             Self::CloseBracket(t) => t,
             Self::OpenParen(t) => t,
@@ -127,6 +133,8 @@ impl<T> TaggedToken<T> {
             Self::IntegerLiteral(_, v) => Token::IntegerLiteral((), *v),
             Self::Shl(_) => Token::Shl(()),
             Self::Mul(_) => Token::Mul(()),
+            Self::Add(_) => Token::Add(()),
+            Self::Sub(_) => Token::Sub(()),
             Self::OpenBracket(_) => Token::OpenBracket(()),
             Self::CloseBracket(_) => Token::CloseBracket(()),
             Self::OpenParen(_) => Token::OpenParen(()),
@@ -349,6 +357,8 @@ pub(crate) fn parse_char_array_to_tokens(s: &[char]) -> Result<Vec<SrcToken>, To
             ',' => builder.push_token(SrcToken::Comma(sp)),
             '.' => builder.push_token(SrcToken::Dot(sp)),
             '*' => builder.push_token(SrcToken::Mul(sp)),
+            '+' => builder.push_token(SrcToken::Add(sp)),
+            '-' => builder.push_token(SrcToken::Sub(sp)),
             '[' => builder.push_token(SrcToken::OpenBracket(sp)),
             ']' => builder.push_token(SrcToken::CloseBracket(sp)),
             '(' => builder.push_token(SrcToken::OpenParen(sp)),
