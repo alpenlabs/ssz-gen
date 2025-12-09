@@ -333,4 +333,108 @@ class Header(Container):
             "Complex schema without trailing newline should parse successfully"
         );
     }
+
+    #[test]
+    fn test_add_sub_operators() {
+        // Test the add and subtract operators with both literal and symbolic operands
+        const SCHEMA: &str = r"
+BASE = 1024
+PLUS_ONE = BASE + 1
+MINUS_ONE = BASE - 1
+LITERAL_ADD = 10 + 5
+LITERAL_SUB = 10 - 5
+
+class MyContainer(Container):
+    field_a: List[byte, PLUS_ONE]
+    field_b: List[byte, MINUS_ONE]
+    field_c: List[byte, LITERAL_ADD]
+    field_d: List[byte, LITERAL_SUB]
+";
+
+        let files = HashMap::from([(Path::new("test.ssz").to_path_buf(), SCHEMA.to_string())]);
+
+        let (_, schema_map) =
+            parse_str_schema(&files, &[]).expect("test: parse schema with add/sub operators");
+
+        let schema = schema_map
+            .get(Path::new("test.ssz"))
+            .expect("test: get schema");
+
+        // Verify we have all the constants
+        let constants = schema.constants();
+        assert_eq!(constants.len(), 5, "Should have 5 constants");
+
+        // Check BASE constant
+        assert_eq!(constants[0].name().0, "BASE");
+        assert_eq!(constants[0].value().eval(), 1024);
+
+        // Check PLUS_ONE constant (1024 + 1 = 1025)
+        assert_eq!(constants[1].name().0, "PLUS_ONE");
+        assert_eq!(constants[1].value().eval(), 1025);
+
+        // Check MINUS_ONE constant (1024 - 1 = 1023)
+        assert_eq!(constants[2].name().0, "MINUS_ONE");
+        assert_eq!(constants[2].value().eval(), 1023);
+
+        // Check LITERAL_ADD constant (10 + 5 = 15)
+        assert_eq!(constants[3].name().0, "LITERAL_ADD");
+        assert_eq!(constants[3].value().eval(), 15);
+
+        // Check LITERAL_SUB constant (10 - 5 = 5)
+        assert_eq!(constants[4].name().0, "LITERAL_SUB");
+        assert_eq!(constants[4].value().eval(), 5);
+
+        // Verify the class was created
+        let classes = schema.classes();
+        assert_eq!(classes.len(), 1, "Should have 1 class");
+        assert_eq!(classes[0].name().0, "MyContainer");
+        assert_eq!(classes[0].fields().len(), 4, "Should have 4 fields");
+
+        eprintln!("Successfully tested add/sub operators with evaluated values: {schema:#?}");
+    }
+
+    #[test]
+    fn test_issue_49_example() {
+        // Test the actual example from issue #49
+        const SCHEMA: &str = r"
+### Maximum length of the predicate condition bytes
+MAX_CONDITION_LEN = 1 << 10
+
+### One additional byte for the PredicateTypeId
+MAX_PREDICATE_LEN = MAX_CONDITION_LEN + 1
+
+class Predicate(Container):
+    condition: List[byte, MAX_CONDITION_LEN]
+    full_data: List[byte, MAX_PREDICATE_LEN]
+";
+
+        let files = HashMap::from([(Path::new("test.ssz").to_path_buf(), SCHEMA.to_string())]);
+
+        let (_, schema_map) =
+            parse_str_schema(&files, &[]).expect("test: parse schema with issue #49 example");
+
+        let schema = schema_map
+            .get(Path::new("test.ssz"))
+            .expect("test: get schema");
+
+        // Verify constants
+        let constants = schema.constants();
+        assert_eq!(constants.len(), 2, "Should have 2 constants");
+
+        // Check MAX_CONDITION_LEN constant (1 << 10 = 1024)
+        assert_eq!(constants[0].name().0, "MAX_CONDITION_LEN");
+        assert_eq!(constants[0].value().eval(), 1024);
+
+        // Check MAX_PREDICATE_LEN constant (1024 + 1 = 1025)
+        assert_eq!(constants[1].name().0, "MAX_PREDICATE_LEN");
+        assert_eq!(constants[1].value().eval(), 1025);
+
+        // Verify the class
+        let classes = schema.classes();
+        assert_eq!(classes.len(), 1, "Should have 1 class");
+        assert_eq!(classes[0].name().0, "Predicate");
+        assert_eq!(classes[0].fields().len(), 2, "Should have 2 fields");
+
+        eprintln!("Successfully parsed issue #49 example: {schema:#?}");
+    }
 }

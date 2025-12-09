@@ -1238,9 +1238,10 @@ mod tests {
     use std::path::Path;
 
     use crate::{
-        ast::{ModuleManager, ParseError, parse_module_from_toktrs},
+        ast::{AssignExpr, ModuleManager, ParseError, parse_module_from_toktrs},
         token::parse_char_array_to_tokens,
         token_tree::parse_tokens_to_toktrs,
+        tysys::ConstValue,
     };
 
     #[test]
@@ -1823,6 +1824,173 @@ class Foo(Container):
             }
             other => panic!("Expected StandaloneDocstring error, got: {:?}", other),
         }
+    }
+
+    #[test]
+    fn test_ast_parse_const_add_sub() {
+        let s = r"
+BASE = 1024
+PLUS_ONE = BASE + 1
+MINUS_ONE = BASE - 1
+LITERAL_ADD = 10 + 5
+LITERAL_SUB = 10 - 5
+";
+
+        let arr = s.chars().collect::<Vec<_>>();
+
+        let toks = parse_char_array_to_tokens(&arr).expect("test: tokenize string");
+        eprintln!("tokens {toks:#?}");
+
+        let tt = parse_tokens_to_toktrs(&toks).expect("test: treeize tokens");
+        eprintln!("tree {tt:#?}");
+
+        let mut module_manager = ModuleManager::new(&[]);
+        module_manager.add_module(Path::new(""), false);
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager, None)
+            .expect("test: parse toktrs");
+
+        let entries = module_manager
+            .get_module_mut(Path::new(""))
+            .unwrap()
+            .mut_entries();
+
+        // Verify we parsed all constants
+        assert_eq!(entries.len(), 5);
+
+        // Check BASE constant
+        if let crate::ast::ModuleEntry::Assignment(assign) = &entries[0] {
+            assert_eq!(assign.name().0, "BASE");
+            match assign.value() {
+                AssignExpr::Value(ConstValue::Int(v)) => assert_eq!(*v, 1024),
+                _ => panic!("Expected integer value for BASE"),
+            }
+        } else {
+            panic!("Expected assignment for BASE");
+        }
+
+        // Check PLUS_ONE constant (BASE + 1)
+        if let crate::ast::ModuleEntry::Assignment(assign) = &entries[1] {
+            assert_eq!(assign.name().0, "PLUS_ONE");
+            match assign.value() {
+                AssignExpr::SymbolicBinop(op, ident, v) => {
+                    assert_eq!(*op, crate::tysys::Binop::Add);
+                    assert_eq!(ident.0, "BASE");
+                    assert_eq!(*v, 1);
+                }
+                _ => panic!("Expected symbolic binop for PLUS_ONE"),
+            }
+        } else {
+            panic!("Expected assignment for PLUS_ONE");
+        }
+
+        // Check MINUS_ONE constant (BASE - 1)
+        if let crate::ast::ModuleEntry::Assignment(assign) = &entries[2] {
+            assert_eq!(assign.name().0, "MINUS_ONE");
+            match assign.value() {
+                AssignExpr::SymbolicBinop(op, ident, v) => {
+                    assert_eq!(*op, crate::tysys::Binop::Sub);
+                    assert_eq!(ident.0, "BASE");
+                    assert_eq!(*v, 1);
+                }
+                _ => panic!("Expected symbolic binop for MINUS_ONE"),
+            }
+        } else {
+            panic!("Expected assignment for MINUS_ONE");
+        }
+
+        // Check LITERAL_ADD constant (10 + 5)
+        if let crate::ast::ModuleEntry::Assignment(assign) = &entries[3] {
+            assert_eq!(assign.name().0, "LITERAL_ADD");
+            match assign.value() {
+                AssignExpr::Value(ConstValue::Binop(op, l, r)) => {
+                    assert_eq!(*op, crate::tysys::Binop::Add);
+                    assert_eq!(*l, 10);
+                    assert_eq!(*r, 5);
+                }
+                _ => panic!("Expected value binop for LITERAL_ADD"),
+            }
+        } else {
+            panic!("Expected assignment for LITERAL_ADD");
+        }
+
+        // Check LITERAL_SUB constant (10 - 5)
+        if let crate::ast::ModuleEntry::Assignment(assign) = &entries[4] {
+            assert_eq!(assign.name().0, "LITERAL_SUB");
+            match assign.value() {
+                AssignExpr::Value(ConstValue::Binop(op, l, r)) => {
+                    assert_eq!(*op, crate::tysys::Binop::Sub);
+                    assert_eq!(*l, 10);
+                    assert_eq!(*r, 5);
+                }
+                _ => panic!("Expected value binop for LITERAL_SUB"),
+            }
+        } else {
+            panic!("Expected assignment for LITERAL_SUB");
+        }
+
+        eprintln!("module {module_manager:#?}");
+    }
+
+    /// Test the actual example from issue #49.
+    #[test]
+    fn test_ast_parse_issue_49_example() {
+        let s = r"
+### Maximum length of the predicate condition bytes
+MAX_CONDITION_LEN = 1 << 10
+
+### One additional byte for the PredicateTypeId
+MAX_PREDICATE_LEN = MAX_CONDITION_LEN + 1
+";
+
+        let arr = s.chars().collect::<Vec<_>>();
+
+        let toks = parse_char_array_to_tokens(&arr).expect("test: tokenize string");
+        let tt = parse_tokens_to_toktrs(&toks).expect("test: treeize tokens");
+
+        let mut module_manager = ModuleManager::new(&[]);
+        module_manager.add_module(Path::new(""), false);
+        parse_module_from_toktrs(&tt, Path::new(""), &mut module_manager, None)
+            .expect("test: parse toktrs");
+
+        let entries = module_manager
+            .get_module_mut(Path::new(""))
+            .unwrap()
+            .mut_entries();
+
+        // Verify we parsed both constants
+        assert_eq!(entries.len(), 2);
+
+        // Check MAX_CONDITION_LEN constant (1 << 10)
+        if let crate::ast::ModuleEntry::Assignment(assign) = &entries[0] {
+            assert_eq!(assign.name().0, "MAX_CONDITION_LEN");
+            match assign.value() {
+                AssignExpr::Value(ConstValue::Binop(op, l, r)) => {
+                    assert_eq!(*op, crate::tysys::Binop::Shl);
+                    assert_eq!(*l, 1);
+                    assert_eq!(*r, 10);
+                }
+                _ => panic!("Expected value binop for MAX_CONDITION_LEN"),
+            }
+        } else {
+            panic!("Expected assignment for MAX_CONDITION_LEN");
+        }
+
+        // Check MAX_PREDICATE_LEN constant (MAX_CONDITION_LEN + 1)
+        if let crate::ast::ModuleEntry::Assignment(assign) = &entries[1] {
+            assert_eq!(assign.name().0, "MAX_PREDICATE_LEN");
+            match assign.value() {
+                AssignExpr::SymbolicBinop(op, ident, v) => {
+                    assert_eq!(*op, crate::tysys::Binop::Add);
+                    assert_eq!(ident.0, "MAX_CONDITION_LEN");
+                    assert_eq!(*v, 1);
+                }
+                _ => panic!("Expected symbolic binop for MAX_PREDICATE_LEN"),
+            }
+        } else {
+            panic!("Expected assignment for MAX_PREDICATE_LEN");
+        }
+
+        eprintln!("Successfully parsed issue #49 example: {module_manager:#?}");
     }
 
     #[test]
