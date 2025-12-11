@@ -1,0 +1,8 @@
+import external_ssz
+
+### Union with external types using type alias syntax
+#~# external_kind: container
+ExternalUnion = Union[external_ssz.Type1, external_ssz.Type2]
+
+class TestContainer(Container):
+    union_field: ExternalUnion

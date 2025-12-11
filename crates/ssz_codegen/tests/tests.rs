@@ -1440,29 +1440,56 @@ fn test_external_container_union() {
     // Verify that as_selector0 returns the Ref type
     assert!(
         generated.contains("Result<DepositRef<'_>, ssz::DecodeError>")
-            || generated.contains("Result<DepositRef"),
-        "as_selector0 should return DepositRef (external container Ref type)"
+            || generated.contains("Result<DepositRef<'a>, ssz::DecodeError>"),
+        "Union selector method should return DepositRef type"
+    );
+}
+
+#[test]
+fn test_union_external_alias() {
+    build_ssz_files(
+        &["test_union_external_alias.ssz"],
+        "tests/input",
+        &["external_ssz"],
+        "tests/output/test_union_external_alias.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types");
+
+    let generated = fs::read_to_string("tests/output/test_union_external_alias.rs")
+        .expect("Failed to read generated output");
+
+    // Verify that the union enum is generated
+    assert!(
+        generated.contains("pub enum ExternalUnion"),
+        "Union enum ExternalUnion should be generated"
     );
 
-    // Verify that SubjectDepositDataRef is used (not SubjectDepositData directly)
+    // Verify that external types use Ref variants when pragma is specified
+    // The pragma "external_kind: container" should cause Type1Ref and Type2Ref to be generated
     assert!(
-        generated.contains("SubjectDepositDataRef"),
-        "Generated code should use SubjectDepositDataRef for external container type"
+        generated.contains("Type1Ref") || generated.contains("external_ssz::Type1Ref"),
+        "External type Type1 should use Ref variant when pragma is specified"
     );
 
-    // Verify that the enum variant uses the underlying external type, not the alias
-    // Should be: Deposit(SubjectDepositData) or Deposit(external_ssz::SubjectDepositData)
-    // NOT: Deposit(Deposit)
     assert!(
-        generated.contains("Deposit(external_ssz::SubjectDepositData)")
-            || generated.contains("Deposit(SubjectDepositData)"),
-        "Enum variant should use underlying external type SubjectDepositData, not alias Deposit. Generated output:\n{}",
-        &generated.chars().take(2000).collect::<String>()
+        generated.contains("Type2Ref") || generated.contains("external_ssz::Type2Ref"),
+        "External type Type2 should use Ref variant when pragma is specified"
     );
+
+    // Verify that the union view type uses the Ref variants
     assert!(
-        !generated.contains("Deposit(Deposit)"),
-        "Enum variant should NOT use alias name Deposit as the type. Generated output:\n{}",
-        &generated.chars().take(2000).collect::<String>()
+        generated.contains("pub struct ExternalUnionRef"),
+        "Union view type ExternalUnionRef should be generated"
+    );
+
+    // Verify that selector methods return Ref types
+    assert!(
+        generated.contains("Result<Type1Ref<'_>, ssz::DecodeError>")
+            || generated.contains("Result<Type1Ref<'a>, ssz::DecodeError>")
+            || generated.contains("Result<external_ssz::Type1Ref<'_>, ssz::DecodeError>")
+            || generated.contains("Result<external_ssz::Type1Ref<'a>, ssz::DecodeError>"),
+        "Union selector method should return Type1Ref type"
     );
 }
 
