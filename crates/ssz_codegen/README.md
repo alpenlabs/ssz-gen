@@ -168,9 +168,51 @@ class Bar(StableContainer[5]):
 ```
 
 ### Union Types
+
+There are two ways to define union types:
+
+#### Type Alias Syntax
 ```python
 union_a = Union[uint8, uint16, uint32]
 ```
+
+The variants within the enum are named using the inner type name (e.g., `MyType(MyType)`). If the type is a primitive or the name cannot be determined, it falls back to `Selector{index}` (e.g., `Selector0(u8)`).
+
+#### Class-Based Syntax (Named Variants)
+
+For more control over variant names and to add per-variant pragmas or documentation, use the class-based syntax:
+
+```python
+### Represents different pending input types
+class PendingInputEntry(Union):
+    ### A deposit from the execution layer
+    #~# external_kind: container
+    Deposit: external_ssz.SubjectDepositData
+
+    ### A withdrawal request
+    Withdrawal: WithdrawalData
+```
+
+This generates a Rust enum where the field names become variant names:
+```rust
+/// Represents different pending input types
+pub enum PendingInputEntry {
+    /// A deposit from the execution layer
+    Deposit(external_ssz::SubjectDepositData),
+    /// A withdrawal request
+    Withdrawal(WithdrawalData),
+}
+```
+
+**When to use each syntax:**
+- Use **type alias syntax** (`Union[T1, T2]`) for simple unions with primitive types or when variant naming isn't important
+- Use **class-based syntax** (`class Name(Union)`) when you need:
+  - Explicit variant names (e.g., `Deposit` instead of `Selector0`)
+  - Doc comments on individual variants
+  - Per-variant pragmas (e.g., `#~# external_kind: container`)
+  - Better readability for complex union definitions
+
+#### Anonymous Union Restrictions
 
 In Rust unions are implemented as enums. Because of this we need to be able to assign unique identifiers to the same unions. Because of this and in order to remove any confusion we disallow "anonymous" unions except for `Union[None, T]` which we treat as `Option<T>` in Rust.
 
@@ -200,8 +242,6 @@ class Foo(Container):
 
 alias = Union[uint8, alias_union]
 ```
-
-The variants within the enum are named using the inner type name (e.g., `MyType(MyType)`). If the type is a primitive or the name cannot be determined, it falls back to `Selector{index}` (e.g., `Selector0(u8)`).
 
 ### Imports
 You can import definitions from other files using `import FILE` or `IMPORT FILE as IDENT` or from other crates using `IMPORT CRATE.MODULE`. To import from other crates the crate must be provided to `build_ssz_files` in the `crates` argument.

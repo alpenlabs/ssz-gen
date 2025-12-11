@@ -1,0 +1,43 @@
+import external_ssz
+
+MAX_LIST_SIZE = 1 << 16
+
+### Test Union[Type1, Type2] syntax in a List
+class UnionTypeAliasVariant1(Container):
+    value: uint8
+
+class UnionTypeAliasVariant2(Container):
+    value: uint16
+
+### Type aliases for union variant names
+TypeAliasVariant1 = UnionTypeAliasVariant1
+TypeAliasVariant2 = UnionTypeAliasVariant2
+
+### Union[Type1, Type2] syntax
+UnionTypeAlias = Union[TypeAliasVariant1, TypeAliasVariant2]
+
+### Container using Union[Type1, Type2] syntax in a List
+class ContainerWithUnionTypeAlias(Container):
+    items: List[UnionTypeAlias, MAX_LIST_SIZE]
+
+### Test class Name(Union): syntax in a List
+class UnionClass(Union):
+    ### First variant
+    Variant1: UnionTypeAliasVariant1
+
+    ### Second variant
+    Variant2: UnionTypeAliasVariant2
+
+### Container using class Name(Union): syntax in a List
+class ContainerWithUnionClass(Container):
+    items: List[UnionClass, MAX_LIST_SIZE]
+
+### Test class Name(Union): syntax with external container in a List
+class UnionClassWithExternal(Union):
+    ### External container variant
+    #~# external_kind: container
+    Deposit: external_ssz.SubjectDepositData
+
+### Container using class Name(Union): syntax with external in a List
+class ContainerWithUnionClassExternal(Container):
+    items: List[UnionClassWithExternal, MAX_LIST_SIZE]

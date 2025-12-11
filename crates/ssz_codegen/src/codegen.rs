@@ -163,6 +163,15 @@ impl<'a> CircleBufferCodegen<'a> {
                 type_resolver,
                 parent_path,
             ),
+            BaseClass::Union => {
+                // Union classes generate code directly in process_union_class and store in
+                // union_tracker Skip the normal class generation methods
+                if self.process_union_class(&ident, class, type_resolver) {
+                    // Union code is already generated and stored in union_tracker
+                    return true;
+                }
+                false
+            }
         };
 
         if success {
@@ -511,6 +520,178 @@ impl<'a> CircleBufferCodegen<'a> {
         parent_class_def.fields = new_fields;
         parent_class_def.field_index = new_field_index;
         parent_class_def.field_tokens = new_field_tokens;
+
+        true
+    }
+
+    fn process_union_class(
+        &mut self,
+        union_ident: &Ident,
+        class: &ParserClassDef,
+        type_resolver: &mut TypeResolver<'_>,
+    ) -> bool {
+        let union_name = union_ident.to_string();
+        let mut args = Vec::new();
+        let mut variant_names = Vec::new();
+        let mut variant_pragmas = Vec::new();
+        let mut variant_doc_comments: Vec<Option<String>> = Vec::new();
+
+        for field in class.fields() {
+            let field_ty = field.ty();
+            let field_type = type_resolver.resolve_type(field_ty, None);
+            if field_type.is_unresolved() {
+                return false;
+            }
+
+            args.push(field_type);
+            variant_names.push(field.name().0.clone());
+            variant_pragmas.push(field.pragmas().to_vec());
+            variant_doc_comments.push(field.doc_comment().map(|s| s.to_string()));
+        }
+
+        // Generate doc comments for the union type itself
+        let union_doc_comments = {
+            let doc = class.doc().map(|s| s.to_string());
+            let doc_comment = class.doc_comment().map(|s| s.to_string());
+            match (&doc, &doc_comment) {
+                (Some(docstring), Some(comment)) => {
+                    let merged = format!("{}\n\n{}", docstring.trim(), comment.trim());
+                    ClassDef::format_doc_comment(&merged)
+                }
+                (Some(docstring), None) => ClassDef::format_doc_comment(docstring),
+                (None, Some(comment)) => ClassDef::format_doc_comment(comment),
+                (None, None) => quote! {},
+            }
+        };
+
+        let variants: Vec<TokenStream> = args
+            .iter()
+            .enumerate()
+            .map(|(i, ty)| {
+                let field_name = &class.fields()[i].name().0;
+                let variant_name = field_name.clone();
+                let ident = syn::Ident::new(&variant_name, proc_macro2::Span::call_site());
+
+                // Generate doc comment for this variant
+                let variant_doc = variant_doc_comments
+                    .get(i)
+                    .and_then(|opt| opt.as_ref())
+                    .map(|doc| ClassDef::format_doc_comment(doc))
+                    .unwrap_or_else(|| quote! {});
+
+                match ty.resolution {
+                    crate::types::TypeResolutionKind::None => {
+                        if i == 0 {
+                            quote! {
+                                #variant_doc
+                                #ident
+                            }
+                        } else {
+                            panic!("None is only allowed as the first variant in a Union")
+                        }
+                    }
+                    _ => {
+                        let variant_ty = ty.unwrap_type();
+                        quote! {
+                            #variant_doc
+                            #ident(#variant_ty)
+                        }
+                    }
+                }
+            })
+            .collect();
+
+        let owned_tree_hash_arms: Vec<TokenStream> = args
+            .iter()
+            .enumerate()
+            .map(|(i, ty)| {
+                let selector_value = i as u8;
+                let field_name = &class.fields()[i].name().0;
+                let variant_ident = Ident::new(field_name, Span::call_site());
+
+                match ty.resolution {
+                    crate::types::TypeResolutionKind::None => {
+                        quote! {
+                            #union_ident::#variant_ident => {
+                                tree_hash::mix_in_selector_with_hasher::<H>(
+                                    &tree_hash::Hash256::ZERO,
+                                    #selector_value
+                                ).expect("valid selector")
+                            }
+                        }
+                    }
+                    _ => {
+                        quote! {
+                            #union_ident::#variant_ident(inner) => {
+                                let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
+                                tree_hash::mix_in_selector_with_hasher::<H>(
+                                    &root,
+                                    #selector_value
+                                ).expect("valid selector")
+                            }
+                        }
+                    }
+                }
+            })
+            .collect();
+
+        let union_code = quote! {
+            #union_doc_comments
+            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+            #[ssz(enum_behaviour="union")]
+            pub enum #union_ident {
+                #(#variants),*
+            }
+
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #union_ident {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Container
+                }
+
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Union should never be packed")
+                }
+
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Union should never be packed")
+                }
+
+                fn tree_hash_root(&self) -> H::Output {
+                    match self {
+                        #(#owned_tree_hash_arms),*
+                    }
+                }
+            }
+        };
+
+        type_resolver
+            .union_tracker
+            .borrow_mut()
+            .insert(union_name.clone(), union_code);
+
+        let view_union_code = type_resolver.generate_union_view_code(
+            &union_name,
+            union_ident,
+            &args,
+            &variant_names,
+            &variant_pragmas,
+        );
+
+        type_resolver
+            .union_tracker
+            .borrow_mut()
+            .insert(format!("{}Ref", union_name), view_union_code);
+
+        let class_def = ClassDef {
+            base: BaseClass::Union,
+            fields: vec![],
+            field_tokens: vec![],
+            field_index: HashMap::new(),
+            pragmas: class.pragmas().to_vec(),
+            doc_comment: class.doc_comment().map(|s| s.to_string()),
+            doc: class.doc().map(|s| s.to_string()),
+        };
+        type_resolver.add_class(union_ident, class_def);
 
         true
     }

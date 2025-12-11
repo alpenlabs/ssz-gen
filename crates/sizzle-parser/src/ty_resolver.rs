@@ -344,6 +344,11 @@ impl<'a> TypeResolver<'a> {
             }
 
             IdentTarget::TyCtor(cd) => match (&cd.sig, args) {
+                // Special case: Union can be used as a base class (no args) or type constructor
+                // (with args)
+                (CtorSig::VariableTy, None) if ident.0 == "Union" => {
+                    Ok(TyExpr::Ty(Ty::Simple(ident.clone())))
+                }
                 // This is types that take a specific number of arguments of varying kinds.
                 (CtorSig::Fixed(sig_args), Some(spec_args)) => {
                     let mut args: Vec<TyExpr> = Vec::new();

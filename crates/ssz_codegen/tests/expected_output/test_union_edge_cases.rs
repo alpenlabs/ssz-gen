@@ -96,6 +96,20 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for AnotherSimpleRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<AnotherSimple>
+            for AnotherSimpleRef<'a> {
+                fn to_owned(&self) -> AnotherSimple {
+                    <AnotherSimpleRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for AnotherSimpleRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -270,6 +284,19 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for ComplexUnionRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<ComplexUnion> for ComplexUnionRef<'a> {
+                fn to_owned(&self) -> ComplexUnion {
+                    <ComplexUnionRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for ComplexUnionRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -433,6 +460,20 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for MixedOptionalRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<MixedOptional>
+            for MixedOptionalRef<'a> {
+                fn to_owned(&self) -> MixedOptional {
+                    <MixedOptionalRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for MixedOptionalRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -588,6 +629,19 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for NestedUnionRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<NestedUnion> for NestedUnionRef<'a> {
+                fn to_owned(&self) -> NestedUnion {
+                    <NestedUnionRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for NestedUnionRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -718,6 +772,19 @@ pub mod tests {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
                     let (_, _) = ssz::split_union_bytes(bytes)?;
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for SimpleUnionRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<SimpleUnion> for SimpleUnionRef<'a> {
+                fn to_owned(&self) -> SimpleUnion {
+                    <SimpleUnionRef<'a>>::to_owned(self)
                 }
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
