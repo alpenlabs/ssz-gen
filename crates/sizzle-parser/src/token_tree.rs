@@ -100,6 +100,10 @@ pub enum TaggedToktr<T> {
     Shl(T),
     /// `*` operator.
     Mul(T),
+    /// `+` operator.
+    Add(T),
+    /// `-` operator.
+    Sub(T),
 
     // Token tree nodes with children.
     /// A bracket block.
@@ -139,6 +143,8 @@ impl<T> TaggedToktr<T> {
             Self::IntegerLiteral(t, _) => t,
             Self::Shl(t) => t,
             Self::Mul(t) => t,
+            Self::Add(t) => t,
+            Self::Sub(t) => t,
             Self::BracketBlock(t, _) => t,
             Self::ParenBlock(t, _) => t,
             Self::IndentBlock(t, _) => t,
@@ -295,6 +301,8 @@ pub(crate) fn parse_tokens_to_toktrs(tokens: &[SrcToken]) -> Result<Vec<SrcToktr
             TaggedToken::IntegerLiteral(sp, v) => TaggedToktr::IntegerLiteral(*sp, *v),
             TaggedToken::Shl(sp) => TaggedToktr::Shl(*sp),
             TaggedToken::Mul(sp) => TaggedToktr::Mul(*sp),
+            TaggedToken::Add(sp) => TaggedToktr::Add(*sp),
+            TaggedToken::Sub(sp) => TaggedToktr::Sub(*sp),
             TaggedToken::Comment(sp, text) => TaggedToktr::Comment(*sp, text.clone()),
             TaggedToken::DocComment(sp, text) => {
                 // Merge consecutive doc comments, but don't skip newlines

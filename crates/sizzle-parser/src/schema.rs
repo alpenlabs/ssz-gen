@@ -9,7 +9,7 @@ use crate::{
     ast::{AssignExpr, ClassDefEntry, Module, ModuleEntry},
     builtins,
     ty_resolver::{CrossModuleTypeMap, IdentTarget, ResolverError, TypeData, TypeResolver},
-    tysys::{ConstValue, Ty, TyExpr},
+    tysys::{Binop, ConstValue, Ty, TyExpr},
 };
 
 #[derive(Debug, Error)]
@@ -314,6 +314,37 @@ pub(crate) fn conv_module_to_schema<'a>(
                     constants.push(ConstDef {
                         name: name.clone(),
                         value: val.clone(),
+                    })
+                }
+
+                // Symbolic binary operations (e.g., MAX_LEN + 1)
+                AssignExpr::SymbolicBinop(op, ident, literal) => {
+                    // Look up the identifier's value
+                    let resolved = resolver.resolve_ident_with_args(ident, None)?;
+                    let base_value = match resolved {
+                        TyExpr::Int(cv) => cv.eval(),
+                        TyExpr::ConstRef(_, v) => v,
+                        _ => {
+                            return Err(SchemaError::Ty(ResolverError::MismatchedArgKind(
+                                ident.clone(),
+                            )));
+                        }
+                    };
+
+                    // Compute result
+                    let result = match op {
+                        Binop::Add => base_value + literal,
+                        Binop::Sub => base_value - literal,
+                        Binop::Mul => base_value * literal,
+                        Binop::Shl => base_value << literal,
+                    };
+
+                    let const_value = ConstValue::Int(result);
+                    resolver.decl_const(name.clone(), const_value.clone())?;
+                    idents.insert(name.clone(), IdentTarget::Const(const_value.clone()));
+                    constants.push(ConstDef {
+                        name: name.clone(),
+                        value: const_value,
                     })
                 }
             },
