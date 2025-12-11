@@ -97,8 +97,8 @@ The parser supports four types of comments:
   - `derive: Trait1, Trait2, ...` - Adds additional derive macros to the generated type. These are merged with configured derives and required SSZ derives (Encode, Decode, TreeHash).
   - `attr: #[attribute]` - Adds struct-level attributes (e.g., `#[repr(C)]`, `#[cfg(test)]`).
   - `field_attr: #[attribute]` - Adds field-level attributes (e.g., `#[serde(rename = "field_name")]`).
-  - `external_kind: <kind>` - (Field-level) Controls `Ref` type generation for external types.
-    - `container`: Generates a Ref variant (e.g. `MyTypeRef`) for the field. Use this for external container types that need zero-copy views.
+  - `external_kind: <kind>` - Controls `Ref` type generation for external types. Can be used on fields, union variants, or type alias assignments.
+    - `container`: Generates a Ref variant (e.g. `MyTypeRef`). Use this for external container types that need zero-copy views.
     - `primitive`: Uses the type directly without a Ref wrapper. Use this for external primitive types.
   
   Multiple pragmas can be specified on separate lines:
@@ -178,6 +178,14 @@ union_a = Union[uint8, uint16, uint32]
 
 The variants within the enum are named using the inner type name (e.g., `MyType(MyType)`). If the type is a primitive or the name cannot be determined, it falls back to `Selector{index}` (e.g., `Selector0(u8)`).
 
+Pragmas can be applied to type alias unions to control behavior for all variants:
+```python
+#~# external_kind: container
+ExternalUnion = Union[external_ssz.Type1, external_ssz.Type2]
+```
+
+This applies the `external_kind: container` pragma to all external types in the union, generating appropriate `Ref` view types.
+
 #### Class-Based Syntax (Named Variants)
 
 For more control over variant names and to add per-variant pragmas or documentation, use the class-based syntax:
@@ -205,11 +213,11 @@ pub enum PendingInputEntry {
 ```
 
 **When to use each syntax:**
-- Use **type alias syntax** (`Union[T1, T2]`) for simple unions with primitive types or when variant naming isn't important
+- Use **type alias syntax** (`Union[T1, T2]`) for simple unions with primitive types, or unions with external types where all variants share the same pragma (e.g., all are containers)
 - Use **class-based syntax** (`class Name(Union)`) when you need:
   - Explicit variant names (e.g., `Deposit` instead of `Selector0`)
   - Doc comments on individual variants
-  - Per-variant pragmas (e.g., `#~# external_kind: container`)
+  - Different pragmas per variant (e.g., mixed container and primitive external types)
   - Better readability for complex union definitions
 
 #### Anonymous Union Restrictions
