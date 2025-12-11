@@ -1407,6 +1407,65 @@ fn test_union_type_alias_view_types() {
     );
 }
 
+/// Test that external container types used in Union variants via type aliases
+/// correctly use the Ref variant (e.g., ChainStateRef instead of ChainState).
+#[test]
+fn test_external_container_union() {
+    build_ssz_files(
+        &["test_external_container_union.ssz"],
+        "tests/input",
+        &["external_ssz"],
+        "tests/output/test_external_container_union.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types");
+
+    let generated = fs::read_to_string("tests/output/test_external_container_union.rs")
+        .expect("Failed to read generated output");
+
+    // Verify that the view type alias uses the Ref variant for the external container
+    assert!(
+        generated.contains("pub type DepositRef<'a> = external_ssz::SubjectDepositDataRef<'a>;")
+            || generated.contains("pub type DepositRef<'a> = external_ssz::SubjectDepositDataRef<"),
+        "View type alias DepositRef should reference SubjectDepositDataRef, not SubjectDepositData. Generated output:\n{}",
+        &generated.chars().take(2000).collect::<String>()
+    );
+
+    // Verify that the union view type uses the Ref variant
+    assert!(
+        generated.contains("DepositRef") || generated.contains("Result<DepositRef"),
+        "Union view type should reference DepositRef (which should be SubjectDepositDataRef)"
+    );
+
+    // Verify that as_selector0 returns the Ref type
+    assert!(
+        generated.contains("Result<DepositRef<'_>, ssz::DecodeError>")
+            || generated.contains("Result<DepositRef"),
+        "as_selector0 should return DepositRef (external container Ref type)"
+    );
+
+    // Verify that SubjectDepositDataRef is used (not SubjectDepositData directly)
+    assert!(
+        generated.contains("SubjectDepositDataRef"),
+        "Generated code should use SubjectDepositDataRef for external container type"
+    );
+
+    // Verify that the enum variant uses the underlying external type, not the alias
+    // Should be: Deposit(SubjectDepositData) or Deposit(external_ssz::SubjectDepositData)
+    // NOT: Deposit(Deposit)
+    assert!(
+        generated.contains("Deposit(external_ssz::SubjectDepositData)")
+            || generated.contains("Deposit(SubjectDepositData)"),
+        "Enum variant should use underlying external type SubjectDepositData, not alias Deposit. Generated output:\n{}",
+        &generated.chars().take(2000).collect::<String>()
+    );
+    assert!(
+        !generated.contains("Deposit(Deposit)"),
+        "Enum variant should NOT use alias name Deposit as the type. Generated output:\n{}",
+        &generated.chars().take(2000).collect::<String>()
+    );
+}
+
 #[test]
 fn test_serde_derives() {
     build_ssz_files(
@@ -1544,4 +1603,89 @@ fn test_serde_derives_flat_modules() {
             "OtherType should not have Serialize derive"
         );
     }
+}
+
+#[test]
+fn test_union_type_alias_in_list() {
+    build_ssz_files(
+        &["test_union_in_list.ssz"],
+        "tests/input",
+        &["external_ssz"],
+        "tests/output/test_union_in_list.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types");
+
+    let generated = fs::read_to_string("tests/output/test_union_in_list.rs")
+        .expect("Failed to read generated output");
+
+    // Verify Union[Type1, Type2] syntax generates SszTypeInfo and ToOwnedSsz
+    assert!(
+        generated.contains("impl<'a> ssz::view::SszTypeInfo for UnionTypeAliasRef<'a>"),
+        "Union[Type1, Type2] syntax should implement SszTypeInfo. Generated output:\n{}",
+        &generated.chars().take(3000).collect::<String>()
+    );
+    assert!(
+        generated.contains("impl<'a> ssz_types::view::ToOwnedSsz<UnionTypeAlias>")
+            && generated.contains("for UnionTypeAliasRef<'a>"),
+        "Union[Type1, Type2] syntax should implement ToOwnedSsz. Generated output:\n{}",
+        &generated.chars().take(3000).collect::<String>()
+    );
+
+    // Verify that Lists use VariableListRef with the union Ref types
+    assert!(
+        generated.contains("VariableListRef<'a, UnionTypeAliasRef<'a>"),
+        "Container with Union[Type1, Type2] should use VariableListRef with UnionTypeAliasRef"
+    );
+}
+
+#[test]
+fn test_union_class_in_list() {
+    build_ssz_files(
+        &["test_union_in_list.ssz"],
+        "tests/input",
+        &["external_ssz"],
+        "tests/output/test_union_in_list.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types");
+
+    let generated = fs::read_to_string("tests/output/test_union_in_list.rs")
+        .expect("Failed to read generated output");
+
+    // Verify class Name(Union): syntax generates SszTypeInfo and ToOwnedSsz
+    assert!(
+        generated.contains("impl<'a> ssz::view::SszTypeInfo for UnionClassRef<'a>"),
+        "class Name(Union): syntax should implement SszTypeInfo. Generated output:\n{}",
+        &generated.chars().take(3000).collect::<String>()
+    );
+    assert!(
+        generated.contains("impl<'a> ssz_types::view::ToOwnedSsz<UnionClass>")
+            && generated.contains("for UnionClassRef<'a>"),
+        "class Name(Union): syntax should implement ToOwnedSsz. Generated output:\n{}",
+        &generated.chars().take(3000).collect::<String>()
+    );
+
+    // Verify class Name(Union): syntax with external container generates SszTypeInfo and ToOwnedSsz
+    assert!(
+        generated.contains("impl<'a> ssz::view::SszTypeInfo for UnionClassWithExternalRef<'a>"),
+        "class Name(Union): syntax with external should implement SszTypeInfo. Generated output:\n{}",
+        &generated.chars().take(3000).collect::<String>()
+    );
+    assert!(
+        generated.contains("impl<'a> ssz_types::view::ToOwnedSsz<UnionClassWithExternal>")
+            && generated.contains("for UnionClassWithExternalRef<'a>"),
+        "class Name(Union): syntax with external should implement ToOwnedSsz. Generated output:\n{}",
+        &generated.chars().take(3000).collect::<String>()
+    );
+
+    // Verify that Lists use VariableListRef with the union Ref types
+    assert!(
+        generated.contains("VariableListRef<'a, UnionClassRef<'a>"),
+        "Container with class Name(Union): should use VariableListRef with UnionClassRef"
+    );
+    assert!(
+        generated.contains("VariableListRef<'a, UnionClassWithExternalRef<'a>"),
+        "Container with class Name(Union): external should use VariableListRef with UnionClassWithExternalRef"
+    );
 }

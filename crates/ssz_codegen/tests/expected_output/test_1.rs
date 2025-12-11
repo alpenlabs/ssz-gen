@@ -99,6 +99,20 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for AliasOptionUnionRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<AliasOptionUnion>
+            for AliasOptionUnionRef<'a> {
+                fn to_owned(&self) -> AliasOptionUnion {
+                    <AliasOptionUnionRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for AliasOptionUnionRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -219,6 +233,19 @@ pub mod tests {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
                     let (_, _) = ssz::split_union_bytes(bytes)?;
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for FirstUnionRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<FirstUnion> for FirstUnionRef<'a> {
+                fn to_owned(&self) -> FirstUnion {
+                    <FirstUnionRef<'a>>::to_owned(self)
                 }
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
@@ -362,6 +389,19 @@ pub mod tests {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
                     let (_, _) = ssz::split_union_bytes(bytes)?;
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for TestUnionRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<TestUnion> for TestUnionRef<'a> {
+                fn to_owned(&self) -> TestUnion {
+                    <TestUnionRef<'a>>::to_owned(self)
                 }
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
@@ -513,6 +553,19 @@ pub mod tests {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
                     let (_, _) = ssz::split_union_bytes(bytes)?;
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for UnionARef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<UnionA> for UnionARef<'a> {
+                fn to_owned(&self) -> UnionA {
+                    <UnionARef<'a>>::to_owned(self)
                 }
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
@@ -693,6 +746,19 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for UnionBRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<UnionB> for UnionBRef<'a> {
+                fn to_owned(&self) -> UnionB {
+                    <UnionBRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for UnionBRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -835,6 +901,19 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for UnionCRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<UnionC> for UnionCRef<'a> {
+                fn to_owned(&self) -> UnionC {
+                    <UnionCRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for UnionCRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -955,6 +1034,19 @@ pub mod tests {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
                     let (_, _) = ssz::split_union_bytes(bytes)?;
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for UnionDRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<UnionD> for UnionDRef<'a> {
+                fn to_owned(&self) -> UnionD {
+                    <UnionDRef<'a>>::to_owned(self)
                 }
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>

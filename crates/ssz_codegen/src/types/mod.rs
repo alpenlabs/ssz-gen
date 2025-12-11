@@ -783,6 +783,8 @@ pub enum BaseClass {
     StableContainer(Option<u64>),
     /// A profile type with optional name
     Profile(Option<(String, u64)>),
+    /// A union type
+    Union,
 }
 
 impl BaseClass {
@@ -1011,6 +1013,9 @@ impl ClassDef {
                     }
                 }
             }
+            BaseClass::Union => {
+                quote! {}
+            }
             _ => panic!("Base class arguments not set"),
         }
     }
@@ -1211,6 +1216,11 @@ impl ClassDef {
                     }
                 }
             }
+            BaseClass::Union => {
+                // Unions don't have a single view struct, they have selector methods
+                // This is handled by the union_tracker
+                quote! {}
+            }
         }
     }
 
@@ -1374,6 +1384,9 @@ impl ClassDef {
                     }
                 }
             }
+            BaseClass::Union => {
+                quote! {}
+            }
             _ => panic!("Base class arguments not set"),
         }
     }
@@ -1505,6 +1518,9 @@ impl ClassDef {
                         }
                     }
                 }
+            }
+            BaseClass::Union => {
+                quote! {}
             }
             _ => panic!("Base class arguments not set"),
         }
@@ -2007,6 +2023,9 @@ impl ClassDef {
                     }
                 }
             }
+            BaseClass::Union => {
+                quote! {}
+            }
             _ => panic!("Base class arguments not set"),
         }
     }
@@ -2252,6 +2271,8 @@ pub enum ClassDefinition {
     StableContainer,
     /// Profile class
     Profile,
+    /// Union class
+    Union,
     /// Custom class definition
     Custom(ClassDef),
 }

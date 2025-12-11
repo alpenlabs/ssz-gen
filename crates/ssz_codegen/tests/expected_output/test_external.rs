@@ -120,6 +120,20 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for ExternalUnionARef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<ExternalUnionA>
+            for ExternalUnionARef<'a> {
+                fn to_owned(&self) -> ExternalUnionA {
+                    <ExternalUnionARef<'a>>::to_owned(self)
+                }
+            }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for ExternalUnionARef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -268,6 +282,20 @@ pub mod tests {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
                     let (_, _) = ssz::split_union_bytes(bytes)?;
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for ExternalUnionBRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<ExternalUnionB>
+            for ExternalUnionBRef<'a> {
+                fn to_owned(&self) -> ExternalUnionB {
+                    <ExternalUnionBRef<'a>>::to_owned(self)
                 }
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>

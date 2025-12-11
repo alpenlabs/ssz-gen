@@ -182,6 +182,9 @@ impl<'a> TypeResolver<'a> {
             .base_classes
             .insert("Profile".to_string(), BaseClass::Profile(None));
         resolver
+            .base_classes
+            .insert("Union".to_string(), BaseClass::Union);
+        resolver
             .classes
             .insert("Container".to_string(), ClassDefinition::Container);
         resolver.classes.insert(
@@ -191,6 +194,9 @@ impl<'a> TypeResolver<'a> {
         resolver
             .classes
             .insert("Profile".to_string(), ClassDefinition::Profile);
+        resolver
+            .classes
+            .insert("Union".to_string(), ClassDefinition::Union);
 
         resolver
     }
@@ -306,6 +312,16 @@ impl<'a> TypeResolver<'a> {
     ///
     /// Some(TypeResolution::BaseClass) if the type resolves to a base class, None otherwise
     fn resolve_base_class(&self, ty: &Ty) -> Option<TypeResolution> {
+        // Base classes are only valid when used as simple types (no arguments)
+        // e.g., `class Name(Union):` not `Union[Type1, Type2]`
+        // For Union specifically, if it has arguments, it's a type constructor, not a base class
+        if let Ty::Complex(_, _) = ty
+            && ty.base_name().0 == "Union"
+        {
+            // Union[Type1, Type2] is a type constructor, not a base class
+            return None;
+        }
+
         let base_class = self.base_classes.get(ty.base_name().0.as_str());
         base_class.map(|base_class| match base_class {
             BaseClass::Container => TypeResolution {
@@ -368,6 +384,10 @@ impl<'a> TypeResolver<'a> {
                     )))),
                 }
             }
+            BaseClass::Union => TypeResolution {
+                ty: None,
+                resolution: TypeResolutionKind::BaseClass(BaseClass::Union),
+            },
         })
     }
 
@@ -518,49 +538,23 @@ impl<'a> TypeResolver<'a> {
 
                     let ref_ident = Ident::new(&format!("{}Ref", ident_str), Span::call_site());
 
-                    // Generate view type aliases for type aliases used in union variants
-                    // When a variant name (from type alias) differs from underlying type name,
-                    // we need to create a view type alias (e.g., AliasNameRef = UnderlyingTypeRef)
                     let mut view_type_aliases: Vec<TokenStream> = Vec::new();
                     let mut variant_view_types: Vec<(String, TokenStream)> = Vec::new();
 
                     for (i, ty) in args.iter().enumerate() {
-                        // Skip None types - they don't have view types and don't need aliases
-                        if ty.resolution == TypeResolutionKind::None {
-                            variant_view_types.push(("None".to_string(), quote! { () }));
+                        if self.handle_none_variant(ty, &mut variant_view_types) {
                             continue;
                         }
 
-                        // Extract variant name from original type expression to preserve type alias
-                        // names
                         let variant_name_from_expr = original_args
                             .get(i)
                             .and_then(extract_variant_name_from_ty_expr);
 
-                        // Extract the underlying type name from the resolution
-                        // For a class type, resolution is TypeResolutionKind::Class(class_name)
-                        let underlying_type_name = match &ty.resolution {
-                            TypeResolutionKind::Class(class_name) => Some(class_name.clone()),
-                            _ => None,
-                        };
-
-                        // Get the view type: always use ty.to_view_type() to preserve existing
-                        // behavior
+                        let underlying_type_name = self.extract_underlying_type_name(ty, false);
                         let underlying_view_ty = ty.to_view_type();
-
-                        // Determine if we need an alias: only when a type alias is used as a
-                        // variant name This means: variant name from
-                        // original expression differs from underlying type name
-                        // AND the underlying type is a class (not None, Option, etc.)
-                        // AND the underlying type is in the types map (meaning it's a type alias,
-                        // not an imported type or direct class reference)
                         let underlying_name_opt = underlying_type_name.as_ref();
-                        let underlying_type_resolution = underlying_name_opt
-                            .and_then(|name| self.types.get(name))
-                            .and_then(|def| match def {
-                                TypeDefinition::CustomType(res) => Some(res),
-                                _ => None,
-                            });
+                        let underlying_type_resolution =
+                            self.get_custom_type_resolution(underlying_name_opt);
 
                         let needs_alias = variant_name_from_expr.is_some()
                             && underlying_name_opt.is_some()
@@ -568,18 +562,12 @@ impl<'a> TypeResolver<'a> {
                             && matches!(ty.resolution, TypeResolutionKind::Class(_))
                             && underlying_type_resolution.is_some();
 
-                        // If we need an alias, get the underlying type's view type from the types
-                        // map We already checked that
-                        // underlying_type_resolution exists above
                         let underlying_view_ty = if needs_alias {
-                            // We already verified this exists in the needs_alias check
                             underlying_type_resolution.unwrap().to_view_type()
                         } else {
                             underlying_view_ty
                         };
 
-                        // Use the name from the original expression if available (preserves type
-                        // alias names), otherwise extract from resolved type
                         let variant_name_from_resolved = extract_variant_name(ty);
                         let variant_name = variant_name_from_expr
                             .as_ref()
@@ -587,192 +575,45 @@ impl<'a> TypeResolver<'a> {
                             .cloned()
                             .unwrap_or_else(|| format!("Selector{i}"));
 
-                        if needs_alias {
-                            // Generate alias: pub type {variant_name}Ref<'a> =
-                            // {underlying_view_ty};
-                            let alias_name =
-                                Ident::new(&format!("{}Ref", variant_name), Span::call_site());
-                            view_type_aliases.push(quote! {
-                                pub type #alias_name<'a> = #underlying_view_ty;
-                            });
-                            // Include lifetime parameter when using the alias
-                            variant_view_types
-                                .push((variant_name.clone(), quote! { #alias_name<'_> }));
-                        } else {
-                            variant_view_types
-                                .push((variant_name.clone(), quote! { #underlying_view_ty }));
-                        }
+                        self.add_variant_view_type(
+                            &mut view_type_aliases,
+                            &mut variant_view_types,
+                            &variant_name,
+                            needs_alias,
+                            quote! { #underlying_view_ty },
+                        );
                     }
 
-                    // Generate selector methods for lazy variant access
-                    let selector_methods: Vec<TokenStream> = args
-                        .iter()
-                        .enumerate()
-                        .map(|(i, ty)| {
-                            let method_name = Ident::new(&format!("as_selector{i}"), Span::call_site());
-                            let selector_value = i as u8;
-                            let error_msg = format!("Wrong selector for {}: expected {}", ident_str, i);
-
-                            match ty.resolution {
-                                TypeResolutionKind::None => {
-                                    // Unit variant
-                                    quote! {
-                                        pub fn #method_name(&self) -> Result<(), ssz::DecodeError> {
-                                            if self.selector() != #selector_value {
-                                                return Err(ssz::DecodeError::BytesInvalid(
-                                                    #error_msg.to_string()
-                                                ));
-                                            }
-                                            Ok(())
-                                        }
-                                    }
-                                }
-                                _ => {
-                                    // Use the view type we determined above (either alias or underlying)
-                                    let (_, view_ty) = variant_view_types.get(i).unwrap();
-                                    quote! {
-                                        pub fn #method_name(&self) -> Result<#view_ty, ssz::DecodeError> {
-                                            if self.selector() != #selector_value {
-                                                return Err(ssz::DecodeError::BytesInvalid(
-                                                    #error_msg.to_string()
-                                                ));
-                                            }
-                                            ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
-                                        }
-                                    }
-                                }
-                            }
-                        })
-                        .collect();
-
-                    // Generate to_owned dispatch based on selector
-                    let to_owned_arms: Vec<TokenStream> = args
-                        .iter()
-                        .enumerate()
-                        .map(|(i, ty)| {
-                            let selector_value = i as u8;
-                            let variant_name =
-                                extract_variant_name(ty).unwrap_or_else(|| format!("Selector{i}"));
-                            let variant_ident = Ident::new(&variant_name, Span::call_site());
-                            let method_name =
-                                Ident::new(&format!("as_selector{i}"), Span::call_site());
-
-                            match ty.resolution {
-                                TypeResolutionKind::None => {
-                                    quote! {
-                                        #selector_value => {
-                                            self.#method_name().expect("valid selector");
-                                            #ident::#variant_ident
-                                        }
-                                    }
-                                }
-                                TypeResolutionKind::Boolean | TypeResolutionKind::UInt(_) => {
-                                    quote! {
-                                        #selector_value => #ident::#variant_ident(
-                                            self.#method_name().expect("valid selector")
-                                        )
-                                    }
-                                }
-                                _ => {
-                                    quote! {
-                                        #selector_value => #ident::#variant_ident(
-                                            self.#method_name().expect("valid selector").to_owned()
-                                        )
-                                    }
-                                }
-                            }
-                        })
-                        .collect();
-
-                    // Generate TreeHash implementation for lazy union
-                    let tree_hash_arms: Vec<TokenStream> = args
-                        .iter()
-                        .enumerate()
-                        .map(|(i, ty)| {
-                            let selector_value = i as u8;
-                            let method_name = Ident::new(&format!("as_selector{i}"), Span::call_site());
-
-                            match ty.resolution {
-                                TypeResolutionKind::None => {
-                                    quote! {
-                                        #selector_value => {
-                                            tree_hash::mix_in_selector_with_hasher::<H>(
-                                                &tree_hash::Hash256::ZERO,
-                                                #selector_value
-                                            ).expect("valid selector")
-                                        }
-                                    }
-                                }
-                                _ => {
-                                    quote! {
-                                        #selector_value => {
-                                            let value = self.#method_name().expect("valid selector");
-                                            tree_hash::mix_in_selector_with_hasher::<H>(
-                                                &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
-                                                #selector_value
-                                            ).expect("valid selector")
-                                        }
-                                    }
-                                }
-                            }
-                        })
-                        .collect();
-
-                    // Store the view union as thin wrapper with lazy access
-                    self.union_tracker.borrow_mut().insert(
-                        format!("{}Ref", ident_str),
-                        quote! {
-                            #(#view_type_aliases)*
-
-                            #[derive(Debug, Copy, Clone)]
-                            pub struct #ref_ident<'a> {
-                                bytes: &'a [u8],
-                            }
-
-                            impl<'a> #ref_ident<'a> {
-                                pub fn selector(&self) -> u8 {
-                                    self.bytes[0]
-                                }
-
-                                #(#selector_methods)*
-
-                                pub fn to_owned(&self) -> #ident {
-                                    match self.selector() {
-                                        #(#to_owned_arms,)*
-                                        _ => panic!("Invalid union selector: {}", self.selector()),
-                                    }
-                                }
-                            }
-
-                            impl<'a> ssz::view::DecodeView<'a> for #ref_ident<'a> {
-                                fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                                    let (_, _) = ssz::split_union_bytes(bytes)?;
-                                    Ok(Self { bytes })
-                                }
-                            }
-
-                            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ref_ident<'a> {
-                                fn tree_hash_type() -> tree_hash::TreeHashType {
-                                    tree_hash::TreeHashType::Vector
-                                }
-
-                                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
-                                    unreachable!("Union should never be packed")
-                                }
-
-                                fn tree_hash_packing_factor() -> usize {
-                                    unreachable!("Union should never be packed")
-                                }
-
-                                fn tree_hash_root(&self) -> H::Output {
-                                    match self.selector() {
-                                        #(#tree_hash_arms,)*
-                                        _ => panic!("Invalid union selector: {}", self.selector()),
-                                    }
-                                }
-                            }
-                        },
+                    let selector_methods = self.generate_union_selector_methods(
+                        &ident_str,
+                        &args,
+                        &variant_view_types,
                     );
+
+                    let variant_names: Vec<String> = args
+                        .iter()
+                        .enumerate()
+                        .map(|(i, ty)| {
+                            extract_variant_name(ty).unwrap_or_else(|| format!("Selector{i}"))
+                        })
+                        .collect();
+                    let to_owned_arms =
+                        self.generate_union_to_owned_arms(&ident, &args, &variant_names);
+
+                    let tree_hash_arms = self.generate_union_tree_hash_arms(&args);
+
+                    let view_union_code = self.generate_union_view_struct_impl(
+                        ref_ident,
+                        &ident,
+                        view_type_aliases,
+                        selector_methods,
+                        to_owned_arms,
+                        tree_hash_arms,
+                    );
+
+                    self.union_tracker
+                        .borrow_mut()
+                        .insert(format!("{}Ref", ident_str), view_union_code);
 
                     TypeResolutionKind::Union(ident_str, args)
                 }
@@ -887,6 +728,15 @@ impl<'a> TypeResolver<'a> {
                     panic!("Expected profile to inherit from a stable container");
                 }
             }
+            ClassDefinition::Union => ClassDef {
+                base: BaseClass::Union,
+                fields: vec![],
+                field_tokens: vec![],
+                field_index: HashMap::new(),
+                pragmas: vec![],
+                doc_comment: None,
+                doc: None,
+            },
             ClassDefinition::Custom(class_def) => class_def.clone(),
         }
     }
@@ -1107,5 +957,391 @@ impl<'a> TypeResolver<'a> {
         }
 
         type_resolution
+    }
+
+    /// Generates view type code for union types
+    ///
+    /// This generates the `UnionRef<'a>` struct and its associated implementations
+    /// including selector methods, TreeHash, and DecodeView. It also generates
+    /// view type aliases for variants that use type aliases (e.g., `DepositRef<'a>`).
+    ///
+    /// # Arguments
+    ///
+    /// * `union_name` - The name of the union type (e.g., "PendingInputEntry")
+    /// * `union_ident` - The identifier for the union type
+    /// * `args` - The resolved type arguments for each union variant
+    /// * `variant_names` - The names of each variant (from field names in new syntax)
+    /// * `variant_pragmas` - The pragmas for each variant
+    ///
+    /// # Returns
+    ///
+    /// A TokenStream containing the complete view type implementation for the union
+    pub fn generate_union_view_code(
+        &self,
+        union_name: &str,
+        union_ident: &Ident,
+        args: &[TypeResolution],
+        variant_names: &[String],
+        variant_pragmas: &[Vec<String>],
+    ) -> TokenStream {
+        let ref_ident = Ident::new(&format!("{}Ref", union_name), Span::call_site());
+
+        let mut view_type_aliases: Vec<TokenStream> = Vec::new();
+        let mut variant_view_types: Vec<(String, TokenStream)> = Vec::new();
+
+        for (i, ty) in args.iter().enumerate() {
+            if self.handle_none_variant(ty, &mut variant_view_types) {
+                continue;
+            }
+
+            let variant_name = variant_names
+                .get(i)
+                .cloned()
+                .unwrap_or_else(|| format!("Selector{i}"));
+            let pragmas = variant_pragmas.get(i).cloned().unwrap_or_default();
+
+            let underlying_type_name = self.extract_underlying_type_name(ty, true);
+            let underlying_view_ty = ty.to_view_type_with_pragmas(&pragmas);
+            let underlying_name_opt = underlying_type_name.as_ref();
+            let underlying_type_resolution = self.get_custom_type_resolution(underlying_name_opt);
+
+            let default_name = String::new();
+            let underlying_name_str = underlying_name_opt.unwrap_or(&default_name);
+
+            let is_external_container_alias = matches!(ty.resolution, TypeResolutionKind::External)
+                && variant_name != *underlying_name_str
+                && pragmas
+                    .iter()
+                    .any(|p| p.trim() == "external_kind: container");
+
+            let needs_alias = variant_name != *underlying_name_str
+                && (matches!(ty.resolution, TypeResolutionKind::Class(_))
+                    && underlying_type_resolution.is_some()
+                    || is_external_container_alias);
+
+            let final_view_ty = if needs_alias && is_external_container_alias {
+                underlying_view_ty
+            } else if needs_alias {
+                underlying_type_resolution
+                    .unwrap()
+                    .to_view_type_with_pragmas(&pragmas)
+            } else {
+                underlying_view_ty
+            };
+
+            self.add_variant_view_type(
+                &mut view_type_aliases,
+                &mut variant_view_types,
+                &variant_name,
+                needs_alias,
+                quote! { #final_view_ty },
+            );
+        }
+
+        let selector_methods =
+            self.generate_union_selector_methods(union_name, args, &variant_view_types);
+
+        let to_owned_arms = self.generate_union_to_owned_arms(union_ident, args, variant_names);
+
+        let tree_hash_arms = self.generate_union_tree_hash_arms(args);
+
+        self.generate_union_view_struct_impl(
+            ref_ident,
+            union_ident,
+            view_type_aliases,
+            selector_methods,
+            to_owned_arms,
+            tree_hash_arms,
+        )
+    }
+
+    fn handle_none_variant(
+        &self,
+        ty: &TypeResolution,
+        variant_view_types: &mut Vec<(String, TokenStream)>,
+    ) -> bool {
+        if ty.resolution == TypeResolutionKind::None {
+            variant_view_types.push(("None".to_string(), quote! { () }));
+            return true;
+        }
+        false
+    }
+
+    fn extract_underlying_type_name(
+        &self,
+        ty: &TypeResolution,
+        include_external: bool,
+    ) -> Option<String> {
+        match &ty.resolution {
+            TypeResolutionKind::Class(class_name) => Some(class_name.clone()),
+            TypeResolutionKind::External if include_external => {
+                if let Some(syn::Type::Path(syn::TypePath { path, .. })) = &ty.ty {
+                    path.segments.last().map(|seg| seg.ident.to_string())
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn get_custom_type_resolution(&self, type_name: Option<&String>) -> Option<&TypeResolution> {
+        type_name
+            .and_then(|name| self.types.get(name))
+            .and_then(|def| match def {
+                TypeDefinition::CustomType(res) => Some(res.as_ref()),
+                _ => None,
+            })
+    }
+
+    fn add_variant_view_type(
+        &self,
+        view_type_aliases: &mut Vec<TokenStream>,
+        variant_view_types: &mut Vec<(String, TokenStream)>,
+        variant_name: &str,
+        needs_alias: bool,
+        view_ty: TokenStream,
+    ) {
+        if needs_alias {
+            let alias_name = Ident::new(&format!("{}Ref", variant_name), Span::call_site());
+            view_type_aliases.push(quote! {
+                pub type #alias_name<'a> = #view_ty;
+            });
+            variant_view_types.push((variant_name.to_string(), quote! { #alias_name<'_> }));
+        } else {
+            variant_view_types.push((variant_name.to_string(), quote! { #view_ty }));
+        }
+    }
+
+    fn generate_union_view_struct_impl(
+        &self,
+        ref_ident: Ident,
+        union_ident: &Ident,
+        view_type_aliases: Vec<TokenStream>,
+        selector_methods: Vec<TokenStream>,
+        to_owned_arms: Vec<TokenStream>,
+        tree_hash_arms: Vec<TokenStream>,
+    ) -> TokenStream {
+        quote! {
+            #(#view_type_aliases)*
+
+            #[derive(Debug, Copy, Clone)]
+            pub struct #ref_ident<'a> {
+                bytes: &'a [u8],
+            }
+
+            impl<'a> #ref_ident<'a> {
+                pub fn selector(&self) -> u8 {
+                    self.bytes[0]
+                }
+
+                #(#selector_methods)*
+
+                pub fn to_owned(&self) -> #union_ident {
+                    match self.selector() {
+                        #(#to_owned_arms,)*
+                        _ => panic!("Invalid union selector: {}", self.selector()),
+                    }
+                }
+            }
+
+            impl<'a> ssz::view::DecodeView<'a> for #ref_ident<'a> {
+                fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    let (_, _) = ssz::split_union_bytes(bytes)?;
+                    Ok(Self { bytes })
+                }
+            }
+
+            impl<'a> ssz::view::SszTypeInfo for #ref_ident<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+
+            impl<'a> ssz_types::view::ToOwnedSsz<#union_ident> for #ref_ident<'a> {
+                fn to_owned(&self) -> #union_ident {
+                    <#ref_ident<'a>>::to_owned(self)
+                }
+            }
+
+            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ref_ident<'a> {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Vector
+                }
+
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Union should never be packed")
+                }
+
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Union should never be packed")
+                }
+
+                fn tree_hash_root(&self) -> H::Output {
+                    match self.selector() {
+                        #(#tree_hash_arms,)*
+                        _ => panic!("Invalid union selector: {}", self.selector()),
+                    }
+                }
+            }
+        }
+    }
+
+    /// Generates selector methods for union view types
+    ///
+    /// # Arguments
+    ///
+    /// * `union_name` - The name of the union type
+    /// * `args` - The resolved type arguments for the union variants
+    /// * `variant_view_types` - The view types for each variant (name, type)
+    ///
+    /// # Returns
+    ///
+    /// A vector of TokenStreams containing the selector method implementations
+    pub fn generate_union_selector_methods(
+        &self,
+        union_name: &str,
+        args: &[TypeResolution],
+        variant_view_types: &[(String, TokenStream)],
+    ) -> Vec<TokenStream> {
+        args.iter()
+            .enumerate()
+            .map(|(i, ty)| {
+                let method_name = Ident::new(&format!("as_selector{i}"), Span::call_site());
+                let selector_value = i as u8;
+                let error_msg = format!("Wrong selector for {}: expected {}", union_name, i);
+
+                match ty.resolution {
+                    TypeResolutionKind::None => {
+                        quote! {
+                            pub fn #method_name(&self) -> Result<(), ssz::DecodeError> {
+                                if self.selector() != #selector_value {
+                                    return Err(ssz::DecodeError::BytesInvalid(
+                                        #error_msg.to_string()
+                                    ));
+                                }
+                                Ok(())
+                            }
+                        }
+                    }
+                    _ => {
+                        let (_, view_ty) = variant_view_types.get(i).unwrap();
+                        quote! {
+                            pub fn #method_name(&self) -> Result<#view_ty, ssz::DecodeError> {
+                                if self.selector() != #selector_value {
+                                    return Err(ssz::DecodeError::BytesInvalid(
+                                        #error_msg.to_string()
+                                    ));
+                                }
+                                ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
+                            }
+                        }
+                    }
+                }
+            })
+            .collect()
+    }
+
+    /// Generates TreeHash match arms for union view types
+    ///
+    /// # Arguments
+    ///
+    /// * `args` - The resolved type arguments for the union variants
+    ///
+    /// # Returns
+    ///
+    /// A vector of TokenStreams containing the TreeHash match arms
+    pub fn generate_union_tree_hash_arms(&self, args: &[TypeResolution]) -> Vec<TokenStream> {
+        args.iter()
+            .enumerate()
+            .map(|(i, ty)| {
+                let selector_value = i as u8;
+                let method_name = Ident::new(&format!("as_selector{i}"), Span::call_site());
+
+                match ty.resolution {
+                    TypeResolutionKind::None => {
+                        quote! {
+                            #selector_value => {
+                                tree_hash::mix_in_selector_with_hasher::<H>(
+                                    &tree_hash::Hash256::ZERO,
+                                    #selector_value
+                                ).expect("valid selector")
+                            }
+                        }
+                    }
+                    _ => {
+                        quote! {
+                            #selector_value => {
+                                let value = self.#method_name().expect("valid selector");
+                                tree_hash::mix_in_selector_with_hasher::<H>(
+                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    #selector_value
+                                ).expect("valid selector")
+                            }
+                        }
+                    }
+                }
+            })
+            .collect()
+    }
+
+    /// Generates to_owned match arms for union view types
+    ///
+    /// # Arguments
+    ///
+    /// * `union_ident` - The identifier for the union type
+    /// * `args` - The resolved type arguments for the union variants
+    /// * `variant_names` - The names of each variant
+    ///
+    /// # Returns
+    ///
+    /// A vector of TokenStreams containing the to_owned match arms
+    pub fn generate_union_to_owned_arms(
+        &self,
+        union_ident: &Ident,
+        args: &[TypeResolution],
+        variant_names: &[String],
+    ) -> Vec<TokenStream> {
+        args.iter()
+            .enumerate()
+            .map(|(i, ty)| {
+                let selector_value = i as u8;
+                let variant_name = variant_names
+                    .get(i)
+                    .cloned()
+                    .unwrap_or_else(|| format!("Selector{i}"));
+                let variant_ident = Ident::new(&variant_name, Span::call_site());
+                let method_name = Ident::new(&format!("as_selector{i}"), Span::call_site());
+
+                match ty.resolution {
+                    TypeResolutionKind::None => {
+                        quote! {
+                            #selector_value => {
+                                self.#method_name().expect("valid selector");
+                                #union_ident::#variant_ident
+                            }
+                        }
+                    }
+                    TypeResolutionKind::Boolean | TypeResolutionKind::UInt(_) => {
+                        quote! {
+                            #selector_value => #union_ident::#variant_ident(
+                                self.#method_name().expect("valid selector")
+                            )
+                        }
+                    }
+                    _ => {
+                        quote! {
+                            #selector_value => #union_ident::#variant_ident(
+                                self.#method_name().expect("valid selector").to_owned()
+                            )
+                        }
+                    }
+                }
+            })
+            .collect()
     }
 }

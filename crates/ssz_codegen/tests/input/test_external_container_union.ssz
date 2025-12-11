@@ -1,0 +1,12 @@
+import external_ssz
+
+### Pending input we expect to see in a block
+### Using external container type for the deposit
+class PendingInputEntry(Union):
+    #~# external_kind: container
+    Deposit: external_ssz.SubjectDepositData
+
+### Container using the union
+class TestContainer(Container):
+    ### Pending inputs
+    pending_inputs: List[PendingInputEntry, 10]
