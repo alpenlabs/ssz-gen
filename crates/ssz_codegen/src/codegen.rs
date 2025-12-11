@@ -534,6 +534,7 @@ impl<'a> CircleBufferCodegen<'a> {
         let mut args = Vec::new();
         let mut variant_names = Vec::new();
         let mut variant_pragmas = Vec::new();
+        let mut variant_doc_comments: Vec<Option<String>> = Vec::new();
 
         for field in class.fields() {
             let field_ty = field.ty();
@@ -545,9 +546,25 @@ impl<'a> CircleBufferCodegen<'a> {
             args.push(field_type);
             variant_names.push(field.name().0.clone());
             variant_pragmas.push(field.pragmas().to_vec());
+            variant_doc_comments.push(field.doc_comment().map(|s| s.to_string()));
         }
 
-        let variants: Vec<syn::Variant> = args
+        // Generate doc comments for the union type itself
+        let union_doc_comments = {
+            let doc = class.doc().map(|s| s.to_string());
+            let doc_comment = class.doc_comment().map(|s| s.to_string());
+            match (&doc, &doc_comment) {
+                (Some(docstring), Some(comment)) => {
+                    let merged = format!("{}\n\n{}", docstring.trim(), comment.trim());
+                    ClassDef::format_doc_comment(&merged)
+                }
+                (Some(docstring), None) => ClassDef::format_doc_comment(docstring),
+                (None, Some(comment)) => ClassDef::format_doc_comment(comment),
+                (None, None) => quote! {},
+            }
+        };
+
+        let variants: Vec<TokenStream> = args
             .iter()
             .enumerate()
             .map(|(i, ty)| {
@@ -555,17 +572,30 @@ impl<'a> CircleBufferCodegen<'a> {
                 let variant_name = field_name.clone();
                 let ident = syn::Ident::new(&variant_name, proc_macro2::Span::call_site());
 
+                // Generate doc comment for this variant
+                let variant_doc = variant_doc_comments
+                    .get(i)
+                    .and_then(|opt| opt.as_ref())
+                    .map(|doc| ClassDef::format_doc_comment(doc))
+                    .unwrap_or_else(|| quote! {});
+
                 match ty.resolution {
                     crate::types::TypeResolutionKind::None => {
                         if i == 0 {
-                            parse_quote!(#ident)
+                            quote! {
+                                #variant_doc
+                                #ident
+                            }
                         } else {
                             panic!("None is only allowed as the first variant in a Union")
                         }
                     }
                     _ => {
                         let variant_ty = ty.unwrap_type();
-                        parse_quote!(#ident(#variant_ty))
+                        quote! {
+                            #variant_doc
+                            #ident(#variant_ty)
+                        }
                     }
                 }
             })
@@ -606,6 +636,7 @@ impl<'a> CircleBufferCodegen<'a> {
             .collect();
 
         let union_code = quote! {
+            #union_doc_comments
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(enum_behaviour="union")]
             pub enum #union_ident {
