@@ -114,11 +114,16 @@ impl ModuleEntry {
 pub(crate) struct AssignEntry {
     name: Identifier,
     value: AssignExpr,
+    pragmas: Vec<String>,
 }
 
 impl AssignEntry {
     pub(crate) fn new(name: Identifier, value: AssignExpr) -> Self {
-        Self { name, value }
+        Self {
+            name,
+            value,
+            pragmas: Vec::new(),
+        }
     }
 
     pub(crate) fn name(&self) -> &Identifier {
@@ -127,6 +132,14 @@ impl AssignEntry {
 
     pub(crate) fn value(&self) -> &AssignExpr {
         &self.value
+    }
+
+    pub(crate) fn pragmas(&self) -> &[String] {
+        &self.pragmas
+    }
+
+    pub(crate) fn set_pragmas(&mut self, pragmas: Vec<String>) {
+        self.pragmas = pragmas;
     }
 }
 
@@ -553,8 +566,11 @@ pub(crate) fn parse_module_from_toktrs<P: AsRef<Path>>(
             // Lines that start with identifiers are probably assignments.
             TaggedToktr::Identifier(_, _) => {
                 consecutive_newlines = 0;
-                comment_buffer.clear(); // Clear comments before assignments
-                let cd = parse_assignment(&mut gob, &import_map)?;
+                // Collect pragmas before parsing assignment
+                let pragmas = comment_buffer.take_pragmas();
+                comment_buffer.clear(); // Clear comments after collecting pragmas
+                let mut cd = parse_assignment(&mut gob, &import_map)?;
+                cd.set_pragmas(pragmas);
                 module_manager
                     .get_module_mut(path)
                     .unwrap()

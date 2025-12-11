@@ -206,12 +206,18 @@ impl<'a> TypeResolver<'a> {
     /// # Arguments
     ///
     /// * `ty` - The type to resolve
-    /// * `is_assignment` - Whether the type is being assigned an alias or not
+    /// * `alias_ident` - The identifier to use as an alias for the resolved type (if any)
+    /// * `pragmas` - Pragma comments for the alias (if any)
     ///
     /// # Returns
     ///
     /// A TypeResolution representing the resolved type, or TypeResolution::None if unresolved
-    pub fn resolve_type(&self, ty: &Ty, alias_ident: Option<&syn::Ident>) -> TypeResolution {
+    pub fn resolve_type(
+        &self,
+        ty: &Ty,
+        alias_ident: Option<&syn::Ident>,
+        pragmas: &[String],
+    ) -> TypeResolution {
         // Check if the type is imported
         if let Ty::Imported(path, name, _) = ty {
             return self.resolve_imported_type(path, name);
@@ -264,7 +270,9 @@ impl<'a> TypeResolver<'a> {
             _ => &[],
         };
         match type_def {
-            Some(def) => self.resolve_type_definition(def, args, original_args, alias_ident),
+            Some(def) => {
+                self.resolve_type_definition(def, args, original_args, alias_ident, pragmas)
+            }
             None => TypeResolution {
                 ty: None,
                 resolution: TypeResolutionKind::Unresolved,
@@ -283,7 +291,7 @@ impl<'a> TypeResolver<'a> {
     /// A TypeResolution representing the resolved type expression
     fn resolve_type_expr(&self, ty_expr: &TyExpr) -> TypeResolution {
         match ty_expr {
-            TyExpr::Ty(ty) => self.resolve_type(ty, None),
+            TyExpr::Ty(ty) => self.resolve_type(ty, None, &[]),
             TyExpr::Int(int) => TypeResolution {
                 ty: None,
                 resolution: TypeResolutionKind::Constant(int.eval()),
@@ -398,6 +406,8 @@ impl<'a> TypeResolver<'a> {
     /// * `def` - The type definition to resolve
     /// * `args` - The resolved type arguments
     /// * `original_args` - The original TyExpr arguments (for preserving constant names)
+    /// * `alias_ident` - The identifier to use as an alias for the resolved type (if any)
+    /// * `pragmas` - Pragma comments for the alias (if any)
     ///
     /// # Returns
     ///
@@ -408,6 +418,7 @@ impl<'a> TypeResolver<'a> {
         args: Vec<TypeResolution>,
         original_args: &[TyExpr],
         alias_ident: Option<&syn::Ident>,
+        pragmas: &[String],
     ) -> TypeResolution {
         let mut resolved_ty = None;
         let resolution = match def {
@@ -551,7 +562,7 @@ impl<'a> TypeResolver<'a> {
                             .and_then(extract_variant_name_from_ty_expr);
 
                         let underlying_type_name = self.extract_underlying_type_name(ty, false);
-                        let underlying_view_ty = ty.to_view_type();
+                        let underlying_view_ty = ty.to_view_type_with_pragmas(pragmas);
                         let underlying_name_opt = underlying_type_name.as_ref();
                         let underlying_type_resolution =
                             self.get_custom_type_resolution(underlying_name_opt);
@@ -563,7 +574,9 @@ impl<'a> TypeResolver<'a> {
                             && underlying_type_resolution.is_some();
 
                         let underlying_view_ty = if needs_alias {
-                            underlying_type_resolution.unwrap().to_view_type()
+                            underlying_type_resolution
+                                .unwrap()
+                                .to_view_type_with_pragmas(pragmas)
                         } else {
                             underlying_view_ty
                         };
@@ -747,12 +760,18 @@ impl<'a> TypeResolver<'a> {
     ///
     /// * `ty` - The type to resolve
     /// * `alias_ident` - The identifier to use as an alias for the resolved type
+    /// * `pragmas` - Pragma comments for the alias
     ///
     /// # Returns
     ///
     /// A TypeResolution representing the resolved type
-    pub fn resolve_type_and_add(&mut self, ty: &Ty, alias_ident: &syn::Ident) -> TypeResolution {
-        let resolved = self.resolve_type(ty, Some(alias_ident));
+    pub fn resolve_type_and_add(
+        &mut self,
+        ty: &Ty,
+        alias_ident: &syn::Ident,
+        pragmas: &[String],
+    ) -> TypeResolution {
+        let resolved = self.resolve_type(ty, Some(alias_ident), pragmas);
 
         let alias_str = alias_ident.to_string();
         if resolved.is_type() && !self.types.contains_key(&alias_str) {
@@ -919,7 +938,7 @@ impl<'a> TypeResolver<'a> {
             return base_class;
         }
 
-        let mut type_resolution = resolver.resolve_type(&Ty::Simple(name.clone()), None);
+        let mut type_resolution = resolver.resolve_type(&Ty::Simple(name.clone()), None, &[]);
 
         // Create a path with the crate prefix for internal imports
         // crate::folder1::folder2::name

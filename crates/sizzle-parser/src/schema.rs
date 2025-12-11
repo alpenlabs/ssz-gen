@@ -156,6 +156,7 @@ impl ClassFieldDef {
 pub struct AliasDef {
     name: Identifier,
     ty: Ty,
+    pragmas: Vec<String>,
 }
 
 impl AliasDef {
@@ -167,6 +168,11 @@ impl AliasDef {
     /// Concrete type that we are aliasing.
     pub fn ty(&self) -> &Ty {
         &self.ty
+    }
+
+    /// Pragma comments for the alias.
+    pub fn pragmas(&self) -> &[String] {
+        &self.pragmas
     }
 }
 
@@ -209,6 +215,7 @@ pub(crate) fn conv_module_to_schema<'a>(
                                 imported.base_name().clone(),
                                 imported.full_name(),
                             ),
+                            pragmas: def.pragmas().to_vec(),
                         });
                         continue;
                     }
@@ -243,6 +250,7 @@ pub(crate) fn conv_module_to_schema<'a>(
                             imported.base_name().clone(),
                             imported.full_name(),
                         ),
+                        pragmas: def.pragmas().to_vec(),
                     });
                 }
 
@@ -255,6 +263,7 @@ pub(crate) fn conv_module_to_schema<'a>(
                         aliases.push(AliasDef {
                             name: name.clone(),
                             ty,
+                            pragmas: def.pragmas().to_vec(),
                         })
                     }
                     TyExpr::Int(v) => {
@@ -304,6 +313,7 @@ pub(crate) fn conv_module_to_schema<'a>(
                     aliases.push(AliasDef {
                         name: name.clone(),
                         ty,
+                        pragmas: def.pragmas().to_vec(),
                     })
                 }
 

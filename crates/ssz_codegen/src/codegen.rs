@@ -87,7 +87,7 @@ impl<'a> CircleBufferCodegen<'a> {
     ) -> bool {
         let ident = Ident::new(&alias.name().0, Span::call_site());
 
-        let type_def = type_resolver.resolve_type_and_add(alias.ty(), &ident);
+        let type_def = type_resolver.resolve_type_and_add(alias.ty(), &ident, alias.pragmas());
         if type_def.is_unresolved() {
             return false;
         }
@@ -316,7 +316,7 @@ impl<'a> CircleBufferCodegen<'a> {
             let field_ident = Ident::new(&field.name().0, Span::call_site());
 
             let field_ty = field.ty();
-            let field_type = type_resolver.resolve_type(field_ty, None);
+            let field_type = type_resolver.resolve_type(field_ty, None, &[]);
             if field_type.is_unresolved() {
                 return false;
             }
@@ -460,7 +460,7 @@ impl<'a> CircleBufferCodegen<'a> {
 
             let field_ident = Ident::new(&field.name().0, Span::call_site());
             let field_ty = field.ty();
-            let field_type = type_resolver.resolve_type(field_ty, None);
+            let field_type = type_resolver.resolve_type(field_ty, None, &[]);
             if field_type.is_unresolved() {
                 return false;
             }
@@ -538,7 +538,7 @@ impl<'a> CircleBufferCodegen<'a> {
 
         for field in class.fields() {
             let field_ty = field.ty();
-            let field_type = type_resolver.resolve_type(field_ty, None);
+            let field_type = type_resolver.resolve_type(field_ty, None, &[]);
             if field_type.is_unresolved() {
                 return false;
             }
