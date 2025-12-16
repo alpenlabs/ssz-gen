@@ -2,7 +2,7 @@
 
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, Eq, PartialEq, Error)]
 pub enum NameError {
     #[error("tried to parse empty string")]
     EmptyString,

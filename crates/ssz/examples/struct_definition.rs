@@ -13,6 +13,7 @@ use smallvec as _;
 use ssz::{Decode, DecodeError, Encode, SszDecoderBuilder, SszEncoder};
 use ssz_derive as _;
 use ssz_primitives as _;
+use thiserror as _;
 
 /// A struct with 3 fields
 #[derive(Debug, PartialEq)]

@@ -15,6 +15,7 @@ use smallvec as _;
 use ssz::{Decode, Encode};
 use ssz_derive::{Decode, Encode};
 use ssz_primitives as _;
+use thiserror as _;
 
 /// A struct with 4 fixed length fields
 #[derive(Clone, Copy, Encode, Decode, Debug)]

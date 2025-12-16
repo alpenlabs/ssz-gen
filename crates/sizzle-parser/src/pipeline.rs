@@ -14,7 +14,7 @@ use crate::{
 };
 
 /// Represents an error from any of the phases of parsing a raw schema.
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, Eq, PartialEq, Error)]
 pub enum SszError {
     /// Error from the tokenizer.
     #[error("tokenizer: {0}")]

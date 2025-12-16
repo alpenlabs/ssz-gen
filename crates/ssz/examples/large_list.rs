@@ -15,6 +15,7 @@ use smallvec as _;
 use ssz::{Decode, Encode};
 use ssz_derive as _;
 use ssz_primitives as _;
+use thiserror as _;
 
 fn main() {
     let vec: Vec<u64> = vec![4242; 8196];

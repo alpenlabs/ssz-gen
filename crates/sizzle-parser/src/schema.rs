@@ -12,7 +12,7 @@ use crate::{
     tysys::{Binop, ConstValue, Ty, TyExpr},
 };
 
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, Eq, PartialEq, Error)]
 pub enum SchemaError {
     #[error("unknown import '{0:?}'")]
     UnknownImport(Identifier),

@@ -289,7 +289,7 @@ impl TyExprSpec {
 /// An imported type.
 ///
 /// No verification is done at this stage.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ImportedTySpec {
     module_path: PathBuf,
     module_name: Identifier,
@@ -339,7 +339,7 @@ impl ImportedTySpec {
 /// An instantiated generic type.
 ///
 /// At this stage we have not verified that `base_name` is actually a type.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ComplexTySpec {
     base_name: Identifier,
     args: Vec<TyArgSpec>,
@@ -360,7 +360,7 @@ impl ComplexTySpec {
 }
 
 /// Type arguments.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TyArgSpec {
     /// An imported type.
     Imported(ImportedTySpec),
@@ -379,7 +379,7 @@ pub enum TyArgSpec {
 }
 
 /// Errors that can occur during AST parsing.
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, Eq, PartialEq, Error)]
 pub enum ParseError {
     /// A malformed block structure was encountered at the given source position.
     #[error("malformed def at {0}")]

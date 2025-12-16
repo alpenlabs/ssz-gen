@@ -18,19 +18,22 @@ workspace = true
 [lib]
 name = "ssz"
 
-[dev-dependencies]
-ssz_derive.workspace = true
-serde_json.workspace = true
-ssz_primitives = { workspace = true, features = ["rand"] }
-serde.workspace = true
-
 [dependencies]
+ssz_primitives.workspace = true
+
 arbitrary = { workspace = true, optional = true }
 hex = { workspace = true, optional = true }
 itertools.workspace = true
 serde = { workspace = true, optional = true }
 smallvec.workspace = true
-ssz_primitives.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+ssz_derive.workspace = true
+ssz_primitives = { workspace = true, features = ["rand"] }
+
+serde_json.workspace = true
+serde.workspace = true
 
 [features]
 default = []

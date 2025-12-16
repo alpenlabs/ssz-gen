@@ -10,6 +10,7 @@ use serde::de::{Deserialize, Deserializer};
 #[cfg(feature = "serde")]
 use serde::ser::{Serialize, Serializer};
 use smallvec::{SmallVec, ToSmallVec, smallvec};
+use thiserror::Error;
 
 #[cfg(feature = "serde")]
 use crate::serde_utils::hex::{PrefixedHexVisitor, encode as hex_encode};
@@ -18,20 +19,29 @@ use crate::{Decode, DecodeError, Encode};
 pub(crate) mod bitvector_dynamic;
 
 /// Returned when an item encounters an error.
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Error)]
 pub enum Error {
     /// The bitfield is out of bounds
+    #[error("the bitfield is out of bounds: index {i} is out of bounds for length {len}")]
     OutOfBounds {
         /// The index
         i: usize,
         /// The length
         len: usize,
     },
+
     /// A `BitList` does not have a set bit, therefore its length is unknowable.
+    #[error("the bitfield does not have a set bit, therefore its length is unknowable")]
     MissingLengthInformation,
+
     /// A `BitList` has excess bits set to true.
+    #[error("the bitfield has excess bits set to true")]
     ExcessBits,
+
     /// A `BitList` has an invalid number of bytes for a given bit length.
+    #[error(
+        "the bitfield has an invalid number of bytes for a given bit length: given {given} bytes, expected {expected} bytes"
+    )]
     InvalidByteCount {
         /// The given length
         given: usize,

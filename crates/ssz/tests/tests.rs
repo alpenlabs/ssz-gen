@@ -15,6 +15,7 @@ use smallvec as _;
 use ssz::{Decode, DecodeError, Encode};
 use ssz_derive::{Decode, Encode};
 use ssz_primitives::{U128, U256};
+use thiserror as _;
 
 mod round_trip {
     use std::{

@@ -4,15 +4,19 @@
 use std::mem;
 
 use smallvec::{SmallVec, smallvec};
+use thiserror::Error;
 
 use crate::TreeHashDigest;
 
 type SmallVec8<T> = SmallVec<[T; 8]>;
 
 /// Error type for the MerkleHasher.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Error)]
 pub enum Error {
     /// The maximum number of leaves defined by the initialization `depth` has been exceed.
+    #[error(
+        "the maximum number of leaves defined by the initialization `depth` has been exceed. Maximum number of leaves: {max_leaves}"
+    )]
     MaximumLeavesExceeded {
         /// The maximum number of leaves that can be hashed.
         max_leaves: usize,

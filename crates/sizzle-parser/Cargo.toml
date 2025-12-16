@@ -14,4 +14,4 @@ keywords.workspace = true
 workspace = true
 
 [dependencies]
-thiserror = "2"
+thiserror.workspace = true

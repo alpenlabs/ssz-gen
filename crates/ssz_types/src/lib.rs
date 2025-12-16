@@ -58,6 +58,7 @@ use rand as _;
 use serde_json as _;
 pub use ssz::{BitList, BitVector, Bitfield};
 pub use ssz_primitives::{FixedBytes, Hash256, U128, U256};
+use thiserror::Error;
 pub use variable_list::VariableList;
 
 pub mod length {
@@ -66,20 +67,29 @@ pub mod length {
 }
 
 /// Returned when an item encounters an error.
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Eq, Error)]
 pub enum Error {
     /// An index is out of bounds.
+    #[error("an index is out of bounds: index {i} is out of bounds for length {len}")]
     OutOfBounds {
         /// The index that is out of bounds.
         i: usize,
         /// The length of the list.
         len: usize,
     },
+
     /// A `BitList` does not have a set bit, therefore it's length is unknowable.
+    #[error("a `BitList` does not have a set bit, therefore it's length is unknowable")]
     MissingLengthInformation,
+
     /// A `BitList` has excess bits set to true.
+    #[error("a `BitList` has excess bits set to true")]
     ExcessBits,
+
     /// A `BitList` has an invalid number of bytes for a given bit length.
+    #[error(
+        "a `BitList` has an invalid number of bytes for a given bit length: given {given} bytes, expected {expected} bytes"
+    )]
     InvalidByteCount {
         /// The number of bytes given.
         given: usize,

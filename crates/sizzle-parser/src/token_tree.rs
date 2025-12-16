@@ -190,7 +190,7 @@ impl<T> NodeData<T> {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, Eq, PartialEq, Error)]
 pub enum ToktrError {
     #[error("expected {0:?} terminal but found {1:?} terminal")]
     UnfinishedBlock(BlockType, BlockType),
