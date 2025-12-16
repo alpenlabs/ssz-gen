@@ -6,6 +6,7 @@
 use std::cmp::Ordering;
 
 use smallvec::{SmallVec, smallvec};
+use thiserror::Error;
 
 use super::*;
 
@@ -15,9 +16,10 @@ pub(crate) mod impls;
 pub(crate) mod try_from_iter;
 
 /// Returned when SSZ decoding fails.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Error)]
 pub enum DecodeError {
     /// The bytes supplied were too short to be decoded into the specified type.
+    #[error("invalid byte length: got {len} bytes, expected {expected}")]
     InvalidByteLength {
         /// The length of the bytes
         len: usize,
@@ -25,6 +27,7 @@ pub enum DecodeError {
         expected: usize,
     },
     /// The given bytes were too short to be read as a length prefix.
+    #[error("invalid length prefix: got {len} bytes, expected {expected}")]
     InvalidLengthPrefix {
         /// The length of the bytes
         len: usize,
@@ -39,39 +42,49 @@ pub enum DecodeError {
     /// - When decoding variable length items, the 1st offset points "backwards" into the fixed
     ///   length items (i.e., `length[0] < BYTES_PER_LENGTH_OFFSET`).
     /// - When decoding variable-length items, the `n`'th offset was less than the `n-1`'th offset.
+    #[error("out of bounds byte at index {i}")]
     OutOfBoundsByte {
         /// The index of the byte
         i: usize,
     },
-    /// An offset points “backwards” into the fixed-bytes portion of the message, essentially
+    /// An offset points "backwards" into the fixed-bytes portion of the message, essentially
     /// double-decoding bytes that will also be decoded as fixed-length.
     ///
     /// <https://notes.ethereum.org/ruKvDXl6QOW3gnqVYb8ezA?view#1-Offset-into-fixed-portion>
+    #[error("offset {0} points into fixed portion")]
     OffsetIntoFixedPortion(usize),
     /// The first offset does not point to the byte that follows the fixed byte portion,
     /// essentially skipping a variable-length byte.
     ///
     /// <https://notes.ethereum.org/ruKvDXl6QOW3gnqVYb8ezA?view#2-Skip-first-variable-byte>
+    #[error("offset {0} skips variable bytes")]
     OffsetSkipsVariableBytes(usize),
     /// An offset points to bytes prior to the previous offset. Depending on how you look at it,
     /// this either double-decodes bytes or makes the first offset a negative-length.
     ///
     /// <https://notes.ethereum.org/ruKvDXl6QOW3gnqVYb8ezA?view#3-Offsets-are-decreasing>
+    #[error("offsets are decreasing at {0}")]
     OffsetsAreDecreasing(usize),
     /// An offset references byte indices that do not exist in the source bytes.
     ///
     /// <https://notes.ethereum.org/ruKvDXl6QOW3gnqVYb8ezA?view#4-Offsets-are-out-of-bounds>
+    #[error("offset {0} is out of bounds")]
     OffsetOutOfBounds(usize),
     /// A variable-length list does not have a fixed portion that is cleanly divisible by
     /// `BYTES_PER_LENGTH_OFFSET`.
+    #[error("invalid list fixed bytes length: {0} is not divisible by offset size")]
     InvalidListFixedBytesLen(usize),
     /// Some item has a `ssz_fixed_len` of zero. This is illegal.
+    #[error("item has zero length, which is not permitted")]
     ZeroLengthItem,
     /// The given bytes were invalid for some application-level reason.
+    #[error("invalid bytes: {0}")]
     BytesInvalid(String),
     /// The given union selector is out of bounds.
+    #[error("invalid union selector: {0}")]
     UnionSelectorInvalid(u8),
     /// The given bytes could not be successfully decoded into any variant of the transparent enum.
+    #[error("no matching variant found for transparent enum")]
     NoMatchingVariant,
 }
 

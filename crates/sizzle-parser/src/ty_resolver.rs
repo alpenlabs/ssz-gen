@@ -12,7 +12,7 @@ use crate::{
     tysys::{ConstValue, Ty, TyExpr},
 };
 
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, Eq, PartialEq, Error)]
 pub enum ResolverError {
     #[error("unknown import '{0:?}'")]
     UnknownImport(Identifier),

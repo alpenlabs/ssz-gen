@@ -150,7 +150,7 @@ impl<T> TaggedToken<T> {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, Eq, PartialEq, Error)]
 pub enum TokenError {
     #[error("unexpected char '{0}' at pos {1}")]
     UnexpectedChar(char, usize),

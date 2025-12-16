@@ -10,6 +10,7 @@ use smallvec as _;
 use ssz_derive::Encode;
 use ssz_primitives::{U128, U256};
 use ssz_types::{BitVector, Optional, VariableList};
+use thiserror as _;
 use tree_hash::{
     self, BYTES_PER_CHUNK, Hash256, MerkleHasher, PackedEncoding, TreeHash, TreeHashDigest,
     hash32_concat,
