@@ -2148,9 +2148,10 @@ impl ClassDef {
                         TypeResolutionKind::Union(_, _) => {
                             // Union types: getter returns Optional<UnionRef>
                             // Need to map the Optional and convert UnionRef to Union
+                            // Use ToOwnedSsz trait method for proper type resolution with external types
                             quote! {
                                 #field_name: match self.#field_name().expect("valid view") {
-                                    ssz_types::Optional::Some(inner) => ssz_types::Optional::Some(inner.to_owned()),
+                                    ssz_types::Optional::Some(inner) => ssz_types::Optional::Some(ssz_types::view::ToOwnedSsz::to_owned(&inner)),
                                     ssz_types::Optional::None => ssz_types::Optional::None,
                                 }
                             }
@@ -2158,9 +2159,10 @@ impl ClassDef {
                         _ => {
                             // Complex types: Optional<TRef> -> Optional<T>
                             // Use match to convert inner TRef to T
+                            // Use ToOwnedSsz trait method for proper type resolution with external types
                             quote! {
                                 #field_name: match self.#field_name().expect("valid view") {
-                                    ssz_types::Optional::Some(inner) => ssz_types::Optional::Some(inner.to_owned()),
+                                    ssz_types::Optional::Some(inner) => ssz_types::Optional::Some(ssz_types::view::ToOwnedSsz::to_owned(&inner)),
                                     ssz_types::Optional::None => ssz_types::Optional::None,
                                 }
                             }
@@ -2172,8 +2174,9 @@ impl ClassDef {
                         TypeResolutionKind::Option(_) => {
                             // Option types (from Union[null, T]) - getter returns Result<Option<TRef>, Error>
                             // Need to convert Option<TRef> to Option<T> by calling to_owned() on inner if Some
+                            // Use ToOwnedSsz trait method for proper type resolution with external types
                             quote! {
-                                #field_name: self.#field_name().expect("valid view").map(|inner| inner.to_owned())
+                                #field_name: self.#field_name().expect("valid view").map(|inner| ssz_types::view::ToOwnedSsz::to_owned(&inner))
                             }
                         }
                         TypeResolutionKind::Boolean | TypeResolutionKind::UInt(_) => {
@@ -2212,8 +2215,32 @@ impl ClassDef {
                                 }
                             }
                         }
+                        TypeResolutionKind::Bitlist(_) | TypeResolutionKind::Bitvector(_) => {
+                            // BitListRef/BitVectorRef have inherent to_owned() methods
+                            quote! {
+                                #field_name: self.#field_name().expect("valid view").to_owned()
+                            }
+                        }
+                        TypeResolutionKind::Bytes(_) => {
+                            // FixedBytesRef has inherent to_owned() method
+                            quote! {
+                                #field_name: ssz_types::FixedBytes(self.#field_name().expect("valid view").to_owned())
+                            }
+                        }
+                        TypeResolutionKind::Class(_)
+                        | TypeResolutionKind::External
+                        | TypeResolutionKind::Union(_, _) => {
+                            // For complex types (containers, unions, external), use ToOwnedSsz trait method
+                            // for proper type resolution with external types
+                            quote! {
+                                #field_name: {
+                                    let view = self.#field_name().expect("valid view");
+                                    ssz_types::view::ToOwnedSsz::to_owned(&view)
+                                }
+                            }
+                        }
                         _ => {
-                            // For other complex types, call getter and then to_owned()
+                            // Fallback for any other types - use inherent to_owned()
                             quote! {
                                 #field_name: self.#field_name().expect("valid view").to_owned()
                             }

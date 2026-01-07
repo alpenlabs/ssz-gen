@@ -101,14 +101,16 @@ pub mod tests {
                             ExternalUnionA::Selector0
                         }
                         1u8 => {
-                            ExternalUnionA::A(
-                                self.as_selector1().expect("valid selector").to_owned(),
-                            )
+                            ExternalUnionA::A({
+                                let view = self.as_selector1().expect("valid selector");
+                                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
                         }
                         2u8 => {
-                            ExternalUnionA::B(
-                                self.as_selector2().expect("valid selector").to_owned(),
-                            )
+                            ExternalUnionA::B({
+                                let view = self.as_selector2().expect("valid selector");
+                                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
                         }
                         _ => panic!("Invalid union selector: {}", self.selector()),
                     }
@@ -265,14 +267,16 @@ pub mod tests {
                             ExternalUnionB::Selector0
                         }
                         1u8 => {
-                            ExternalUnionB::TestA(
-                                self.as_selector1().expect("valid selector").to_owned(),
-                            )
+                            ExternalUnionB::TestA({
+                                let view = self.as_selector1().expect("valid selector");
+                                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
                         }
                         2u8 => {
-                            ExternalUnionB::TestB(
-                                self.as_selector2().expect("valid selector").to_owned(),
-                            )
+                            ExternalUnionB::TestB({
+                                let view = self.as_selector2().expect("valid selector");
+                                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
                         }
                         _ => panic!("Invalid union selector: {}", self.selector()),
                     }
@@ -521,8 +525,14 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> ExternalContainer {
                     ExternalContainer {
-                        field_a: self.field_a().expect("valid view").to_owned(),
-                        field_b: self.field_b().expect("valid view").to_owned(),
+                        field_a: {
+                            let view = self.field_a().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
+                        field_b: {
+                            let view = self.field_b().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
                     }
                 }
             }

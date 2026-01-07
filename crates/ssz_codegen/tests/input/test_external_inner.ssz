@@ -1,0 +1,4 @@
+# Inner container type 
+class BlockCommitment(Container):
+    height: uint32
+    block_hash: Vector[byte, 32]

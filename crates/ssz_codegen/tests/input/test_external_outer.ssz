@@ -1,0 +1,8 @@
+import test_external_inner
+
+# Outer container that uses inner container as external type
+class BlockRange(Container):
+    #~# external_kind: container
+    start: test_external_inner.BlockCommitment
+    #~# external_kind: container
+    end: test_external_inner.BlockCommitment

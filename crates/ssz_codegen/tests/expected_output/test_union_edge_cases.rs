@@ -255,24 +255,28 @@ pub mod tests {
                 pub fn to_owned(&self) -> ComplexUnion {
                     match self.selector() {
                         0u8 => {
-                            ComplexUnion::Selector0(
-                                self.as_selector0().expect("valid selector").to_owned(),
-                            )
+                            ComplexUnion::Selector0({
+                                let view = self.as_selector0().expect("valid selector");
+                                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
                         }
                         1u8 => {
-                            ComplexUnion::Selector1(
-                                self.as_selector1().expect("valid selector").to_owned(),
-                            )
+                            ComplexUnion::Selector1({
+                                let view = self.as_selector1().expect("valid selector");
+                                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
                         }
                         2u8 => {
-                            ComplexUnion::SimpleUnion(
-                                self.as_selector2().expect("valid selector").to_owned(),
-                            )
+                            ComplexUnion::SimpleUnion({
+                                let view = self.as_selector2().expect("valid selector");
+                                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
                         }
                         3u8 => {
-                            ComplexUnion::Selector3(
-                                self.as_selector3().expect("valid selector").to_owned(),
-                            )
+                            ComplexUnion::Selector3({
+                                let view = self.as_selector3().expect("valid selector");
+                                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
                         }
                         _ => panic!("Invalid union selector: {}", self.selector()),
                     }
@@ -605,14 +609,16 @@ pub mod tests {
                 pub fn to_owned(&self) -> NestedUnion {
                     match self.selector() {
                         0u8 => {
-                            NestedUnion::SimpleUnion(
-                                self.as_selector0().expect("valid selector").to_owned(),
-                            )
+                            NestedUnion::SimpleUnion({
+                                let view = self.as_selector0().expect("valid selector");
+                                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
                         }
                         1u8 => {
-                            NestedUnion::AnotherSimple(
-                                self.as_selector1().expect("valid selector").to_owned(),
-                            )
+                            NestedUnion::AnotherSimple({
+                                let view = self.as_selector1().expect("valid selector");
+                                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
                         }
                         2u8 => {
                             NestedUnion::Selector2(
@@ -1213,21 +1219,30 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> UnionEdgeCases {
                     UnionEdgeCases {
-                        simple: self.simple().expect("valid view").to_owned(),
-                        nested: self.nested().expect("valid view").to_owned(),
-                        complex: self.complex().expect("valid view").to_owned(),
+                        simple: {
+                            let view = self.simple().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
+                        nested: {
+                            let view = self.nested().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
+                        complex: {
+                            let view = self.complex().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
                         opt_simple: self
                             .opt_simple()
                             .expect("valid view")
-                            .map(|inner| inner.to_owned()),
+                            .map(|inner| ssz_types::view::ToOwnedSsz::to_owned(&inner)),
                         opt_complex: self
                             .opt_complex()
                             .expect("valid view")
-                            .map(|inner| inner.to_owned()),
+                            .map(|inner| ssz_types::view::ToOwnedSsz::to_owned(&inner)),
                         opt_union: self
                             .opt_union()
                             .expect("valid view")
-                            .map(|inner| inner.to_owned()),
+                            .map(|inner| ssz_types::view::ToOwnedSsz::to_owned(&inner)),
                     }
                 }
             }
@@ -1460,12 +1475,18 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> AllUnions {
                     AllUnions {
-                        union1: self.union1().expect("valid view").to_owned(),
-                        union2: self.union2().expect("valid view").to_owned(),
+                        union1: {
+                            let view = self.union1().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
+                        union2: {
+                            let view = self.union2().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
                         union3: self
                             .union3()
                             .expect("valid view")
-                            .map(|inner| inner.to_owned()),
+                            .map(|inner| ssz_types::view::ToOwnedSsz::to_owned(&inner)),
                     }
                 }
             }
