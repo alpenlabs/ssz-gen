@@ -1698,17 +1698,17 @@ fn test_union_class_in_list() {
 /// and implement `ToOwnedSsz<CustomType>` to get automatic conversion from
 /// SSZ-generated view types to their custom types.
 #[test]
-fn test_custom_to_owned_ssz_implementation() {
+fn test_external_container_to_owned_ssz() {
     build_ssz_files(
-        &["test_custom_to_owned.ssz"],
+        &["test_external_inner.ssz", "test_external_outer.ssz"],
         "tests/input",
         &[],
-        "tests/output/test_custom_to_owned.rs",
+        "tests/output/test_external_container.rs",
         ModuleGeneration::NestedModules,
     )
     .expect("Failed to generate SSZ types");
 
-    let generated = fs::read_to_string("tests/output/test_custom_to_owned.rs")
+    let generated = fs::read_to_string("tests/output/test_external_container.rs")
         .expect("Failed to read generated output");
 
     // Verify that the generated code uses ToOwnedSsz trait method for complex types
@@ -1719,18 +1719,19 @@ fn test_custom_to_owned_ssz_implementation() {
         &generated
     );
 
-    // Verify that the generated code has the trait implementation for InnerData
+    // Verify that the generated code has the trait implementation for BlockCommitment
     assert!(
-        generated.contains("impl<'a> ssz_types::view::ToOwnedSsz<InnerData> for InnerDataRef<'a>"),
-        "Generated code should implement ToOwnedSsz for InnerDataRef"
+        generated.contains("ssz_types::view::ToOwnedSsz<BlockCommitment>")
+            && generated.contains("for BlockCommitmentRef<'a>"),
+        "Generated code should implement ToOwnedSsz for BlockCommitmentRef"
     );
 
-    // Verify that OuterContainer's to_owned uses the trait method for inner field
-    // This allows users to implement ToOwnedSsz<CustomInnerData> for InnerDataRef
-    // and have the OuterContainer conversion automatically use their custom type
+    // Verify that BlockRange's to_owned uses the trait method for start/end fields
+    // This allows users to implement ToOwnedSsz<CustomBlockCommitment> for BlockCommitmentRef
+    // and have the BlockRange conversion automatically use their custom type
     assert!(
-        generated.contains("inner: {")
+        generated.contains("start: {")
             && generated.contains("ssz_types::view::ToOwnedSsz::to_owned(&view)"),
-        "OuterContainer.inner should use trait-based to_owned for type resolution"
+        "BlockRange.start should use trait-based to_owned for type resolution"
     );
 }

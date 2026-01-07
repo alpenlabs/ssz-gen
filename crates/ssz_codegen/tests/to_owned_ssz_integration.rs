@@ -13,7 +13,7 @@ use ssz_primitives as _;
 use tree_hash_derive as _;
 
 // Include generated code
-include!("output/test_external_container.rs");
+include!("expected_output/test_external_container.rs");
 
 use ssz::view::DecodeView;
 use ssz_types::view::ToOwnedSsz;
