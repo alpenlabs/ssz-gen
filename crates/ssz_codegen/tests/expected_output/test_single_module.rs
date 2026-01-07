@@ -71,9 +71,10 @@ impl<'a> AliasOptionUnionRef<'a> {
                 AliasOptionUnion::Selector0(self.as_selector0().expect("valid selector"))
             }
             1u8 => {
-                AliasOptionUnion::Selector1(
-                    self.as_selector1().expect("valid selector").to_owned(),
-                )
+                AliasOptionUnion::Selector1({
+                    let view = self.as_selector1().expect("valid selector");
+                    ssz_types::view::ToOwnedSsz::to_owned(&view)
+                })
             }
             _ => panic!("Invalid union selector: {}", self.selector()),
         }
@@ -623,13 +624,17 @@ impl<'a> UnionBRef<'a> {
         match self.selector() {
             0u8 => UnionB::Selector0(self.as_selector0().expect("valid selector")),
             1u8 => {
-                UnionB::UnionA(self.as_selector1().expect("valid selector").to_owned())
+                UnionB::UnionA({
+                    let view = self.as_selector1().expect("valid selector");
+                    ssz_types::view::ToOwnedSsz::to_owned(&view)
+                })
             }
             2u8 => UnionB::Selector2(self.as_selector2().expect("valid selector")),
             3u8 => {
-                UnionB::Selector3(
-                    self.as_selector3().expect("valid selector").to_owned(),
-                )
+                UnionB::Selector3({
+                    let view = self.as_selector3().expect("valid selector");
+                    ssz_types::view::ToOwnedSsz::to_owned(&view)
+                })
             }
             _ => panic!("Invalid union selector: {}", self.selector()),
         }
@@ -1447,13 +1452,17 @@ impl<'a> GammaRef<'a> {
         Gamma {
             g: match self.g().expect("valid view") {
                 ssz_types::Optional::Some(inner) => {
-                    ssz_types::Optional::Some(inner.to_owned())
+                    ssz_types::Optional::Some(
+                        ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                    )
                 }
                 ssz_types::Optional::None => ssz_types::Optional::None,
             },
             h: match self.h().expect("valid view") {
                 ssz_types::Optional::Some(inner) => {
-                    ssz_types::Optional::Some(inner.to_owned())
+                    ssz_types::Optional::Some(
+                        ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                    )
                 }
                 ssz_types::Optional::None => ssz_types::Optional::None,
             },
@@ -1846,25 +1855,33 @@ impl<'a> EpsilonRef<'a> {
         Epsilon {
             g: match self.g().expect("valid view") {
                 ssz_types::Optional::Some(inner) => {
-                    ssz_types::Optional::Some(inner.to_owned())
+                    ssz_types::Optional::Some(
+                        ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                    )
                 }
                 ssz_types::Optional::None => ssz_types::Optional::None,
             },
             h: match self.h().expect("valid view") {
                 ssz_types::Optional::Some(inner) => {
-                    ssz_types::Optional::Some(inner.to_owned())
+                    ssz_types::Optional::Some(
+                        ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                    )
                 }
                 ssz_types::Optional::None => ssz_types::Optional::None,
             },
             i: match self.i().expect("valid view") {
                 ssz_types::Optional::Some(inner) => {
-                    ssz_types::Optional::Some(inner.to_owned())
+                    ssz_types::Optional::Some(
+                        ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                    )
                 }
                 ssz_types::Optional::None => ssz_types::Optional::None,
             },
             j: match self.j().expect("valid view") {
                 ssz_types::Optional::Some(inner) => {
-                    ssz_types::Optional::Some(inner.to_owned())
+                    ssz_types::Optional::Some(
+                        ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                    )
                 }
                 ssz_types::Optional::None => ssz_types::Optional::None,
             },
@@ -2050,13 +2067,17 @@ impl<'a> ZetaRef<'a> {
         Zeta {
             u: match self.u().expect("valid view") {
                 ssz_types::Optional::Some(inner) => {
-                    ssz_types::Optional::Some(inner.to_owned())
+                    ssz_types::Optional::Some(
+                        ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                    )
                 }
                 ssz_types::Optional::None => ssz_types::Optional::None,
             },
             v: match self.v().expect("valid view") {
                 ssz_types::Optional::Some(inner) => {
-                    ssz_types::Optional::Some(inner.to_owned())
+                    ssz_types::Optional::Some(
+                        ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                    )
                 }
                 ssz_types::Optional::None => ssz_types::Optional::None,
             },
@@ -2469,9 +2490,18 @@ impl<'a> EtaRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> Eta {
         Eta {
-            l: self.l().expect("valid view").to_owned(),
-            m: self.m().expect("valid view").to_owned(),
-            n: self.n().expect("valid view").to_owned(),
+            l: {
+                let view = self.l().expect("valid view");
+                ssz_types::view::ToOwnedSsz::to_owned(&view)
+            },
+            m: {
+                let view = self.m().expect("valid view");
+                ssz_types::view::ToOwnedSsz::to_owned(&view)
+            },
+            n: {
+                let view = self.n().expect("valid view");
+                ssz_types::view::ToOwnedSsz::to_owned(&view)
+            },
         }
     }
 }
@@ -2652,8 +2682,14 @@ impl<'a> ThetaRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> Theta {
         Theta {
-            o: self.o().expect("valid view").to_owned(),
-            p: self.p().expect("valid view").to_owned(),
+            o: {
+                let view = self.o().expect("valid view");
+                ssz_types::view::ToOwnedSsz::to_owned(&view)
+            },
+            p: {
+                let view = self.p().expect("valid view");
+                ssz_types::view::ToOwnedSsz::to_owned(&view)
+            },
             q: ssz_types::FixedBytes(self.q().expect("valid view").to_owned()),
         }
     }
@@ -2997,37 +3033,49 @@ impl<'a> IotaRef<'a> {
         Iota {
             g: match self.g().expect("valid view") {
                 ssz_types::Optional::Some(inner) => {
-                    ssz_types::Optional::Some(inner.to_owned())
+                    ssz_types::Optional::Some(
+                        ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                    )
                 }
                 ssz_types::Optional::None => ssz_types::Optional::None,
             },
             h: match self.h().expect("valid view") {
                 ssz_types::Optional::Some(inner) => {
-                    ssz_types::Optional::Some(inner.to_owned())
+                    ssz_types::Optional::Some(
+                        ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                    )
                 }
                 ssz_types::Optional::None => ssz_types::Optional::None,
             },
             i: match self.i().expect("valid view") {
                 ssz_types::Optional::Some(inner) => {
-                    ssz_types::Optional::Some(inner.to_owned())
+                    ssz_types::Optional::Some(
+                        ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                    )
                 }
                 ssz_types::Optional::None => ssz_types::Optional::None,
             },
             j: match self.j().expect("valid view") {
                 ssz_types::Optional::Some(inner) => {
-                    ssz_types::Optional::Some(inner.to_owned())
+                    ssz_types::Optional::Some(
+                        ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                    )
                 }
                 ssz_types::Optional::None => ssz_types::Optional::None,
             },
             r: match self.r().expect("valid view") {
                 ssz_types::Optional::Some(inner) => {
-                    ssz_types::Optional::Some(inner.to_owned())
+                    ssz_types::Optional::Some(
+                        ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                    )
                 }
                 ssz_types::Optional::None => ssz_types::Optional::None,
             },
             s: match self.s().expect("valid view") {
                 ssz_types::Optional::Some(inner) => {
-                    ssz_types::Optional::Some(inner.to_owned())
+                    ssz_types::Optional::Some(
+                        ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                    )
                 }
                 ssz_types::Optional::None => ssz_types::Optional::None,
             },
@@ -3211,8 +3259,14 @@ impl<'a> KappaRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> Kappa {
         Kappa {
-            t: self.t().expect("valid view").to_owned(),
-            u: self.u().expect("valid view").to_owned(),
+            t: {
+                let view = self.t().expect("valid view");
+                ssz_types::view::ToOwnedSsz::to_owned(&view)
+            },
+            u: {
+                let view = self.u().expect("valid view");
+                ssz_types::view::ToOwnedSsz::to_owned(&view)
+            },
             v: self.v().expect("valid view").to_owned(),
         }
     }
@@ -3396,13 +3450,17 @@ impl<'a> LambdaRef<'a> {
         Lambda {
             w: match self.w().expect("valid view") {
                 ssz_types::Optional::Some(inner) => {
-                    ssz_types::Optional::Some(inner.to_owned())
+                    ssz_types::Optional::Some(
+                        ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                    )
                 }
                 ssz_types::Optional::None => ssz_types::Optional::None,
             },
             x: match self.x().expect("valid view") {
                 ssz_types::Optional::Some(inner) => {
-                    ssz_types::Optional::Some(inner.to_owned())
+                    ssz_types::Optional::Some(
+                        ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                    )
                 }
                 ssz_types::Optional::None => ssz_types::Optional::None,
             },
@@ -3563,8 +3621,14 @@ impl<'a> MuRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> Mu {
         Mu {
-            y: self.y().expect("valid view").to_owned(),
-            z: self.z().expect("valid view").to_owned(),
+            y: {
+                let view = self.y().expect("valid view");
+                ssz_types::view::ToOwnedSsz::to_owned(&view)
+            },
+            z: {
+                let view = self.z().expect("valid view");
+                ssz_types::view::ToOwnedSsz::to_owned(&view)
+            },
         }
     }
 }
@@ -3798,10 +3862,16 @@ impl<'a> NuRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> Nu {
         Nu {
-            zz: self.zz().expect("valid view").to_owned(),
+            zz: {
+                let view = self.zz().expect("valid view");
+                ssz_types::view::ToOwnedSsz::to_owned(&view)
+            },
             aaa: self.aaa().expect("valid view").to_owned().expect("valid view"),
             bbb: self.bbb().expect("valid view").to_owned(),
-            test: self.test().expect("valid view").map(|inner| inner.to_owned()),
+            test: self
+                .test()
+                .expect("valid view")
+                .map(|inner| ssz_types::view::ToOwnedSsz::to_owned(&inner)),
         }
     }
 }

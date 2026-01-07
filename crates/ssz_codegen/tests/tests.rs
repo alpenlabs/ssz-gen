@@ -1689,3 +1689,47 @@ fn test_union_class_in_list() {
         "Container with class Name(Union): external should use VariableListRef with UnionClassWithExternalRef"
     );
 }
+
+/// Test demonstrating that custom `ToOwnedSsz` implementations can be used
+/// to convert SSZ view types to user-defined types.
+///
+/// This is the key use case for the fix: users can define their own types
+/// and implement `ToOwnedSsz<CustomType>` to get automatic conversion from
+/// SSZ-generated view types to their custom types.
+#[test]
+fn test_custom_to_owned_ssz_implementation() {
+    build_ssz_files(
+        &["test_custom_to_owned.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_custom_to_owned.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types");
+
+    let generated = fs::read_to_string("tests/output/test_custom_to_owned.rs")
+        .expect("Failed to read generated output");
+
+    // Verify that the generated code uses ToOwnedSsz trait method for complex types
+    // This is the key change that enables custom type resolution
+    assert!(
+        generated.contains("ssz_types::view::ToOwnedSsz::to_owned(&view)"),
+        "Generated to_owned() should use ToOwnedSsz trait method for complex types. Generated:\n{}",
+        &generated
+    );
+
+    // Verify that the generated code has the trait implementation for InnerData
+    assert!(
+        generated.contains("impl<'a> ssz_types::view::ToOwnedSsz<InnerData> for InnerDataRef<'a>"),
+        "Generated code should implement ToOwnedSsz for InnerDataRef"
+    );
+
+    // Verify that OuterContainer's to_owned uses the trait method for inner field
+    // This allows users to implement ToOwnedSsz<CustomInnerData> for InnerDataRef
+    // and have the OuterContainer conversion automatically use their custom type
+    assert!(
+        generated.contains("inner: {")
+            && generated.contains("ssz_types::view::ToOwnedSsz::to_owned(&view)"),
+        "OuterContainer.inner should use trait-based to_owned for type resolution"
+    );
+}

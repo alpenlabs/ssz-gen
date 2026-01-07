@@ -29,7 +29,7 @@ use ssz::{
     DecodeError,
     view::{DecodeView, ListRef, SszTypeInfo, VectorRef},
 };
-use ssz_primitives::{FixedBytes, U128, U256};
+use ssz_primitives::FixedBytes;
 use tree_hash::{PackedEncoding, TreeHash, TreeHashDigest, TreeHashType};
 
 use crate::{Error, FixedVector, VariableList};
@@ -145,29 +145,49 @@ where
 ///
 /// This trait bridges between zero-copy view types (like [`u64`] from [`DecodeView`])
 /// and their owned counterparts that can be collected into containers.
+///
+/// # Blanket Implementation
+///
+/// A blanket implementation is provided for all [`Copy`] types, so you don't need
+/// to implement this trait for simple wrapper types. This covers:
+///
+/// - All primitive types (`u8`, `u16`, `u32`, `u64`, `u128`, `usize`, `bool`)
+/// - SSZ primitive types ([`FixedBytes`], `U256`, `U128`)
+/// - Custom wrapper types that implement `Copy` (e.g., `Buf32`, `AccountId`)
+///
+/// # Custom Implementations
+///
+/// For external container types where the `FooRef<'_>` view type needs to convert
+/// to a different owned type `Foo`, implement this trait explicitly:
+///
+/// ```rust,ignore
+/// impl<'a> ToOwnedSsz<MyCustomType> for MyCustomTypeRef<'a> {
+///     fn to_owned(&self) -> MyCustomType {
+///         MyCustomType::new(self.field1(), self.field2())
+///     }
+/// }
+/// ```
+///
+/// # SSZ Schema Usage
+///
+/// When using external types in SSZ schemas:
+///
+/// - Use `external_kind: container` for types that have a separate `Ref` view type and need custom
+///   `ToOwnedSsz` conversion logic.
+/// - Use `external_kind: primitive` (or omit the pragma) for simple `Copy` wrapper types that don't
+///   need a `Ref` variant.
 pub trait ToOwnedSsz<T> {
     /// Converts this view to an owned value.
     fn to_owned(&self) -> T;
 }
 
-/// Implement [`ToOwnedSsz`] for primitive types (they implement [`Copy`]).
-macro_rules! impl_to_owned_copy {
-    ($($t:ty),*) => {
-        $(
-            impl ToOwnedSsz<$t> for $t {
-                fn to_owned(&self) -> $t {
-                    *self
-                }
-            }
-        )*
-    };
-}
-
-impl_to_owned_copy!(u8, u16, u32, u64, u128, usize, bool);
-
-/// Implement [`ToOwnedSsz`] for [`ssz_primitives`] types.
-impl<const N: usize> ToOwnedSsz<FixedBytes<N>> for FixedBytes<N> {
-    fn to_owned(&self) -> FixedBytes<N> {
+/// Blanket implementation for all [`Copy`] types.
+///
+/// This covers primitives (`u8`, `u64`, `bool`, etc.), SSZ primitives ([`FixedBytes`],
+/// `U256`, `U128`), and any custom `Copy` wrapper types used in SSZ schemas.
+impl<T: Copy> ToOwnedSsz<T> for T {
+    #[inline]
+    fn to_owned(&self) -> T {
         *self
     }
 }
@@ -176,18 +196,6 @@ impl<const N: usize> ToOwnedSsz<FixedBytes<N>> for FixedBytes<N> {
 impl<'a, const N: usize> ToOwnedSsz<FixedBytes<N>> for ssz::view::FixedBytesRef<'a, N> {
     fn to_owned(&self) -> FixedBytes<N> {
         FixedBytes(*self.as_bytes())
-    }
-}
-
-impl ToOwnedSsz<U256> for U256 {
-    fn to_owned(&self) -> U256 {
-        *self
-    }
-}
-
-impl ToOwnedSsz<U128> for U128 {
-    fn to_owned(&self) -> U128 {
-        *self
     }
 }
 

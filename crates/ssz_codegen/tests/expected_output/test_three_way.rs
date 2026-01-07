@@ -159,7 +159,10 @@ impl<'a> ContainerARef<'a> {
     pub fn to_owned(&self) -> ContainerA {
         ContainerA {
             value: self.value().expect("valid view"),
-            b_ref: self.b_ref().expect("valid view").to_owned(),
+            b_ref: {
+                let view = self.b_ref().expect("valid view");
+                ssz_types::view::ToOwnedSsz::to_owned(&view)
+            },
         }
     }
 }
@@ -316,7 +319,10 @@ impl<'a> ContainerBRef<'a> {
     pub fn to_owned(&self) -> ContainerB {
         ContainerB {
             value: self.value().expect("valid view"),
-            c_ref: self.c_ref().expect("valid view").to_owned(),
+            c_ref: {
+                let view = self.c_ref().expect("valid view");
+                ssz_types::view::ToOwnedSsz::to_owned(&view)
+            },
         }
     }
 }

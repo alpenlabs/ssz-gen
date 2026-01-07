@@ -1,0 +1,10 @@
+# Test schema for demonstrating custom ToOwnedSsz implementations
+# This allows users to convert SSZ view types to their own custom types
+
+class InnerData(Container):
+    value: uint64
+    hash: Vector[byte, 32]
+
+class OuterContainer(Container):
+    inner: InnerData
+    items: List[InnerData, 10]

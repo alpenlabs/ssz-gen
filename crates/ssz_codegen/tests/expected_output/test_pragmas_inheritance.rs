@@ -207,13 +207,17 @@ pub mod tests {
                     Parent {
                         a: match self.a().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
                         b: match self.b().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
@@ -458,19 +462,25 @@ pub mod tests {
                     Child {
                         a: match self.a().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
                         b: match self.b().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
                         c: match self.c().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },

@@ -83,9 +83,10 @@ pub mod tests {
                             )
                         }
                         1u8 => {
-                            AliasUnionUnion::AliasUnion(
-                                self.as_selector1().expect("valid selector").to_owned(),
-                            )
+                            AliasUnionUnion::AliasUnion({
+                                let view = self.as_selector1().expect("valid selector");
+                                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
                         }
                         _ => panic!("Invalid union selector: {}", self.selector()),
                     }
@@ -349,13 +350,17 @@ pub mod tests {
                     StableContainerClass {
                         a: match self.a().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
                         b: match self.b().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
@@ -465,9 +470,10 @@ pub mod tests {
                             )
                         }
                         2u8 => {
-                            AliasUnionUnion::AliasUnion(
-                                self.as_selector2().expect("valid selector").to_owned(),
-                            )
+                            AliasUnionUnion::AliasUnion({
+                                let view = self.as_selector2().expect("valid selector");
+                                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
                         }
                         _ => panic!("Invalid union selector: {}", self.selector()),
                     }
@@ -707,7 +713,9 @@ pub mod tests {
                     StableContainerClass {
                         a: match self.a().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
@@ -919,7 +927,9 @@ pub mod tests {
                         a: self.a().expect("valid view"),
                         b: match self.b().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },

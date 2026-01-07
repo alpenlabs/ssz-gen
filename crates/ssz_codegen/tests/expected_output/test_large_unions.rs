@@ -389,19 +389,22 @@ pub mod tests {
                             )
                         }
                         1u8 => {
-                            MixedUnion::Selector1(
-                                self.as_selector1().expect("valid selector").to_owned(),
-                            )
+                            MixedUnion::Selector1({
+                                let view = self.as_selector1().expect("valid selector");
+                                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
                         }
                         2u8 => {
-                            MixedUnion::Selector2(
-                                self.as_selector2().expect("valid selector").to_owned(),
-                            )
+                            MixedUnion::Selector2({
+                                let view = self.as_selector2().expect("valid selector");
+                                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
                         }
                         3u8 => {
-                            MixedUnion::Selector3(
-                                self.as_selector3().expect("valid selector").to_owned(),
-                            )
+                            MixedUnion::Selector3({
+                                let view = self.as_selector3().expect("valid selector");
+                                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
                         }
                         _ => panic!("Invalid union selector: {}", self.selector()),
                     }
@@ -894,9 +897,18 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> ContainerWithBigUnions {
                     ContainerWithBigUnions {
-                        big: self.big().expect("valid view").to_owned(),
-                        same: self.same().expect("valid view").to_owned(),
-                        mixed: self.mixed().expect("valid view").to_owned(),
+                        big: {
+                            let view = self.big().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
+                        same: {
+                            let view = self.same().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
+                        mixed: {
+                            let view = self.mixed().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
                     }
                 }
             }

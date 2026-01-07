@@ -1334,10 +1334,13 @@ impl<'a> TypeResolver<'a> {
                         }
                     }
                     _ => {
+                        // Use ToOwnedSsz trait method for proper type resolution with external
+                        // types
                         quote! {
-                            #selector_value => #union_ident::#variant_ident(
-                                self.#method_name().expect("valid selector").to_owned()
-                            )
+                            #selector_value => #union_ident::#variant_ident({
+                                let view = self.#method_name().expect("valid selector");
+                                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
                         }
                     }
                 }
