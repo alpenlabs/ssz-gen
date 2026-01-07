@@ -1734,4 +1734,12 @@ fn test_external_container_to_owned_ssz() {
             && generated.contains("ssz_types::view::ToOwnedSsz::to_owned(&view)"),
         "BlockRange.start should use trait-based to_owned for type resolution"
     );
+
+    // Verify generated output matches expected output
+    let expected = fs::read_to_string("tests/expected_output/test_external_container.rs")
+        .expect("Failed to read expected output");
+    assert_eq!(
+        generated, expected,
+        "Generated output does not match expected output"
+    );
 }
