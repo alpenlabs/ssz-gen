@@ -21,6 +21,7 @@ serde = { workspace = true, features = ["derive"] }
 sizzle-parser.workspace = true
 ssz.workspace = true
 ssz_derive.workspace = true
+ssz_primitives.workspace = true
 ssz_types.workspace = true
 syn = { workspace = true, features = ["extra-traits"] }
 toml.workspace = true

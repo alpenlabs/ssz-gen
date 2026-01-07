@@ -745,6 +745,7 @@ dependencies = [
  "sizzle-parser",
  "ssz",
  "ssz_derive",
+ "ssz_primitives",
  "ssz_types",
  "syn",
  "toml",

@@ -11,6 +11,7 @@ use serde as _;
 use sizzle_parser::parse_str_schema;
 use ssz as _;
 use ssz_derive as _;
+use ssz_primitives as _;
 use ssz_types as _;
 use syn::parse_str;
 #[cfg(any(test, doctest))]

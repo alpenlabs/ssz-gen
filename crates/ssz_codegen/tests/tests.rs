@@ -10,6 +10,7 @@ use sizzle_parser as _;
 use ssz as _;
 use ssz_codegen::{ModuleGeneration, build_ssz_files, build_ssz_files_with_derives};
 use ssz_derive as _;
+use ssz_primitives as _;
 use ssz_types as _;
 use syn as _;
 use toml as _;
