@@ -274,6 +274,9 @@ pub(crate) enum TyExprSpec {
     /// This is an identifier and type parameters.  It probably refers to a
     /// type, but we need to sanity check all of this.
     Complex(ComplexTySpec),
+
+    /// None type for unit variants in Unions
+    None,
 }
 
 impl TyExprSpec {
@@ -282,6 +285,7 @@ impl TyExprSpec {
             TyExprSpec::Simple(name) => name,
             TyExprSpec::Complex(spec) => &spec.base_name,
             TyExprSpec::Imported(spec) => &spec.base_name,
+            TyExprSpec::None => panic!("None type has no base name"),
         }
     }
 }
@@ -746,15 +750,28 @@ fn parse_class(
             gob.gobble_until(is_toktr_newline);
             gob.gobble_until(is_toktr_not_newline);
 
-            let body_data = match gob.get() {
-                Some(IndentBlock(_, d)) => d,
+            let body = match gob.get() {
+                Some(IndentBlock(_, d)) => {
+                    let mut body_gob = Gobbler::new(d.children());
+                    let body = parse_class_body(&mut body_gob, import_map)?;
+                    gob.gobble_one();
+                    body
+                }
                 Some(t) => return Err(ParseError::UnexpectedToken(*t.tag())),
-                Option::None => return Err(ParseError::UnexpectedEnd),
+                Option::None => {
+                    // Empty body - only allowed for Union types (unit variants)
+                    let is_union =
+                        matches!(parent_ty, TyExprSpec::Simple(ref id) if id.0.as_str() == "Union");
+                    if is_union {
+                        ClassBody {
+                            doc: None,
+                            fields: Vec::new(),
+                        }
+                    } else {
+                        return Err(ParseError::UnexpectedEnd);
+                    }
+                }
             };
-
-            let mut body_gob = Gobbler::new(body_data.children());
-            let body = parse_class_body(&mut body_gob, import_map)?;
-            gob.gobble_one();
 
             let mut cd = ClassDefEntry::new(name, parent_ty, body.doc, body.fields);
             // Attach comments if any were collected
@@ -1011,6 +1028,22 @@ fn parse_class_body(
 
             [Identifier(_, fname), Colon(_), Identifier(_, tyname)] => {
                 let ty = TyExprSpec::Simple(tyname.clone());
+                let mut field = FieldDef::new(fname.clone(), ty);
+                // Attach comments to the field
+                if let Some(field_doc) = comment_buffer.take_doc_comment() {
+                    field.set_doc_comment(Some(field_doc));
+                }
+                let pragmas = comment_buffer.take_pragmas();
+                for pragma in pragmas {
+                    field.add_pragma(pragma);
+                }
+                fields.push(field);
+                comment_buffer.clear();
+            }
+
+            [Identifier(_, fname)] => {
+                // Unit variant in Union (no associated data - uses None type)
+                let ty = TyExprSpec::None;
                 let mut field = FieldDef::new(fname.clone(), ty);
                 // Attach comments to the field
                 if let Some(field_doc) = comment_buffer.take_doc_comment() {

@@ -119,6 +119,18 @@ impl<'a> TypeResolver<'a> {
         }
     }
 
+    /// Creates a TypeResolution for a unit variant (no associated data)
+    ///
+    /// # Returns
+    ///
+    /// A TypeResolution representing a unit variant in a Union
+    pub fn make_unit_variant_type(&self) -> TypeResolution {
+        TypeResolution {
+            ty: None,
+            resolution: TypeResolutionKind::None,
+        }
+    }
+
     /// Creates a new TypeResolver with all built-in types and classes pre-registered
     ///
     /// # Returns

@@ -6,7 +6,7 @@ use thiserror::Error;
 
 use crate::{
     Identifier,
-    ast::{AssignExpr, ClassDefEntry, Module, ModuleEntry},
+    ast::{AssignExpr, ClassDefEntry, Module, ModuleEntry, TyExprSpec},
     builtins,
     ty_resolver::{CrossModuleTypeMap, IdentTarget, ResolverError, TypeData, TypeResolver},
     tysys::{Binop, ConstValue, Ty, TyExpr},
@@ -124,7 +124,7 @@ impl ClassDef {
 #[derive(Clone, Debug)]
 pub struct ClassFieldDef {
     name: Identifier,
-    ty: Ty,
+    ty: Option<Ty>, // None for unit variants in Unions
     doc_comment: Option<String>,
     pragmas: Vec<String>,
 }
@@ -135,9 +135,9 @@ impl ClassFieldDef {
         &self.name
     }
 
-    /// Type of the field.
-    pub fn ty(&self) -> &Ty {
-        &self.ty
+    /// Type of the field. None for unit variants in Unions.
+    pub fn ty(&self) -> Option<&Ty> {
+        self.ty.as_ref()
     }
 
     /// Doc comment for the field.
@@ -396,7 +396,16 @@ fn conv_classdef<'a>(
 
         field_names.insert(name.clone());
 
-        let ty = resolv.resolve_spec_as_ty(d.ty())?;
+        // Handle None type (unit variants in Unions only)
+        let is_union =
+            matches!(def.parent_ty(), TyExprSpec::Simple(id) if id.0.as_str() == "Union");
+        let ty = if is_union && matches!(d.ty(), TyExprSpec::None) {
+            // Unit variant in union - no type data
+            None
+        } else {
+            Some(resolv.resolve_spec_as_ty(d.ty())?)
+        };
+
         fields.push(ClassFieldDef {
             name,
             ty,
@@ -427,12 +436,15 @@ fn trace_type_for_cycles<'d>(
     };
 
     for f in def.fields() {
-        for reffed_id in f.ty().iter_idents() {
-            if reffed_id == root {
-                return Err(SchemaError::CyclicTypedefs(root.clone()));
-            }
+        // Skip unit variants (no type)
+        if let Some(ty) = f.ty() {
+            for reffed_id in ty.iter_idents() {
+                if reffed_id == root {
+                    return Err(SchemaError::CyclicTypedefs(root.clone()));
+                }
 
-            trace_type_for_cycles(reffed_id, root, defs)?;
+                trace_type_for_cycles(reffed_id, root, defs)?;
+            }
         }
     }
 
