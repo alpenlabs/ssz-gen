@@ -316,12 +316,18 @@ impl<'a> CircleBufferCodegen<'a> {
             let field_ident = Ident::new(&field.name().0, Span::call_site());
 
             let field_ty = field.ty();
-            let field_type = type_resolver.resolve_type(field_ty, None);
-            if field_type.is_unresolved() {
-                return false;
-            }
-
-            let ty = field_type.unwrap_type();
+            // Handle unit variants (no type)
+            let (field_type, ty) = if let Some(field_ty) = field_ty {
+                let field_type = type_resolver.resolve_type(field_ty, None);
+                if field_type.is_unresolved() {
+                    return false;
+                }
+                let ty = field_type.unwrap_type();
+                (field_type, ty)
+            } else {
+                // Unit variant - no associated type, skip
+                continue;
+            };
             let field_ty_token = quote! { #ty };
 
             // Make sure the field is compatible with the parent class
@@ -460,7 +466,13 @@ impl<'a> CircleBufferCodegen<'a> {
 
             let field_ident = Ident::new(&field.name().0, Span::call_site());
             let field_ty = field.ty();
-            let field_type = type_resolver.resolve_type(field_ty, None);
+            // Handle unit variants (no type)
+            let field_type = if let Some(field_ty) = field_ty {
+                type_resolver.resolve_type(field_ty, None)
+            } else {
+                // Unit variant - no associated type, skip
+                continue;
+            };
             if field_type.is_unresolved() {
                 return false;
             }
@@ -538,10 +550,18 @@ impl<'a> CircleBufferCodegen<'a> {
 
         for field in class.fields() {
             let field_ty = field.ty();
-            let field_type = type_resolver.resolve_type(field_ty, None);
-            if field_type.is_unresolved() {
-                return false;
-            }
+            // Handle unit variants (no type)
+            let field_type = if let Some(field_ty) = field_ty {
+                let ft = type_resolver.resolve_type(field_ty, None);
+                if ft.is_unresolved() {
+                    return false;
+                }
+                ft
+            } else {
+                // Unit variant - use a placeholder for None type
+                // This will be handled specially in union generation
+                type_resolver.make_unit_variant_type()
+            };
 
             args.push(field_type);
             variant_names.push(field.name().0.clone());

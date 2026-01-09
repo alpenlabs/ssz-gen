@@ -1743,3 +1743,32 @@ fn test_external_container_to_owned_ssz() {
         "Generated output does not match expected output"
     );
 }
+
+#[test]
+fn test_union_empty_variant() {
+    build_ssz_files(
+        &["test_union_empty_variant.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_union_empty_variant.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types for union with empty variant");
+
+    let actual_output = fs::read_to_string("tests/output/test_union_empty_variant.rs")
+        .expect("Failed to read actual output");
+
+    // Verify that the union with empty variant was generated
+    assert!(
+        actual_output.contains("pub enum TestUnion"),
+        "Generated code should contain TestUnion enum"
+    );
+    assert!(
+        actual_output.contains("Empty"),
+        "Generated code should contain Empty variant"
+    );
+    assert!(
+        actual_output.contains("Data"),
+        "Generated code should contain Data variant"
+    );
+}

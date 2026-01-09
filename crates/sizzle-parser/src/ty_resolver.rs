@@ -601,6 +601,7 @@ impl<'a> TypeResolver<'a> {
             TyExprSpec::Complex(complex) => {
                 self.resolve_ident_with_args(complex.base_name(), Some(complex.args()))?
             }
+            TyExprSpec::None => TyExpr::None,
             TyExprSpec::Imported(imported) => {
                 let Some(ident_targets) = self.cross_module_types.get(imported.module_path())
                 else {
@@ -635,7 +636,14 @@ impl<'a> TypeResolver<'a> {
         // And then just make sure it's a type (not a const or None).
         match expr {
             TyExpr::Ty(ty) => Ok(ty),
-            TyExpr::Int(_) | TyExpr::ConstRef(_, _) | TyExpr::None => {
+            TyExpr::None => {
+                // None is valid for Union unit variants, but not as a type argument
+                // Return a placeholder error since we shouldn't reach here for valid union variants
+                Err(ResolverError::MismatchedArgKind(
+                    Identifier::try_from("null").expect("valid identifier"),
+                ))
+            }
+            TyExpr::Int(_) | TyExpr::ConstRef(_, _) => {
                 Err(ResolverError::MismatchedArgKind(spec.base_name().clone()))
             }
         }

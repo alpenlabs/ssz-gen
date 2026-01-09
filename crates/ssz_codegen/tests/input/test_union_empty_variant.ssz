@@ -1,0 +1,17 @@
+### Test union with empty/unit variant
+
+### Some container type for the union variant
+class DataVariant(Container):
+    value: uint64
+
+### Union with both empty and data variants
+class TestUnion(Union):
+    ### Empty variant (no data)
+    Empty
+
+    ### Variant with data
+    Data: DataVariant
+
+### Container using the union
+class TestContainer(Container):
+    state: TestUnion
