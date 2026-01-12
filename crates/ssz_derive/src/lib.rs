@@ -1830,10 +1830,13 @@ fn ssz_decode_derive_enum_union(derive_input: &DeriveInput, enum_data: &DataEnum
         })
         .unzip();
 
-    let mut union_selectors = compute_union_selectors(constructors.len());
-    if start_index == 1 {
-        union_selectors.remove(0);
-    }
+    // When first variant is None (start_index == 1), selectors start at 1 instead of 0
+    let union_selectors: Vec<u8> = (start_index..(start_index + constructors.len()))
+        .map(|i| {
+            i.try_into()
+                .expect("union selector exceeds u8::max_value, union has too many variants")
+        })
+        .collect();
 
     let none_constructor = if start_index == 1 {
         let variant_name = &enum_data.variants[0].ident;

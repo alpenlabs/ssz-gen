@@ -85,9 +85,10 @@ pub mod tests {
                             )
                         }
                         1u8 => {
-                            AliasOptionUnion::Selector1(
-                                self.as_selector1().expect("valid selector").to_owned(),
-                            )
+                            AliasOptionUnion::Selector1({
+                                let view = self.as_selector1().expect("valid selector");
+                                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
                         }
                         _ => panic!("Invalid union selector: {}", self.selector()),
                     }
@@ -97,6 +98,20 @@ pub mod tests {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
                     let (_, _) = ssz::split_union_bytes(bytes)?;
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for AliasOptionUnionRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<AliasOptionUnion>
+            for AliasOptionUnionRef<'a> {
+                fn to_owned(&self) -> AliasOptionUnion {
+                    <AliasOptionUnionRef<'a>>::to_owned(self)
                 }
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
@@ -221,6 +236,19 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for FirstUnionRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<FirstUnion> for FirstUnionRef<'a> {
+                fn to_owned(&self) -> FirstUnion {
+                    <FirstUnionRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for FirstUnionRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -278,9 +306,8 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     match self {
                         TestUnion::Selector0 => {
-                            tree_hash::mix_in_selector_with_hasher::<
-                                H,
-                            >(&tree_hash::Hash256::ZERO, 0u8)
+                            let zero_root = H::get_zero_hash(0);
+                            tree_hash::mix_in_selector_with_hasher::<H>(&zero_root, 0u8)
                                 .expect("valid selector")
                         }
                         TestUnion::Selector1(inner) => {
@@ -364,6 +391,19 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for TestUnionRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<TestUnion> for TestUnionRef<'a> {
+                fn to_owned(&self) -> TestUnion {
+                    <TestUnionRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for TestUnionRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -378,9 +418,8 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     match self.selector() {
                         0u8 => {
-                            tree_hash::mix_in_selector_with_hasher::<
-                                H,
-                            >(&tree_hash::Hash256::ZERO, 0u8)
+                            let zero_root = H::get_zero_hash(0);
+                            tree_hash::mix_in_selector_with_hasher::<H>(&zero_root, 0u8)
                                 .expect("valid selector")
                         }
                         1u8 => {
@@ -513,6 +552,19 @@ pub mod tests {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
                     let (_, _) = ssz::split_union_bytes(bytes)?;
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for UnionARef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<UnionA> for UnionARef<'a> {
+                fn to_owned(&self) -> UnionA {
+                    <UnionARef<'a>>::to_owned(self)
                 }
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
@@ -669,9 +721,10 @@ pub mod tests {
                             )
                         }
                         1u8 => {
-                            UnionB::UnionA(
-                                self.as_selector1().expect("valid selector").to_owned(),
-                            )
+                            UnionB::UnionA({
+                                let view = self.as_selector1().expect("valid selector");
+                                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
                         }
                         2u8 => {
                             UnionB::Selector2(
@@ -679,9 +732,10 @@ pub mod tests {
                             )
                         }
                         3u8 => {
-                            UnionB::Selector3(
-                                self.as_selector3().expect("valid selector").to_owned(),
-                            )
+                            UnionB::Selector3({
+                                let view = self.as_selector3().expect("valid selector");
+                                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
                         }
                         _ => panic!("Invalid union selector: {}", self.selector()),
                     }
@@ -691,6 +745,19 @@ pub mod tests {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
                     let (_, _) = ssz::split_union_bytes(bytes)?;
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for UnionBRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<UnionB> for UnionBRef<'a> {
+                fn to_owned(&self) -> UnionB {
+                    <UnionBRef<'a>>::to_owned(self)
                 }
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
@@ -835,6 +902,19 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
+            impl<'a> ssz::view::SszTypeInfo for UnionCRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<UnionC> for UnionCRef<'a> {
+                fn to_owned(&self) -> UnionC {
+                    <UnionCRef<'a>>::to_owned(self)
+                }
+            }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for UnionCRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -955,6 +1035,19 @@ pub mod tests {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
                     let (_, _) = ssz::split_union_bytes(bytes)?;
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for UnionDRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<UnionD> for UnionDRef<'a> {
+                fn to_owned(&self) -> UnionD {
+                    <UnionDRef<'a>>::to_owned(self)
                 }
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
@@ -1572,13 +1665,17 @@ pub mod tests {
                     Gamma {
                         g: match self.g().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
                         h: match self.h().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
@@ -2012,25 +2109,33 @@ pub mod tests {
                     Epsilon {
                         g: match self.g().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
                         h: match self.h().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
                         i: match self.i().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
                         j: match self.j().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
@@ -2233,13 +2338,17 @@ pub mod tests {
                     Zeta {
                         u: match self.u().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
                         v: match self.v().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
@@ -2252,7 +2361,8 @@ pub mod tests {
                 pub ccc: u8,
                 pub ddd: u8,
                 pub eee: VariableList<u16, 3usize>,
-                pub large_int: U256,
+                pub large_int_128: U128,
+                pub large_int_256: U256,
             }
             impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for TestType {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -2266,7 +2376,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(4usize);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(5usize);
                     hasher
                         .write(
                             <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.ccc)
@@ -2289,7 +2399,15 @@ pub mod tests {
                         .write(
                             <_ as tree_hash::TreeHash<
                                 H,
-                            >>::tree_hash_root(&self.large_int)
+                            >>::tree_hash_root(&self.large_int_128)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<
+                                H,
+                            >>::tree_hash_root(&self.large_int_256)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -2339,13 +2457,13 @@ pub mod tests {
                 ) -> Result<VariableListRef<'a, u16, 3usize>, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
                         self.bytes,
-                        38usize,
+                        54usize,
                         1usize,
                         0usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
                         self.bytes,
-                        38usize,
+                        54usize,
                         1usize,
                         1usize,
                     )?;
@@ -2355,8 +2473,20 @@ pub mod tests {
                     let bytes = &self.bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
-                pub fn large_int(&self) -> Result<U256, ssz::DecodeError> {
+                pub fn large_int_128(&self) -> Result<U128, ssz::DecodeError> {
                     let offset = 6usize;
+                    let end = offset + 16usize;
+                    if end > self.bytes.len() {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: self.bytes.len(),
+                            expected: end,
+                        });
+                    }
+                    let bytes = &self.bytes[offset..end];
+                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                }
+                pub fn large_int_256(&self) -> Result<U256, ssz::DecodeError> {
+                    let offset = 22usize;
                     let end = offset + 32usize;
                     if end > self.bytes.len() {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -2401,6 +2531,11 @@ pub mod tests {
                     }
                     {
                         let offset = 6usize;
+                        let field_bytes = &self.bytes[offset..offset + 16usize];
+                        hasher.write(field_bytes).expect("write field");
+                    }
+                    {
+                        let offset = 22usize;
                         let field_bytes = &self.bytes[offset..offset + 32usize];
                         hasher.write(field_bytes).expect("write field");
                     }
@@ -2409,21 +2544,21 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for TestTypeRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    if bytes.len() < 38usize {
+                    if bytes.len() < 54usize {
                         return Err(ssz::DecodeError::InvalidByteLength {
                             len: bytes.len(),
-                            expected: 38usize,
+                            expected: 54usize,
                         });
                     }
                     let mut prev_offset: Option<usize> = None;
                     for i in 0..1usize {
                         let offset = ssz::layout::read_variable_offset(
                             bytes,
-                            38usize,
+                            54usize,
                             1usize,
                             i,
                         )?;
-                        if i == 0 && offset != 38usize {
+                        if i == 0 && offset != 54usize {
                             return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
                         }
                         if let Some(prev) = prev_offset && offset < prev {
@@ -2470,7 +2605,8 @@ pub mod tests {
                             .expect("valid view")
                             .to_owned()
                             .expect("valid view"),
-                        large_int: self.large_int().expect("valid view"),
+                        large_int_128: self.large_int_128().expect("valid view"),
+                        large_int_256: self.large_int_256().expect("valid view"),
                     }
                 }
             }
@@ -2681,9 +2817,18 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> Eta {
                     Eta {
-                        l: self.l().expect("valid view").to_owned(),
-                        m: self.m().expect("valid view").to_owned(),
-                        n: self.n().expect("valid view").to_owned(),
+                        l: {
+                            let view = self.l().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
+                        m: {
+                            let view = self.m().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
+                        n: {
+                            let view = self.n().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
                     }
                 }
             }
@@ -2887,8 +3032,14 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> Theta {
                     Theta {
-                        o: self.o().expect("valid view").to_owned(),
-                        p: self.p().expect("valid view").to_owned(),
+                        o: {
+                            let view = self.o().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
+                        p: {
+                            let view = self.p().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
                         q: ssz_types::FixedBytes(
                             self.q().expect("valid view").to_owned(),
                         ),
@@ -3271,37 +3422,49 @@ pub mod tests {
                     Iota {
                         g: match self.g().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
                         h: match self.h().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
                         i: match self.i().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
                         j: match self.j().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
                         r: match self.r().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
                         s: match self.s().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
@@ -3508,8 +3671,14 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> Kappa {
                     Kappa {
-                        t: self.t().expect("valid view").to_owned(),
-                        u: self.u().expect("valid view").to_owned(),
+                        t: {
+                            let view = self.t().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
+                        u: {
+                            let view = self.u().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
                         v: self.v().expect("valid view").to_owned(),
                     }
                 }
@@ -3708,13 +3877,17 @@ pub mod tests {
                     Lambda {
                         w: match self.w().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
                         x: match self.x().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(inner.to_owned())
+                                ssz_types::Optional::Some(
+                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
@@ -3894,8 +4067,14 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> Mu {
                     Mu {
-                        y: self.y().expect("valid view").to_owned(),
-                        z: self.z().expect("valid view").to_owned(),
+                        y: {
+                            let view = self.y().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
+                        z: {
+                            let view = self.z().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
                     }
                 }
             }
@@ -4156,7 +4335,10 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> Nu {
                     Nu {
-                        zz: self.zz().expect("valid view").to_owned(),
+                        zz: {
+                            let view = self.zz().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
                         aaa: self
                             .aaa()
                             .expect("valid view")
@@ -4166,7 +4348,7 @@ pub mod tests {
                         test: self
                             .test()
                             .expect("valid view")
-                            .map(|inner| inner.to_owned()),
+                            .map(|inner| ssz_types::view::ToOwnedSsz::to_owned(&inner)),
                     }
                 }
             }

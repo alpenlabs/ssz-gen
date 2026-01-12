@@ -1771,4 +1771,24 @@ fn test_union_empty_variant() {
         actual_output.contains("Data"),
         "Generated code should contain Data variant"
     );
+
+    // Verify TreeHash implementation uses precomputed zero hash for empty variants
+    assert!(
+        actual_output.contains("let zero_root = H::get_zero_hash(0);"),
+        "TreeHash for empty variant should use precomputed zero hash H::get_zero_hash(0)"
+    );
+    assert!(
+        !actual_output.contains("tree_hash::Hash256::ZERO"),
+        "TreeHash should not use concrete Hash256::ZERO type"
+    );
+
+    // Verify the pattern appears in multiple locations (owned and Ref implementations)
+    let pattern_count = actual_output
+        .matches("let zero_root = H::get_zero_hash(0);")
+        .count();
+    assert!(
+        pattern_count >= 2,
+        "Expected at least 2 occurrences of zero_root pattern (owned and Ref), found {}",
+        pattern_count
+    );
 }
