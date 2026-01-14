@@ -12,8 +12,8 @@ use ssz_primitives::{U128, U256};
 use ssz_types::{BitVector, Optional, VariableList};
 use thiserror as _;
 use tree_hash::{
-    self, BYTES_PER_CHUNK, Hash256, MerkleHasher, PackedEncoding, TreeHash, TreeHashDigest,
-    hash32_concat,
+    self, BYTES_PER_CHUNK, Hash256, MerkleHasher, PackedEncoding, Sha256Hasher, TreeHash,
+    TreeHashDigest, hash32_concat,
 };
 use tree_hash_derive::TreeHash;
 
@@ -479,4 +479,65 @@ fn shape_enum() {
 
     assert_eq!(square.tree_hash_root(), enum_square.tree_hash_root());
     assert_eq!(circle.tree_hash_root(), enum_circle.tree_hash_root());
+}
+
+/// Container type for union variant data
+#[derive(TreeHash, Clone)]
+struct DataVariant1 {
+    value: u64,
+}
+
+/// Union with empty variant at position 0 (common pattern for Option-like types)
+#[derive(TreeHash)]
+#[tree_hash(enum_behaviour = "union")]
+enum UnionWithEmptyFirst {
+    /// Empty variant at selector 0
+    Empty,
+    /// Data variant at selector 1
+    Data(DataVariant1),
+}
+
+/// Test vector for empty union variant tree hash.
+///
+/// This test verifies the correct hash value for empty union variants.
+/// The expected hash is: hash(zero_hash || selector_chunk)
+/// where zero_hash = [0u8; 32] and selector_chunk = [selector, 0, 0, ..., 0]
+#[test]
+fn union_empty_variant_tree_hash_vector() {
+    // Test 1: Empty variant at selector 0
+    // root = zero_hash = [0u8; 32]
+    // result = hash(root || [0, 0, ..., 0]) = hash([0u8; 64])
+    let empty_first = UnionWithEmptyFirst::Empty;
+    let empty_first_hash = empty_first.tree_hash_root();
+
+    // The expected hash is SHA256 of 64 zero bytes
+    // Computed: SHA256([0u8; 64]) =
+    // f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b
+    let expected_empty_selector_0 = Hash256::from_slice(&[
+        0xf5, 0xa5, 0xfd, 0x42, 0xd1, 0x6a, 0x20, 0x30, 0x27, 0x98, 0xef, 0x6e, 0xd3, 0x09, 0x97,
+        0x9b, 0x43, 0x00, 0x3d, 0x23, 0x20, 0xd9, 0xf0, 0xe8, 0xea, 0x98, 0x31, 0xa9, 0x27, 0x59,
+        0xfb, 0x4b,
+    ]);
+
+    assert_eq!(
+        empty_first_hash, expected_empty_selector_0,
+        "Empty variant at selector 0 should be SHA256([0u8; 64])"
+    );
+
+    // Verify the zero hash at depth 0 is indeed [0u8; 32]
+    let zero_hash = Sha256Hasher::get_zero_hash(0);
+    assert_eq!(
+        zero_hash,
+        Hash256::ZERO,
+        "Zero hash at depth 0 should be 32 zero bytes"
+    );
+
+    // Test 2: Non-empty variant to verify it differs from empty
+    let data_variant = UnionWithEmptyFirst::Data(DataVariant1 { value: 42 });
+    let data_hash = data_variant.tree_hash_root();
+
+    assert_ne!(
+        data_hash, empty_first_hash,
+        "Data variant hash should differ from empty variant"
+    );
 }

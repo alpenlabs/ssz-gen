@@ -378,9 +378,8 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     match self {
                         MixedOptional::Selector0 => {
-                            tree_hash::mix_in_selector_with_hasher::<
-                                H,
-                            >(&tree_hash::Hash256::ZERO, 0u8)
+                            let zero_root = H::get_zero_hash(0);
+                            tree_hash::mix_in_selector_with_hasher::<H>(&zero_root, 0u8)
                                 .expect("valid selector")
                         }
                         MixedOptional::Selector1(inner) => {
@@ -492,9 +491,8 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     match self.selector() {
                         0u8 => {
-                            tree_hash::mix_in_selector_with_hasher::<
-                                H,
-                            >(&tree_hash::Hash256::ZERO, 0u8)
+                            let zero_root = H::get_zero_hash(0);
+                            tree_hash::mix_in_selector_with_hasher::<H>(&zero_root, 0u8)
                                 .expect("valid selector")
                         }
                         1u8 => {

@@ -494,8 +494,10 @@ impl<'a> TypeResolver<'a> {
                                 TypeResolutionKind::None => {
                                     quote! {
                                         #ident::#variant_ident => {
+                                            // For empty variants, use precomputed zero hash
+                                            let zero_root = H::get_zero_hash(0);
                                             tree_hash::mix_in_selector_with_hasher::<H>(
-                                                &tree_hash::Hash256::ZERO,
+                                                &zero_root,
                                                 #selector_value
                                             ).expect("valid selector")
                                         }
@@ -1278,8 +1280,10 @@ impl<'a> TypeResolver<'a> {
                     TypeResolutionKind::None => {
                         quote! {
                             #selector_value => {
+                                // For empty variants, use precomputed zero hash
+                                let zero_root = H::get_zero_hash(0);
                                 tree_hash::mix_in_selector_with_hasher::<H>(
-                                    &tree_hash::Hash256::ZERO,
+                                    &zero_root,
                                     #selector_value
                                 ).expect("valid selector")
                             }
