@@ -1,7 +1,4 @@
-//! Integration test for union enums with empty first variant using derive macros.
-//!
-//! Per SSZ spec, the None (empty) variant is only legal as the first option (index 0).
-//! This test verifies that Union[None, T, ...] works correctly.
+//! Tests for union enums with empty first variant.
 
 use darling as _;
 use quote as _;
@@ -16,7 +13,7 @@ fn assert_encode_decode<T: Encode + Decode + PartialEq + std::fmt::Debug>(item: 
     assert_eq!(decoded, *item, "roundtrip mismatch");
 }
 
-/// Test union enum with empty first variant (the fix target)
+/// Test union enum with empty first variant
 #[derive(PartialEq, Debug, Encode, Decode)]
 #[ssz(enum_behaviour = "union")]
 enum UnionEmptyFirst {
@@ -30,7 +27,6 @@ fn test_union_empty_first_variant() {
     assert_encode_decode(&UnionEmptyFirst::Empty, &[0]);
 
     // Value variant should encode as selector 1 with u64 body
-    // THIS IS THE KEY TEST - before the fix, decoding would fail with UnionSelectorInvalid(1)
     assert_encode_decode(&UnionEmptyFirst::Value(42), &[1, 42, 0, 0, 0, 0, 0, 0, 0]);
     assert_encode_decode(&UnionEmptyFirst::Value(0), &[1, 0, 0, 0, 0, 0, 0, 0, 0]);
     assert_encode_decode(
