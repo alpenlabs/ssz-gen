@@ -1434,7 +1434,7 @@ mod bitlist {
 
     #[test]
     fn ssz_bytes_len() {
-        for i in 1..64 {
+        for i in 1..=64 {
             let mut bitfield = BitList1024::with_capacity(i).unwrap();
             for j in 0..i {
                 bitfield.set(j, true).expect("should set bit in bounds");
