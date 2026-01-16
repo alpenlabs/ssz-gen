@@ -50,7 +50,7 @@ pub(crate) fn populate_builtin_types<'a>(resolv: &mut TypeResolver<'a>) {
 
     let vector_ident = make_ident("Vector");
     let byte_ident = make_ident("uint8"); // really "byte", but this is what that resolves to
-    for i in 1..64 {
+    for i in 1..=64 {
         let byte_te = TyExpr::new_simple(byte_ident.clone());
         let len_te = TyExpr::new_int(i);
         let complex = Ty::Complex(vector_ident.clone(), vec![byte_te, len_te]);
