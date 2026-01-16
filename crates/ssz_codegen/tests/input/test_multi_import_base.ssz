@@ -1,0 +1,3 @@
+### Base type shared by multiple importers
+class BaseType(Container):
+    value: uint64

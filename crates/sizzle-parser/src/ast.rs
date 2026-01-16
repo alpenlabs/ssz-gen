@@ -470,18 +470,9 @@ impl ModuleManager {
         true
     }
 
-    /// Removes and returns the last module from the manager.
-    ///
-    /// Returns the module if it was removed, None if there are no more modules.
-    pub(crate) fn pop_module(&mut self) -> Option<(PathBuf, Module)> {
-        let path = self.import_order.pop()?;
-        let module = self.modules.remove(&path)?;
-        Some((path, module))
-    }
-
-    /// Returns a module by path.
-    pub(crate) fn _get_module<P: AsRef<Path>>(&self, path: P) -> Option<&Module> {
-        self.modules.get(path.as_ref())
+    /// Consumes the manager and returns all modules.
+    pub(crate) fn into_modules(self) -> Modules {
+        self.modules
     }
 
     /// Returns a mutable module by path.
@@ -1160,12 +1151,6 @@ fn parse_import<P: AsRef<Path>>(
                 is_first_tok = false;
             }
 
-            if import_map
-                .insert(import_alias.clone(), path.clone())
-                .is_some()
-            {
-                panic!("import: duplicate import alias: {import_alias:?}");
-            }
             // Check if this is an entry point first, then check filesystem
             let ssz_path = path.with_extension("ssz");
             // Normalize path for comparison (remove extension, as entry points are stored without
@@ -1175,13 +1160,21 @@ fn parse_import<P: AsRef<Path>>(
                 entry_point_files
             {
                 // Check if the resolved path matches any entry point
-                // Entry points are stored without .ssz extension, so compare normalized paths
+                // Entry points may be stored with or without .ssz extension, so check both
                 // Use get() for O(1) lookup instead of iterating (more efficient and deterministic)
-                let matching_entry = entry_files.get(&path_normalized);
+                // Track which key matched so we use the same path format
+                let (matched_path, matching_entry) =
+                    if let Some(content) = entry_files.get(&path_normalized) {
+                        (path_normalized.clone(), Some(content))
+                    } else if let Some(content) = entry_files.get(&ssz_path) {
+                        (ssz_path.clone(), Some(content))
+                    } else {
+                        (path_normalized.clone(), None)
+                    };
 
                 if let Some(file_content) = matching_entry {
-                    // Use the entry point path and content
-                    (path_normalized.clone(), true, Some(file_content.clone()))
+                    // Use the matched path (preserving the extension format used by entry_files)
+                    (matched_path, true, Some(file_content.clone()))
                 } else if ssz_path.exists() {
                     // Fall back to filesystem check
                     (path.clone(), true, None)
@@ -1193,10 +1186,6 @@ fn parse_import<P: AsRef<Path>>(
                         .file_name()
                         .expect("module path should have a file name");
                     let stripped_path = PathBuf::from(module_name);
-
-                    // Update import_map to use the stripped path for existing Rust modules
-                    import_map.insert(import_alias.clone(), stripped_path.clone());
-
                     (stripped_path, false, None)
                 } else {
                     // External module without .ssz file - keep full path
@@ -1212,15 +1201,21 @@ fn parse_import<P: AsRef<Path>>(
                     .file_name()
                     .expect("module path should have a file name");
                 let stripped_path = PathBuf::from(module_name);
-
-                // Update import_map to use the stripped path for existing Rust modules
-                import_map.insert(import_alias.clone(), stripped_path.clone());
-
                 (stripped_path, false, None)
             } else {
                 // External module without .ssz file - keep full path
                 (path.clone(), false, None)
             };
+
+            // Update import_map with the final resolved path
+            // This ensures that when types reference this import, they use the correct path
+            // (e.g., "state.ssz" instead of just "state")
+            if import_map
+                .insert(import_alias.clone(), final_path.clone())
+                .is_some()
+            {
+                panic!("import: duplicate import alias: {import_alias:?}");
+            }
 
             let add_module_result = module_manager.add_module(&final_path, is_external);
             if !add_module_result || is_external {

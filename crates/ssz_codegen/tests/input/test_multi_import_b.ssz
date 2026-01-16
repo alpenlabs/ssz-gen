@@ -1,0 +1,8 @@
+import test_multi_import_base as base
+import test_multi_import_a as a
+
+### Type B that imports both base and a
+class TypeB(Container):
+    base: base.BaseType
+    type_a: a.TypeA
+    extra: uint16
