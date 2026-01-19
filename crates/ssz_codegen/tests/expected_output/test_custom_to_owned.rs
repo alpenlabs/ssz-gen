@@ -2,7 +2,7 @@ pub mod tests {
     #![allow(unused_imports, reason = "generated code using ssz-gen")]
     pub mod input {
         #![allow(unused_imports, reason = "generated code using ssz-gen")]
-        pub mod test_cross_entry_common {
+        pub mod test_custom_to_owned {
             #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
             use ssz_types::view::{FixedVectorRef, VariableListRef};
@@ -13,127 +13,11 @@ pub mod tests {
             use ssz::view::*;
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            pub struct CommonTypeA {
-                pub value: u32,
-            }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for CommonTypeA {
-                fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
-                }
-                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
-                    unreachable!("Container should never be packed")
-                }
-                fn tree_hash_packing_factor() -> usize {
-                    unreachable!("Container should never be packed")
-                }
-                fn tree_hash_root(&self) -> H::Output {
-                    use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
-                    hasher
-                        .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.value)
-                                .as_ref(),
-                        )
-                        .expect("tree hash derive should not apply too many leaves");
-                    hasher
-                        .finish()
-                        .expect("tree hash derive should not have a remaining buffer")
-                }
-            }
-            /// Zero-copy view over [`CommonTypeA`].
-            ///
-            /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
-            /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
-            /// needed.
-            #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
-            pub struct CommonTypeARef<'a> {
-                bytes: &'a [u8],
-            }
-            #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> CommonTypeARef<'a> {
-                pub fn value(&self) -> Result<u32, ssz::DecodeError> {
-                    let offset = 0usize;
-                    let end = offset + 4usize;
-                    if end > self.bytes.len() {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: self.bytes.len(),
-                            expected: end,
-                        });
-                    }
-                    let bytes = &self.bytes[offset..end];
-                    ssz::view::DecodeView::from_ssz_bytes(bytes)
-                }
-            }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for CommonTypeARef<'a> {
-                fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
-                }
-                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
-                    unreachable!("Container should never be packed")
-                }
-                fn tree_hash_packing_factor() -> usize {
-                    unreachable!("Container should never be packed")
-                }
-                fn tree_hash_root(&self) -> H::Output {
-                    use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
-                    {
-                        let offset = 0usize;
-                        let field_bytes = &self.bytes[offset..offset + 4usize];
-                        hasher.write(field_bytes).expect("write field");
-                    }
-                    hasher.finish().expect("finish hasher")
-                }
-            }
-            impl<'a> ssz::view::DecodeView<'a> for CommonTypeARef<'a> {
-                fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    if bytes.len() != 4usize {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: bytes.len(),
-                            expected: 4usize,
-                        });
-                    }
-                    Ok(Self { bytes })
-                }
-            }
-            impl<'a> ssz::view::SszTypeInfo for CommonTypeARef<'a> {
-                fn is_ssz_fixed_len() -> bool {
-                    true
-                }
-                fn ssz_fixed_len() -> usize {
-                    4usize
-                }
-            }
-            #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> ssz_types::view::ToOwnedSsz<CommonTypeA> for CommonTypeARef<'a> {
-                #[allow(
-                    clippy::wrong_self_convention,
-                    reason = "API convention for view types"
-                )]
-                fn to_owned(&self) -> CommonTypeA {
-                    <CommonTypeARef<'a>>::to_owned(self)
-                }
-            }
-            #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> CommonTypeARef<'a> {
-                #[allow(
-                    clippy::wrong_self_convention,
-                    reason = "API convention for view types"
-                )]
-                pub fn to_owned(&self) -> CommonTypeA {
-                    CommonTypeA {
-                        value: self.value().expect("valid view"),
-                    }
-                }
-            }
-            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
-            #[ssz(struct_behaviour = "container")]
-            pub struct CommonTypeB {
+            pub struct InnerData {
                 pub value: u64,
+                pub hash: FixedBytes<32usize>,
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for CommonTypeB {
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for InnerData {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -145,10 +29,16 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     hasher
                         .write(
                             <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.value)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.hash)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -157,18 +47,18 @@ pub mod tests {
                         .expect("tree hash derive should not have a remaining buffer")
                 }
             }
-            /// Zero-copy view over [`CommonTypeB`].
+            /// Zero-copy view over [`InnerData`].
             ///
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Clone, Debug, PartialEq, Eq, Copy)]
-            pub struct CommonTypeBRef<'a> {
+            pub struct InnerDataRef<'a> {
                 bytes: &'a [u8],
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> CommonTypeBRef<'a> {
+            impl<'a> InnerDataRef<'a> {
                 pub fn value(&self) -> Result<u64, ssz::DecodeError> {
                     let offset = 0usize;
                     let end = offset + 8usize;
@@ -181,9 +71,23 @@ pub mod tests {
                     let bytes = &self.bytes[offset..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
+                pub fn hash(
+                    &self,
+                ) -> Result<FixedBytesRef<'a, 32usize>, ssz::DecodeError> {
+                    let offset = 8usize;
+                    let end = offset + 32usize;
+                    if end > self.bytes.len() {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: self.bytes.len(),
+                            expected: end,
+                        });
+                    }
+                    let bytes = &self.bytes[offset..end];
+                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                }
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for CommonTypeBRef<'a> {
+            for InnerDataRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -201,70 +105,68 @@ pub mod tests {
                         let field_bytes = &self.bytes[offset..offset + 8usize];
                         hasher.write(field_bytes).expect("write field");
                     }
+                    {
+                        let hash = self.hash().expect("valid view");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&hash);
+                        hasher.write(root.as_ref()).expect("write field");
+                    }
                     hasher.finish().expect("finish hasher")
                 }
             }
-            impl<'a> ssz::view::DecodeView<'a> for CommonTypeBRef<'a> {
+            impl<'a> ssz::view::DecodeView<'a> for InnerDataRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    if bytes.len() != 8usize {
+                    if bytes.len() != 40usize {
                         return Err(ssz::DecodeError::InvalidByteLength {
                             len: bytes.len(),
-                            expected: 8usize,
+                            expected: 40usize,
                         });
                     }
                     Ok(Self { bytes })
                 }
             }
-            impl<'a> ssz::view::SszTypeInfo for CommonTypeBRef<'a> {
+            impl<'a> ssz::view::SszTypeInfo for InnerDataRef<'a> {
                 fn is_ssz_fixed_len() -> bool {
                     true
                 }
                 fn ssz_fixed_len() -> usize {
-                    8usize
+                    40usize
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> ssz_types::view::ToOwnedSsz<CommonTypeB> for CommonTypeBRef<'a> {
+            impl<'a> ssz_types::view::ToOwnedSsz<InnerData> for InnerDataRef<'a> {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
-                fn to_owned(&self) -> CommonTypeB {
-                    <CommonTypeBRef<'a>>::to_owned(self)
+                fn to_owned(&self) -> InnerData {
+                    <InnerDataRef<'a>>::to_owned(self)
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> CommonTypeBRef<'a> {
+            impl<'a> InnerDataRef<'a> {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
-                pub fn to_owned(&self) -> CommonTypeB {
-                    CommonTypeB {
+                pub fn to_owned(&self) -> InnerData {
+                    InnerData {
                         value: self.value().expect("valid view"),
+                        hash: ssz_types::FixedBytes(
+                            self.hash().expect("valid view").to_owned(),
+                        ),
                     }
                 }
             }
-        }
-        pub mod test_cross_entry_local {
-            #![allow(unused_imports, reason = "generated code using ssz-gen")]
-            use ssz_types::*;
-            use ssz_types::view::{FixedVectorRef, VariableListRef};
-            use ssz_primitives::{U128, U256};
-            use ssz_derive::{Encode, Decode};
-            use tree_hash::TreeHashDigest;
-            use tree_hash_derive::TreeHash;
-            use ssz::view::*;
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            pub struct ContainerA {
-                pub field: crate::tests::input::test_cross_entry_common::CommonTypeA,
-                pub list: VariableList<
-                    crate::tests::input::test_cross_entry_common::CommonTypeB,
-                    10usize,
-                >,
+            pub struct OuterContainer {
+                pub inner: InnerData,
+                pub items: VariableList<InnerData, 10usize>,
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ContainerA {
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
+            for OuterContainer {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -279,13 +181,13 @@ pub mod tests {
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.field)
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.inner)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.list)
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.items)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -294,24 +196,19 @@ pub mod tests {
                         .expect("tree hash derive should not have a remaining buffer")
                 }
             }
-            /// Zero-copy view over [`ContainerA`].
+            /// Zero-copy view over [`OuterContainer`].
             ///
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Clone, Debug, PartialEq, Eq, Copy)]
-            pub struct ContainerARef<'a> {
+            pub struct OuterContainerRef<'a> {
                 bytes: &'a [u8],
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> ContainerARef<'a> {
-                pub fn field(
-                    &self,
-                ) -> Result<
-                    crate::tests::input::test_cross_entry_common::CommonTypeARef<'a>,
-                    ssz::DecodeError,
-                > {
+            impl<'a> OuterContainerRef<'a> {
+                pub fn inner(&self) -> Result<InnerDataRef<'a>, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
                         self.bytes,
                         8usize,
@@ -330,14 +227,10 @@ pub mod tests {
                     let bytes = &self.bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
-                pub fn list(
+                pub fn items(
                     &self,
                 ) -> Result<
-                    VariableListRef<
-                        'a,
-                        crate::tests::input::test_cross_entry_common::CommonTypeBRef<'a>,
-                        10usize,
-                    >,
+                    VariableListRef<'a, InnerDataRef<'a>, 10usize>,
                     ssz::DecodeError,
                 > {
                     let start = ssz::layout::read_variable_offset(
@@ -360,7 +253,7 @@ pub mod tests {
                 }
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for ContainerARef<'a> {
+            for OuterContainerRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -374,23 +267,23 @@ pub mod tests {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
                     {
-                        let field = self.field().expect("valid view");
+                        let inner = self.inner().expect("valid view");
                         let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
                             H,
-                        >::tree_hash_root(&field);
+                        >::tree_hash_root(&inner);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     {
-                        let list = self.list().expect("valid view");
+                        let items = self.items().expect("valid view");
                         let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
                             H,
-                        >::tree_hash_root(&list);
+                        >::tree_hash_root(&items);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }
             }
-            impl<'a> ssz::view::DecodeView<'a> for ContainerARef<'a> {
+            impl<'a> ssz::view::DecodeView<'a> for OuterContainerRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
                     if bytes.len() < 8usize {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -420,7 +313,7 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
-            impl<'a> ssz::view::SszTypeInfo for ContainerARef<'a> {
+            impl<'a> ssz::view::SszTypeInfo for OuterContainerRef<'a> {
                 fn is_ssz_fixed_len() -> bool {
                     false
                 }
@@ -429,29 +322,30 @@ pub mod tests {
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> ssz_types::view::ToOwnedSsz<ContainerA> for ContainerARef<'a> {
+            impl<'a> ssz_types::view::ToOwnedSsz<OuterContainer>
+            for OuterContainerRef<'a> {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
-                fn to_owned(&self) -> ContainerA {
-                    <ContainerARef<'a>>::to_owned(self)
+                fn to_owned(&self) -> OuterContainer {
+                    <OuterContainerRef<'a>>::to_owned(self)
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> ContainerARef<'a> {
+            impl<'a> OuterContainerRef<'a> {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
-                pub fn to_owned(&self) -> ContainerA {
-                    ContainerA {
-                        field: {
-                            let view = self.field().expect("valid view");
+                pub fn to_owned(&self) -> OuterContainer {
+                    OuterContainer {
+                        inner: {
+                            let view = self.inner().expect("valid view");
                             ssz_types::view::ToOwnedSsz::to_owned(&view)
                         },
-                        list: self
-                            .list()
+                        items: self
+                            .items()
                             .expect("valid view")
                             .to_owned()
                             .expect("valid view"),

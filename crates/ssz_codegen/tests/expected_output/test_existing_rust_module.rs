@@ -195,10 +195,10 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> TestExistingModule {
                     TestExistingModule {
-                        existing_field: self
-                            .existing_field()
-                            .expect("valid view")
-                            .to_owned(),
+                        existing_field: {
+                            let view = self.existing_field().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
                         slot: self.slot().expect("valid view"),
                     }
                 }

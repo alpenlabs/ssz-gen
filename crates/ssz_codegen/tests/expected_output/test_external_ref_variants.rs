@@ -231,8 +231,14 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> ContainerWithExternal {
                     ContainerWithExternal {
-                        payload: self.payload().expect("valid view").to_owned(),
-                        account_id: self.account_id().expect("valid view").to_owned(),
+                        payload: {
+                            let view = self.payload().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
+                        account_id: {
+                            let view = self.account_id().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
                         messages: self
                             .messages()
                             .expect("valid view")

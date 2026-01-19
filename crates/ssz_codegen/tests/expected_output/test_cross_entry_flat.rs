@@ -241,7 +241,9 @@ pub mod test_cross_entry_update {
             let bytes = &self.bytes[offset..end];
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
-        pub fn updates(&self) -> Result<BytesRef<'a>, ssz::DecodeError> {
+        pub fn updates(
+            &self,
+        ) -> Result<VariableListRef<'a, u8, 10usize>, ssz::DecodeError> {
             let start = ssz::layout::read_variable_offset(
                 self.bytes,
                 16usize,
@@ -346,9 +348,16 @@ pub mod test_cross_entry_update {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> Update {
             Update {
-                state: self.state().expect("valid view").to_owned(),
+                state: {
+                    let view = self.state().expect("valid view");
+                    ssz_types::view::ToOwnedSsz::to_owned(&view)
+                },
                 timestamp: self.timestamp().expect("valid view"),
-                updates: self.updates().expect("valid view").to_owned().into(),
+                updates: self
+                    .updates()
+                    .expect("valid view")
+                    .to_owned()
+                    .expect("valid view"),
             }
         }
     }

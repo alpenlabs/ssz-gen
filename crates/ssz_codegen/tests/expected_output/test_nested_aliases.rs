@@ -90,7 +90,9 @@ pub mod tests {
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> NestedAliasContainerRef<'a> {
-                pub fn field1(&self) -> Result<BytesRef<'a>, ssz::DecodeError> {
+                pub fn field1(
+                    &self,
+                ) -> Result<VariableListRef<'a, u8, 10usize>, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
                         self.bytes,
                         16usize,
@@ -111,7 +113,10 @@ pub mod tests {
                 }
                 pub fn field2(
                     &self,
-                ) -> Result<FixedVectorRef<'a, BytesRef<'a>, 5usize>, ssz::DecodeError> {
+                ) -> Result<
+                    FixedVectorRef<'a, VariableListRef<'a, u8, 10usize>, 5usize>,
+                    ssz::DecodeError,
+                > {
                     let start = ssz::layout::read_variable_offset(
                         self.bytes,
                         16usize,
@@ -130,7 +135,9 @@ pub mod tests {
                     let bytes = &self.bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
-                pub fn field3(&self) -> Result<BytesRef<'a>, ssz::DecodeError> {
+                pub fn field3(
+                    &self,
+                ) -> Result<VariableListRef<'a, u8, 10usize>, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
                         self.bytes,
                         16usize,
@@ -152,7 +159,7 @@ pub mod tests {
                 pub fn field4(
                     &self,
                 ) -> Result<
-                    FixedVectorRef<'a, BytesRef<'a>, 10usize>,
+                    FixedVectorRef<'a, VariableListRef<'a, u8, 10usize>, 10usize>,
                     ssz::DecodeError,
                 > {
                     let start = ssz::layout::read_variable_offset(
@@ -276,13 +283,21 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> NestedAliasContainer {
                     NestedAliasContainer {
-                        field1: self.field1().expect("valid view").to_owned().into(),
+                        field1: self
+                            .field1()
+                            .expect("valid view")
+                            .to_owned()
+                            .expect("valid view"),
                         field2: self
                             .field2()
                             .expect("valid view")
                             .to_owned()
                             .expect("valid view"),
-                        field3: self.field3().expect("valid view").to_owned().into(),
+                        field3: self
+                            .field3()
+                            .expect("valid view")
+                            .to_owned()
+                            .expect("valid view"),
                         field4: self
                             .field4()
                             .expect("valid view")

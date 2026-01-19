@@ -315,8 +315,14 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> ExternalPragmaTest {
                     ExternalPragmaTest {
-                        state: self.state().expect("valid view").to_owned(),
-                        balance: self.balance().expect("valid view").to_owned(),
+                        state: {
+                            let view = self.state().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
+                        balance: {
+                            let view = self.balance().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
                         headers: self
                             .headers()
                             .expect("valid view")
