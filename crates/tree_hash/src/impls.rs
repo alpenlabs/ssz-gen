@@ -501,9 +501,20 @@ impl<'a, const N: usize, H: TreeHashDigest> TreeHash<H> for BitListRef<'a, N> {
     }
 
     fn tree_hash_root(&self) -> H::Output {
-        // Directly hash the bytes without converting to owned BitList
-        let chunks_root = merkle_root_with_hasher::<H>(self.as_bytes(), 0);
-        mix_in_length_with_hasher::<H>(&chunks_root, self.len())
+        let bit_len = self.len();
+        let data_len = if bit_len == 0 { 0 } else { bit_len.div_ceil(8) };
+        let mut bytes = self.as_bytes()[..data_len].to_vec();
+
+        if let Some(last) = bytes.last_mut() {
+            let bits_in_last = bit_len % 8;
+            if bits_in_last != 0 {
+                let mask = (1u8 << bits_in_last) - 1;
+                *last &= mask;
+            }
+        }
+
+        let chunks_root = bitfield_bytes_tree_hash_root::<N, H>(&bytes);
+        mix_in_length_with_hasher::<H>(&chunks_root, bit_len)
     }
 }
 #[cfg(test)]
