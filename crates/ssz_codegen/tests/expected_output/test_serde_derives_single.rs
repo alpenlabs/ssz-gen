@@ -100,7 +100,7 @@ for BlockCommitmentRef<'a> {
     }
     fn tree_hash_root(&self) -> H::Output {
         use tree_hash::TreeHash;
-        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
         {
             let offset = 0usize;
             let field_bytes = &self.bytes[offset..offset + 8usize];
@@ -211,7 +211,7 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for OtherTypeRef<'
     }
     fn tree_hash_root(&self) -> H::Output {
         use tree_hash::TreeHash;
-        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
         {
             let offset = 0usize;
             let field_bytes = &self.bytes[offset..offset + 8usize];

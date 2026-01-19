@@ -1056,7 +1056,7 @@ pub mod test_1 {
         }
         fn tree_hash_root(&self) -> H::Output {
             use tree_hash::TreeHash;
-            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
             {
                 let offset = 0usize;
                 let field_bytes = &self.bytes[offset..offset + 1usize];
@@ -1214,7 +1214,7 @@ pub mod test_1 {
         }
         fn tree_hash_root(&self) -> H::Output {
             use tree_hash::TreeHash;
-            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
             {
                 let d = self.d().expect("valid view");
                 let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
@@ -1566,7 +1566,7 @@ pub mod test_1 {
         }
         fn tree_hash_root(&self) -> H::Output {
             use tree_hash::TreeHash;
-            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
             {
                 let offset = 0usize;
                 let field_bytes = &self.bytes[offset..offset + 1usize];
@@ -2246,7 +2246,7 @@ pub mod test_1 {
         }
         fn tree_hash_root(&self) -> H::Output {
             use tree_hash::TreeHash;
-            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(5usize);
             {
                 let offset = 0usize;
                 let field_bytes = &self.bytes[offset..offset + 1usize];
@@ -2449,7 +2449,7 @@ pub mod test_1 {
         }
         fn tree_hash_root(&self) -> H::Output {
             use tree_hash::TreeHash;
-            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
             {
                 let l = self.l().expect("valid view");
                 let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
@@ -2646,7 +2646,7 @@ pub mod test_1 {
         }
         fn tree_hash_root(&self) -> H::Output {
             use tree_hash::TreeHash;
-            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
             {
                 let o = self.o().expect("valid view");
                 let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
@@ -3228,7 +3228,7 @@ pub mod test_1 {
         }
         fn tree_hash_root(&self) -> H::Output {
             use tree_hash::TreeHash;
-            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
             {
                 let t = self.t().expect("valid view");
                 let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
@@ -3602,7 +3602,7 @@ pub mod test_1 {
         }
         fn tree_hash_root(&self) -> H::Output {
             use tree_hash::TreeHash;
-            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
             {
                 let y = self.y().expect("valid view");
                 let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
@@ -3836,7 +3836,7 @@ pub mod test_1 {
         }
         fn tree_hash_root(&self) -> H::Output {
             use tree_hash::TreeHash;
-            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(4usize);
             {
                 let zz = self.zz().expect("valid view");
                 let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<

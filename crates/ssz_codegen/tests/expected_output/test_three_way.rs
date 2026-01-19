@@ -97,7 +97,7 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ContainerARef<
     }
     fn tree_hash_root(&self) -> H::Output {
         use tree_hash::TreeHash;
-        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
         {
             let offset = 0usize;
             let field_bytes = &self.bytes[offset..offset + 1usize];
@@ -257,7 +257,7 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ContainerBRef<
     }
     fn tree_hash_root(&self) -> H::Output {
         use tree_hash::TreeHash;
-        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
         {
             let offset = 0usize;
             let field_bytes = &self.bytes[offset..offset + 2usize];
@@ -389,7 +389,7 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ContainerCRef<
     }
     fn tree_hash_root(&self) -> H::Output {
         use tree_hash::TreeHash;
-        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
         {
             let offset = 0usize;
             let field_bytes = &self.bytes[offset..offset + 4usize];

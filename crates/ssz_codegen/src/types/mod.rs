@@ -1274,6 +1274,8 @@ impl ClassDef {
                     })
                     .collect();
 
+                let num_fields = self.fields.len();
+
                 quote! {
                     impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ref_ident<'a> {
                         fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -1291,7 +1293,7 @@ impl ClassDef {
                         fn tree_hash_root(&self) -> H::Output {
                             use tree_hash::TreeHash;
 
-                            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(#num_fields);
                             #(#hash_operations)*
 
                             hasher.finish().expect("finish hasher")
