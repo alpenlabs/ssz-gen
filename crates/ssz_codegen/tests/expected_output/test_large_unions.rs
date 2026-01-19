@@ -347,7 +347,9 @@ pub mod tests {
                     }
                     ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
                 }
-                pub fn as_selector1(&self) -> Result<BytesRef<'a>, ssz::DecodeError> {
+                pub fn as_selector1(
+                    &self,
+                ) -> Result<VariableListRef<'a, u8, 5usize>, ssz::DecodeError> {
                     if self.selector() != 1u8 {
                         return Err(
                             ssz::DecodeError::BytesInvalid(

@@ -2,7 +2,7 @@ pub mod tests {
     #![allow(unused_imports, reason = "generated code using ssz-gen")]
     pub mod input {
         #![allow(unused_imports, reason = "generated code using ssz-gen")]
-        pub mod test_union_type_alias {
+        pub mod test_union_empty_middle {
             #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
             use ssz_types::view::{FixedVectorRef, VariableListRef};
@@ -11,12 +11,19 @@ pub mod tests {
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
+            /// Union with empty in the middle
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(enum_behaviour = "union")]
-            pub enum TestUnion {
-                TypeAlias(TypeAlias),
+            pub enum TestUnionEmptyMiddle {
+                /// First variant with data
+                First(DataVariant),
+                /// Empty variant in middle position
+                Empty,
+                /// Last variant with data
+                Last(DataVariant),
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for TestUnion {
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
+            for TestUnionEmptyMiddle {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -28,42 +35,86 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     match self {
-                        TestUnion::TypeAlias(inner) => {
+                        TestUnionEmptyMiddle::First(inner) => {
                             let root = <_ as tree_hash::TreeHash<
                                 H,
                             >>::tree_hash_root(inner);
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
                                 .expect("valid selector")
                         }
+                        TestUnionEmptyMiddle::Empty => {
+                            let zero_root = H::get_zero_hash(0);
+                            tree_hash::mix_in_selector_with_hasher::<H>(&zero_root, 1u8)
+                                .expect("valid selector")
+                        }
+                        TestUnionEmptyMiddle::Last(inner) => {
+                            let root = <_ as tree_hash::TreeHash<
+                                H,
+                            >>::tree_hash_root(inner);
+                            tree_hash::mix_in_selector_with_hasher::<H>(&root, 2u8)
+                                .expect("valid selector")
+                        }
                     }
                 }
             }
-            pub type TypeAliasRef<'a> = UnderlyingTypeRef<'a>;
+            pub type FirstRef<'a> = DataVariantRef<'a>;
+            pub type LastRef<'a> = DataVariantRef<'a>;
             #[derive(Debug, Copy, Clone)]
-            pub struct TestUnionRef<'a> {
+            pub struct TestUnionEmptyMiddleRef<'a> {
                 bytes: &'a [u8],
             }
-            impl<'a> TestUnionRef<'a> {
+            impl<'a> TestUnionEmptyMiddleRef<'a> {
                 pub fn selector(&self) -> u8 {
                     self.bytes[0]
                 }
-                pub fn as_selector0(
-                    &self,
-                ) -> Result<TypeAliasRef<'_>, ssz::DecodeError> {
+                pub fn as_selector0(&self) -> Result<FirstRef<'_>, ssz::DecodeError> {
                     if self.selector() != 0u8 {
                         return Err(
                             ssz::DecodeError::BytesInvalid(
-                                "Wrong selector for TestUnion: expected 0".to_string(),
+                                "Wrong selector for TestUnionEmptyMiddle: expected 0"
+                                    .to_string(),
                             ),
                         );
                     }
                     ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
                 }
-                pub fn to_owned(&self) -> TestUnion {
+                pub fn as_selector1(&self) -> Result<(), ssz::DecodeError> {
+                    if self.selector() != 1u8 {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                "Wrong selector for TestUnionEmptyMiddle: expected 1"
+                                    .to_string(),
+                            ),
+                        );
+                    }
+                    Ok(())
+                }
+                pub fn as_selector2(&self) -> Result<LastRef<'_>, ssz::DecodeError> {
+                    if self.selector() != 2u8 {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                "Wrong selector for TestUnionEmptyMiddle: expected 2"
+                                    .to_string(),
+                            ),
+                        );
+                    }
+                    ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
+                }
+                pub fn to_owned(&self) -> TestUnionEmptyMiddle {
                     match self.selector() {
                         0u8 => {
-                            TestUnion::TypeAlias({
+                            TestUnionEmptyMiddle::First({
                                 let view = self.as_selector0().expect("valid selector");
+                                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
+                        }
+                        1u8 => {
+                            self.as_selector1().expect("valid selector");
+                            TestUnionEmptyMiddle::Empty
+                        }
+                        2u8 => {
+                            TestUnionEmptyMiddle::Last({
+                                let view = self.as_selector2().expect("valid selector");
                                 ssz_types::view::ToOwnedSsz::to_owned(&view)
                             })
                         }
@@ -71,13 +122,13 @@ pub mod tests {
                     }
                 }
             }
-            impl<'a> ssz::view::DecodeView<'a> for TestUnionRef<'a> {
+            impl<'a> ssz::view::DecodeView<'a> for TestUnionEmptyMiddleRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
                     let (_, _) = ssz::split_union_bytes(bytes)?;
                     Ok(Self { bytes })
                 }
             }
-            impl<'a> ssz::view::SszTypeInfo for TestUnionRef<'a> {
+            impl<'a> ssz::view::SszTypeInfo for TestUnionEmptyMiddleRef<'a> {
                 fn is_ssz_fixed_len() -> bool {
                     false
                 }
@@ -85,13 +136,14 @@ pub mod tests {
                     0
                 }
             }
-            impl<'a> ssz_types::view::ToOwnedSsz<TestUnion> for TestUnionRef<'a> {
-                fn to_owned(&self) -> TestUnion {
-                    <TestUnionRef<'a>>::to_owned(self)
+            impl<'a> ssz_types::view::ToOwnedSsz<TestUnionEmptyMiddle>
+            for TestUnionEmptyMiddleRef<'a> {
+                fn to_owned(&self) -> TestUnionEmptyMiddle {
+                    <TestUnionEmptyMiddleRef<'a>>::to_owned(self)
                 }
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for TestUnionRef<'a> {
+            for TestUnionEmptyMiddleRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Vector
                 }
@@ -113,18 +165,34 @@ pub mod tests {
                                 )
                                 .expect("valid selector")
                         }
+                        1u8 => {
+                            let zero_root = H::get_zero_hash(0);
+                            tree_hash::mix_in_selector_with_hasher::<H>(&zero_root, 1u8)
+                                .expect("valid selector")
+                        }
+                        2u8 => {
+                            let value = self.as_selector2().expect("valid selector");
+                            tree_hash::mix_in_selector_with_hasher::<
+                                H,
+                            >(
+                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    2u8,
+                                )
+                                .expect("valid selector")
+                        }
                         _ => panic!("Invalid union selector: {}", self.selector()),
                     }
                 }
             }
-            /// Test type alias used in union
+            /// Test union with empty variant in the middle position
+            ///
+            /// Container type for non-empty variants
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            pub struct UnderlyingType {
+            pub struct DataVariant {
                 pub value: u64,
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for UnderlyingType {
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for DataVariant {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -148,18 +216,18 @@ pub mod tests {
                         .expect("tree hash derive should not have a remaining buffer")
                 }
             }
-            /// Zero-copy view over [`UnderlyingType`].
+            /// Zero-copy view over [`DataVariant`].
             ///
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Clone, Debug, PartialEq, Eq, Copy)]
-            pub struct UnderlyingTypeRef<'a> {
+            pub struct DataVariantRef<'a> {
                 bytes: &'a [u8],
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> UnderlyingTypeRef<'a> {
+            impl<'a> DataVariantRef<'a> {
                 pub fn value(&self) -> Result<u64, ssz::DecodeError> {
                     let offset = 0usize;
                     let end = offset + 8usize;
@@ -174,7 +242,7 @@ pub mod tests {
                 }
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for UnderlyingTypeRef<'a> {
+            for DataVariantRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -195,7 +263,7 @@ pub mod tests {
                     hasher.finish().expect("finish hasher")
                 }
             }
-            impl<'a> ssz::view::DecodeView<'a> for UnderlyingTypeRef<'a> {
+            impl<'a> ssz::view::DecodeView<'a> for DataVariantRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
                     if bytes.len() != 8usize {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -206,7 +274,7 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
-            impl<'a> ssz::view::SszTypeInfo for UnderlyingTypeRef<'a> {
+            impl<'a> ssz::view::SszTypeInfo for DataVariantRef<'a> {
                 fn is_ssz_fixed_len() -> bool {
                     true
                 }
@@ -215,29 +283,27 @@ pub mod tests {
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> ssz_types::view::ToOwnedSsz<UnderlyingType>
-            for UnderlyingTypeRef<'a> {
+            impl<'a> ssz_types::view::ToOwnedSsz<DataVariant> for DataVariantRef<'a> {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
-                fn to_owned(&self) -> UnderlyingType {
-                    <UnderlyingTypeRef<'a>>::to_owned(self)
+                fn to_owned(&self) -> DataVariant {
+                    <DataVariantRef<'a>>::to_owned(self)
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> UnderlyingTypeRef<'a> {
+            impl<'a> DataVariantRef<'a> {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
-                pub fn to_owned(&self) -> UnderlyingType {
-                    UnderlyingType {
+                pub fn to_owned(&self) -> DataVariant {
+                    DataVariant {
                         value: self.value().expect("valid view"),
                     }
                 }
             }
-            pub type TypeAlias = UnderlyingType;
         }
     }
 }

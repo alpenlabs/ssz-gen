@@ -177,7 +177,9 @@ pub struct ViewTypeTestRef<'a> {
 }
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ViewTypeTestRef<'a> {
-    pub fn payload(&self) -> Result<BytesRef<'a>, ssz::DecodeError> {
+    pub fn payload(
+        &self,
+    ) -> Result<VariableListRef<'a, u8, 4096usize>, ssz::DecodeError> {
         let start = ssz::layout::read_variable_offset(
             self.bytes,
             40usize,
@@ -312,7 +314,7 @@ impl<'a> ViewTypeTestRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> ViewTypeTest {
         ViewTypeTest {
-            payload: self.payload().expect("valid view").to_owned().into(),
+            payload: self.payload().expect("valid view").to_owned().expect("valid view"),
             entries: self.entries().expect("valid view").to_owned().expect("valid view"),
             hash: ssz_types::FixedBytes(self.hash().expect("valid view").to_owned()),
         }

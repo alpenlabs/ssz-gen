@@ -615,7 +615,9 @@ pub mod test_1 {
             }
             ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
         }
-        pub fn as_selector3(&self) -> Result<BytesRef<'a>, ssz::DecodeError> {
+        pub fn as_selector3(
+            &self,
+        ) -> Result<VariableListRef<'a, u8, 12usize>, ssz::DecodeError> {
             if self.selector() != 3u8 {
                 return Err(
                     ssz::DecodeError::BytesInvalid(
@@ -1156,7 +1158,7 @@ pub mod test_1 {
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> BetaRef<'a> {
-        pub fn d(&self) -> Result<BytesRef<'a>, ssz::DecodeError> {
+        pub fn d(&self) -> Result<VariableListRef<'a, u8, 5usize>, ssz::DecodeError> {
             let start = ssz::layout::read_variable_offset(
                 self.bytes,
                 7usize,
@@ -1283,7 +1285,7 @@ pub mod test_1 {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> Beta {
             Beta {
-                d: self.d().expect("valid view").to_owned().into(),
+                d: self.d().expect("valid view").to_owned().expect("valid view"),
                 e: self.e().expect("valid view"),
                 f: self.f().expect("valid view"),
             }
@@ -1356,7 +1358,7 @@ pub mod test_1 {
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> GammaRef<'a> {
         pub fn g(&self) -> Result<Optional<u8>, ssz::DecodeError> {
-            let bitvector_offset = 1usize;
+            let bitvector_offset = 6usize;
             let container_bytes = &self.bytes[bitvector_offset..];
             let start = ssz::layout::read_variable_offset(
                 container_bytes,
@@ -1379,7 +1381,7 @@ pub mod test_1 {
         pub fn h(
             &self,
         ) -> Result<Optional<VariableListRef<'a, u16, 8usize>>, ssz::DecodeError> {
-            let bitvector_offset = 1usize;
+            let bitvector_offset = 6usize;
             let container_bytes = &self.bytes[bitvector_offset..];
             let start = ssz::layout::read_variable_offset(
                 container_bytes,
@@ -1429,7 +1431,7 @@ pub mod test_1 {
     impl<'a> ssz::view::DecodeView<'a> for GammaRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
             use ssz::Decode;
-            let bitvector_length = 1usize;
+            let bitvector_length = 6usize;
             if bytes.len() < bitvector_length {
                 return Err(ssz::DecodeError::InvalidByteLength {
                     len: bytes.len(),
@@ -1707,7 +1709,7 @@ pub mod test_1 {
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> EpsilonRef<'a> {
         pub fn g(&self) -> Result<Optional<u8>, ssz::DecodeError> {
-            let bitvector_offset = 1usize;
+            let bitvector_offset = 6usize;
             let container_bytes = &self.bytes[bitvector_offset..];
             let start = ssz::layout::read_variable_offset(
                 container_bytes,
@@ -1730,7 +1732,7 @@ pub mod test_1 {
         pub fn h(
             &self,
         ) -> Result<Optional<VariableListRef<'a, u16, 8usize>>, ssz::DecodeError> {
-            let bitvector_offset = 1usize;
+            let bitvector_offset = 6usize;
             let container_bytes = &self.bytes[bitvector_offset..];
             let start = ssz::layout::read_variable_offset(
                 container_bytes,
@@ -1751,7 +1753,7 @@ pub mod test_1 {
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
         pub fn i(&self) -> Result<Optional<u8>, ssz::DecodeError> {
-            let bitvector_offset = 1usize;
+            let bitvector_offset = 6usize;
             let container_bytes = &self.bytes[bitvector_offset..];
             let start = ssz::layout::read_variable_offset(
                 container_bytes,
@@ -1772,7 +1774,7 @@ pub mod test_1 {
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
         pub fn j(&self) -> Result<Optional<u16>, ssz::DecodeError> {
-            let bitvector_offset = 1usize;
+            let bitvector_offset = 6usize;
             let container_bytes = &self.bytes[bitvector_offset..];
             let start = ssz::layout::read_variable_offset(
                 container_bytes,
@@ -1832,7 +1834,7 @@ pub mod test_1 {
     impl<'a> ssz::view::DecodeView<'a> for EpsilonRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
             use ssz::Decode;
-            let bitvector_length = 1usize;
+            let bitvector_length = 6usize;
             if bytes.len() < bitvector_length {
                 return Err(ssz::DecodeError::InvalidByteLength {
                     len: bytes.len(),
@@ -1975,7 +1977,7 @@ pub mod test_1 {
         pub fn u(
             &self,
         ) -> Result<Optional<FixedBytesRef<'a, 16usize>>, ssz::DecodeError> {
-            let bitvector_offset = 1usize;
+            let bitvector_offset = 16usize;
             let container_bytes = &self.bytes[bitvector_offset..];
             let start = ssz::layout::read_variable_offset(
                 container_bytes,
@@ -1995,8 +1997,10 @@ pub mod test_1 {
             let bytes = &container_bytes[start..end];
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
-        pub fn v(&self) -> Result<Optional<BytesRef<'a>>, ssz::DecodeError> {
-            let bitvector_offset = 1usize;
+        pub fn v(
+            &self,
+        ) -> Result<Optional<VariableListRef<'a, u8, 5usize>>, ssz::DecodeError> {
+            let bitvector_offset = 16usize;
             let container_bytes = &self.bytes[bitvector_offset..];
             let start = ssz::layout::read_variable_offset(
                 container_bytes,
@@ -2046,7 +2050,7 @@ pub mod test_1 {
     impl<'a> ssz::view::DecodeView<'a> for ZetaRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
             use ssz::Decode;
-            let bitvector_length = 1usize;
+            let bitvector_length = 16usize;
             if bytes.len() < bitvector_length {
                 return Err(ssz::DecodeError::InvalidByteLength {
                     len: bytes.len(),
@@ -2848,7 +2852,7 @@ pub mod test_1 {
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> IotaRef<'a> {
         pub fn g(&self) -> Result<Optional<u8>, ssz::DecodeError> {
-            let bitvector_offset = 1usize;
+            let bitvector_offset = 6usize;
             let container_bytes = &self.bytes[bitvector_offset..];
             let start = ssz::layout::read_variable_offset(
                 container_bytes,
@@ -2871,7 +2875,7 @@ pub mod test_1 {
         pub fn h(
             &self,
         ) -> Result<Optional<VariableListRef<'a, u16, 8usize>>, ssz::DecodeError> {
-            let bitvector_offset = 1usize;
+            let bitvector_offset = 6usize;
             let container_bytes = &self.bytes[bitvector_offset..];
             let start = ssz::layout::read_variable_offset(
                 container_bytes,
@@ -2892,7 +2896,7 @@ pub mod test_1 {
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
         pub fn i(&self) -> Result<Optional<u8>, ssz::DecodeError> {
-            let bitvector_offset = 1usize;
+            let bitvector_offset = 6usize;
             let container_bytes = &self.bytes[bitvector_offset..];
             let start = ssz::layout::read_variable_offset(
                 container_bytes,
@@ -2913,7 +2917,7 @@ pub mod test_1 {
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
         pub fn j(&self) -> Result<Optional<u16>, ssz::DecodeError> {
-            let bitvector_offset = 1usize;
+            let bitvector_offset = 6usize;
             let container_bytes = &self.bytes[bitvector_offset..];
             let start = ssz::layout::read_variable_offset(
                 container_bytes,
@@ -2936,7 +2940,7 @@ pub mod test_1 {
         pub fn r(
             &self,
         ) -> Result<Optional<VariableListRef<'a, u16, 2usize>>, ssz::DecodeError> {
-            let bitvector_offset = 1usize;
+            let bitvector_offset = 6usize;
             let container_bytes = &self.bytes[bitvector_offset..];
             let start = ssz::layout::read_variable_offset(
                 container_bytes,
@@ -2957,7 +2961,7 @@ pub mod test_1 {
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
         pub fn s(&self) -> Result<Optional<u8>, ssz::DecodeError> {
-            let bitvector_offset = 1usize;
+            let bitvector_offset = 6usize;
             let container_bytes = &self.bytes[bitvector_offset..];
             let start = ssz::layout::read_variable_offset(
                 container_bytes,
@@ -3027,7 +3031,7 @@ pub mod test_1 {
     impl<'a> ssz::view::DecodeView<'a> for IotaRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
             use ssz::Decode;
-            let bitvector_length = 1usize;
+            let bitvector_length = 6usize;
             if bytes.len() < bitvector_length {
                 return Err(ssz::DecodeError::InvalidByteLength {
                     len: bytes.len(),

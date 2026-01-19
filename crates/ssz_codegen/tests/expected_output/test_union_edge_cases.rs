@@ -206,7 +206,9 @@ pub mod tests {
                 pub fn selector(&self) -> u8 {
                     self.bytes[0]
                 }
-                pub fn as_selector0(&self) -> Result<BytesRef<'a>, ssz::DecodeError> {
+                pub fn as_selector0(
+                    &self,
+                ) -> Result<VariableListRef<'a, u8, 10usize>, ssz::DecodeError> {
                     if self.selector() != 0u8 {
                         return Err(
                             ssz::DecodeError::BytesInvalid(
