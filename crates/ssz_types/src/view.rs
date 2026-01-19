@@ -572,6 +572,32 @@ mod tests {
     }
 
     #[test]
+    fn tree_hash_variable_list_ref_u8_empty_respects_capacity_limit() {
+        use tree_hash::{Hash256, Sha256Hasher, TreeHash};
+
+        // Regression for bounded byte-list hashing:
+        // An empty `VariableList<u8, 64>` must merkleize with `limit = ceil(64 / 32) = 2` chunks,
+        // then mix in length (0). Historically some view hashing paths behaved like `limit = 0`,
+        // producing a different root.
+        let owned: VariableList<u8, 64> = vec![].into();
+        let bytes = owned.as_ssz_bytes();
+        let view = VariableListRef::<u8, 64>::from_ssz_bytes(&bytes).unwrap();
+
+        let owned_hash: Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&owned);
+        let view_hash: Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&view);
+
+        assert_eq!(owned_hash, view_hash);
+        assert_eq!(
+            owned_hash,
+            Hash256::from_slice(&[
+                0x7a, 0x05, 0x01, 0xf5, 0x95, 0x7b, 0xdf, 0x9c, 0xb3, 0xa8, 0xff, 0x49, 0x66, 0xf0,
+                0x22, 0x65, 0xf9, 0x68, 0x65, 0x8b, 0x7a, 0x9c, 0x62, 0x64, 0x2c, 0xba, 0x11, 0x65,
+                0xe8, 0x66, 0x42, 0xf5,
+            ])
+        );
+    }
+
+    #[test]
     fn tree_hash_fixed_vector_ref() {
         use tree_hash::{Sha256Hasher, TreeHash};
 
