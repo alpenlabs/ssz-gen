@@ -1367,6 +1367,46 @@ fn test_three_way_dependency() {
     );
 }
 
+/// Test diamond-like dependency where two entry points (A and B) both import a base entry point.
+/// This mimics the snark-acct-types scenario where update.ssz and proof_interface.ssz both
+/// import state.ssz.
+#[test]
+fn test_diamond_dependency_both_import_base() {
+    build_ssz_files(
+        &[
+            "test_multi_import_base.ssz",
+            "test_multi_import_a.ssz",
+            "test_multi_import_b.ssz",
+        ],
+        "tests/input",
+        &[],
+        "tests/output/test_diamond_dependency.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types with diamond dependency");
+
+    let generated = fs::read_to_string("tests/output/test_diamond_dependency.rs")
+        .expect("Failed to read generated output");
+
+    // Verify base type is only defined once
+    let base_type_count = generated.matches("pub struct BaseType {").count();
+    assert_eq!(
+        base_type_count, 1,
+        "BaseType should only be defined once, found {} times",
+        base_type_count
+    );
+
+    // Verify TypeA and TypeB are present
+    assert!(
+        generated.contains("pub struct TypeA {"),
+        "TypeA should be generated"
+    );
+    assert!(
+        generated.contains("pub struct TypeB {"),
+        "TypeB should be generated"
+    );
+}
+
 /// Test that view type aliases are generated for type aliases used in union variants.
 #[test]
 fn test_union_type_alias_view_types() {

@@ -1,0 +1,6 @@
+import test_multi_import_base as base
+
+### Type A that imports base
+class TypeA(Container):
+    base: base.BaseType
+    data: uint32

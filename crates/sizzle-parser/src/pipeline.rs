@@ -1,12 +1,17 @@
 //! High-level logic for full-pipeline parsing.
 
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+};
 
 use thiserror::Error;
 
 use crate::{
     SszSchema,
-    ast::{self, ModuleManager, ParseError},
+    ast::{
+        self, AssignExpr, Module, ModuleEntry, ModuleManager, ParseError, TyArgSpec, TyExprSpec,
+    },
     schema::{self, SchemaError},
     token::{self, TokenError},
     token_tree::{self, ToktrError},
@@ -35,6 +40,151 @@ pub enum SszError {
     /// Error from the schema generator.
     #[error("schema generation: {0}")]
     SchemaGen(#[from] SchemaError),
+}
+
+/// Helper struct for topological sorting of modules.
+struct TopoSort {
+    modules: HashMap<PathBuf, Module>,
+    deps: HashMap<PathBuf, HashSet<PathBuf>>,
+    in_progress: HashSet<PathBuf>,
+    sorted: Vec<(PathBuf, Module)>,
+}
+
+impl TopoSort {
+    fn new(modules: HashMap<PathBuf, Module>) -> Self {
+        // Build a mapping from normalized paths (without extension) to actual paths.
+        // This handles the case where imports use "state" but modules are stored as "state.ssz".
+        let mut normalized_to_actual: HashMap<PathBuf, PathBuf> = HashMap::new();
+        for path in modules.keys() {
+            let normalized = path.with_extension("");
+            normalized_to_actual.insert(normalized, path.clone());
+        }
+
+        // Build dependency graph: for each module, find what it imports.
+        let mut deps: HashMap<PathBuf, HashSet<PathBuf>> = HashMap::new();
+        for (path, module) in &modules {
+            let mut actual_deps = HashSet::new();
+            for import_path in get_module_imports(module) {
+                // Try to find the actual module path (with or without extension)
+                if modules.contains_key(&import_path) {
+                    actual_deps.insert(import_path);
+                } else if let Some(actual) = normalized_to_actual.get(&import_path) {
+                    actual_deps.insert(actual.clone());
+                } else {
+                    // Try with .ssz extension
+                    let ssz_path = import_path.with_extension("ssz");
+                    if modules.contains_key(&ssz_path) {
+                        actual_deps.insert(ssz_path);
+                    }
+                }
+            }
+            deps.insert(path.clone(), actual_deps);
+        }
+
+        Self {
+            modules,
+            deps,
+            in_progress: HashSet::new(),
+            sorted: Vec::new(),
+        }
+    }
+
+    /// Performs DFS visit for topological sort.
+    fn visit(&mut self, path: PathBuf) {
+        // If already processed (removed from modules), skip.
+        if !self.modules.contains_key(&path) {
+            return;
+        }
+        // Cycle detection: if we're currently processing this path, skip.
+        if self.in_progress.contains(&path) {
+            return;
+        }
+
+        self.in_progress.insert(path.clone());
+
+        // Visit all dependencies first.
+        if let Some(module_deps) = self.deps.get(&path).cloned() {
+            for dep_path in module_deps {
+                self.visit(dep_path);
+            }
+        }
+
+        self.in_progress.remove(&path);
+
+        // Remove from modules and add to sorted list (avoids cloning).
+        if let Some(module) = self.modules.remove(&path) {
+            self.sorted.push((path, module));
+        }
+    }
+
+    /// Consumes self and returns the topologically sorted modules.
+    fn sort(mut self) -> Vec<(PathBuf, Module)> {
+        let paths: Vec<_> = self.modules.keys().cloned().collect();
+        for path in paths {
+            self.visit(path);
+        }
+        self.sorted
+    }
+}
+
+/// Collects import paths from a type expression specification.
+fn collect_imports_from_ty_expr(spec: &TyExprSpec, imports: &mut HashSet<PathBuf>) {
+    match spec {
+        TyExprSpec::Imported(imported) => {
+            imports.insert(imported.module_path().clone());
+        }
+        TyExprSpec::Complex(complex) => {
+            for arg in complex.args() {
+                collect_imports_from_ty_arg(arg, imports);
+            }
+        }
+        TyExprSpec::Simple(_) | TyExprSpec::None => {}
+    }
+}
+
+/// Collects import paths from a type argument specification.
+fn collect_imports_from_ty_arg(spec: &TyArgSpec, imports: &mut HashSet<PathBuf>) {
+    match spec {
+        TyArgSpec::Imported(imported) => {
+            imports.insert(imported.module_path().clone());
+        }
+        TyArgSpec::Complex(complex) => {
+            for arg in complex.args() {
+                collect_imports_from_ty_arg(arg, imports);
+            }
+        }
+        TyArgSpec::Ident(_) | TyArgSpec::IntLiteral(_) | TyArgSpec::None => {}
+    }
+}
+
+/// Extracts the import paths from a module's entries by looking at all imported type references.
+fn get_module_imports(module: &Module) -> HashSet<PathBuf> {
+    let mut imports = HashSet::new();
+
+    for entry in module.entries() {
+        match entry {
+            ModuleEntry::Assignment(assign) => match assign.value() {
+                AssignExpr::Imported(imported) => {
+                    imports.insert(imported.module_path().clone());
+                }
+                AssignExpr::Complex(complex) => {
+                    for arg in complex.args() {
+                        collect_imports_from_ty_arg(arg, &mut imports);
+                    }
+                }
+                AssignExpr::Name(_) | AssignExpr::Value(_) | AssignExpr::SymbolicBinop(_, _, _) => {
+                }
+            },
+            ModuleEntry::Class(class) => {
+                collect_imports_from_ty_expr(class.parent_ty(), &mut imports);
+                for field in class.fields() {
+                    collect_imports_from_ty_expr(field.ty(), &mut imports);
+                }
+            }
+        }
+    }
+
+    imports
 }
 
 /// High-level parse function.
@@ -66,8 +216,14 @@ pub fn parse_str_schema(
         cross_module_types.insert(path, ModuleTypeMap::External);
     }
 
+    // Collect all modules and sort them topologically so dependencies come before dependents.
+    // This ensures that when we convert a module to a schema, all its imported modules have
+    // already been processed and their types are available in cross_module_types.
+    let topo_sort = TopoSort::new(module_manager.into_modules());
+    let sorted_modules = topo_sort.sort();
+
     let mut parsing_order = Vec::new();
-    while let Some((path, module)) = module_manager.pop_module() {
+    for (path, module) in sorted_modules {
         if module.is_external() {
             cross_module_types.insert(path.clone(), ModuleTypeMap::External);
             continue;
@@ -436,5 +592,339 @@ class Predicate(Container):
         assert_eq!(classes[0].fields().len(), 2, "Should have 2 fields");
 
         eprintln!("Successfully parsed issue #49 example: {schema:#?}");
+    }
+
+    #[test]
+    fn test_diamond_dependency() {
+        // Test case mimicking snark-acct-types scenario:
+        // - state.ssz defines base types
+        // - update.ssz imports state.ssz
+        // - proof.ssz imports both state.ssz and update.ssz
+        //
+        // Without topological sorting, this could fail with UnknownImport if
+        // update.ssz is processed before state.ssz.
+
+        const STATE: &str = r"
+### Base state type
+class State(Container):
+    value: uint64
+    hash: Bytes32
+";
+
+        const UPDATE: &str = r"
+import state
+
+### Update references state
+class Update(Container):
+    prev: state.State
+    next: state.State
+    delta: uint32
+";
+
+        const PROOF: &str = r"
+import state
+import update
+
+### Proof references both state and update
+class Proof(Container):
+    cur_state: state.State
+    new_state: state.State
+    upd: update.Update
+";
+
+        let files = HashMap::from([
+            (Path::new("state.ssz").to_path_buf(), STATE.to_string()),
+            (Path::new("update.ssz").to_path_buf(), UPDATE.to_string()),
+            (Path::new("proof.ssz").to_path_buf(), PROOF.to_string()),
+        ]);
+
+        let (parsing_order, schema_map) =
+            parse_str_schema(&files, &[]).expect("diamond dependency should parse successfully");
+
+        // Verify all three modules were parsed
+        assert_eq!(schema_map.len(), 3, "Should have 3 schemas");
+
+        // Verify state.ssz was processed before update.ssz and proof.ssz
+        let state_idx = parsing_order
+            .iter()
+            .position(|p| p.to_str() == Some("state.ssz"))
+            .expect("state.ssz should be in parsing order");
+        let update_idx = parsing_order
+            .iter()
+            .position(|p| p.to_str() == Some("update.ssz"))
+            .expect("update.ssz should be in parsing order");
+        let proof_idx = parsing_order
+            .iter()
+            .position(|p| p.to_str() == Some("proof.ssz"))
+            .expect("proof.ssz should be in parsing order");
+
+        assert!(
+            state_idx < update_idx,
+            "state.ssz should be processed before update.ssz"
+        );
+        assert!(
+            state_idx < proof_idx,
+            "state.ssz should be processed before proof.ssz"
+        );
+        assert!(
+            update_idx < proof_idx,
+            "update.ssz should be processed before proof.ssz"
+        );
+
+        // Verify the schemas have the expected classes
+        let state_schema = schema_map.get(Path::new("state.ssz")).unwrap();
+        assert_eq!(state_schema.classes().len(), 1);
+        assert_eq!(state_schema.classes()[0].name().0, "State");
+
+        let update_schema = schema_map.get(Path::new("update.ssz")).unwrap();
+        assert_eq!(update_schema.classes().len(), 1);
+        assert_eq!(update_schema.classes()[0].name().0, "Update");
+
+        let proof_schema = schema_map.get(Path::new("proof.ssz")).unwrap();
+        assert_eq!(proof_schema.classes().len(), 1);
+        assert_eq!(proof_schema.classes()[0].name().0, "Proof");
+    }
+
+    #[test]
+    fn test_multiple_modules_shared_imports() {
+        // Test 3 consumer modules that each import a mix of shared and non-shared dependencies.
+        // Modeled after snark-acct-types where:
+        // - external_crate: external Rust crate (like strata_acct_types) imported by all
+        // - primitives.ssz: internal module with simple types, imported by all
+        // - unique_a.ssz: only imported by consumer_a
+        // - unique_b.ssz: only imported by consumer_b
+        // - unique_c.ssz: only imported by consumer_c
+        // - consumer_a.ssz: imports external_crate + primitives + unique_a
+        // - consumer_b.ssz: imports external_crate + primitives + unique_b
+        // - consumer_c.ssz: imports external_crate + primitives + unique_c + consumer_a +
+        //   consumer_b
+        //
+        // This extends the diamond pattern to 3 consumers with:
+        // - One external crate imported by all (like strata_acct_types)
+        // - One internal SSZ module imported by all (like primitives/types)
+        // - Unique modules for each consumer
+        // - Cross-consumer imports (consumer_c imports consumer_a and consumer_b)
+
+        // Internal module with simple types - imported by all other modules
+        const PRIMITIVES: &str = r"
+### Simple primitive wrapper types
+class Amount(Container):
+    value: uint64
+
+class Hash(Container):
+    data: Bytes32
+";
+
+        const UNIQUE_A: &str = r"
+import external_crate
+import primitives
+
+### Type unique to consumer A
+class UniqueA(Container):
+    value_a: uint32
+    amount: primitives.Amount
+    ext: external_crate.SomeType
+";
+
+        const UNIQUE_B: &str = r"
+import external_crate
+import primitives
+
+### Type unique to consumer B
+class UniqueB(Container):
+    value_b: uint64
+    hash: primitives.Hash
+    ext: external_crate.SomeType
+";
+
+        const UNIQUE_C: &str = r"
+import external_crate
+import primitives
+
+### Type unique to consumer C
+class UniqueC(Container):
+    value_c: Bytes32
+    amount: primitives.Amount
+    ext: external_crate.SomeType
+";
+
+        const CONSUMER_A: &str = r"
+import external_crate
+import primitives
+import unique_a
+
+### Consumer A imports external_crate + primitives + unique_a
+class ConsumerA(Container):
+    amount: primitives.Amount
+    extra: unique_a.UniqueA
+    ext: external_crate.SomeType
+";
+
+        const CONSUMER_B: &str = r"
+import external_crate
+import primitives
+import unique_b
+
+### Consumer B imports external_crate + primitives + unique_b
+class ConsumerB(Container):
+    hash: primitives.Hash
+    extra: unique_b.UniqueB
+    ext: external_crate.SomeType
+";
+
+        const CONSUMER_C: &str = r"
+import external_crate
+import primitives
+import unique_c
+import consumer_a
+import consumer_b
+
+### Consumer C imports external_crate + primitives + unique_c + both other consumers
+class ConsumerC(Container):
+    amount: primitives.Amount
+    extra: unique_c.UniqueC
+    ref_a: consumer_a.ConsumerA
+    ref_b: consumer_b.ConsumerB
+    ext: external_crate.SomeType
+";
+
+        let files = HashMap::from([
+            (
+                Path::new("primitives.ssz").to_path_buf(),
+                PRIMITIVES.to_string(),
+            ),
+            (
+                Path::new("unique_a.ssz").to_path_buf(),
+                UNIQUE_A.to_string(),
+            ),
+            (
+                Path::new("unique_b.ssz").to_path_buf(),
+                UNIQUE_B.to_string(),
+            ),
+            (
+                Path::new("unique_c.ssz").to_path_buf(),
+                UNIQUE_C.to_string(),
+            ),
+            (
+                Path::new("consumer_a.ssz").to_path_buf(),
+                CONSUMER_A.to_string(),
+            ),
+            (
+                Path::new("consumer_b.ssz").to_path_buf(),
+                CONSUMER_B.to_string(),
+            ),
+            (
+                Path::new("consumer_c.ssz").to_path_buf(),
+                CONSUMER_C.to_string(),
+            ),
+        ]);
+
+        // external_crate is registered as an external crate (like strata_acct_types)
+        let (parsing_order, schema_map) = parse_str_schema(&files, &["external_crate"])
+            .expect("multiple modules with shared imports should parse successfully");
+
+        // Verify all 7 modules were parsed
+        assert_eq!(schema_map.len(), 7, "Should have 7 schemas");
+
+        // Helper to get index in parsing order
+        let get_idx = |name: &str| {
+            parsing_order
+                .iter()
+                .position(|p| p.to_str() == Some(name))
+                .unwrap_or_else(|| panic!("{name} should be in parsing order"))
+        };
+
+        let primitives_idx = get_idx("primitives.ssz");
+        let unique_a_idx = get_idx("unique_a.ssz");
+        let unique_b_idx = get_idx("unique_b.ssz");
+        let unique_c_idx = get_idx("unique_c.ssz");
+        let consumer_a_idx = get_idx("consumer_a.ssz");
+        let consumer_b_idx = get_idx("consumer_b.ssz");
+        let consumer_c_idx = get_idx("consumer_c.ssz");
+
+        // Verify dependency ordering
+        // primitives must come before all modules that import it
+        assert!(
+            primitives_idx < unique_a_idx,
+            "primitives.ssz should be processed before unique_a.ssz"
+        );
+        assert!(
+            primitives_idx < unique_b_idx,
+            "primitives.ssz should be processed before unique_b.ssz"
+        );
+        assert!(
+            primitives_idx < unique_c_idx,
+            "primitives.ssz should be processed before unique_c.ssz"
+        );
+        assert!(
+            primitives_idx < consumer_a_idx,
+            "primitives.ssz should be processed before consumer_a.ssz"
+        );
+        assert!(
+            primitives_idx < consumer_b_idx,
+            "primitives.ssz should be processed before consumer_b.ssz"
+        );
+        assert!(
+            primitives_idx < consumer_c_idx,
+            "primitives.ssz should be processed before consumer_c.ssz"
+        );
+
+        // unique modules must come before their consumers
+        assert!(
+            unique_a_idx < consumer_a_idx,
+            "unique_a.ssz should be processed before consumer_a.ssz"
+        );
+        assert!(
+            unique_b_idx < consumer_b_idx,
+            "unique_b.ssz should be processed before consumer_b.ssz"
+        );
+        assert!(
+            unique_c_idx < consumer_c_idx,
+            "unique_c.ssz should be processed before consumer_c.ssz"
+        );
+
+        // consumer_a and consumer_b must come before consumer_c
+        assert!(
+            consumer_a_idx < consumer_c_idx,
+            "consumer_a.ssz should be processed before consumer_c.ssz"
+        );
+        assert!(
+            consumer_b_idx < consumer_c_idx,
+            "consumer_b.ssz should be processed before consumer_c.ssz"
+        );
+
+        // Verify the schemas have the expected classes
+        let primitives_schema = schema_map.get(Path::new("primitives.ssz")).unwrap();
+        assert_eq!(primitives_schema.classes().len(), 2);
+        assert_eq!(primitives_schema.classes()[0].name().0, "Amount");
+        assert_eq!(primitives_schema.classes()[1].name().0, "Hash");
+
+        assert_eq!(
+            schema_map
+                .get(Path::new("consumer_a.ssz"))
+                .unwrap()
+                .classes()[0]
+                .name()
+                .0,
+            "ConsumerA"
+        );
+        assert_eq!(
+            schema_map
+                .get(Path::new("consumer_b.ssz"))
+                .unwrap()
+                .classes()[0]
+                .name()
+                .0,
+            "ConsumerB"
+        );
+        assert_eq!(
+            schema_map
+                .get(Path::new("consumer_c.ssz"))
+                .unwrap()
+                .classes()[0]
+                .name()
+                .0,
+            "ConsumerC"
+        );
     }
 }
