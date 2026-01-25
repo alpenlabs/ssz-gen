@@ -122,7 +122,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     {
                         let existing_field = self.existing_field().expect("valid view");
                         let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
@@ -195,10 +195,10 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> TestExistingModule {
                     TestExistingModule {
-                        existing_field: self
-                            .existing_field()
-                            .expect("valid view")
-                            .to_owned(),
+                        existing_field: {
+                            let view = self.existing_field().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
                         slot: self.slot().expect("valid view"),
                     }
                 }

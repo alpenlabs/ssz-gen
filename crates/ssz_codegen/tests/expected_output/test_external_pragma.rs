@@ -219,7 +219,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(5usize);
                     {
                         let state = self.state().expect("valid view");
                         let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
@@ -315,8 +315,14 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> ExternalPragmaTest {
                     ExternalPragmaTest {
-                        state: self.state().expect("valid view").to_owned(),
-                        balance: self.balance().expect("valid view").to_owned(),
+                        state: {
+                            let view = self.state().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
+                        balance: {
+                            let view = self.balance().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
                         headers: self
                             .headers()
                             .expect("valid view")

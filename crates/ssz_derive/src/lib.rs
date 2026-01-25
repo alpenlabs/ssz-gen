@@ -553,19 +553,21 @@ fn ssz_encode_derive_stable_container(
                 if <Self as ssz::Encode>::is_ssz_fixed_len() {
                     <Self as ssz::Encode>::ssz_fixed_len()
                 } else {
-                    let mut len: usize = 0;
+                    let mut len: usize = #max_fields.div_ceil(8);
                     #(
-                        if #field_is_ssz_fixed_len {
-                            len = len
-                                .checked_add(#field_fixed_len)
-                                .expect("encode ssz_bytes_len length overflow");
-                        } else {
-                            len = len
-                                .checked_add(ssz::BYTES_PER_LENGTH_OFFSET)
-                                .expect("encode ssz_bytes_len length overflow for offset");
-                            len = len
-                                .checked_add(#field_ssz_bytes_len)
-                                .expect("encode ssz_bytes_len length overflow for bytes");
+                        if let Optional::Some(ref inner) = self.#struct_fields_vec {
+                            if #field_is_ssz_fixed_len {
+                                len = len
+                                    .checked_add(#field_fixed_len)
+                                    .expect("encode ssz_bytes_len length overflow");
+                            } else {
+                                len = len
+                                    .checked_add(ssz::BYTES_PER_LENGTH_OFFSET)
+                                    .expect("encode ssz_bytes_len length overflow for offset");
+                                len = len
+                                    .checked_add(inner.ssz_bytes_len())
+                                    .expect("encode ssz_bytes_len length overflow for bytes");
+                            }
                         }
                     )*
 
@@ -733,29 +735,23 @@ fn ssz_encode_derive_profile_container(
             }
 
             fn ssz_append(&self, buf: &mut Vec<u8>) {
-                let mut offset: usize = 0;
-
-                #(
-                    offset = offset
-                        .checked_add(#field_fixed_len)
-                        .expect("encode ssz_append offset overflow");
-                )*
-
-                let mut encoder = ssz::SszEncoder::container(buf, offset);
-
-                #(
-                    #field_encoder_append;
-                )*
-
-                encoder.finalize();
-            }
-
-            // Custom ssz_bytes implementation so that we prepend the BitVector.
-            fn as_ssz_bytes(&self) -> Vec<u8> {
                 if #optional_count == 0 {
-                    let mut buf = vec![];
-                    self.ssz_append(&mut buf);
-                    return buf
+                    let mut offset: usize = 0;
+
+                    #(
+                        offset = offset
+                            .checked_add(#field_fixed_len)
+                            .expect("encode ssz_append offset overflow");
+                    )*
+
+                    let mut encoder = ssz::SszEncoder::container(buf, offset);
+
+                    #(
+                        #field_encoder_append;
+                    )*
+
+                    encoder.finalize();
+                    return;
                 }
 
                 // Construct the BitVector. This should only contain the bits of Optional values. A
@@ -776,15 +772,31 @@ fn ssz_encode_derive_profile_container(
                     working_index += 1;
                 )*
 
-                let mut bitvector = optional_fields.as_ssz_bytes();
+                // Append bitvector to output
+                buf.extend_from_slice(&optional_fields.as_ssz_bytes());
 
-                // We need to ensure the bitvector is not taken into account when computing
-                // offsets. So finalize the ssz struct before prepending.
+                let mut offset: usize = 0;
+
+                #(
+                    offset = offset
+                        .checked_add(#field_fixed_len)
+                        .expect("encode ssz_append offset overflow");
+                )*
+
+                let mut encoder = ssz::SszEncoder::container(buf, offset);
+
+                #(
+                    #field_encoder_append;
+                )*
+
+                encoder.finalize();
+            }
+
+            // Custom ssz_bytes implementation so that we prepend the BitVector.
+            fn as_ssz_bytes(&self) -> Vec<u8> {
                 let mut buf = vec![];
                 self.ssz_append(&mut buf);
-
-                bitvector.append(&mut buf);
-                bitvector
+                buf
             }
         }
     };

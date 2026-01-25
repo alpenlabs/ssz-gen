@@ -78,7 +78,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     {
                         let offset = 0usize;
                         let field_bytes = &self.bytes[offset..offset + 4usize];
@@ -195,7 +195,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     {
                         let offset = 0usize;
                         let field_bytes = &self.bytes[offset..offset + 8usize];
@@ -372,7 +372,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     {
                         let field = self.field().expect("valid view");
                         let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
@@ -446,7 +446,10 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> ContainerA {
                     ContainerA {
-                        field: self.field().expect("valid view").to_owned(),
+                        field: {
+                            let view = self.field().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
                         list: self
                             .list()
                             .expect("valid view")

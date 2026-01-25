@@ -149,7 +149,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
                     {
                         let payload = self.payload().expect("valid view");
                         let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
@@ -231,8 +231,14 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> ContainerWithExternal {
                     ContainerWithExternal {
-                        payload: self.payload().expect("valid view").to_owned(),
-                        account_id: self.account_id().expect("valid view").to_owned(),
+                        payload: {
+                            let view = self.payload().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
+                        account_id: {
+                            let view = self.account_id().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
                         messages: self
                             .messages()
                             .expect("valid view")

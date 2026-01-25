@@ -522,16 +522,12 @@ impl TypeResolution {
                 }
             }
             TypeResolutionKind::List(ty, size_expr) => {
-                let inner = &**ty;
                 let size = size_expr.value() as usize;
 
-                // Special case: List<u8, N> -> BytesRef<'a>
-                if matches!(inner.resolution, TypeResolutionKind::UInt(8)) {
-                    parse_quote!(BytesRef<'a>)
-                } else {
-                    let inner_view_ty = ty.to_view_type_inner(true, pragmas);
-                    parse_quote!(VariableListRef<'a, #inner_view_ty, #size>)
-                }
+                // Lists are represented as VariableListRef, even for u8, so tree hashing honors the
+                // limit.
+                let inner_view_ty = ty.to_view_type_inner(true, pragmas);
+                parse_quote!(VariableListRef<'a, #inner_view_ty, #size>)
             }
             TypeResolutionKind::Bitvector(size_expr) => {
                 let size = size_expr.value() as usize;
@@ -1278,6 +1274,8 @@ impl ClassDef {
                     })
                     .collect();
 
+                let num_fields = self.fields.len();
+
                 quote! {
                     impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ref_ident<'a> {
                         fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -1295,7 +1293,7 @@ impl ClassDef {
                         fn tree_hash_root(&self) -> H::Output {
                             use tree_hash::TreeHash;
 
-                            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(#num_fields);
                             #(#hash_operations)*
 
                             hasher.finish().expect("finish hasher")
@@ -1550,8 +1548,11 @@ impl ClassDef {
             .count();
 
         let bitvector_offset = match self.base {
-            BaseClass::StableContainer(_) | BaseClass::Profile(_) if optional_count > 0 => {
-                optional_count.div_ceil(8)
+            BaseClass::StableContainer(Some(max_fields))
+            | BaseClass::Profile(Some((_, max_fields)))
+                if optional_count > 0 =>
+            {
+                (max_fields as usize).div_ceil(8)
             }
             _ => 0,
         };
@@ -1929,7 +1930,11 @@ impl ClassDef {
                     .filter(|f| matches!(f.ty.resolution, TypeResolutionKind::Optional(_)))
                     .count();
 
-                let bitvector_length = optional_count.div_ceil(8);
+                let bitvector_length = if optional_count == 0 {
+                    0
+                } else {
+                    max_fields_usize.div_ceil(8)
+                };
 
                 // Generate validation for StableContainer/Profile
                 let validation = if bitvector_length == 0 {
@@ -2186,18 +2191,10 @@ impl ClassDef {
                             }
                         }
                         TypeResolutionKind::List(ty, _size) => {
-                            // Check if it's List<u8, N> which uses BytesRef
-                            let inner = &**ty;
-                            if matches!(inner.resolution, TypeResolutionKind::UInt(8)) {
-                                // BytesRef::to_owned() returns Vec<u8>, need to convert to VariableList
-                                quote! {
-                                    #field_name: self.#field_name().expect("valid view").to_owned().into()
-                                }
-                            } else {
-                                // VariableListRef::to_owned() returns Result<VariableList<T, N>, Error>
-                                quote! {
-                                    #field_name: self.#field_name().expect("valid view").to_owned().expect("valid view")
-                                }
+                            // VariableListRef::to_owned() returns Result<VariableList<T, N>, Error>
+                            let _inner = &**ty;
+                            quote! {
+                                #field_name: self.#field_name().expect("valid view").to_owned().expect("valid view")
                             }
                         }
                         TypeResolutionKind::Vector(ty, _size) => {

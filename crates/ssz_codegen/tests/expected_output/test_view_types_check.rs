@@ -2,7 +2,7 @@ pub mod tests {
     #![allow(unused_imports, reason = "generated code using ssz-gen")]
     pub mod input {
         #![allow(unused_imports, reason = "generated code using ssz-gen")]
-        pub mod test_comments {
+        pub mod test_view_types {
             #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
             use ssz_types::view::{FixedVectorRef, VariableListRef};
@@ -11,17 +11,13 @@ pub mod tests {
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
-            /// This is a doc comment for the Point class It can span multiple lines
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            pub struct Point {
-                /// X coordinate of the point
-                pub x: u32,
-                /// Y coordinate of the point
-                pub y: u32,
-                pub z: u32,
+            pub struct ExportEntry {
+                pub key: u32,
+                pub value: u64,
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Point {
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ExportEntry {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -33,22 +29,16 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.x)
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.key)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.y)
-                                .as_ref(),
-                        )
-                        .expect("tree hash derive should not apply too many leaves");
-                    hasher
-                        .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.z)
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.value)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -57,19 +47,19 @@ pub mod tests {
                         .expect("tree hash derive should not have a remaining buffer")
                 }
             }
-            /// Zero-copy view over [`Point`].
+            /// Zero-copy view over [`ExportEntry`].
             ///
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Clone, Debug, PartialEq, Eq, Copy)]
-            pub struct PointRef<'a> {
+            pub struct ExportEntryRef<'a> {
                 bytes: &'a [u8],
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> PointRef<'a> {
-                pub fn x(&self) -> Result<u32, ssz::DecodeError> {
+            impl<'a> ExportEntryRef<'a> {
+                pub fn key(&self) -> Result<u32, ssz::DecodeError> {
                     let offset = 0usize;
                     let end = offset + 4usize;
                     if end > self.bytes.len() {
@@ -81,21 +71,9 @@ pub mod tests {
                     let bytes = &self.bytes[offset..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
-                pub fn y(&self) -> Result<u32, ssz::DecodeError> {
+                pub fn value(&self) -> Result<u64, ssz::DecodeError> {
                     let offset = 4usize;
-                    let end = offset + 4usize;
-                    if end > self.bytes.len() {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: self.bytes.len(),
-                            expected: end,
-                        });
-                    }
-                    let bytes = &self.bytes[offset..end];
-                    ssz::view::DecodeView::from_ssz_bytes(bytes)
-                }
-                pub fn z(&self) -> Result<u32, ssz::DecodeError> {
-                    let offset = 8usize;
-                    let end = offset + 4usize;
+                    let end = offset + 8usize;
                     if end > self.bytes.len() {
                         return Err(ssz::DecodeError::InvalidByteLength {
                             len: self.bytes.len(),
@@ -107,7 +85,7 @@ pub mod tests {
                 }
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for PointRef<'a> {
+            for ExportEntryRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -119,7 +97,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     {
                         let offset = 0usize;
                         let field_bytes = &self.bytes[offset..offset + 4usize];
@@ -127,18 +105,13 @@ pub mod tests {
                     }
                     {
                         let offset = 4usize;
-                        let field_bytes = &self.bytes[offset..offset + 4usize];
-                        hasher.write(field_bytes).expect("write field");
-                    }
-                    {
-                        let offset = 8usize;
-                        let field_bytes = &self.bytes[offset..offset + 4usize];
+                        let field_bytes = &self.bytes[offset..offset + 8usize];
                         hasher.write(field_bytes).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }
             }
-            impl<'a> ssz::view::DecodeView<'a> for PointRef<'a> {
+            impl<'a> ssz::view::DecodeView<'a> for ExportEntryRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
                     if bytes.len() != 12usize {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -149,7 +122,7 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
-            impl<'a> ssz::view::SszTypeInfo for PointRef<'a> {
+            impl<'a> ssz::view::SszTypeInfo for ExportEntryRef<'a> {
                 fn is_ssz_fixed_len() -> bool {
                     true
                 }
@@ -158,40 +131,36 @@ pub mod tests {
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> ssz_types::view::ToOwnedSsz<Point> for PointRef<'a> {
+            impl<'a> ssz_types::view::ToOwnedSsz<ExportEntry> for ExportEntryRef<'a> {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
-                fn to_owned(&self) -> Point {
-                    <PointRef<'a>>::to_owned(self)
+                fn to_owned(&self) -> ExportEntry {
+                    <ExportEntryRef<'a>>::to_owned(self)
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> PointRef<'a> {
+            impl<'a> ExportEntryRef<'a> {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
-                pub fn to_owned(&self) -> Point {
-                    Point {
-                        x: self.x().expect("valid view"),
-                        y: self.y().expect("valid view"),
-                        z: self.z().expect("valid view"),
+                pub fn to_owned(&self) -> ExportEntry {
+                    ExportEntry {
+                        key: self.key().expect("valid view"),
+                        value: self.value().expect("valid view"),
                     }
                 }
             }
-            /// A container for coordinates
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            pub struct CoordinateContainer {
-                /// Latitude coordinate
-                pub lat: u64,
-                /// Longitude coordinate
-                pub lon: u64,
+            pub struct ViewTypeTest {
+                pub payload: VariableList<u8, 4096usize>,
+                pub entries: VariableList<ExportEntry, 256usize>,
+                pub hash: FixedBytes<32usize>,
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for CoordinateContainer {
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ViewTypeTest {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -203,16 +172,22 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.lat)
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.payload)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.lon)
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.entries)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.hash)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -221,33 +196,68 @@ pub mod tests {
                         .expect("tree hash derive should not have a remaining buffer")
                 }
             }
-            /// Zero-copy view over [`CoordinateContainer`].
+            /// Zero-copy view over [`ViewTypeTest`].
             ///
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Clone, Debug, PartialEq, Eq, Copy)]
-            pub struct CoordinateContainerRef<'a> {
+            pub struct ViewTypeTestRef<'a> {
                 bytes: &'a [u8],
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> CoordinateContainerRef<'a> {
-                pub fn lat(&self) -> Result<u64, ssz::DecodeError> {
-                    let offset = 0usize;
-                    let end = offset + 8usize;
-                    if end > self.bytes.len() {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: self.bytes.len(),
-                            expected: end,
-                        });
+            impl<'a> ViewTypeTestRef<'a> {
+                pub fn payload(
+                    &self,
+                ) -> Result<VariableListRef<'a, u8, 4096usize>, ssz::DecodeError> {
+                    let start = ssz::layout::read_variable_offset(
+                        self.bytes,
+                        40usize,
+                        2usize,
+                        0usize,
+                    )?;
+                    let end = ssz::layout::read_variable_offset_or_end(
+                        self.bytes,
+                        40usize,
+                        2usize,
+                        1usize,
+                    )?;
+                    if start > end || end > self.bytes.len() {
+                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
                     }
-                    let bytes = &self.bytes[offset..end];
+                    let bytes = &self.bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
-                pub fn lon(&self) -> Result<u64, ssz::DecodeError> {
+                pub fn entries(
+                    &self,
+                ) -> Result<
+                    VariableListRef<'a, ExportEntryRef<'a>, 256usize>,
+                    ssz::DecodeError,
+                > {
+                    let start = ssz::layout::read_variable_offset(
+                        self.bytes,
+                        40usize,
+                        2usize,
+                        1usize,
+                    )?;
+                    let end = ssz::layout::read_variable_offset_or_end(
+                        self.bytes,
+                        40usize,
+                        2usize,
+                        2usize,
+                    )?;
+                    if start > end || end > self.bytes.len() {
+                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+                    }
+                    let bytes = &self.bytes[start..end];
+                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                }
+                pub fn hash(
+                    &self,
+                ) -> Result<FixedBytesRef<'a, 32usize>, ssz::DecodeError> {
                     let offset = 8usize;
-                    let end = offset + 8usize;
+                    let end = offset + 32usize;
                     if end > self.bytes.len() {
                         return Err(ssz::DecodeError::InvalidByteLength {
                             len: self.bytes.len(),
@@ -259,7 +269,7 @@ pub mod tests {
                 }
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for CoordinateContainerRef<'a> {
+            for ViewTypeTestRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -271,60 +281,100 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
                     {
-                        let offset = 0usize;
-                        let field_bytes = &self.bytes[offset..offset + 8usize];
-                        hasher.write(field_bytes).expect("write field");
+                        let payload = self.payload().expect("valid view");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&payload);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
-                        let offset = 8usize;
-                        let field_bytes = &self.bytes[offset..offset + 8usize];
-                        hasher.write(field_bytes).expect("write field");
+                        let entries = self.entries().expect("valid view");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&entries);
+                        hasher.write(root.as_ref()).expect("write field");
+                    }
+                    {
+                        let hash = self.hash().expect("valid view");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                            H,
+                        >::tree_hash_root(&hash);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }
             }
-            impl<'a> ssz::view::DecodeView<'a> for CoordinateContainerRef<'a> {
+            impl<'a> ssz::view::DecodeView<'a> for ViewTypeTestRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    if bytes.len() != 16usize {
+                    if bytes.len() < 40usize {
                         return Err(ssz::DecodeError::InvalidByteLength {
                             len: bytes.len(),
-                            expected: 16usize,
+                            expected: 40usize,
                         });
+                    }
+                    let mut prev_offset: Option<usize> = None;
+                    for i in 0..2usize {
+                        let offset = ssz::layout::read_variable_offset(
+                            bytes,
+                            40usize,
+                            2usize,
+                            i,
+                        )?;
+                        if i == 0 && offset != 40usize {
+                            return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
+                        }
+                        if let Some(prev) = prev_offset && offset < prev {
+                            return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                        }
+                        if offset > bytes.len() {
+                            return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                        }
+                        prev_offset = Some(offset);
                     }
                     Ok(Self { bytes })
                 }
             }
-            impl<'a> ssz::view::SszTypeInfo for CoordinateContainerRef<'a> {
+            impl<'a> ssz::view::SszTypeInfo for ViewTypeTestRef<'a> {
                 fn is_ssz_fixed_len() -> bool {
-                    true
+                    false
                 }
                 fn ssz_fixed_len() -> usize {
-                    16usize
+                    0
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> ssz_types::view::ToOwnedSsz<CoordinateContainer>
-            for CoordinateContainerRef<'a> {
+            impl<'a> ssz_types::view::ToOwnedSsz<ViewTypeTest> for ViewTypeTestRef<'a> {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
-                fn to_owned(&self) -> CoordinateContainer {
-                    <CoordinateContainerRef<'a>>::to_owned(self)
+                fn to_owned(&self) -> ViewTypeTest {
+                    <ViewTypeTestRef<'a>>::to_owned(self)
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> CoordinateContainerRef<'a> {
+            impl<'a> ViewTypeTestRef<'a> {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
-                pub fn to_owned(&self) -> CoordinateContainer {
-                    CoordinateContainer {
-                        lat: self.lat().expect("valid view"),
-                        lon: self.lon().expect("valid view"),
+                pub fn to_owned(&self) -> ViewTypeTest {
+                    ViewTypeTest {
+                        payload: self
+                            .payload()
+                            .expect("valid view")
+                            .to_owned()
+                            .expect("valid view"),
+                        entries: self
+                            .entries()
+                            .expect("valid view")
+                            .to_owned()
+                            .expect("valid view"),
+                        hash: ssz_types::FixedBytes(
+                            self.hash().expect("valid view").to_owned(),
+                        ),
                     }
                 }
             }

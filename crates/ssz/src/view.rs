@@ -544,6 +544,12 @@ impl<'a, TRef: SszTypeInfo, const N: usize> VectorRef<'a, TRef, N> {
             let first_offset = read_offset(self.bytes)?;
             let current_offset_pos = index * BYTES_PER_LENGTH_OFFSET;
             let current_offset = read_offset(&self.bytes[current_offset_pos..])?;
+            let previous_offset = if index == 0 {
+                None
+            } else {
+                let previous_offset_pos = (index - 1) * BYTES_PER_LENGTH_OFFSET;
+                Some(read_offset(&self.bytes[previous_offset_pos..])?)
+            };
 
             let next_offset = if index + 1 < N {
                 let next_offset_pos = (index + 1) * BYTES_PER_LENGTH_OFFSET;
@@ -552,7 +558,12 @@ impl<'a, TRef: SszTypeInfo, const N: usize> VectorRef<'a, TRef, N> {
                 self.bytes.len()
             };
 
-            sanitize_offset(current_offset, None, self.bytes.len(), Some(first_offset))?;
+            sanitize_offset(
+                current_offset,
+                previous_offset,
+                self.bytes.len(),
+                Some(first_offset),
+            )?;
 
             if next_offset < current_offset || next_offset > self.bytes.len() {
                 return Err(DecodeError::OffsetsAreDecreasing(next_offset));

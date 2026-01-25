@@ -90,7 +90,7 @@ pub mod test_cross_entry_state {
         }
         fn tree_hash_root(&self) -> H::Output {
             use tree_hash::TreeHash;
-            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
             {
                 let data = self.data().expect("valid view");
                 let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
@@ -241,7 +241,9 @@ pub mod test_cross_entry_update {
             let bytes = &self.bytes[offset..end];
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
-        pub fn updates(&self) -> Result<BytesRef<'a>, ssz::DecodeError> {
+        pub fn updates(
+            &self,
+        ) -> Result<VariableListRef<'a, u8, 10usize>, ssz::DecodeError> {
             let start = ssz::layout::read_variable_offset(
                 self.bytes,
                 16usize,
@@ -273,7 +275,7 @@ pub mod test_cross_entry_update {
         }
         fn tree_hash_root(&self) -> H::Output {
             use tree_hash::TreeHash;
-            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
             {
                 let state = self.state().expect("valid view");
                 let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
@@ -346,9 +348,16 @@ pub mod test_cross_entry_update {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> Update {
             Update {
-                state: self.state().expect("valid view").to_owned(),
+                state: {
+                    let view = self.state().expect("valid view");
+                    ssz_types::view::ToOwnedSsz::to_owned(&view)
+                },
                 timestamp: self.timestamp().expect("valid view"),
-                updates: self.updates().expect("valid view").to_owned().into(),
+                updates: self
+                    .updates()
+                    .expect("valid view")
+                    .to_owned()
+                    .expect("valid view"),
             }
         }
     }

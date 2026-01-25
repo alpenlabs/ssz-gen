@@ -2,7 +2,7 @@ pub mod tests {
     #![allow(unused_imports, reason = "generated code using ssz-gen")]
     pub mod input {
         #![allow(unused_imports, reason = "generated code using ssz-gen")]
-        pub mod test_cross_entry_state {
+        pub mod test_union_empty_variant {
             #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
             use ssz_types::view::{FixedVectorRef, VariableListRef};
@@ -11,15 +11,147 @@ pub mod tests {
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
-            #[allow(dead_code, reason = "generated code using ssz-gen")]
-            pub const MAX_VK_BYTES: u64 = 48u64;
+            /// Union with both empty and data variants
+            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+            #[ssz(enum_behaviour = "union")]
+            pub enum TestUnion {
+                /// Empty variant (no data)
+                Empty,
+                /// Variant with data
+                Data(DataVariant),
+            }
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for TestUnion {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Container
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Union should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Union should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    match self {
+                        TestUnion::Empty => {
+                            let zero_root = H::get_zero_hash(0);
+                            tree_hash::mix_in_selector_with_hasher::<H>(&zero_root, 0u8)
+                                .expect("valid selector")
+                        }
+                        TestUnion::Data(inner) => {
+                            let root = <_ as tree_hash::TreeHash<
+                                H,
+                            >>::tree_hash_root(inner);
+                            tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
+                                .expect("valid selector")
+                        }
+                    }
+                }
+            }
+            pub type DataRef<'a> = DataVariantRef<'a>;
+            #[derive(Debug, Copy, Clone)]
+            pub struct TestUnionRef<'a> {
+                bytes: &'a [u8],
+            }
+            impl<'a> TestUnionRef<'a> {
+                pub fn selector(&self) -> u8 {
+                    self.bytes[0]
+                }
+                pub fn as_selector0(&self) -> Result<(), ssz::DecodeError> {
+                    if self.selector() != 0u8 {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                "Wrong selector for TestUnion: expected 0".to_string(),
+                            ),
+                        );
+                    }
+                    Ok(())
+                }
+                pub fn as_selector1(&self) -> Result<DataRef<'_>, ssz::DecodeError> {
+                    if self.selector() != 1u8 {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                "Wrong selector for TestUnion: expected 1".to_string(),
+                            ),
+                        );
+                    }
+                    ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
+                }
+                pub fn to_owned(&self) -> TestUnion {
+                    match self.selector() {
+                        0u8 => {
+                            self.as_selector0().expect("valid selector");
+                            TestUnion::Empty
+                        }
+                        1u8 => {
+                            TestUnion::Data({
+                                let view = self.as_selector1().expect("valid selector");
+                                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
+                        }
+                        _ => panic!("Invalid union selector: {}", self.selector()),
+                    }
+                }
+            }
+            impl<'a> ssz::view::DecodeView<'a> for TestUnionRef<'a> {
+                fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
+                    let (_, _) = ssz::split_union_bytes(bytes)?;
+                    Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for TestUnionRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<TestUnion> for TestUnionRef<'a> {
+                fn to_owned(&self) -> TestUnion {
+                    <TestUnionRef<'a>>::to_owned(self)
+                }
+            }
+            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
+            for TestUnionRef<'a> {
+                fn tree_hash_type() -> tree_hash::TreeHashType {
+                    tree_hash::TreeHashType::Vector
+                }
+                fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
+                    unreachable!("Union should never be packed")
+                }
+                fn tree_hash_packing_factor() -> usize {
+                    unreachable!("Union should never be packed")
+                }
+                fn tree_hash_root(&self) -> H::Output {
+                    match self.selector() {
+                        0u8 => {
+                            let zero_root = H::get_zero_hash(0);
+                            tree_hash::mix_in_selector_with_hasher::<H>(&zero_root, 0u8)
+                                .expect("valid selector")
+                        }
+                        1u8 => {
+                            let value = self.as_selector1().expect("valid selector");
+                            tree_hash::mix_in_selector_with_hasher::<
+                                H,
+                            >(
+                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    1u8,
+                                )
+                                .expect("valid selector")
+                        }
+                        _ => panic!("Invalid union selector: {}", self.selector()),
+                    }
+                }
+            }
+            /// Test union with empty/unit variant
+            ///
+            /// Some container type for the union variant
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            pub struct State {
-                pub data: FixedBytes<48usize>,
-                pub counter: u64,
+            pub struct DataVariant {
+                pub value: u64,
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for State {
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for DataVariant {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -31,16 +163,10 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.data)
-                                .as_ref(),
-                        )
-                        .expect("tree hash derive should not apply too many leaves");
-                    hasher
-                        .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.counter)
+                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.value)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -49,34 +175,20 @@ pub mod tests {
                         .expect("tree hash derive should not have a remaining buffer")
                 }
             }
-            /// Zero-copy view over [`State`].
+            /// Zero-copy view over [`DataVariant`].
             ///
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Clone, Debug, PartialEq, Eq, Copy)]
-            pub struct StateRef<'a> {
+            pub struct DataVariantRef<'a> {
                 bytes: &'a [u8],
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> StateRef<'a> {
-                pub fn data(
-                    &self,
-                ) -> Result<FixedBytesRef<'a, 48usize>, ssz::DecodeError> {
+            impl<'a> DataVariantRef<'a> {
+                pub fn value(&self) -> Result<u64, ssz::DecodeError> {
                     let offset = 0usize;
-                    let end = offset + 48usize;
-                    if end > self.bytes.len() {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: self.bytes.len(),
-                            expected: end,
-                        });
-                    }
-                    let bytes = &self.bytes[offset..end];
-                    ssz::view::DecodeView::from_ssz_bytes(bytes)
-                }
-                pub fn counter(&self) -> Result<u64, ssz::DecodeError> {
-                    let offset = 48usize;
                     let end = offset + 8usize;
                     if end > self.bytes.len() {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -89,7 +201,7 @@ pub mod tests {
                 }
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for StateRef<'a> {
+            for DataVariantRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -101,86 +213,63 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     {
-                        let data = self.data().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
-                            H,
-                        >::tree_hash_root(&data);
-                        hasher.write(root.as_ref()).expect("write field");
-                    }
-                    {
-                        let offset = 48usize;
+                        let offset = 0usize;
                         let field_bytes = &self.bytes[offset..offset + 8usize];
                         hasher.write(field_bytes).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }
             }
-            impl<'a> ssz::view::DecodeView<'a> for StateRef<'a> {
+            impl<'a> ssz::view::DecodeView<'a> for DataVariantRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    if bytes.len() != 56usize {
+                    if bytes.len() != 8usize {
                         return Err(ssz::DecodeError::InvalidByteLength {
                             len: bytes.len(),
-                            expected: 56usize,
+                            expected: 8usize,
                         });
                     }
                     Ok(Self { bytes })
                 }
             }
-            impl<'a> ssz::view::SszTypeInfo for StateRef<'a> {
+            impl<'a> ssz::view::SszTypeInfo for DataVariantRef<'a> {
                 fn is_ssz_fixed_len() -> bool {
                     true
                 }
                 fn ssz_fixed_len() -> usize {
-                    56usize
+                    8usize
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> ssz_types::view::ToOwnedSsz<State> for StateRef<'a> {
+            impl<'a> ssz_types::view::ToOwnedSsz<DataVariant> for DataVariantRef<'a> {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
-                fn to_owned(&self) -> State {
-                    <StateRef<'a>>::to_owned(self)
+                fn to_owned(&self) -> DataVariant {
+                    <DataVariantRef<'a>>::to_owned(self)
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> StateRef<'a> {
+            impl<'a> DataVariantRef<'a> {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
-                pub fn to_owned(&self) -> State {
-                    State {
-                        data: ssz_types::FixedBytes(
-                            self.data().expect("valid view").to_owned(),
-                        ),
-                        counter: self.counter().expect("valid view"),
+                pub fn to_owned(&self) -> DataVariant {
+                    DataVariant {
+                        value: self.value().expect("valid view"),
                     }
                 }
             }
-        }
-        pub mod test_cross_entry_update {
-            #![allow(unused_imports, reason = "generated code using ssz-gen")]
-            use ssz_types::*;
-            use ssz_types::view::{FixedVectorRef, VariableListRef};
-            use ssz_primitives::{U128, U256};
-            use ssz_derive::{Encode, Decode};
-            use tree_hash::TreeHashDigest;
-            use tree_hash_derive::TreeHash;
-            use ssz::view::*;
-            #[allow(dead_code, reason = "generated code using ssz-gen")]
-            pub const MAX_UPDATES: u64 = 10u64;
+            /// Container using the union
             #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
             #[ssz(struct_behaviour = "container")]
-            pub struct Update {
-                pub state: crate::tests::input::test_cross_entry_state::State,
-                pub timestamp: u64,
-                pub updates: VariableList<u8, 10usize>,
+            pub struct TestContainer {
+                pub state: TestUnion,
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Update {
+            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for TestContainer {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -192,7 +281,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     hasher
                         .write(
                             <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.state)
@@ -200,86 +289,34 @@ pub mod tests {
                         )
                         .expect("tree hash derive should not apply too many leaves");
                     hasher
-                        .write(
-                            <_ as tree_hash::TreeHash<
-                                H,
-                            >>::tree_hash_root(&self.timestamp)
-                                .as_ref(),
-                        )
-                        .expect("tree hash derive should not apply too many leaves");
-                    hasher
-                        .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.updates)
-                                .as_ref(),
-                        )
-                        .expect("tree hash derive should not apply too many leaves");
-                    hasher
                         .finish()
                         .expect("tree hash derive should not have a remaining buffer")
                 }
             }
-            /// Zero-copy view over [`Update`].
+            /// Zero-copy view over [`TestContainer`].
             ///
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             #[derive(Clone, Debug, PartialEq, Eq, Copy)]
-            pub struct UpdateRef<'a> {
+            pub struct TestContainerRef<'a> {
                 bytes: &'a [u8],
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> UpdateRef<'a> {
-                pub fn state(
-                    &self,
-                ) -> Result<
-                    crate::tests::input::test_cross_entry_state::StateRef<'a>,
-                    ssz::DecodeError,
-                > {
+            impl<'a> TestContainerRef<'a> {
+                pub fn state(&self) -> Result<TestUnionRef<'a>, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
                         self.bytes,
-                        16usize,
-                        2usize,
+                        4usize,
+                        1usize,
                         0usize,
                     )?;
                     let end = ssz::layout::read_variable_offset_or_end(
                         self.bytes,
-                        16usize,
-                        2usize,
+                        4usize,
                         1usize,
-                    )?;
-                    if start > end || end > self.bytes.len() {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                    }
-                    let bytes = &self.bytes[start..end];
-                    ssz::view::DecodeView::from_ssz_bytes(bytes)
-                }
-                pub fn timestamp(&self) -> Result<u64, ssz::DecodeError> {
-                    let offset = 4usize;
-                    let end = offset + 8usize;
-                    if end > self.bytes.len() {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: self.bytes.len(),
-                            expected: end,
-                        });
-                    }
-                    let bytes = &self.bytes[offset..end];
-                    ssz::view::DecodeView::from_ssz_bytes(bytes)
-                }
-                pub fn updates(
-                    &self,
-                ) -> Result<VariableListRef<'a, u8, 10usize>, ssz::DecodeError> {
-                    let start = ssz::layout::read_variable_offset(
-                        self.bytes,
-                        16usize,
-                        2usize,
                         1usize,
-                    )?;
-                    let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
-                        16usize,
-                        2usize,
-                        2usize,
                     )?;
                     if start > end || end > self.bytes.len() {
                         return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
@@ -289,7 +326,7 @@ pub mod tests {
                 }
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for UpdateRef<'a> {
+            for TestContainerRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -301,7 +338,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     {
                         let state = self.state().expect("valid view");
                         let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
@@ -309,38 +346,26 @@ pub mod tests {
                         >::tree_hash_root(&state);
                         hasher.write(root.as_ref()).expect("write field");
                     }
-                    {
-                        let offset = 4usize;
-                        let field_bytes = &self.bytes[offset..offset + 8usize];
-                        hasher.write(field_bytes).expect("write field");
-                    }
-                    {
-                        let updates = self.updates().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
-                            H,
-                        >::tree_hash_root(&updates);
-                        hasher.write(root.as_ref()).expect("write field");
-                    }
                     hasher.finish().expect("finish hasher")
                 }
             }
-            impl<'a> ssz::view::DecodeView<'a> for UpdateRef<'a> {
+            impl<'a> ssz::view::DecodeView<'a> for TestContainerRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    if bytes.len() < 16usize {
+                    if bytes.len() < 4usize {
                         return Err(ssz::DecodeError::InvalidByteLength {
                             len: bytes.len(),
-                            expected: 16usize,
+                            expected: 4usize,
                         });
                     }
                     let mut prev_offset: Option<usize> = None;
-                    for i in 0..2usize {
+                    for i in 0..1usize {
                         let offset = ssz::layout::read_variable_offset(
                             bytes,
-                            16usize,
-                            2usize,
+                            4usize,
+                            1usize,
                             i,
                         )?;
-                        if i == 0 && offset != 16usize {
+                        if i == 0 && offset != 4usize {
                             return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
                         }
                         if let Some(prev) = prev_offset && offset < prev {
@@ -354,7 +379,7 @@ pub mod tests {
                     Ok(Self { bytes })
                 }
             }
-            impl<'a> ssz::view::SszTypeInfo for UpdateRef<'a> {
+            impl<'a> ssz::view::SszTypeInfo for TestContainerRef<'a> {
                 fn is_ssz_fixed_len() -> bool {
                     false
                 }
@@ -363,33 +388,28 @@ pub mod tests {
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> ssz_types::view::ToOwnedSsz<Update> for UpdateRef<'a> {
+            impl<'a> ssz_types::view::ToOwnedSsz<TestContainer>
+            for TestContainerRef<'a> {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
-                fn to_owned(&self) -> Update {
-                    <UpdateRef<'a>>::to_owned(self)
+                fn to_owned(&self) -> TestContainer {
+                    <TestContainerRef<'a>>::to_owned(self)
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> UpdateRef<'a> {
+            impl<'a> TestContainerRef<'a> {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
-                pub fn to_owned(&self) -> Update {
-                    Update {
+                pub fn to_owned(&self) -> TestContainer {
+                    TestContainer {
                         state: {
                             let view = self.state().expect("valid view");
                             ssz_types::view::ToOwnedSsz::to_owned(&view)
                         },
-                        timestamp: self.timestamp().expect("valid view"),
-                        updates: self
-                            .updates()
-                            .expect("valid view")
-                            .to_owned()
-                            .expect("valid view"),
                     }
                 }
             }
