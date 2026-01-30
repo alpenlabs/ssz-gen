@@ -138,6 +138,12 @@ fn collect_imports_from_ty_expr(spec: &TyExprSpec, imports: &mut HashSet<PathBuf
                 collect_imports_from_ty_arg(arg, imports);
             }
         }
+        TyExprSpec::ImportedComplex(imported) => {
+            imports.insert(imported.module_path().clone());
+            for arg in imported.args() {
+                collect_imports_from_ty_arg(arg, imports);
+            }
+        }
         TyExprSpec::Simple(_) | TyExprSpec::None => {}
     }
 }
@@ -150,6 +156,12 @@ fn collect_imports_from_ty_arg(spec: &TyArgSpec, imports: &mut HashSet<PathBuf>)
         }
         TyArgSpec::Complex(complex) => {
             for arg in complex.args() {
+                collect_imports_from_ty_arg(arg, imports);
+            }
+        }
+        TyArgSpec::ImportedComplex(imported) => {
+            imports.insert(imported.module_path().clone());
+            for arg in imported.args() {
                 collect_imports_from_ty_arg(arg, imports);
             }
         }
@@ -169,6 +181,12 @@ fn get_module_imports(module: &Module) -> HashSet<PathBuf> {
                 }
                 AssignExpr::Complex(complex) => {
                     for arg in complex.args() {
+                        collect_imports_from_ty_arg(arg, &mut imports);
+                    }
+                }
+                AssignExpr::ImportedComplex(imported) => {
+                    imports.insert(imported.module_path().clone());
+                    for arg in imported.args() {
                         collect_imports_from_ty_arg(arg, &mut imports);
                     }
                 }
