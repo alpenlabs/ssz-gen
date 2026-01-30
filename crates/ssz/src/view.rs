@@ -267,8 +267,13 @@ impl<'a, TRef: SszTypeInfo> ListRef<'a, TRef> {
                     return Err(DecodeError::InvalidListFixedBytesLen(bytes.len()));
                 }
                 // Validate first offset - it should point to the first byte after all offsets
-                // We don't know the exact fixed portion size yet, so we'll validate during
-                // iteration
+                let first_offset = read_offset(bytes)?;
+                if first_offset < BYTES_PER_LENGTH_OFFSET
+                    || !first_offset.is_multiple_of(BYTES_PER_LENGTH_OFFSET)
+                {
+                    return Err(DecodeError::InvalidListFixedBytesLen(first_offset));
+                }
+                sanitize_offset(first_offset, None, bytes.len(), Some(first_offset))?;
             }
         }
         Ok(Self {
@@ -1149,6 +1154,13 @@ mod tests {
         let view = ListRef::<u64>::new(bytes).unwrap();
         assert_eq!(view.len(), 0);
         assert!(view.is_empty());
+    }
+
+    #[test]
+    fn list_ref_rejects_zero_first_offset() {
+        let bytes = vec![0, 0, 0, 0, 0xde, 0xad, 0xbe, 0xef];
+        let err = ListRef::<BytesRef<'_>>::new(&bytes).unwrap_err();
+        assert!(matches!(err, DecodeError::InvalidListFixedBytesLen(_)));
     }
 
     #[test]
