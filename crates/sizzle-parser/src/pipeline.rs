@@ -427,6 +427,27 @@ TestB = mod_b.TypeB
     }
 
     #[test]
+    fn test_imported_generic_types_parse() {
+        const SCHEMA: &str = r"
+import external_crate
+
+Foo = external_crate.Vector[uint8, 32]
+
+class Example(Container):
+    bytes: external_crate.List[uint8, 16]
+    nested: external_crate.Vector[external_crate.List[uint8, 4], 2]
+";
+
+        let files = HashMap::from([(Path::new("test.ssz").to_path_buf(), SCHEMA.to_string())]);
+
+        let result = parse_str_schema(&files, &["external_crate"]);
+        assert!(
+            result.is_ok(),
+            "Imported generic types should parse successfully"
+        );
+    }
+
+    #[test]
     fn test_schema_without_trailing_newline() {
         // Test that parsing works when the file doesn't end with a newline
         // This was causing an infinite loop in parse_class_body

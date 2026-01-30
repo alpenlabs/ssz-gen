@@ -143,6 +143,9 @@ pub(crate) enum AssignExpr {
     /// This could be another const name or a type expression.
     Imported(ImportedTySpec),
 
+    /// An imported name with type arguments.
+    ImportedComplex(ImportedComplexTySpec),
+
     /// A type expression.
     Complex(ComplexTySpec),
 
@@ -268,6 +271,9 @@ pub(crate) enum TyExprSpec {
     /// This is an imported type.
     Imported(ImportedTySpec),
 
+    /// This is an imported type with arguments.
+    ImportedComplex(ImportedComplexTySpec),
+
     /// This is just a single identifier.  It could refer to a type or a const.
     Simple(Identifier),
 
@@ -285,6 +291,7 @@ impl TyExprSpec {
             TyExprSpec::Simple(name) => name,
             TyExprSpec::Complex(spec) => &spec.base_name,
             TyExprSpec::Imported(spec) => &spec.base_name,
+            TyExprSpec::ImportedComplex(spec) => spec.base_name(),
             TyExprSpec::None => panic!("None type has no base name"),
         }
     }
@@ -340,6 +347,42 @@ impl ImportedTySpec {
     }
 }
 
+/// An imported type with generic arguments.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ImportedComplexTySpec {
+    imported: ImportedTySpec,
+    args: Vec<TyArgSpec>,
+}
+
+impl ImportedComplexTySpec {
+    pub fn new(module_path: PathBuf, base_name: Identifier, args: Vec<TyArgSpec>) -> Self {
+        Self {
+            imported: ImportedTySpec::new(module_path, base_name),
+            args,
+        }
+    }
+
+    pub fn module_path(&self) -> &PathBuf {
+        self.imported.module_path()
+    }
+
+    pub fn module_name(&self) -> &Identifier {
+        self.imported.module_name()
+    }
+
+    pub fn base_name(&self) -> &Identifier {
+        self.imported.base_name()
+    }
+
+    pub fn full_name(&self) -> Identifier {
+        self.imported.full_name()
+    }
+
+    pub fn args(&self) -> &[TyArgSpec] {
+        &self.args
+    }
+}
+
 /// An instantiated generic type.
 ///
 /// At this stage we have not verified that `base_name` is actually a type.
@@ -368,6 +411,9 @@ impl ComplexTySpec {
 pub enum TyArgSpec {
     /// An imported type.
     Imported(ImportedTySpec),
+
+    /// An imported type with arguments.
+    ImportedComplex(ImportedComplexTySpec),
 
     /// An identifier, which could be a constant or a type name.
     Ident(Identifier),
@@ -649,6 +695,22 @@ fn parse_assign_expr(
             AssignExpr::Complex(ComplexTySpec::new(name.clone(), args))
         }
 
+        [
+            TaggedToktr::Identifier(_, module_name),
+            TaggedToktr::Dot(_),
+            TaggedToktr::Identifier(_, ident),
+            TaggedToktr::BracketBlock(_, arg_toks),
+        ] => {
+            let module_path = import_map.get(module_name).unwrap();
+            let mut gob = Gobbler::new(arg_toks.children());
+            let args = parse_ty_args(&mut gob, import_map)?;
+            AssignExpr::ImportedComplex(ImportedComplexTySpec::new(
+                module_path.clone(),
+                ident.clone(),
+                args,
+            ))
+        }
+
         // Simple integer expression.
         [TaggedToktr::IntegerLiteral(_, v)] => AssignExpr::Value(ConstValue::Int(*v)),
 
@@ -811,7 +873,19 @@ fn parse_ty(
             gob.gobble_one();
 
             let module_path = import_map.get(&first_ident).unwrap();
-            TyExprSpec::Imported(ImportedTySpec::new(module_path.clone(), second_ident))
+            match gob.get() {
+                Some(TaggedToktr::BracketBlock(_, data)) => {
+                    let mut args_gob = Gobbler::new(data.children());
+                    let args = parse_ty_args(&mut args_gob, import_map)?;
+                    gob.gobble_one();
+                    TyExprSpec::ImportedComplex(ImportedComplexTySpec::new(
+                        module_path.clone(),
+                        second_ident,
+                        args,
+                    ))
+                }
+                _ => TyExprSpec::Imported(ImportedTySpec::new(module_path.clone(), second_ident)),
+            }
         }
 
         Some(t) => {
@@ -890,11 +964,22 @@ fn parse_ty_arg(
                     gob.gobble_one();
 
                     let module_path = import_map.get(&first_ident).unwrap();
-
-                    Ok(TyArgSpec::Imported(ImportedTySpec::new(
-                        module_path.clone(),
-                        second_ident,
-                    )))
+                    match gob.get() {
+                        Some(TaggedToktr::BracketBlock(_, data)) => {
+                            let mut args_gob = Gobbler::new(data.children());
+                            let args = parse_ty_args(&mut args_gob, import_map)?;
+                            gob.gobble_one();
+                            Ok(TyArgSpec::ImportedComplex(ImportedComplexTySpec::new(
+                                module_path.clone(),
+                                second_ident,
+                                args,
+                            )))
+                        }
+                        _ => Ok(TyArgSpec::Imported(ImportedTySpec::new(
+                            module_path.clone(),
+                            second_ident,
+                        ))),
+                    }
                 }
 
                 // This would be the next item.
@@ -979,6 +1064,35 @@ fn parse_class_body(
                 let mut arg_gob = Gobbler::new(tyarg_data.children());
                 let ty_args = parse_ty_args(&mut arg_gob, import_map)?;
                 let ty = TyExprSpec::Complex(ComplexTySpec::new(tyname.clone(), ty_args));
+                let mut field = FieldDef::new(fname.clone(), ty);
+                // Attach comments to the field
+                if let Some(field_doc) = comment_buffer.take_doc_comment() {
+                    field.set_doc_comment(Some(field_doc));
+                }
+                let pragmas = comment_buffer.take_pragmas();
+                for pragma in pragmas {
+                    field.add_pragma(pragma);
+                }
+                fields.push(field);
+                comment_buffer.clear();
+            }
+
+            [
+                Identifier(_, fname),
+                Colon(_),
+                Identifier(_, first_ident),
+                Dot(_),
+                Identifier(_, second_ident),
+                BracketBlock(_, tyarg_data),
+            ] => {
+                let module_path = import_map.get(first_ident).unwrap();
+                let mut arg_gob = Gobbler::new(tyarg_data.children());
+                let ty_args = parse_ty_args(&mut arg_gob, import_map)?;
+                let ty = TyExprSpec::ImportedComplex(ImportedComplexTySpec::new(
+                    module_path.clone(),
+                    second_ident.clone(),
+                    ty_args,
+                ));
                 let mut field = FieldDef::new(fname.clone(), ty);
                 // Attach comments to the field
                 if let Some(field_doc) = comment_buffer.take_doc_comment() {

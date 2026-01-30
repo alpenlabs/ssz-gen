@@ -246,6 +246,17 @@ pub(crate) fn conv_module_to_schema<'a>(
                     });
                 }
 
+                AssignExpr::ImportedComplex(imported) => {
+                    let ty = resolver
+                        .resolve_spec_as_ty(&TyExprSpec::ImportedComplex(imported.clone()))?;
+                    resolver.decl_user_type(name.clone())?;
+                    idents.insert(name.clone(), IdentTarget::Ty(TypeData {}));
+                    aliases.push(AliasDef {
+                        name: name.clone(),
+                        ty,
+                    });
+                }
+
                 // This is pretty straightforward, we just look up the identifier in-place.
                 AssignExpr::Name(ident) => match resolver.resolve_ident_with_args(ident, None)? {
                     TyExpr::Ty(ty) => {
