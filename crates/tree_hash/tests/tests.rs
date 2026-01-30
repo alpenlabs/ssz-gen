@@ -22,6 +22,11 @@ struct HashVec {
     vec: Vec<u8>,
 }
 
+#[derive(Encode)]
+struct MacroList(VariableList<u8, 64>);
+
+tree_hash::tree_hash_ssz_encoding_as_list!(MacroList, 64);
+
 impl From<Vec<u8>> for HashVec {
     fn from(vec: Vec<u8>) -> Self {
         Self { vec }
@@ -56,6 +61,17 @@ impl tree_hash::TreeHash<tree_hash::Sha256Hasher> for HashVec {
 
         tree_hash::mix_in_length_with_hasher::<tree_hash::Sha256Hasher>(&root, self.vec.len())
     }
+}
+
+#[test]
+fn macro_list_tree_hash_matches_variable_list() {
+    let list: VariableList<u8, 64> = vec![0x42].into();
+    let macro_list = MacroList(list.clone());
+
+    let list_root = TreeHash::<Sha256Hasher>::tree_hash_root(&list);
+    let macro_root = TreeHash::<Sha256Hasher>::tree_hash_root(&macro_list);
+
+    assert_eq!(macro_root, list_root);
 }
 
 fn mix_in_selector(a: Hash256, selector: u8) -> Hash256 {

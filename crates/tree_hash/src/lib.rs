@@ -384,9 +384,11 @@ macro_rules! tree_hash_ssz_encoding_as_vector {
 }
 
 /// Macro for implementing `TreeHash` for a type that is encoded as a list.
+///
+/// The `limit` should be the list's maximum length in bytes (e.g. `List[byte, N]`).
 #[macro_export]
 macro_rules! tree_hash_ssz_encoding_as_list {
-    ($type: ident) => {
+    ($type: ident, $limit: expr) => {
         impl<H: TreeHashDigest> tree_hash::TreeHash<H> for $type {
             fn tree_hash_type() -> tree_hash::TreeHashType {
                 tree_hash::TreeHashType::List
@@ -401,9 +403,18 @@ macro_rules! tree_hash_ssz_encoding_as_list {
             }
 
             fn tree_hash_root(&self) -> H::Output {
-                tree_hash::merkle_root_with_hasher::<H>(&ssz::ssz_encode(self), 0)
+                let bytes = ssz::ssz_encode(self);
+                let limit: usize = $limit;
+                let minimum_leaf_count = limit.div_ceil(tree_hash::BYTES_PER_CHUNK);
+                let chunks_root = tree_hash::merkle_root_with_hasher::<H>(&bytes, minimum_leaf_count);
+                tree_hash::mix_in_length_with_hasher::<H>(&chunks_root, bytes.len())
             }
         }
+    };
+    ($type: ident) => {
+        compile_error!(
+            "tree_hash_ssz_encoding_as_list! now requires a list limit: tree_hash_ssz_encoding_as_list!(Type, LIMIT)"
+        );
     };
 }
 
