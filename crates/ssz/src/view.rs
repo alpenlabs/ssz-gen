@@ -1332,6 +1332,34 @@ mod tests {
     }
 
     #[test]
+    fn vector_ref_variable_offsets_valid() {
+        let encoded = vec![
+            0x08, 0x00, 0x00, 0x00, // offset[0] = 8
+            0x09, 0x00, 0x00, 0x00, // offset[1] = 9
+            0xAA, 0xBB,
+        ];
+
+        let view = VectorRef::<BytesRef<'_>, 2>::new(&encoded).unwrap();
+        assert_eq!(view.get(0).unwrap().as_bytes(), &[0xAA]);
+        assert_eq!(view.get(1).unwrap().as_bytes(), &[0xBB]);
+    }
+
+    #[test]
+    fn vector_ref_rejects_decreasing_offsets() {
+        let bytes = vec![
+            0x0c, 0x00, 0x00, 0x00, // offset[0] = 12
+            0x14, 0x00, 0x00, 0x00, // offset[1] = 20
+            0x0c, 0x00, 0x00, 0x00, // offset[2] = 12 (decreasing)
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
+            0x0f, 0x10,
+        ];
+
+        let view = VectorRef::<BytesRef<'_>, 3>::new(&bytes).unwrap();
+        let err = view.get(2).unwrap_err();
+        assert!(matches!(err, DecodeError::OffsetsAreDecreasing(_)));
+    }
+
+    #[test]
     fn bitvector_ref_excess_bits() {
         // Bitvector with excess bits set should fail
         let bytes = [0b1111_1111u8]; // All bits set, but only 4 should be valid
