@@ -223,6 +223,46 @@ pub fn merkle_root_with_hasher<H: TreeHashDigest>(
     }
 }
 
+/// Merkleize a list of 32-byte chunks using the progressive tree shape.
+///
+/// See EIP-7916 for details on progressive merkleization.
+pub fn merkleize_progressive_with_hasher<H: TreeHashDigest>(chunks: &[H::Output]) -> H::Output {
+    merkleize_progressive_with_hasher_inner::<H>(chunks, 1)
+}
+
+fn merkleize_progressive_with_hasher_inner<H: TreeHashDigest>(
+    chunks: &[H::Output],
+    num_leaves: usize,
+) -> H::Output {
+    if chunks.is_empty() {
+        return H::get_zero_hash(0);
+    }
+
+    let left_len = std::cmp::min(num_leaves, chunks.len());
+    let left_root = merkleize_progressive_subtree::<H>(&chunks[..left_len], num_leaves);
+    let right_root = merkleize_progressive_with_hasher_inner::<H>(
+        &chunks[left_len..],
+        num_leaves.saturating_mul(4),
+    );
+
+    H::hash32_concat(left_root.as_ref(), right_root.as_ref())
+}
+
+fn merkleize_progressive_subtree<H: TreeHashDigest>(
+    chunks: &[H::Output],
+    num_leaves: usize,
+) -> H::Output {
+    let mut hasher = MerkleHasher::<H>::with_leaves(num_leaves);
+    for chunk in chunks {
+        hasher
+            .write(chunk.as_ref())
+            .expect("progressive merkleize leaves within limit");
+    }
+    hasher
+        .finish()
+        .expect("progressive merkleize leaves within limit")
+}
+
 /// Returns the node created by hashing `root` and `length`.
 ///
 /// Used in `TreeHash` for inserting the length of a list above it's root.

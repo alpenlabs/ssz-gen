@@ -294,6 +294,8 @@ fn tree_hash_derive_struct_stable_container(
         ty_inner_type("Optional", ty).expect("Use Optional<T> for StableContainer");
     }
 
+    let num_fields = idents.len();
+
     let output = quote! {
         impl #impl_generics tree_hash::TreeHash<#hasher_type> for #name #ty_generics #where_clause {
             fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -321,20 +323,19 @@ fn tree_hash_derive_struct_stable_container(
                     working_field += 1;
                 )*
 
-                // Hash according to `max_fields` regardless of the actual number of fields on the struct.
-                let mut hasher = tree_hash::MerkleHasher::<#hasher_type>::with_leaves(#max_fields);
-
+                let mut field_roots: Vec<<#hasher_type as tree_hash::TreeHashDigest>::Output> =
+                    Vec::with_capacity(#num_fields);
                 #(
                     if self.#idents.is_some() {
-                        hasher.write(<_ as tree_hash::TreeHash<#hasher_type>>::tree_hash_root(&self.#idents).as_ref())
-                            .expect("tree hash derive should not apply too many leaves");
+                        field_roots.push(<_ as tree_hash::TreeHash<#hasher_type>>::tree_hash_root(&self.#idents));
                     } else {
-                        hasher.write(#hasher_type::get_zero_hash_slice(0))
-                            .expect("tree hash derive should not apply too many leaves");
+                        field_roots.push(#hasher_type::get_zero_hash(0));
                     }
                 )*
-
-                let hash = hasher.finish().expect("tree hash derive should not have a remaining buffer");
+                for _ in #num_fields..#max_fields {
+                    field_roots.push(#hasher_type::get_zero_hash(0));
+                }
+                let hash = tree_hash::merkleize_progressive_with_hasher::<#hasher_type>(&field_roots);
                 let active_fields_hash = <_ as tree_hash::TreeHash<#hasher_type>>::tree_hash_root(&active_fields);
 
                 <#hasher_type as tree_hash::TreeHashDigest>::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
@@ -354,7 +355,7 @@ fn tree_hash_derive_struct_profile(
     let (impl_generics, ty_generics, where_clause) = &item.generics.split_for_impl();
 
     let set_active_fields = &mut vec![];
-    let hashes = &mut vec![];
+    let field_root_pushes = &mut vec![];
 
     // Assume a starting index of 0.
     let mut index = 0;
@@ -378,9 +379,8 @@ fn tree_hash_derive_struct_profile(
             if new_index > index {
                 // If we're skipping fields, we need to add zero hash for the skipped fields.
                 for _ in index..new_index {
-                    hashes.push(quote! {
-                        hasher.write(#hasher_type::get_zero_hash_slice(0))
-                            .expect("tree hash derive should not apply too many leaves");
+                    field_root_pushes.push(quote! {
+                        field_roots.push(#hasher_type::get_zero_hash(0));
                     });
                 }
             }
@@ -399,27 +399,33 @@ fn tree_hash_derive_struct_profile(
                 }
             });
 
-            hashes.push(quote! {
-                if active_fields.get(#index).unwrap_or(false) {
-                    hasher.write(<_ as tree_hash::TreeHash<#hasher_type>>::tree_hash_root(&self.#ident).as_ref())
-                        .expect("tree hash derive should not apply too many leaves");
+            field_root_pushes.push(quote! {
+                if self.#ident.is_some() {
+                    field_roots.push(<_ as tree_hash::TreeHash<#hasher_type>>::tree_hash_root(&self.#ident));
                 } else {
-                    hasher.write(#hasher_type::get_zero_hash_slice(0))
-                        .expect("tree hash derive should not apply too many leaves");
+                    field_roots.push(#hasher_type::get_zero_hash(0));
                 }
             });
         } else {
             set_active_fields.push(quote! {
                 active_fields.set(#index, true).expect("Should not be out of bounds");
             });
-            hashes.push(quote! {
-                hasher.write(<_ as tree_hash::TreeHash<#hasher_type>>::tree_hash_root(&self.#ident).as_ref())
-                    .expect("tree hash derive should not apply too many leaves");
+            field_root_pushes.push(quote! {
+                field_roots.push(<_ as tree_hash::TreeHash<#hasher_type>>::tree_hash_root(&self.#ident));
             });
         }
 
         // Increment the index.
         index += 1;
+    }
+
+    let final_index = index;
+    if final_index < max_fields {
+        for _ in final_index..max_fields {
+            field_root_pushes.push(quote! {
+                field_roots.push(#hasher_type::get_zero_hash(0));
+            });
+        }
     }
 
     let output = quote! {
@@ -444,14 +450,13 @@ fn tree_hash_derive_struct_profile(
                     #set_active_fields
                 )*
 
-                // Hash according to `max_fields` regardless of the actual number of fields on the struct.
-                let mut hasher = tree_hash::MerkleHasher::<#hasher_type>::with_leaves(#max_fields);
-
+                let mut field_roots: Vec<<#hasher_type as tree_hash::TreeHashDigest>::Output> =
+                    Vec::with_capacity(#max_fields);
                 #(
-                    #hashes
+                    #field_root_pushes
                 )*
 
-                let hash = hasher.finish().expect("tree hash derive should not have a remaining buffer");
+                let hash = tree_hash::merkleize_progressive_with_hasher::<#hasher_type>(&field_roots);
                 let active_fields_hash = <_ as tree_hash::TreeHash<#hasher_type>>::tree_hash_root(&active_fields);
 
                 <#hasher_type as tree_hash::TreeHashDigest>::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
