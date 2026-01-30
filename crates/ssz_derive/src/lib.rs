@@ -164,6 +164,10 @@ use std::convert::TryInto;
 use darling::{FromDeriveInput, FromMeta};
 use proc_macro::TokenStream;
 use quote::quote;
+#[cfg(test)]
+use ssz as _;
+#[cfg(test)]
+use ssz_types as _;
 use syn::{DataEnum, DataStruct, DeriveInput, Ident, Index, parse_macro_input};
 
 /// The highest possible union selector value (higher values are reserved for backwards compatible
@@ -1496,7 +1500,23 @@ fn ssz_decode_derive_stable_container(
             fn from_ssz_bytes(bytes: &[u8]) -> std::result::Result<Self, ssz::DecodeError> {
                 // Decode the leading BitVector first.
                 let bitvector_length: usize = #max_fields.div_ceil(8);
-                let bitvector = BitVector::<#max_fields>::from_ssz_bytes(&bytes[0..bitvector_length]).unwrap();
+                if bytes.len() < bitvector_length {
+                    return Err(ssz::DecodeError::InvalidByteLength {
+                        len: bytes.len(),
+                        expected: bitvector_length,
+                    });
+                }
+                let bitvector =
+                    BitVector::<#max_fields>::from_ssz_bytes(&bytes[0..bitvector_length])?;
+                let num_fields: usize = #working_index;
+                for index in num_fields..#max_fields {
+                    if bitvector.get(index).unwrap_or(false) {
+                        return Err(ssz::DecodeError::BytesInvalid(
+                            "StableContainer has active_fields bits set beyond field count"
+                                .to_string(),
+                        ));
+                    }
+                }
 
                 let bytes = &bytes[bitvector_length..];
 
@@ -1985,10 +2005,4 @@ fn ty_inner_type<'a>(wrapper: &str, ty: &'a syn::Type) -> Option<&'a syn::Type> 
         }
     }
     None
-}
-
-#[cfg(test)]
-mod tests {
-    use ssz as _;
-    use ssz_types as _;
 }
