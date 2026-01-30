@@ -188,6 +188,7 @@ fn get_module_imports(module: &Module) -> HashSet<PathBuf> {
 }
 
 /// High-level parse function.
+#[allow(clippy::result_large_err)]
 pub fn parse_str_schema(
     files: &HashMap<PathBuf, String>,
     external_modules: &[&str],

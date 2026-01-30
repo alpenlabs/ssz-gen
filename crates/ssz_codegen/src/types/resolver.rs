@@ -7,7 +7,12 @@
 //! - Track and generate union types
 //! - Manage custom type definitions
 
-use std::{cell::RefCell, collections::HashMap, path::PathBuf, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    path::{Path, PathBuf},
+    rc::Rc,
+};
 
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
@@ -1090,7 +1095,7 @@ impl<'a> TypeResolver<'a> {
 
     fn build_imported_type_path(
         &self,
-        path: &PathBuf,
+        path: &Path,
         name: &Identifier,
         generic_args: Option<Vec<GenericArgument>>,
         include_crate: bool,
