@@ -702,6 +702,27 @@ mod tests {
     }
 
     #[test]
+    fn property_variable_list_u8_equivalence() {
+        use tree_hash::{Sha256Hasher, TreeHash};
+
+        for size in [0, 1, 2, 31, 32, 33, 63, 64] {
+            let values: Vec<u8> = (0..size).map(|i| i as u8).collect();
+            let list: VariableList<u8, 64> = values.clone().into();
+            let encoded = list.as_ssz_bytes();
+
+            let view = VariableListRef::<u8, 64>::from_ssz_bytes(&encoded).unwrap();
+            let view_owned = view.to_owned().unwrap();
+
+            assert_eq!(list, view_owned, "Size {}", size);
+
+            let owned_hash: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&list);
+            let view_hash: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&view);
+
+            assert_eq!(owned_hash, view_hash, "Size {}", size);
+        }
+    }
+
+    #[test]
     fn property_fixed_vector_tree_hash_equivalence() {
         use tree_hash::{Sha256Hasher, TreeHash};
 
