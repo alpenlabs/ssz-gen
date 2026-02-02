@@ -777,11 +777,31 @@ fn schema_uses_serde(schema: &SszSchema) -> bool {
     false
 }
 
+/// Checks if any type in the schema uses rkyv derives
+fn schema_uses_rkyv(schema: &SszSchema) -> bool {
+    use crate::pragma::ParsedPragma;
+
+    // Check classes for rkyv derives in pragmas
+    for class in schema.classes() {
+        let pragmas = ParsedPragma::parse(class.pragmas());
+        if pragmas
+            .derives
+            .iter()
+            .any(|d| d == "RkyvArchive" || d == "RkyvSerialize" || d == "RkyvDeserialize")
+        {
+            return true;
+        }
+    }
+
+    false
+}
+
 /// Generates a single flat module with all definitions at the root level
 fn single_module_rust_code(
     schema_map: &HashMap<&PathBuf, TokenStream>,
     entry_point_paths: &HashSet<PathBuf>,
     needs_serde: bool,
+    needs_rkyv: bool,
 ) -> TokenStream {
     let mut all_tokens = Vec::new();
 
@@ -804,6 +824,12 @@ fn single_module_rust_code(
         quote! {}
     };
 
+    let rkyv_imports = if needs_rkyv {
+        quote! { use rkyv::{Archive as RkyvArchive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize}; }
+    } else {
+        quote! {}
+    };
+
     quote! {
         #![allow(unused_imports, reason = "generated code using ssz-gen")]
         use ssz_types::*;
@@ -814,6 +840,7 @@ fn single_module_rust_code(
         use tree_hash_derive::TreeHash;
         use ssz::view::*;
         #serde_imports
+        #rkyv_imports
 
         #(#all_tokens)*
     }
@@ -824,6 +851,7 @@ fn flat_modules_rust_code(
     schema_map: &HashMap<&PathBuf, TokenStream>,
     entry_point_paths: &HashSet<PathBuf>,
     needs_serde: bool,
+    needs_rkyv: bool,
 ) -> TokenStream {
     let mut modules = Vec::new();
 
@@ -833,6 +861,12 @@ fn flat_modules_rust_code(
 
     let serde_imports = if needs_serde {
         quote! { use serde::{Serialize, Deserialize}; }
+    } else {
+        quote! {}
+    };
+
+    let rkyv_imports = if needs_rkyv {
+        quote! { use rkyv::{Archive as RkyvArchive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize}; }
     } else {
         quote! {}
     };
@@ -855,6 +889,7 @@ fn flat_modules_rust_code(
                         use tree_hash_derive::TreeHash;
                         use ssz::view::*;
                         #serde_imports
+                        #rkyv_imports
 
                         #content_tokens
                     }
@@ -950,6 +985,12 @@ pub fn schema_map_to_rust_code(
         .filter_map(|path| schema_map.get(path))
         .any(schema_uses_serde);
 
+    // Detect if any schema uses rkyv derives
+    let needs_rkyv = parsing_order
+        .iter()
+        .filter_map(|path| schema_map.get(path))
+        .any(schema_uses_rkyv);
+
     for path in parsing_order {
         let schema = schema_map.get(path).unwrap();
         let mut type_resolver = TypeResolver::new_with_builtins(&resolvers);
@@ -1002,6 +1043,12 @@ pub fn schema_map_to_rust_code(
             quote! {}
         };
 
+        let rkyv_imports = if needs_rkyv {
+            quote! { use rkyv::{Archive as RkyvArchive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize}; }
+        } else {
+            quote! {}
+        };
+
         // Store full module with imports for other modes
         module_tokens.insert(
             path,
@@ -1014,6 +1061,7 @@ pub fn schema_map_to_rust_code(
                 use tree_hash_derive::TreeHash;
                 use ssz::view::*;
                 #serde_imports
+                #rkyv_imports
 
                 #content_tokens
             },
@@ -1024,12 +1072,18 @@ pub fn schema_map_to_rust_code(
     }
 
     match module_generation {
-        ModuleGeneration::SingleModule => {
-            single_module_rust_code(&module_content_tokens, entry_point_paths, needs_serde)
-        }
-        ModuleGeneration::FlatModules => {
-            flat_modules_rust_code(&module_content_tokens, entry_point_paths, needs_serde)
-        }
+        ModuleGeneration::SingleModule => single_module_rust_code(
+            &module_content_tokens,
+            entry_point_paths,
+            needs_serde,
+            needs_rkyv,
+        ),
+        ModuleGeneration::FlatModules => flat_modules_rust_code(
+            &module_content_tokens,
+            entry_point_paths,
+            needs_serde,
+            needs_rkyv,
+        ),
         ModuleGeneration::NestedModules => module_tokens_to_rust_code(&module_tokens),
     }
 }

@@ -39,7 +39,7 @@ The parser supports four types of comments:
 
 - **Pragma comments** (`#~#`): Special directive comments that are preserved in the AST and schema. Pragmas can be attached to classes and fields to provide metadata or directives for code generation (handled by downstream tools like `ssz_codegen`).
   ```python
-  #~# derive: Serialize, Deserialize
+  #~# derive: Serialize, Deserialize, RkyvArchive, RkyvSerialize, RkyvDeserialize
   #~# attr: #[repr(C)]
   class Point(Container):
       #~# field_attr: #[serde(rename = "x_coord")]

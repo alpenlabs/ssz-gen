@@ -1,0 +1,12 @@
+Slot = uint64
+
+### Test that rkyv derives add proper imports (mirrors identifiers use case)
+#~# derive: Copy, Hash, RkyvArchive, RkyvSerialize, RkyvDeserialize
+class BlockCommitment(Container):
+    ### Slot number
+    slot: Slot
+    ### Block ID
+    blkid: uint256
+
+class OtherType(Container):
+    value: uint64

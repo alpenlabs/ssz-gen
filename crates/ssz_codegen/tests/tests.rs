@@ -1647,6 +1647,157 @@ fn test_serde_derives_flat_modules() {
 }
 
 #[test]
+fn test_rkyv_derives() {
+    build_ssz_files(
+        &["test_rkyv_derives.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_rkyv_derives.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types");
+
+    let generated = fs::read_to_string("tests/output/test_rkyv_derives.rs")
+        .expect("Failed to read generated output");
+
+    // Verify rkyv import is added
+    assert!(
+        generated.contains("use rkyv::{")
+            && generated.contains("Archive as RkyvArchive")
+            && generated.contains("Deserialize as RkyvDeserialize")
+            && generated.contains("Serialize as RkyvSerialize"),
+        "Rkyv import should be added when types use RkyvArchive/RkyvSerialize/RkyvDeserialize derives"
+    );
+
+    // Verify BlockCommitment has rkyv derives along with Copy and Hash
+    let block_commitment_derives = get_struct_derives(&generated, "BlockCommitment")
+        .expect("BlockCommitment should have derive attributes");
+
+    assert!(
+        block_commitment_derives.contains("RkyvArchive")
+            && block_commitment_derives.contains("RkyvSerialize")
+            && block_commitment_derives.contains("RkyvDeserialize"),
+        "BlockCommitment should have RkyvArchive, RkyvSerialize, and RkyvDeserialize in derives"
+    );
+
+    assert!(
+        block_commitment_derives.contains("Copy") && block_commitment_derives.contains("Hash"),
+        "BlockCommitment should also have Copy and Hash derives"
+    );
+
+    // Verify OtherType does NOT have rkyv derives (but rkyv import is still present since
+    // BlockCommitment uses it)
+    if let Some(other_type_derives) = get_struct_derives(&generated, "OtherType") {
+        assert!(
+            !other_type_derives.contains("RkyvArchive"),
+            "OtherType should not have RkyvArchive derive"
+        );
+    }
+}
+
+#[test]
+fn test_rkyv_derives_single_module() {
+    build_ssz_files(
+        &["test_rkyv_derives.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_rkyv_derives_single.rs",
+        ModuleGeneration::SingleModule,
+    )
+    .expect("Failed to generate SSZ types");
+
+    let generated = fs::read_to_string("tests/output/test_rkyv_derives_single.rs")
+        .expect("Failed to read generated output");
+
+    // Verify rkyv import is added in SingleModule mode
+    assert!(
+        generated.contains("use rkyv::{")
+            && generated.contains("Archive as RkyvArchive")
+            && generated.contains("Deserialize as RkyvDeserialize")
+            && generated.contains("Serialize as RkyvSerialize"),
+        "Rkyv import should be added in SingleModule mode when types use RkyvArchive/RkyvSerialize/RkyvDeserialize derives"
+    );
+
+    // Verify BlockCommitment has rkyv derives
+    let block_commitment_derives = get_struct_derives(&generated, "BlockCommitment")
+        .expect("BlockCommitment should have derive attributes");
+
+    assert!(
+        block_commitment_derives.contains("RkyvArchive")
+            && block_commitment_derives.contains("RkyvSerialize")
+            && block_commitment_derives.contains("RkyvDeserialize"),
+        "BlockCommitment should have RkyvArchive, RkyvSerialize, and RkyvDeserialize derives in SingleModule mode"
+    );
+
+    assert!(
+        block_commitment_derives.contains("Copy") && block_commitment_derives.contains("Hash"),
+        "BlockCommitment should also have Copy and Hash derives"
+    );
+
+    // Verify OtherType does NOT have rkyv derives
+    if let Some(other_type_derives) = get_struct_derives(&generated, "OtherType") {
+        assert!(
+            !other_type_derives.contains("RkyvArchive"),
+            "OtherType should not have RkyvArchive derive"
+        );
+    }
+}
+
+#[test]
+fn test_rkyv_derives_flat_modules() {
+    build_ssz_files(
+        &["test_rkyv_derives.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_rkyv_derives_flat.rs",
+        ModuleGeneration::FlatModules,
+    )
+    .expect("Failed to generate SSZ types");
+
+    let generated = fs::read_to_string("tests/output/test_rkyv_derives_flat.rs")
+        .expect("Failed to read generated output");
+
+    // Verify rkyv import is added in FlatModules mode (inside the module)
+    assert!(
+        generated.contains("use rkyv::{")
+            && generated.contains("Archive as RkyvArchive")
+            && generated.contains("Deserialize as RkyvDeserialize")
+            && generated.contains("Serialize as RkyvSerialize"),
+        "Rkyv import should be added in FlatModules mode when types use RkyvArchive/RkyvSerialize/RkyvDeserialize derives"
+    );
+
+    // Verify the module structure
+    assert!(
+        generated.contains("pub mod test_rkyv_derives"),
+        "FlatModules should generate a test_rkyv_derives module"
+    );
+
+    // Verify BlockCommitment has rkyv derives
+    let block_commitment_derives = get_struct_derives(&generated, "BlockCommitment")
+        .expect("BlockCommitment should have derive attributes");
+
+    assert!(
+        block_commitment_derives.contains("RkyvArchive")
+            && block_commitment_derives.contains("RkyvSerialize")
+            && block_commitment_derives.contains("RkyvDeserialize"),
+        "BlockCommitment should have RkyvArchive, RkyvSerialize, and RkyvDeserialize derives in FlatModules mode"
+    );
+
+    assert!(
+        block_commitment_derives.contains("Copy") && block_commitment_derives.contains("Hash"),
+        "BlockCommitment should also have Copy and Hash derives"
+    );
+
+    // Verify OtherType does NOT have rkyv derives
+    if let Some(other_type_derives) = get_struct_derives(&generated, "OtherType") {
+        assert!(
+            !other_type_derives.contains("RkyvArchive"),
+            "OtherType should not have RkyvArchive derive"
+        );
+    }
+}
+
+#[test]
 fn test_union_type_alias_in_list() {
     build_ssz_files(
         &["test_union_in_list.ssz"],
