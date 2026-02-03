@@ -109,6 +109,10 @@ The parser supports four types of comments:
   class Point(Container):
       x: uint32
   ```
+
+  When derives include `Serialize`/`Deserialize` or `RkyvArchive`/`RkyvSerialize`/`RkyvDeserialize`,
+  the generated Rust code automatically adds the corresponding `use serde::{...}` or
+  `use rkyv::{... as Rkyv...}` imports so the derive macros resolve correctly.
   
   Pragmas are preserved through inheritance - child classes inherit parent pragmas and can add their own.
 

@@ -24,7 +24,7 @@ These libraries have been modified to add `StableContainer` support and other en
 - Union types
 - Constants and type aliases
 - Built-in type aliases (`byte`, `bit`, `null`, `BytesX`)
-- Documentation comments (`###`) and pragma comments (`#~#`) for controlling code generation (additional derives, custom attributes)
+- Documentation comments (`###`) and pragma comments (`#~#`) for controlling code generation (additional derives like Serde/Rkyv, custom attributes)
 
 ## Usage
 
