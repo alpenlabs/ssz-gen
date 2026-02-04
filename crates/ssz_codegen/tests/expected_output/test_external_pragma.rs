@@ -160,7 +160,7 @@ pub mod tests {
                 pub fn transactions(
                     &self,
                 ) -> Result<
-                    VariableListRef<'a, external_ssz::TransactionRef<'a>, 100usize>,
+                    ListRef<'a, external_ssz::TransactionRef<'a>, 100usize>,
                     ssz::DecodeError,
                 > {
                     let start = ssz::layout::read_variable_offset(
@@ -184,7 +184,7 @@ pub mod tests {
                 pub fn account_ids(
                     &self,
                 ) -> Result<
-                    VariableListRef<'a, external_ssz::AccountId, 50usize>,
+                    ListRef<'a, external_ssz::AccountId, 50usize>,
                     ssz::DecodeError,
                 > {
                     let start = ssz::layout::read_variable_offset(
@@ -328,16 +328,30 @@ pub mod tests {
                             .expect("valid view")
                             .to_owned()
                             .expect("valid view"),
-                        transactions: self
-                            .transactions()
-                            .expect("valid view")
-                            .to_owned()
-                            .expect("valid view"),
-                        account_ids: self
-                            .account_ids()
-                            .expect("valid view")
-                            .to_owned()
-                            .expect("valid view"),
+                        transactions: {
+                            let view = self.transactions().expect("valid view");
+                            let items: Result<Vec<_>, _> = view
+                                .iter()
+                                .map(|item_result| {
+                                    item_result
+                                        .map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                                })
+                                .collect();
+                            let items = items.expect("valid view");
+                            ssz_types::VariableList::from(items)
+                        },
+                        account_ids: {
+                            let view = self.account_ids().expect("valid view");
+                            let items: Result<Vec<_>, _> = view
+                                .iter()
+                                .map(|item_result| {
+                                    item_result
+                                        .map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                                })
+                                .collect();
+                            let items = items.expect("valid view");
+                            ssz_types::VariableList::from(items)
+                        },
                     }
                 }
             }

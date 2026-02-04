@@ -382,7 +382,7 @@ impl<'a> SszDecoder<'a> {
     /// builder.register_anonymous_variable_length_item()?;
     /// let mut decoder = builder.build()?;
     ///
-    /// let view: BytesRef = decoder.decode_next_view()?;
+    /// let view: BytesRef<3> = decoder.decode_next_view()?;
     /// assert_eq!(view.as_bytes(), &[0x01, 0x02, 0x03]);
     /// # Ok(())
     /// # }

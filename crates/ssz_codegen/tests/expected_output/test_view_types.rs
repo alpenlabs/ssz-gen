@@ -177,9 +177,7 @@ pub struct ViewTypeTestRef<'a> {
 }
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ViewTypeTestRef<'a> {
-    pub fn payload(
-        &self,
-    ) -> Result<VariableListRef<'a, u8, 4096usize>, ssz::DecodeError> {
+    pub fn payload(&self) -> Result<BytesRef<'a, 4096usize>, ssz::DecodeError> {
         let start = ssz::layout::read_variable_offset(
             self.bytes,
             40usize,
@@ -200,7 +198,7 @@ impl<'a> ViewTypeTestRef<'a> {
     }
     pub fn entries(
         &self,
-    ) -> Result<VariableListRef<'a, ExportEntryRef<'a>, 256usize>, ssz::DecodeError> {
+    ) -> Result<ListRef<'a, ExportEntryRef<'a>, 256usize>, ssz::DecodeError> {
         let start = ssz::layout::read_variable_offset(
             self.bytes,
             40usize,
@@ -314,8 +312,19 @@ impl<'a> ViewTypeTestRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> ViewTypeTest {
         ViewTypeTest {
-            payload: self.payload().expect("valid view").to_owned().expect("valid view"),
-            entries: self.entries().expect("valid view").to_owned().expect("valid view"),
+            payload: self.payload().expect("valid view").to_owned().into(),
+            entries: {
+                let view = self.entries().expect("valid view");
+                let items: Result<Vec<_>, _> = view
+                    .iter()
+                    .map(|item_result| {
+                        item_result
+                            .map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                    })
+                    .collect();
+                let items = items.expect("valid view");
+                ssz_types::VariableList::from(items)
+            },
             hash: ssz_types::FixedBytes(self.hash().expect("valid view").to_owned()),
         }
     }

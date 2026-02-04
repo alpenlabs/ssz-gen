@@ -333,7 +333,7 @@ pub mod tests {
                 pub fn list(
                     &self,
                 ) -> Result<
-                    VariableListRef<
+                    ListRef<
                         'a,
                         crate::tests::input::test_cross_entry_common::CommonTypeBRef<'a>,
                         10usize,
@@ -450,11 +450,18 @@ pub mod tests {
                             let view = self.field().expect("valid view");
                             ssz_types::view::ToOwnedSsz::to_owned(&view)
                         },
-                        list: self
-                            .list()
-                            .expect("valid view")
-                            .to_owned()
-                            .expect("valid view"),
+                        list: {
+                            let view = self.list().expect("valid view");
+                            let items: Result<Vec<_>, _> = view
+                                .iter()
+                                .map(|item_result| {
+                                    item_result
+                                        .map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                                })
+                                .collect();
+                            let items = items.expect("valid view");
+                            ssz_types::VariableList::from(items)
+                        },
                     }
                 }
             }

@@ -114,7 +114,7 @@ pub mod tests {
                 pub fn messages(
                     &self,
                 ) -> Result<
-                    VariableListRef<'a, external_ssz::MessagePayloadRef<'a>, 10usize>,
+                    ListRef<'a, external_ssz::MessagePayloadRef<'a>, 10usize>,
                     ssz::DecodeError,
                 > {
                     let start = ssz::layout::read_variable_offset(
@@ -239,11 +239,18 @@ pub mod tests {
                             let view = self.account_id().expect("valid view");
                             ssz_types::view::ToOwnedSsz::to_owned(&view)
                         },
-                        messages: self
-                            .messages()
-                            .expect("valid view")
-                            .to_owned()
-                            .expect("valid view"),
+                        messages: {
+                            let view = self.messages().expect("valid view");
+                            let items: Result<Vec<_>, _> = view
+                                .iter()
+                                .map(|item_result| {
+                                    item_result
+                                        .map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                                })
+                                .collect();
+                            let items = items.expect("valid view");
+                            ssz_types::VariableList::from(items)
+                        },
                     }
                 }
             }

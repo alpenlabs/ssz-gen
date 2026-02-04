@@ -34,7 +34,7 @@ fn build_ssz_files(
 ) -> Result<(), Box<dyn error::Error>> {
     let _guard = CODEGEN_LOCK
         .lock()
-        .expect("codegen lock should not be poisoned");
+        .unwrap_or_else(|poison| poison.into_inner());
     build_ssz_files_unlocked(
         entry_points,
         base_dir,
@@ -55,7 +55,7 @@ fn build_ssz_files_with_derives(
 ) -> Result<(), Box<dyn error::Error>> {
     let _guard = CODEGEN_LOCK
         .lock()
-        .expect("codegen lock should not be poisoned");
+        .unwrap_or_else(|poison| poison.into_inner());
     build_ssz_files_with_derives_unlocked(
         entry_points,
         base_dir,
@@ -979,12 +979,12 @@ class DocAndPragma(Container):
     assert!(fields[0].pragmas()[0].contains("field-pragma"));
 }
 
-/// Test that view types ([`VariableListRef`], [`FixedVectorRef`])
+/// Test that view types ([`ListRef`], [`BytesRef`], [`FixedVectorRef`])
 /// are properly imported and that [`ToOwnedSsz::to_owned`]
 /// methods work correctly for different types:
 ///
-/// - `List<u8, N>` uses [`VariableListRef`] and returns Result
-/// - `List<T, N>` uses [`VariableListRef`] and returns Result
+/// - `List<u8, N>` uses [`BytesRef`] and returns a list via `into()`
+/// - `List<T, N>` uses [`ListRef`] and collects into `VariableList`
 /// - `Vector<T, N>` uses [`FixedVectorRef`] and returns Result
 #[test]
 fn test_view_types_imports_and_to_owned() {
@@ -1000,28 +1000,34 @@ fn test_view_types_imports_and_to_owned() {
     let generated = fs::read_to_string("tests/output/test_view_types.rs")
         .expect("Failed to read generated output");
 
-    // Verify that VariableListRef and FixedVectorRef are imported
+    // Verify that FixedVectorRef is imported
     assert!(
-        generated.contains("use ssz_types::view::{FixedVectorRef, VariableListRef}"),
-        "Generated code should import VariableListRef and FixedVectorRef"
+        generated.contains("FixedVectorRef"),
+        "Generated code should import FixedVectorRef"
     );
 
-    // Verify that List<u8, N> uses VariableListRef, not BytesRef
+    // Verify that List<u8, N> uses BytesRef
     assert!(
-        generated.contains("VariableListRef<'a, u8, 4096usize>"),
-        "List<u8, N> fields should use VariableListRef in view types"
+        generated.contains("BytesRef<'a, 4096usize>"),
+        "List<u8, N> fields should use BytesRef in view types"
     );
 
-    // Verify that List<T, N> (VariableListRef) uses .expect() to unwrap Result
+    // Verify that List<T, N> uses ListRef
     assert!(
-        generated.contains(".to_owned().expect(\"valid view\")"),
-        "VariableListRef::to_owned() should use .expect() to unwrap Result"
+        generated.contains("ListRef<'a, ExportEntryRef<'a>, 256usize>"),
+        "List<T, N> fields should use ListRef in view types"
     );
 
-    // Verify that Vector<T, N> (FixedVectorRef) uses .expect() to unwrap Result
+    // Verify that list to_owned conversion builds VariableList from items
     assert!(
-        generated.contains("to_owned().expect(\"valid view\")"),
-        "FixedVectorRef::to_owned() should use .expect() to unwrap Result"
+        generated.contains("VariableList::from(items)"),
+        "ListRef to_owned conversion should build VariableList"
+    );
+
+    // Verify that Vector[byte, N] uses FixedBytes conversion
+    assert!(
+        generated.contains("FixedBytes(self.hash().expect(\"valid view\").to_owned())"),
+        "Vector[byte, N] should convert via FixedBytes"
     );
 
     // Verify that tree_hash_root uses explicit type annotations for type inference
@@ -1067,7 +1073,7 @@ fn test_stable_container_optional_bitvector_length() {
 }
 
 #[test]
-fn test_view_type_list_u8_uses_variable_list_ref() {
+fn test_view_type_list_u8_uses_bytes_ref() {
     build_ssz_files(
         &["test_view_types.ssz"],
         "tests/input",
@@ -1081,8 +1087,8 @@ fn test_view_type_list_u8_uses_variable_list_ref() {
         .expect("Failed to read actual output");
 
     assert!(
-        actual_output.contains("VariableListRef<'a, u8, 4096usize>"),
-        "Expected List[uint8, N] to use VariableListRef in view types"
+        actual_output.contains("BytesRef<'a, 4096usize>"),
+        "Expected List[uint8, N] to use BytesRef in view types"
     );
 }
 
@@ -1807,10 +1813,10 @@ fn test_union_type_alias_in_list() {
         &generated.chars().take(3000).collect::<String>()
     );
 
-    // Verify that Lists use VariableListRef with the union Ref types
+    // Verify that Lists use ListRef with the union Ref types
     assert!(
-        generated.contains("VariableListRef<'a, UnionTypeAliasRef<'a>"),
-        "Container with Union[Type1, Type2] should use VariableListRef with UnionTypeAliasRef"
+        generated.contains("ListRef<'a, UnionTypeAliasRef<'a>"),
+        "Container with Union[Type1, Type2] should use ListRef with UnionTypeAliasRef"
     );
 }
 
@@ -1854,14 +1860,14 @@ fn test_union_class_in_list() {
         &generated.chars().take(3000).collect::<String>()
     );
 
-    // Verify that Lists use VariableListRef with the union Ref types
+    // Verify that Lists use ListRef with the union Ref types
     assert!(
-        generated.contains("VariableListRef<'a, UnionClassRef<'a>"),
-        "Container with class Name(Union): should use VariableListRef with UnionClassRef"
+        generated.contains("ListRef<'a, UnionClassRef<'a>"),
+        "Container with class Name(Union): should use ListRef with UnionClassRef"
     );
     assert!(
-        generated.contains("VariableListRef<'a, UnionClassWithExternalRef<'a>"),
-        "Container with class Name(Union): external should use VariableListRef with UnionClassWithExternalRef"
+        generated.contains("ListRef<'a, UnionClassWithExternalRef<'a>"),
+        "Container with class Name(Union): external should use ListRef with UnionClassWithExternalRef"
     );
 }
 

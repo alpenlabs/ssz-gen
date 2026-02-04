@@ -523,11 +523,13 @@ impl TypeResolution {
             }
             TypeResolutionKind::List(ty, size_expr) => {
                 let size = size_expr.value() as usize;
-
-                // Lists are represented as VariableListRef, even for u8, so tree hashing honors the
-                // limit.
-                let inner_view_ty = ty.to_view_type_inner(true, pragmas);
-                parse_quote!(VariableListRef<'a, #inner_view_ty, #size>)
+                // Special case: List[byte, N] -> BytesRef<'a, N>
+                if matches!(ty.resolution, TypeResolutionKind::UInt(8)) {
+                    parse_quote!(BytesRef<'a, #size>)
+                } else {
+                    let inner_view_ty = ty.to_view_type_inner(true, pragmas);
+                    parse_quote!(ListRef<'a, #inner_view_ty, #size>)
+                }
             }
             TypeResolutionKind::Bitvector(size_expr) => {
                 let size = size_expr.value() as usize;
@@ -1303,7 +1305,6 @@ impl ClassDef {
             }
             BaseClass::StableContainer(Some(max)) => {
                 let max = max as usize;
-                let num_fields = self.fields.len();
                 let field_names: Vec<Ident> = self
                     .fields
                     .iter()
@@ -1333,8 +1334,6 @@ impl ClassDef {
                         quote! {
                             if let ssz_types::Optional::Some(ref inner) = #field_name {
                                 field_roots.push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                            } else {
-                                field_roots.push(H::get_zero_hash(0));
                             }
                         }
                     })
@@ -1370,9 +1369,6 @@ impl ClassDef {
                             #(
                                 #field_root_pushes
                             )*
-                            for _ in #num_fields..#max {
-                                field_roots.push(H::get_zero_hash(0));
-                            }
                             let hash = tree_hash::merkleize_progressive_with_hasher::<H>(&field_roots);
                             let active_fields_hash =
                                 <_ as tree_hash::TreeHash<H>>::tree_hash_root(&active_fields);
@@ -1391,18 +1387,9 @@ impl ClassDef {
                 let indices: Vec<usize> = self.fields.iter().map(|f| f.index).collect();
                 let mut set_active_fields = Vec::new();
                 let mut field_root_pushes = Vec::new();
-                let mut index = 0usize;
-
                 for (idx, field) in self.fields.iter().enumerate() {
                     let field_name = &field_names[idx];
                     let stable_index = &indices[idx];
-                    if *stable_index > index {
-                        for _ in index..*stable_index {
-                            field_root_pushes.push(quote! {
-                                field_roots.push(H::get_zero_hash(0));
-                            });
-                        }
-                    }
 
                     let is_optional =
                         matches!(field.ty.resolution, TypeResolutionKind::Optional(_));
@@ -1417,8 +1404,6 @@ impl ClassDef {
                         field_root_pushes.push(quote! {
                             if let ssz_types::Optional::Some(ref inner) = #field_name {
                                 field_roots.push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                            } else {
-                                field_roots.push(H::get_zero_hash(0));
                             }
                         });
                     } else {
@@ -1429,16 +1414,6 @@ impl ClassDef {
                         });
                         field_root_pushes.push(quote! {
                             field_roots.push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&#field_name));
-                        });
-                    }
-
-                    index = stable_index + 1;
-                }
-
-                if index < max {
-                    for _ in index..max {
-                        field_root_pushes.push(quote! {
-                            field_roots.push(H::get_zero_hash(0));
                         });
                     }
                 }
@@ -1548,19 +1523,9 @@ impl ClassDef {
                 let indices: Vec<usize> = self.fields.iter().map(|f| f.index).collect();
                 let mut set_active_fields = Vec::new();
                 let mut field_root_pushes = Vec::new();
-                let mut index = 0usize;
-
                 for (idx, field) in self.fields.iter().enumerate() {
                     let field_name = &field_names[idx];
                     let stable_index = &indices[idx];
-
-                    if *stable_index > index {
-                        for _ in index..*stable_index {
-                            field_root_pushes.push(quote! {
-                                field_roots.push(H::get_zero_hash(0));
-                            });
-                        }
-                    }
 
                     let is_optional =
                         matches!(field.ty.resolution, TypeResolutionKind::Optional(_));
@@ -1575,8 +1540,6 @@ impl ClassDef {
                         field_root_pushes.push(quote! {
                             if let ssz_types::Optional::Some(ref inner) = self.#field_name {
                                 field_roots.push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                            } else {
-                                field_roots.push(H::get_zero_hash(0));
                             }
                         });
                     } else {
@@ -1587,16 +1550,6 @@ impl ClassDef {
                         });
                         field_root_pushes.push(quote! {
                             field_roots.push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.#field_name));
-                        });
-                    }
-
-                    index = stable_index + 1;
-                }
-
-                if index < max_fields {
-                    for _ in index..max_fields {
-                        field_root_pushes.push(quote! {
-                            field_roots.push(H::get_zero_hash(0));
                         });
                     }
                 }
@@ -2319,10 +2272,25 @@ impl ClassDef {
                             }
                         }
                         TypeResolutionKind::List(ty, _size) => {
-                            // VariableListRef::to_owned() returns Result<VariableList<T, N>, Error>
-                            let _inner = &**ty;
-                            quote! {
-                                #field_name: self.#field_name().expect("valid view").to_owned().expect("valid view")
+                            let inner = &**ty;
+                            if matches!(inner.resolution, TypeResolutionKind::UInt(8)) {
+                                quote! {
+                                    #field_name: self.#field_name().expect("valid view").to_owned().into()
+                                }
+                            } else {
+                                quote! {
+                                    #field_name: {
+                                        let view = self.#field_name().expect("valid view");
+                                        let items: Result<Vec<_>, _> = view
+                                            .iter()
+                                            .map(|item_result| {
+                                                item_result.map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                                            })
+                                            .collect();
+                                        let items = items.expect("valid view");
+                                        ssz_types::VariableList::from(items)
+                                    }
+                                }
                             }
                         }
                         TypeResolutionKind::Vector(ty, _size) => {

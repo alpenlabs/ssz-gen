@@ -705,7 +705,7 @@ pub mod tests {
                 }
                 pub fn as_selector3(
                     &self,
-                ) -> Result<VariableListRef<'a, u8, 12usize>, ssz::DecodeError> {
+                ) -> Result<BytesRef<'a, 12usize>, ssz::DecodeError> {
                     if self.selector() != 3u8 {
                         return Err(
                             ssz::DecodeError::BytesInvalid(
@@ -1328,9 +1328,7 @@ pub mod tests {
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BetaRef<'a> {
-                pub fn d(
-                    &self,
-                ) -> Result<VariableListRef<'a, u8, 5usize>, ssz::DecodeError> {
+                pub fn d(&self) -> Result<BytesRef<'a, 5usize>, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
                         self.bytes,
                         7usize,
@@ -1464,7 +1462,7 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> Beta {
                     Beta {
-                        d: self.d().expect("valid view").to_owned().expect("valid view"),
+                        d: self.d().expect("valid view").to_owned().into(),
                         e: self.e().expect("valid view"),
                         f: self.f().expect("valid view"),
                     }
@@ -1506,55 +1504,11 @@ pub mod tests {
                     if let ssz_types::Optional::Some(ref inner) = self.g {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = self.h {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
                     let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
                     >(&field_roots);
@@ -1599,10 +1553,7 @@ pub mod tests {
                 }
                 pub fn h(
                     &self,
-                ) -> Result<
-                    Optional<VariableListRef<'a, u16, 8usize>>,
-                    ssz::DecodeError,
-                > {
+                ) -> Result<Optional<ListRef<'a, u16, 8usize>>, ssz::DecodeError> {
                     let bitvector_offset = 6usize;
                     let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
@@ -1657,17 +1608,10 @@ pub mod tests {
                     if let ssz_types::Optional::Some(ref inner) = g {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = h {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
-                    }
-                    for _ in 2usize..42usize {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
@@ -1928,65 +1872,19 @@ pub mod tests {
                     if let ssz_types::Optional::Some(ref inner) = self.g {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = self.h {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = self.i {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = self.j {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
                     let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
                     >(&field_roots);
@@ -2031,10 +1929,7 @@ pub mod tests {
                 }
                 pub fn h(
                     &self,
-                ) -> Result<
-                    Optional<VariableListRef<'a, u16, 8usize>>,
-                    ssz::DecodeError,
-                > {
+                ) -> Result<Optional<ListRef<'a, u16, 8usize>>, ssz::DecodeError> {
                     let bitvector_offset = 6usize;
                     let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
@@ -2143,29 +2038,18 @@ pub mod tests {
                     if let ssz_types::Optional::Some(ref inner) = g {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = h {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = i {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = j {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
-                    }
-                    for _ in 4usize..42usize {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
@@ -2274,141 +2158,11 @@ pub mod tests {
                     if let ssz_types::Optional::Some(ref inner) = self.u {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = self.v {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
                     let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
                     >(&field_roots);
@@ -2455,10 +2209,7 @@ pub mod tests {
                 }
                 pub fn v(
                     &self,
-                ) -> Result<
-                    Optional<VariableListRef<'a, u8, 5usize>>,
-                    ssz::DecodeError,
-                > {
+                ) -> Result<Optional<BytesRef<'a, 5usize>>, ssz::DecodeError> {
                     let bitvector_offset = 16usize;
                     let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
@@ -2513,17 +2264,10 @@ pub mod tests {
                     if let ssz_types::Optional::Some(ref inner) = u {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = v {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
-                    }
-                    for _ in 2usize..128usize {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
@@ -2698,9 +2442,7 @@ pub mod tests {
                     let bytes = &self.bytes[offset..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
-                pub fn eee(
-                    &self,
-                ) -> Result<VariableListRef<'a, u16, 3usize>, ssz::DecodeError> {
+                pub fn eee(&self) -> Result<ListRef<'a, u16, 3usize>, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
                         self.bytes,
                         54usize,
@@ -2846,11 +2588,18 @@ pub mod tests {
                     TestType {
                         ccc: self.ccc().expect("valid view"),
                         ddd: self.ddd().expect("valid view"),
-                        eee: self
-                            .eee()
-                            .expect("valid view")
-                            .to_owned()
-                            .expect("valid view"),
+                        eee: {
+                            let view = self.eee().expect("valid view");
+                            let items: Result<Vec<_>, _> = view
+                                .iter()
+                                .map(|item_result| {
+                                    item_result
+                                        .map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                                })
+                                .collect();
+                            let items = items.expect("valid view");
+                            ssz_types::VariableList::from(items)
+                        },
                         large_int_128: self.large_int_128().expect("valid view"),
                         large_int_256: self.large_int_256().expect("valid view"),
                     }
@@ -3352,75 +3101,27 @@ pub mod tests {
                     if let ssz_types::Optional::Some(ref inner) = self.g {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = self.h {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = self.i {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = self.j {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = self.r {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = self.s {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
                     let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
                     >(&field_roots);
@@ -3465,10 +3166,7 @@ pub mod tests {
                 }
                 pub fn h(
                     &self,
-                ) -> Result<
-                    Optional<VariableListRef<'a, u16, 8usize>>,
-                    ssz::DecodeError,
-                > {
+                ) -> Result<Optional<ListRef<'a, u16, 8usize>>, ssz::DecodeError> {
                     let bitvector_offset = 6usize;
                     let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
@@ -3533,10 +3231,7 @@ pub mod tests {
                 }
                 pub fn r(
                     &self,
-                ) -> Result<
-                    Optional<VariableListRef<'a, u16, 2usize>>,
-                    ssz::DecodeError,
-                > {
+                ) -> Result<Optional<ListRef<'a, u16, 2usize>>, ssz::DecodeError> {
                     let bitvector_offset = 6usize;
                     let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
@@ -3636,41 +3331,26 @@ pub mod tests {
                     if let ssz_types::Optional::Some(ref inner) = g {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = h {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = i {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = j {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = r {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = s {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
-                    }
-                    for _ in 6usize..42usize {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
@@ -4000,17 +3680,11 @@ pub mod tests {
                     if let ssz_types::Optional::Some(ref inner) = self.w {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = self.x {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
                     let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
                     >(&field_roots);
@@ -4108,17 +3782,10 @@ pub mod tests {
                     if let ssz_types::Optional::Some(ref inner) = w {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = x {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
-                    }
-                    for _ in 2usize..4usize {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,

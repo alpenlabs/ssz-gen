@@ -191,18 +191,11 @@ pub mod tests {
                     if let ssz_types::Optional::Some(ref inner) = self.a {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = self.b {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
                     let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
                     >(&field_roots);
@@ -300,17 +293,10 @@ pub mod tests {
                     if let ssz_types::Optional::Some(ref inner) = a {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = b {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
-                    }
-                    for _ in 2usize..5usize {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
@@ -604,13 +590,7 @@ pub mod tests {
                     if let ssz_types::Optional::Some(ref inner) = self.a {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
                     let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
                     >(&field_roots);
@@ -681,11 +661,6 @@ pub mod tests {
                     if let ssz_types::Optional::Some(ref inner) = a {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
-                    }
-                    for _ in 1usize..5usize {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
@@ -796,12 +771,7 @@ pub mod tests {
                     if let ssz_types::Optional::Some(ref inner) = self.b {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
                     let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
                     >(&field_roots);
@@ -894,12 +864,7 @@ pub mod tests {
                     if let ssz_types::Optional::Some(ref inner) = b {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
                     let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
                     >(&field_roots);

@@ -694,7 +694,7 @@ pub mod tests {
                 pub fn items(
                     &self,
                 ) -> Result<
-                    VariableListRef<'a, UnionClassRef<'a>, 65536usize>,
+                    ListRef<'a, UnionClassRef<'a>, 65536usize>,
                     ssz::DecodeError,
                 > {
                     let start = ssz::layout::read_variable_offset(
@@ -797,11 +797,18 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> ContainerWithUnionClass {
                     ContainerWithUnionClass {
-                        items: self
-                            .items()
-                            .expect("valid view")
-                            .to_owned()
-                            .expect("valid view"),
+                        items: {
+                            let view = self.items().expect("valid view");
+                            let items: Result<Vec<_>, _> = view
+                                .iter()
+                                .map(|item_result| {
+                                    item_result
+                                        .map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                                })
+                                .collect();
+                            let items = items.expect("valid view");
+                            ssz_types::VariableList::from(items)
+                        },
                     }
                 }
             }
@@ -851,7 +858,7 @@ pub mod tests {
                 pub fn items(
                     &self,
                 ) -> Result<
-                    VariableListRef<'a, UnionClassWithExternalRef<'a>, 65536usize>,
+                    ListRef<'a, UnionClassWithExternalRef<'a>, 65536usize>,
                     ssz::DecodeError,
                 > {
                     let start = ssz::layout::read_variable_offset(
@@ -955,11 +962,18 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> ContainerWithUnionClassExternal {
                     ContainerWithUnionClassExternal {
-                        items: self
-                            .items()
-                            .expect("valid view")
-                            .to_owned()
-                            .expect("valid view"),
+                        items: {
+                            let view = self.items().expect("valid view");
+                            let items: Result<Vec<_>, _> = view
+                                .iter()
+                                .map(|item_result| {
+                                    item_result
+                                        .map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                                })
+                                .collect();
+                            let items = items.expect("valid view");
+                            ssz_types::VariableList::from(items)
+                        },
                     }
                 }
             }
@@ -1011,7 +1025,7 @@ pub mod tests {
                 pub fn items(
                     &self,
                 ) -> Result<
-                    VariableListRef<'a, UnionTypeAliasRef<'a>, 65536usize>,
+                    ListRef<'a, UnionTypeAliasRef<'a>, 65536usize>,
                     ssz::DecodeError,
                 > {
                     let start = ssz::layout::read_variable_offset(
@@ -1114,11 +1128,18 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> ContainerWithUnionTypeAlias {
                     ContainerWithUnionTypeAlias {
-                        items: self
-                            .items()
-                            .expect("valid view")
-                            .to_owned()
-                            .expect("valid view"),
+                        items: {
+                            let view = self.items().expect("valid view");
+                            let items: Result<Vec<_>, _> = view
+                                .iter()
+                                .map(|item_result| {
+                                    item_result
+                                        .map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                                })
+                                .collect();
+                            let items = items.expect("valid view");
+                            ssz_types::VariableList::from(items)
+                        },
                     }
                 }
             }

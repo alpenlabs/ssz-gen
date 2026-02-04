@@ -328,13 +328,8 @@ fn tree_hash_derive_struct_stable_container(
                 #(
                     if self.#idents.is_some() {
                         field_roots.push(<_ as tree_hash::TreeHash<#hasher_type>>::tree_hash_root(&self.#idents));
-                    } else {
-                        field_roots.push(#hasher_type::get_zero_hash(0));
                     }
                 )*
-                for _ in #num_fields..#max_fields {
-                    field_roots.push(#hasher_type::get_zero_hash(0));
-                }
                 let hash = tree_hash::merkleize_progressive_with_hasher::<#hasher_type>(&field_roots);
                 let active_fields_hash = <_ as tree_hash::TreeHash<#hasher_type>>::tree_hash_root(&active_fields);
 
@@ -376,15 +371,6 @@ fn tree_hash_derive_struct_profile(
         };
 
         if let Some(new_index) = field_opt.stable_index {
-            if new_index > index {
-                // If we're skipping fields, we need to add zero hash for the skipped fields.
-                for _ in index..new_index {
-                    field_root_pushes.push(quote! {
-                        field_roots.push(#hasher_type::get_zero_hash(0));
-                    });
-                }
-            }
-
             index = new_index;
         }
 
@@ -402,8 +388,6 @@ fn tree_hash_derive_struct_profile(
             field_root_pushes.push(quote! {
                 if self.#ident.is_some() {
                     field_roots.push(<_ as tree_hash::TreeHash<#hasher_type>>::tree_hash_root(&self.#ident));
-                } else {
-                    field_roots.push(#hasher_type::get_zero_hash(0));
                 }
             });
         } else {
@@ -417,15 +401,6 @@ fn tree_hash_derive_struct_profile(
 
         // Increment the index.
         index += 1;
-    }
-
-    let final_index = index;
-    if final_index < max_fields {
-        for _ in final_index..max_fields {
-            field_root_pushes.push(quote! {
-                field_roots.push(#hasher_type::get_zero_hash(0));
-            });
-        }
     }
 
     let output = quote! {

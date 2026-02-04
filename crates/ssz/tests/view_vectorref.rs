@@ -11,7 +11,7 @@ fn vectorref_get_variable_offsets() {
     bytes.extend_from_slice(b"aa");
     bytes.extend_from_slice(b"bbb");
 
-    let view = VectorRef::<BytesRef<'_>, 2>::new(&bytes).unwrap();
+    let view = VectorRef::<BytesRef<'_, 3>, 2>::new(&bytes).unwrap();
     let second = view.get(1).unwrap();
 
     assert_eq!(second.as_bytes(), b"bbb");

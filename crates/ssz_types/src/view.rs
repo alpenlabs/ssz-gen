@@ -66,7 +66,7 @@ use crate::{Error, FixedVector, VariableList};
 #[derive(Debug, Copy, Clone)]
 pub struct VariableListRef<'a, TRef, const N: usize> {
     /// The underlying list reference.
-    inner: ListRef<'a, TRef>,
+    inner: ListRef<'a, TRef, N>,
 }
 
 impl<'a, TRef: SszTypeInfo, const N: usize> VariableListRef<'a, TRef, N> {
@@ -74,17 +74,7 @@ impl<'a, TRef: SszTypeInfo, const N: usize> VariableListRef<'a, TRef, N> {
     ///
     /// - `bytes`: the SSZ-encoded list bytes.
     pub fn new(bytes: &'a [u8]) -> Result<Self, DecodeError> {
-        let inner = ListRef::new(bytes)?;
-
-        // Validate that the list doesn't exceed the maximum length
-        if inner.len() > N {
-            return Err(DecodeError::BytesInvalid(format!(
-                "VariableList length {} exceeds maximum {}",
-                inner.len(),
-                N
-            )));
-        }
-
+        let inner = ListRef::<TRef, N>::new(bytes)?;
         Ok(Self { inner })
     }
 
@@ -196,6 +186,28 @@ impl<T: Copy> ToOwnedSsz<T> for T {
 impl<'a, const N: usize> ToOwnedSsz<FixedBytes<N>> for ssz::view::FixedBytesRef<'a, N> {
     fn to_owned(&self) -> FixedBytes<N> {
         FixedBytes(*self.as_bytes())
+    }
+}
+
+impl<'a, const N: usize> ToOwnedSsz<VariableList<u8, N>> for ssz::view::BytesRef<'a, N> {
+    fn to_owned(&self) -> VariableList<u8, N> {
+        VariableList::from(self.to_owned())
+    }
+}
+
+impl<'a, TRef, T, const N: usize> ToOwnedSsz<VariableList<T, N>> for ssz::view::ListRef<'a, TRef, N>
+where
+    TRef: DecodeView<'a> + SszTypeInfo + ToOwnedSsz<T>,
+{
+    fn to_owned(&self) -> VariableList<T, N> {
+        let items: Vec<T> = self
+            .iter()
+            .map(|item_result| {
+                let item = item_result.expect("valid view");
+                ToOwnedSsz::to_owned(&item)
+            })
+            .collect();
+        VariableList::from(items)
     }
 }
 

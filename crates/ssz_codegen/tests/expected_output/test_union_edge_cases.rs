@@ -208,7 +208,7 @@ pub mod tests {
                 }
                 pub fn as_selector0(
                     &self,
-                ) -> Result<VariableListRef<'a, u8, 10usize>, ssz::DecodeError> {
+                ) -> Result<BytesRef<'a, 10usize>, ssz::DecodeError> {
                     if self.selector() != 0u8 {
                         return Err(
                             ssz::DecodeError::BytesInvalid(
@@ -1016,7 +1016,7 @@ pub mod tests {
                 }
                 pub fn opt_complex(
                     &self,
-                ) -> Result<Option<VariableListRef<'a, u16, 8usize>>, ssz::DecodeError> {
+                ) -> Result<Option<ListRef<'a, u16, 8usize>>, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
                         self.bytes,
                         24usize,
@@ -1043,7 +1043,7 @@ pub mod tests {
                     match selector {
                         0 => Ok(None),
                         1 => {
-                            let inner = <VariableListRef<
+                            let inner = <ListRef<
                                 'a,
                                 u16,
                                 8usize,

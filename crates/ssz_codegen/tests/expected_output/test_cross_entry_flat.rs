@@ -241,9 +241,7 @@ pub mod test_cross_entry_update {
             let bytes = &self.bytes[offset..end];
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
-        pub fn updates(
-            &self,
-        ) -> Result<VariableListRef<'a, u8, 10usize>, ssz::DecodeError> {
+        pub fn updates(&self) -> Result<BytesRef<'a, 10usize>, ssz::DecodeError> {
             let start = ssz::layout::read_variable_offset(
                 self.bytes,
                 16usize,
@@ -353,11 +351,7 @@ pub mod test_cross_entry_update {
                     ssz_types::view::ToOwnedSsz::to_owned(&view)
                 },
                 timestamp: self.timestamp().expect("valid view"),
-                updates: self
-                    .updates()
-                    .expect("valid view")
-                    .to_owned()
-                    .expect("valid view"),
+                updates: self.updates().expect("valid view").to_owned().into(),
             }
         }
     }
