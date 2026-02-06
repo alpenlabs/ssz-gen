@@ -223,6 +223,46 @@ pub fn merkle_root_with_hasher<H: TreeHashDigest>(
     }
 }
 
+/// Merkleize a list of 32-byte chunks using the progressive tree shape.
+///
+/// See EIP-7916 for details on progressive merkleization.
+pub fn merkleize_progressive_with_hasher<H: TreeHashDigest>(chunks: &[H::Output]) -> H::Output {
+    merkleize_progressive_with_hasher_inner::<H>(chunks, 1)
+}
+
+fn merkleize_progressive_with_hasher_inner<H: TreeHashDigest>(
+    chunks: &[H::Output],
+    num_leaves: usize,
+) -> H::Output {
+    if chunks.is_empty() {
+        return H::get_zero_hash(0);
+    }
+
+    let left_len = std::cmp::min(num_leaves, chunks.len());
+    let left_root = merkleize_progressive_subtree::<H>(&chunks[..left_len], num_leaves);
+    let right_root = merkleize_progressive_with_hasher_inner::<H>(
+        &chunks[left_len..],
+        num_leaves.saturating_mul(4),
+    );
+
+    H::hash32_concat(left_root.as_ref(), right_root.as_ref())
+}
+
+fn merkleize_progressive_subtree<H: TreeHashDigest>(
+    chunks: &[H::Output],
+    num_leaves: usize,
+) -> H::Output {
+    let mut hasher = MerkleHasher::<H>::with_leaves(num_leaves);
+    for chunk in chunks {
+        hasher
+            .write(chunk.as_ref())
+            .expect("progressive merkleize leaves within limit");
+    }
+    hasher
+        .finish()
+        .expect("progressive merkleize leaves within limit")
+}
+
 /// Returns the node created by hashing `root` and `length`.
 ///
 /// Used in `TreeHash` for inserting the length of a list above it's root.
@@ -344,9 +384,11 @@ macro_rules! tree_hash_ssz_encoding_as_vector {
 }
 
 /// Macro for implementing `TreeHash` for a type that is encoded as a list.
+///
+/// The `limit` should be the list's maximum length in bytes (e.g. `List[byte, N]`).
 #[macro_export]
 macro_rules! tree_hash_ssz_encoding_as_list {
-    ($type: ident) => {
+    ($type: ident, $limit: expr) => {
         impl<H: TreeHashDigest> tree_hash::TreeHash<H> for $type {
             fn tree_hash_type() -> tree_hash::TreeHashType {
                 tree_hash::TreeHashType::List
@@ -361,9 +403,18 @@ macro_rules! tree_hash_ssz_encoding_as_list {
             }
 
             fn tree_hash_root(&self) -> H::Output {
-                tree_hash::merkle_root_with_hasher::<H>(&ssz::ssz_encode(self), 0)
+                let bytes = ssz::ssz_encode(self);
+                let limit: usize = $limit;
+                let minimum_leaf_count = limit.div_ceil(tree_hash::BYTES_PER_CHUNK);
+                let chunks_root = tree_hash::merkle_root_with_hasher::<H>(&bytes, minimum_leaf_count);
+                tree_hash::mix_in_length_with_hasher::<H>(&chunks_root, bytes.len())
             }
         }
+    };
+    ($type: ident) => {
+        compile_error!(
+            "tree_hash_ssz_encoding_as_list! now requires a list limit: tree_hash_ssz_encoding_as_list!(Type, LIMIT)"
+        );
     };
 }
 

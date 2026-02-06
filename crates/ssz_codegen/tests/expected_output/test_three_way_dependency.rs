@@ -1,7 +1,7 @@
 #![allow(unused_imports, reason = "generated code using ssz-gen")]
-use ssz_primitives::{U128, U256};
 use ssz_types::*;
 use ssz_types::view::{FixedVectorRef, VariableListRef};
+use ssz_primitives::{U128, U256};
 use ssz_derive::{Encode, Decode};
 use tree_hash::TreeHashDigest;
 use tree_hash_derive::TreeHash;
@@ -87,7 +87,7 @@ impl<'a> ContainerARef<'a> {
 }
 impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ContainerARef<'a> {
     fn tree_hash_type() -> tree_hash::TreeHashType {
-        tree_hash::TreeHashType::Container
+        tree_hash::TreeHashType::StableContainer
     }
     fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
         unreachable!("Container should never be packed")
@@ -97,7 +97,7 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ContainerARef<
     }
     fn tree_hash_root(&self) -> H::Output {
         use tree_hash::TreeHash;
-        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
         {
             let offset = 0usize;
             let field_bytes = &self.bytes[offset..offset + 1usize];
@@ -159,7 +159,10 @@ impl<'a> ContainerARef<'a> {
     pub fn to_owned(&self) -> ContainerA {
         ContainerA {
             value: self.value().expect("valid view"),
-            b_ref: self.b_ref().expect("valid view").to_owned(),
+            b_ref: {
+                let view = self.b_ref().expect("valid view");
+                ssz_types::view::ToOwnedSsz::to_owned(&view)
+            },
         }
     }
 }
@@ -244,7 +247,7 @@ impl<'a> ContainerBRef<'a> {
 }
 impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ContainerBRef<'a> {
     fn tree_hash_type() -> tree_hash::TreeHashType {
-        tree_hash::TreeHashType::Container
+        tree_hash::TreeHashType::StableContainer
     }
     fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
         unreachable!("Container should never be packed")
@@ -254,7 +257,7 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ContainerBRef<
     }
     fn tree_hash_root(&self) -> H::Output {
         use tree_hash::TreeHash;
-        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
         {
             let offset = 0usize;
             let field_bytes = &self.bytes[offset..offset + 2usize];
@@ -316,7 +319,10 @@ impl<'a> ContainerBRef<'a> {
     pub fn to_owned(&self) -> ContainerB {
         ContainerB {
             value: self.value().expect("valid view"),
-            c_ref: self.c_ref().expect("valid view").to_owned(),
+            c_ref: {
+                let view = self.c_ref().expect("valid view");
+                ssz_types::view::ToOwnedSsz::to_owned(&view)
+            },
         }
     }
 }
@@ -373,7 +379,7 @@ impl<'a> ContainerCRef<'a> {
 }
 impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ContainerCRef<'a> {
     fn tree_hash_type() -> tree_hash::TreeHashType {
-        tree_hash::TreeHashType::Container
+        tree_hash::TreeHashType::StableContainer
     }
     fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
         unreachable!("Container should never be packed")
@@ -383,7 +389,7 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ContainerCRef<
     }
     fn tree_hash_root(&self) -> H::Output {
         use tree_hash::TreeHash;
-        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
         {
             let offset = 0usize;
             let field_bytes = &self.bytes[offset..offset + 4usize];

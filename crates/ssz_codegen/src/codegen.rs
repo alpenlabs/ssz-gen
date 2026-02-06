@@ -139,6 +139,7 @@ impl<'a> CircleBufferCodegen<'a> {
         let parent_ty = class.parent_ty();
         let parent_path = match parent_ty {
             Ty::Imported(path, _, _) => Some(path),
+            Ty::ImportedComplex(path, _, _, _) => Some(path),
             _ => None,
         };
         let parent_class = type_resolver.resolve_class(parent_ty);

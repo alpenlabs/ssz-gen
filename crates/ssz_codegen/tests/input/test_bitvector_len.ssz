@@ -1,0 +1,3 @@
+class BitvectorLenTest(StableContainer[9]):
+    a: Optional[uint8]
+    b: Optional[uint16]

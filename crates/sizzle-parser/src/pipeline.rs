@@ -138,6 +138,12 @@ fn collect_imports_from_ty_expr(spec: &TyExprSpec, imports: &mut HashSet<PathBuf
                 collect_imports_from_ty_arg(arg, imports);
             }
         }
+        TyExprSpec::ImportedComplex(imported) => {
+            imports.insert(imported.module_path().clone());
+            for arg in imported.args() {
+                collect_imports_from_ty_arg(arg, imports);
+            }
+        }
         TyExprSpec::Simple(_) | TyExprSpec::None => {}
     }
 }
@@ -150,6 +156,12 @@ fn collect_imports_from_ty_arg(spec: &TyArgSpec, imports: &mut HashSet<PathBuf>)
         }
         TyArgSpec::Complex(complex) => {
             for arg in complex.args() {
+                collect_imports_from_ty_arg(arg, imports);
+            }
+        }
+        TyArgSpec::ImportedComplex(imported) => {
+            imports.insert(imported.module_path().clone());
+            for arg in imported.args() {
                 collect_imports_from_ty_arg(arg, imports);
             }
         }
@@ -172,6 +184,12 @@ fn get_module_imports(module: &Module) -> HashSet<PathBuf> {
                         collect_imports_from_ty_arg(arg, &mut imports);
                     }
                 }
+                AssignExpr::ImportedComplex(imported) => {
+                    imports.insert(imported.module_path().clone());
+                    for arg in imported.args() {
+                        collect_imports_from_ty_arg(arg, &mut imports);
+                    }
+                }
                 AssignExpr::Name(_) | AssignExpr::Value(_) | AssignExpr::SymbolicBinop(_, _, _) => {
                 }
             },
@@ -188,6 +206,7 @@ fn get_module_imports(module: &Module) -> HashSet<PathBuf> {
 }
 
 /// High-level parse function.
+#[allow(clippy::result_large_err)]
 pub fn parse_str_schema(
     files: &HashMap<PathBuf, String>,
     external_modules: &[&str],
@@ -423,6 +442,27 @@ TestB = mod_b.TypeB
         assert!(
             result.is_ok(),
             "External crate paths should be constructed correctly and not cause UnknownImport"
+        );
+    }
+
+    #[test]
+    fn test_imported_generic_types_parse() {
+        const SCHEMA: &str = r"
+import external_crate
+
+Foo = external_crate.Vector[uint8, 32]
+
+class Example(Container):
+    bytes: external_crate.List[uint8, 16]
+    nested: external_crate.Vector[external_crate.List[uint8, 4], 2]
+";
+
+        let files = HashMap::from([(Path::new("test.ssz").to_path_buf(), SCHEMA.to_string())]);
+
+        let result = parse_str_schema(&files, &["external_crate"]);
+        assert!(
+            result.is_ok(),
+            "Imported generic types should parse successfully"
         );
     }
 

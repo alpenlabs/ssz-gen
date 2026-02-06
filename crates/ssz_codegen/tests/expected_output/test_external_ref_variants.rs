@@ -114,7 +114,7 @@ pub mod tests {
                 pub fn messages(
                     &self,
                 ) -> Result<
-                    VariableListRef<'a, external_ssz::MessagePayloadRef<'a>, 10usize>,
+                    ListRef<'a, external_ssz::MessagePayloadRef<'a>, 10usize>,
                     ssz::DecodeError,
                 > {
                     let start = ssz::layout::read_variable_offset(
@@ -139,7 +139,7 @@ pub mod tests {
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for ContainerWithExternalRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -149,7 +149,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
                     {
                         let payload = self.payload().expect("valid view");
                         let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
@@ -231,13 +231,26 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> ContainerWithExternal {
                     ContainerWithExternal {
-                        payload: self.payload().expect("valid view").to_owned(),
-                        account_id: self.account_id().expect("valid view").to_owned(),
-                        messages: self
-                            .messages()
-                            .expect("valid view")
-                            .to_owned()
-                            .expect("valid view"),
+                        payload: {
+                            let view = self.payload().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
+                        account_id: {
+                            let view = self.account_id().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
+                        messages: {
+                            let view = self.messages().expect("valid view");
+                            let items: Result<Vec<_>, _> = view
+                                .iter()
+                                .map(|item_result| {
+                                    item_result
+                                        .map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                                })
+                                .collect();
+                            let items = items.expect("valid view");
+                            ssz_types::VariableList::from(items)
+                        },
                     }
                 }
             }

@@ -87,7 +87,7 @@ impl<'a> ContainerARef<'a> {
 }
 impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ContainerARef<'a> {
     fn tree_hash_type() -> tree_hash::TreeHashType {
-        tree_hash::TreeHashType::Container
+        tree_hash::TreeHashType::StableContainer
     }
     fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
         unreachable!("Container should never be packed")
@@ -97,7 +97,7 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ContainerARef<
     }
     fn tree_hash_root(&self) -> H::Output {
         use tree_hash::TreeHash;
-        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
         {
             let offset = 0usize;
             let field_bytes = &self.bytes[offset..offset + 1usize];
@@ -247,7 +247,7 @@ impl<'a> ContainerBRef<'a> {
 }
 impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ContainerBRef<'a> {
     fn tree_hash_type() -> tree_hash::TreeHashType {
-        tree_hash::TreeHashType::Container
+        tree_hash::TreeHashType::StableContainer
     }
     fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
         unreachable!("Container should never be packed")
@@ -257,7 +257,7 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ContainerBRef<
     }
     fn tree_hash_root(&self) -> H::Output {
         use tree_hash::TreeHash;
-        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
         {
             let offset = 0usize;
             let field_bytes = &self.bytes[offset..offset + 2usize];
@@ -379,7 +379,7 @@ impl<'a> ContainerCRef<'a> {
 }
 impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ContainerCRef<'a> {
     fn tree_hash_type() -> tree_hash::TreeHashType {
-        tree_hash::TreeHashType::Container
+        tree_hash::TreeHashType::StableContainer
     }
     fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
         unreachable!("Container should never be packed")
@@ -389,7 +389,7 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ContainerCRef<
     }
     fn tree_hash_root(&self) -> H::Output {
         use tree_hash::TreeHash;
-        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
         {
             let offset = 0usize;
             let field_bytes = &self.bytes[offset..offset + 4usize];

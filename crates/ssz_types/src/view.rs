@@ -66,7 +66,7 @@ use crate::{Error, FixedVector, VariableList};
 #[derive(Debug, Copy, Clone)]
 pub struct VariableListRef<'a, TRef, const N: usize> {
     /// The underlying list reference.
-    inner: ListRef<'a, TRef>,
+    inner: ListRef<'a, TRef, N>,
 }
 
 impl<'a, TRef: SszTypeInfo, const N: usize> VariableListRef<'a, TRef, N> {
@@ -74,17 +74,7 @@ impl<'a, TRef: SszTypeInfo, const N: usize> VariableListRef<'a, TRef, N> {
     ///
     /// - `bytes`: the SSZ-encoded list bytes.
     pub fn new(bytes: &'a [u8]) -> Result<Self, DecodeError> {
-        let inner = ListRef::new(bytes)?;
-
-        // Validate that the list doesn't exceed the maximum length
-        if inner.len() > N {
-            return Err(DecodeError::BytesInvalid(format!(
-                "VariableList length {} exceeds maximum {}",
-                inner.len(),
-                N
-            )));
-        }
-
+        let inner = ListRef::<TRef, N>::new(bytes)?;
         Ok(Self { inner })
     }
 
@@ -196,6 +186,28 @@ impl<T: Copy> ToOwnedSsz<T> for T {
 impl<'a, const N: usize> ToOwnedSsz<FixedBytes<N>> for ssz::view::FixedBytesRef<'a, N> {
     fn to_owned(&self) -> FixedBytes<N> {
         FixedBytes(*self.as_bytes())
+    }
+}
+
+impl<'a, const N: usize> ToOwnedSsz<VariableList<u8, N>> for ssz::view::BytesRef<'a, N> {
+    fn to_owned(&self) -> VariableList<u8, N> {
+        VariableList::from(self.to_owned())
+    }
+}
+
+impl<'a, TRef, T, const N: usize> ToOwnedSsz<VariableList<T, N>> for ssz::view::ListRef<'a, TRef, N>
+where
+    TRef: DecodeView<'a> + SszTypeInfo + ToOwnedSsz<T>,
+{
+    fn to_owned(&self) -> VariableList<T, N> {
+        let items: Vec<T> = self
+            .iter()
+            .map(|item_result| {
+                let item = item_result.expect("valid view");
+                ToOwnedSsz::to_owned(&item)
+            })
+            .collect();
+        VariableList::from(items)
     }
 }
 
@@ -572,6 +584,32 @@ mod tests {
     }
 
     #[test]
+    fn tree_hash_variable_list_ref_u8_empty_respects_capacity_limit() {
+        use tree_hash::{Hash256, Sha256Hasher, TreeHash};
+
+        // Regression for bounded byte-list hashing:
+        // An empty `VariableList<u8, 64>` must merkleize with `limit = ceil(64 / 32) = 2` chunks,
+        // then mix in length (0). Historically some view hashing paths behaved like `limit = 0`,
+        // producing a different root.
+        let owned: VariableList<u8, 64> = vec![].into();
+        let bytes = owned.as_ssz_bytes();
+        let view = VariableListRef::<u8, 64>::from_ssz_bytes(&bytes).unwrap();
+
+        let owned_hash: Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&owned);
+        let view_hash: Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&view);
+
+        assert_eq!(owned_hash, view_hash);
+        assert_eq!(
+            owned_hash,
+            Hash256::from_slice(&[
+                0x7a, 0x05, 0x01, 0xf5, 0x95, 0x7b, 0xdf, 0x9c, 0xb3, 0xa8, 0xff, 0x49, 0x66, 0xf0,
+                0x22, 0x65, 0xf9, 0x68, 0x65, 0x8b, 0x7a, 0x9c, 0x62, 0x64, 0x2c, 0xba, 0x11, 0x65,
+                0xe8, 0x66, 0x42, 0xf5,
+            ])
+        );
+    }
+
+    #[test]
     fn tree_hash_fixed_vector_ref() {
         use tree_hash::{Sha256Hasher, TreeHash};
 
@@ -672,6 +710,27 @@ mod tests {
                 "Tree hash mismatch for size {}",
                 size
             );
+        }
+    }
+
+    #[test]
+    fn property_variable_list_u8_equivalence() {
+        use tree_hash::{Sha256Hasher, TreeHash};
+
+        for size in [0, 1, 2, 31, 32, 33, 63, 64] {
+            let values: Vec<u8> = (0..size).map(|i| i as u8).collect();
+            let list: VariableList<u8, 64> = values.clone().into();
+            let encoded = list.as_ssz_bytes();
+
+            let view = VariableListRef::<u8, 64>::from_ssz_bytes(&encoded).unwrap();
+            let view_owned = view.to_owned().unwrap();
+
+            assert_eq!(list, view_owned, "Size {}", size);
+
+            let owned_hash: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&list);
+            let view_hash: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&view);
+
+            assert_eq!(owned_hash, view_hash, "Size {}", size);
         }
     }
 

@@ -62,9 +62,10 @@ pub mod tests {
                 pub fn to_owned(&self) -> TestUnion {
                     match self.selector() {
                         0u8 => {
-                            TestUnion::TypeAlias(
-                                self.as_selector0().expect("valid selector").to_owned(),
-                            )
+                            TestUnion::TypeAlias({
+                                let view = self.as_selector0().expect("valid selector");
+                                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
                         }
                         _ => panic!("Invalid union selector: {}", self.selector()),
                     }
@@ -74,6 +75,19 @@ pub mod tests {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
                     let (_, _) = ssz::split_union_bytes(bytes)?;
                     Ok(Self { bytes })
+                }
+            }
+            impl<'a> ssz::view::SszTypeInfo for TestUnionRef<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+                fn ssz_fixed_len() -> usize {
+                    0
+                }
+            }
+            impl<'a> ssz_types::view::ToOwnedSsz<TestUnion> for TestUnionRef<'a> {
+                fn to_owned(&self) -> TestUnion {
+                    <TestUnionRef<'a>>::to_owned(self)
                 }
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
@@ -162,7 +176,7 @@ pub mod tests {
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for UnderlyingTypeRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -172,7 +186,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     {
                         let offset = 0usize;
                         let field_bytes = &self.bytes[offset..offset + 8usize];

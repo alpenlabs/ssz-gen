@@ -64,6 +64,9 @@ pub enum Ty {
     /// An imported type.
     Imported(PathBuf, Identifier, Identifier),
 
+    /// An imported type with arguments.
+    ImportedComplex(PathBuf, Identifier, Identifier, Vec<TyExpr>),
+
     /// A simple type without arguments.
     Simple(Identifier),
 
@@ -76,6 +79,7 @@ impl Ty {
     pub fn base_name(&self) -> &Identifier {
         match self {
             Ty::Imported(_, _, name) => name,
+            Ty::ImportedComplex(_, _, name, _) => name,
             Ty::Simple(name) => name,
             Ty::Complex(name, _) => name,
         }
@@ -87,7 +91,7 @@ impl Ty {
 
         let ext = match self {
             Ty::Imported(_, _, _) | Ty::Simple(_) => &[],
-            Ty::Complex(_, ch) => ch.as_slice(),
+            Ty::ImportedComplex(_, _, _, ch) | Ty::Complex(_, ch) => ch.as_slice(),
         };
 
         std::iter::once(bn).chain(ext.iter().flat_map(|e| e.iter_idents()))

@@ -171,6 +171,7 @@ impl AliasDef {
 }
 
 /// Converts a AST module to a full schema.
+#[allow(clippy::result_large_err)]
 pub(crate) fn conv_module_to_schema<'a>(
     m: &Module,
     cross_module_types: &'a CrossModuleTypeMap<'a>,
@@ -243,6 +244,17 @@ pub(crate) fn conv_module_to_schema<'a>(
                             imported.base_name().clone(),
                             imported.full_name(),
                         ),
+                    });
+                }
+
+                AssignExpr::ImportedComplex(imported) => {
+                    let ty = resolver
+                        .resolve_spec_as_ty(&TyExprSpec::ImportedComplex(imported.clone()))?;
+                    resolver.decl_user_type(name.clone())?;
+                    idents.insert(name.clone(), IdentTarget::Ty(TypeData {}));
+                    aliases.push(AliasDef {
+                        name: name.clone(),
+                        ty,
                     });
                 }
 
@@ -381,6 +393,7 @@ pub(crate) fn conv_module_to_schema<'a>(
     Ok((schema, idents))
 }
 
+#[allow(clippy::result_large_err)]
 fn conv_classdef<'a>(
     def: &ClassDefEntry,
     resolv: &'a TypeResolver<'a>,
@@ -424,6 +437,7 @@ fn conv_classdef<'a>(
     })
 }
 
+#[allow(clippy::result_large_err)]
 fn trace_type_for_cycles<'d>(
     ident: &Identifier,
     root: &Identifier,

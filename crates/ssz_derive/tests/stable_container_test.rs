@@ -60,3 +60,14 @@ fn test_stable_container_roundtrip_mixed() {
     assert_eq!(decoded.field_a, Optional::Some(42));
     assert_eq!(decoded.field_b, Optional::None);
 }
+
+#[test]
+fn test_stable_container_ssz_bytes_len_matches_encoding() {
+    let value = TestStableContainer {
+        field_a: Optional::Some(0x1111_1111_1111_1111),
+        field_b: Optional::None,
+    };
+
+    let bytes = value.as_ssz_bytes();
+    assert_eq!(value.ssz_bytes_len(), bytes.len());
+}

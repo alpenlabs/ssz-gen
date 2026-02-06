@@ -7,7 +7,12 @@
 //! - Track and generate union types
 //! - Manage custom type definitions
 
-use std::{cell::RefCell, collections::HashMap, path::PathBuf, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    path::{Path, PathBuf},
+    rc::Rc,
+};
 
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
@@ -15,7 +20,7 @@ use sizzle_parser::{
     Identifier,
     tysys::{Ty, TyExpr},
 };
-use syn::{Ident, parse_quote};
+use syn::{AngleBracketedGenericArguments, GenericArgument, Ident, PathArguments, parse_quote};
 
 use super::{BaseClass, ClassDef, ClassDefinition, SizeExpr, TypeDefinition, TypeResolution};
 use crate::types::TypeResolutionKind;
@@ -228,6 +233,9 @@ impl<'a> TypeResolver<'a> {
         if let Ty::Imported(path, name, _) = ty {
             return self.resolve_imported_type(path, name);
         }
+        if let Ty::ImportedComplex(path, name, _, args) = ty {
+            return self.resolve_imported_complex_type(path, name, args);
+        }
 
         // Check if the type is a base class (Container, StableContainer, Profile or aliases to
         // them)
@@ -238,7 +246,7 @@ impl<'a> TypeResolver<'a> {
 
         // Extract the type arguments
         let args = match ty {
-            Ty::Imported(_, _, _) | Ty::Simple(_) => vec![],
+            Ty::Imported(_, _, _) | Ty::ImportedComplex(_, _, _, _) | Ty::Simple(_) => vec![],
             Ty::Complex(_, args) => {
                 let mut resolved_args = Vec::with_capacity(args.len());
                 for arg in args.iter() {
@@ -345,7 +353,8 @@ impl<'a> TypeResolver<'a> {
                     Ty::Imported(_, _, _) | Ty::Simple(_) => {
                         panic!("Stable container must have a max field count as first argument")
                     }
-                    Ty::Complex(_, args) => match args.first() {
+                    Ty::Complex(_, args) | Ty::ImportedComplex(_, _, _, args) => match args.first()
+                    {
                         Some(TyExpr::Int(int)) => int.eval(),
                         Some(TyExpr::ConstRef(_, value)) => *value,
                         _ => {
@@ -368,25 +377,29 @@ impl<'a> TypeResolver<'a> {
                         Ty::Imported(_, _, _) | Ty::Simple(_) => {
                             panic!("Profile must inherit from a stable container")
                         }
-                        Ty::Complex(_, args) => match args.first() {
-                            Some(TyExpr::Ty(ty)) => {
-                                let name = ty.base_name().0.clone();
-                                let class_def = self.resolve_class(ty);
-                                if class_def.is_none() {
-                                    return TypeResolution {
-                                        ty: None,
-                                        resolution: TypeResolutionKind::Unresolved,
-                                    };
+                        Ty::Complex(_, args) | Ty::ImportedComplex(_, _, _, args) => {
+                            match args.first() {
+                                Some(TyExpr::Ty(ty)) => {
+                                    let name = ty.base_name().0.clone();
+                                    let class_def = self.resolve_class(ty);
+                                    if class_def.is_none() {
+                                        return TypeResolution {
+                                            ty: None,
+                                            resolution: TypeResolutionKind::Unresolved,
+                                        };
+                                    }
+                                    let class_def = class_def.unwrap();
+                                    if let BaseClass::StableContainer(max) = class_def.base {
+                                        (name, max.unwrap())
+                                    } else {
+                                        panic!(
+                                            "Expected profile to inherit from a stable container"
+                                        );
+                                    }
                                 }
-                                let class_def = class_def.unwrap();
-                                if let BaseClass::StableContainer(max) = class_def.base {
-                                    (name, max.unwrap())
-                                } else {
-                                    panic!("Expected profile to inherit from a stable container");
-                                }
+                                _ => panic!("Profile must inherit from a class"),
                             }
-                            _ => panic!("Profile must inherit from a class"),
-                        },
+                        }
                     },
                 };
                 TypeResolution {
@@ -662,12 +675,19 @@ impl<'a> TypeResolver<'a> {
                 .expect("Cannot get class definitions from external crates");
             return resolver.resolve_class(&Ty::Simple(name.clone()));
         }
+        if let Ty::ImportedComplex(path, name, _, args) = ty {
+            let resolvers = self.resolvers.borrow();
+            let resolver = resolvers
+                .get(path)
+                .expect("Cannot get class definitions from external crates");
+            return resolver.resolve_class(&Ty::Complex(name.clone(), args.clone()));
+        }
 
         let class_def = self.classes.get(ty.base_name().0.as_str())?;
 
         let args = match ty {
             Ty::Simple(_) | Ty::Imported(_, _, _) => vec![],
-            Ty::Complex(_, args) => args.clone(),
+            Ty::Complex(_, args) | Ty::ImportedComplex(_, _, _, args) => args.clone(),
         };
 
         Some(self.resolve_class_definition(class_def, &args))
@@ -815,11 +835,12 @@ impl<'a> TypeResolver<'a> {
                 }),
                 BaseClass::Profile(Some((name, max))) => {
                     let resolvers = self.resolvers.borrow();
-                    let class_def = if let Ty::Imported(path, _, _) = ty {
-                        let resolver = resolvers.get(path).unwrap();
-                        resolver.classes.get(name).unwrap()
-                    } else {
-                        self.classes.get(name).unwrap()
+                    let class_def = match ty {
+                        Ty::Imported(path, _, _) | Ty::ImportedComplex(path, _, _, _) => {
+                            let resolver = resolvers.get(path).unwrap();
+                            resolver.classes.get(name).unwrap()
+                        }
+                        _ => self.classes.get(name).unwrap(),
                     };
                     let resolved_def = self.resolve_class_definition(class_def, &[]);
                     ClassDefinition::Custom(ClassDef {
@@ -971,6 +992,160 @@ impl<'a> TypeResolver<'a> {
         }
 
         type_resolution
+    }
+
+    fn resolve_imported_complex_type(
+        &self,
+        path: &PathBuf,
+        name: &Identifier,
+        args: &[TyExpr],
+    ) -> TypeResolution {
+        let generic_args: Vec<GenericArgument> = args
+            .iter()
+            .map(|arg| self.ty_expr_to_generic_arg(arg))
+            .collect();
+        let resolvers = self.resolvers.borrow();
+        let is_external = !resolvers.contains_key(path);
+        let ty = self.build_imported_type_path(path, name, Some(generic_args), !is_external);
+
+        if is_external {
+            return TypeResolution {
+                ty: Some(ty),
+                resolution: TypeResolutionKind::External,
+            };
+        }
+
+        let resolver = resolvers.get(path).unwrap();
+        let mut type_resolution =
+            resolver.resolve_type(&Ty::Complex(name.clone(), args.to_vec()), None);
+        type_resolution.ty = Some(ty);
+
+        if type_resolution.resolution == TypeResolutionKind::Unresolved {
+            type_resolution.resolution = TypeResolutionKind::External;
+        }
+
+        type_resolution
+    }
+
+    fn ty_expr_to_generic_arg(&self, ty_expr: &TyExpr) -> GenericArgument {
+        match ty_expr {
+            TyExpr::Ty(ty) => {
+                let resolved = self.resolve_type(ty, None);
+                let ty = if resolved.resolution == TypeResolutionKind::Unresolved {
+                    self.ty_to_type_fallback(ty)
+                } else {
+                    resolved.unwrap_type_preserving_const_names()
+                };
+                GenericArgument::Type(ty)
+            }
+            TyExpr::Int(value) => {
+                let lit = syn::LitInt::new(&value.eval().to_string(), Span::call_site());
+                GenericArgument::Const(parse_quote!(#lit))
+            }
+            TyExpr::ConstRef(ident, _) => {
+                let ident = Ident::new(&ident.0, Span::call_site());
+                GenericArgument::Const(parse_quote!(#ident))
+            }
+            TyExpr::None => GenericArgument::Type(parse_quote!(())),
+        }
+    }
+
+    fn ty_to_type_fallback(&self, ty: &Ty) -> syn::Type {
+        match ty {
+            Ty::Simple(ident) => {
+                let ident = Ident::new(&ident.0, Span::call_site());
+                parse_quote!(#ident)
+            }
+            Ty::Imported(path, name, _) => {
+                let resolvers = self.resolvers.borrow();
+                let include_crate = resolvers.contains_key(path);
+                self.build_imported_type_path(path, name, None, include_crate)
+            }
+            Ty::ImportedComplex(path, name, _, args) => {
+                let resolvers = self.resolvers.borrow();
+                let include_crate = resolvers.contains_key(path);
+                let generic_args: Vec<GenericArgument> = args
+                    .iter()
+                    .map(|arg| self.ty_expr_to_generic_arg(arg))
+                    .collect();
+                self.build_imported_type_path(path, name, Some(generic_args), include_crate)
+            }
+            Ty::Complex(name, args) => {
+                let ident = Ident::new(&name.0, Span::call_site());
+                let generic_args: Vec<GenericArgument> = args
+                    .iter()
+                    .map(|arg| self.ty_expr_to_generic_arg(arg))
+                    .collect();
+                let mut path_segments = syn::punctuated::Punctuated::new();
+                let args = self.generic_args_to_path_args(generic_args);
+                path_segments.push(syn::PathSegment {
+                    ident,
+                    arguments: args,
+                });
+                syn::Type::Path(syn::TypePath {
+                    qself: None,
+                    path: syn::Path {
+                        leading_colon: None,
+                        segments: path_segments,
+                    },
+                })
+            }
+        }
+    }
+
+    fn build_imported_type_path(
+        &self,
+        path: &Path,
+        name: &Identifier,
+        generic_args: Option<Vec<GenericArgument>>,
+        include_crate: bool,
+    ) -> syn::Type {
+        let mut path_segments = syn::punctuated::Punctuated::new();
+        if include_crate {
+            path_segments.push(syn::PathSegment {
+                ident: syn::Ident::new("crate", proc_macro2::Span::call_site()),
+                arguments: syn::PathArguments::None,
+            });
+        }
+        path_segments.extend(
+            path.to_str()
+                .unwrap()
+                .split(std::path::MAIN_SEPARATOR)
+                .map(|s| syn::PathSegment {
+                    ident: syn::Ident::new(s, proc_macro2::Span::call_site()),
+                    arguments: syn::PathArguments::None,
+                }),
+        );
+        let arguments = match generic_args {
+            Some(args) => self.generic_args_to_path_args(args),
+            None => syn::PathArguments::None,
+        };
+        path_segments.push(syn::PathSegment {
+            ident: syn::Ident::new(&name.0, proc_macro2::Span::call_site()),
+            arguments,
+        });
+
+        syn::Type::Path(syn::TypePath {
+            qself: None,
+            path: syn::Path {
+                leading_colon: None,
+                segments: path_segments,
+            },
+        })
+    }
+
+    fn generic_args_to_path_args(&self, args: Vec<GenericArgument>) -> syn::PathArguments {
+        if args.is_empty() {
+            return PathArguments::None;
+        }
+        let mut punctuated = syn::punctuated::Punctuated::new();
+        punctuated.extend(args);
+        PathArguments::AngleBracketed(AngleBracketedGenericArguments {
+            colon2_token: None,
+            lt_token: Default::default(),
+            args: punctuated,
+            gt_token: Default::default(),
+        })
     }
 
     /// Generates view type code for union types

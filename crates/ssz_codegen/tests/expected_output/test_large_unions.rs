@@ -347,7 +347,9 @@ pub mod tests {
                     }
                     ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
                 }
-                pub fn as_selector1(&self) -> Result<BytesRef<'a>, ssz::DecodeError> {
+                pub fn as_selector1(
+                    &self,
+                ) -> Result<BytesRef<'a, 5usize>, ssz::DecodeError> {
                     if self.selector() != 1u8 {
                         return Err(
                             ssz::DecodeError::BytesInvalid(
@@ -805,7 +807,7 @@ pub mod tests {
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for ContainerWithBigUnionsRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -815,7 +817,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
                     {
                         let big = self.big().expect("valid view");
                         let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<

@@ -272,7 +272,7 @@ impl<'a, const N: usize, H: TreeHashDigest> TreeHash<H> for FixedBytesRef<'a, N>
     }
 }
 
-impl<'a, H: TreeHashDigest> TreeHash<H> for BytesRef<'a> {
+impl<'a, const N: usize, H: TreeHashDigest> TreeHash<H> for BytesRef<'a, N> {
     fn tree_hash_type() -> TreeHashType {
         TreeHashType::List
     }
@@ -287,13 +287,18 @@ impl<'a, H: TreeHashDigest> TreeHash<H> for BytesRef<'a> {
 
     fn tree_hash_root(&self) -> H::Output {
         // Directly hash the bytes without copying to owned Vec
-        let chunks_root = merkle_root_with_hasher::<H>(self.as_bytes(), 0);
+        let minimum_leaf_count = N.div_ceil(BYTES_PER_CHUNK);
+        if self.is_empty() && minimum_leaf_count == 1 {
+            let chunks_root = H::get_zero_hash(0);
+            return mix_in_length_with_hasher::<H>(&chunks_root, 0);
+        }
+        let chunks_root = merkle_root_with_hasher::<H>(self.as_bytes(), minimum_leaf_count);
         mix_in_length_with_hasher::<H>(&chunks_root, self.len())
     }
 }
 
 // TreeHash implementation for ListRef
-impl<'a, TRef, H> TreeHash<H> for ListRef<'a, TRef>
+impl<'a, TRef, const N: usize, H> TreeHash<H> for ListRef<'a, TRef, N>
 where
     TRef: DecodeView<'a> + TreeHash<H> + ssz::view::SszTypeInfo,
     H: TreeHashDigest,
@@ -313,44 +318,38 @@ where
     fn tree_hash_root(&self) -> H::Output {
         let item_type = TRef::tree_hash_type();
 
-        if self.is_empty() {
-            let chunks_root = H::get_zero_hash(0);
-            return mix_in_length_with_hasher::<H>(&chunks_root, 0);
-        }
-
         match item_type {
             TreeHashType::Basic => {
                 // For basic types with fixed length, bytes are already properly laid out
-                if !self.is_empty() {
-                    let chunks_root = merkle_root_with_hasher::<H>(self.as_bytes(), 0);
-                    mix_in_length_with_hasher::<H>(&chunks_root, self.len())
-                } else {
+                let minimum_leaf_count = N.div_ceil(TRef::tree_hash_packing_factor());
+                if self.is_empty() && minimum_leaf_count == 1 {
                     let chunks_root = H::get_zero_hash(0);
                     mix_in_length_with_hasher::<H>(&chunks_root, 0)
+                } else {
+                    let chunks_root =
+                        merkle_root_with_hasher::<H>(self.as_bytes(), minimum_leaf_count);
+                    mix_in_length_with_hasher::<H>(&chunks_root, self.len())
                 }
             }
             _ => {
                 // For composite types (Container, Vector, List), hash each item
-                tree_hash_composite_list_items::<TRef, H>(self)
+                tree_hash_composite_list_items::<TRef, N, H>(self)
             }
         }
     }
 }
 
 /// Helper function to hash composite items in a [`ListRef`].
-fn tree_hash_composite_list_items<'a, TRef, H>(list: &ListRef<'a, TRef>) -> H::Output
+fn tree_hash_composite_list_items<'a, TRef, const N: usize, H>(
+    list: &ListRef<'a, TRef, N>,
+) -> H::Output
 where
     TRef: DecodeView<'a> + TreeHash<H> + ssz::view::SszTypeInfo,
     H: TreeHashDigest,
 {
     let num_items = list.len();
-    if num_items == 0 {
-        let chunks_root = H::get_zero_hash(0);
-        return mix_in_length_with_hasher::<H>(&chunks_root, 0);
-    }
-
-    // Create a hasher with enough leaves for all items
-    let mut hasher = MerkleHasher::<H>::with_leaves(num_items);
+    // Create a hasher with enough leaves for all items (limit-aware)
+    let mut hasher = MerkleHasher::<H>::with_leaves(N);
 
     // Hash each item and write to the hasher
     for item_result in list.iter() {
@@ -501,9 +500,20 @@ impl<'a, const N: usize, H: TreeHashDigest> TreeHash<H> for BitListRef<'a, N> {
     }
 
     fn tree_hash_root(&self) -> H::Output {
-        // Directly hash the bytes without converting to owned BitList
-        let chunks_root = merkle_root_with_hasher::<H>(self.as_bytes(), 0);
-        mix_in_length_with_hasher::<H>(&chunks_root, self.len())
+        let bit_len = self.len();
+        let data_len = if bit_len == 0 { 0 } else { bit_len.div_ceil(8) };
+        let mut bytes = self.as_bytes()[..data_len].to_vec();
+
+        if let Some(last) = bytes.last_mut() {
+            let bits_in_last = bit_len % 8;
+            if bits_in_last != 0 {
+                let mask = (1u8 << bits_in_last) - 1;
+                *last &= mask;
+            }
+        }
+
+        let chunks_root = bitfield_bytes_tree_hash_root::<N, H>(&bytes);
+        mix_in_length_with_hasher::<H>(&chunks_root, bit_len)
     }
 }
 #[cfg(test)]

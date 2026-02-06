@@ -436,7 +436,7 @@ pub mod tests {
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for ExternalContainerRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -446,7 +446,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     {
                         let field_a = self.field_a().expect("valid view");
                         let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<

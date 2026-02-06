@@ -75,7 +75,7 @@ impl<'a> StateRef<'a> {
 }
 impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for StateRef<'a> {
     fn tree_hash_type() -> tree_hash::TreeHashType {
-        tree_hash::TreeHashType::Container
+        tree_hash::TreeHashType::StableContainer
     }
     fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
         unreachable!("Container should never be packed")
@@ -85,7 +85,7 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for StateRef<'a> {
     }
     fn tree_hash_root(&self) -> H::Output {
         use tree_hash::TreeHash;
-        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
         {
             let data = self.data().expect("valid view");
             let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
@@ -221,7 +221,7 @@ impl<'a> UpdateRef<'a> {
         let bytes = &self.bytes[offset..end];
         ssz::view::DecodeView::from_ssz_bytes(bytes)
     }
-    pub fn updates(&self) -> Result<BytesRef<'a>, ssz::DecodeError> {
+    pub fn updates(&self) -> Result<BytesRef<'a, 10usize>, ssz::DecodeError> {
         let start = ssz::layout::read_variable_offset(
             self.bytes,
             16usize,
@@ -243,7 +243,7 @@ impl<'a> UpdateRef<'a> {
 }
 impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for UpdateRef<'a> {
     fn tree_hash_type() -> tree_hash::TreeHashType {
-        tree_hash::TreeHashType::Container
+        tree_hash::TreeHashType::StableContainer
     }
     fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
         unreachable!("Container should never be packed")
@@ -253,7 +253,7 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for UpdateRef<'a> 
     }
     fn tree_hash_root(&self) -> H::Output {
         use tree_hash::TreeHash;
-        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
         {
             let state = self.state().expect("valid view");
             let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
@@ -321,7 +321,10 @@ impl<'a> UpdateRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> Update {
         Update {
-            state: self.state().expect("valid view").to_owned(),
+            state: {
+                let view = self.state().expect("valid view");
+                ssz_types::view::ToOwnedSsz::to_owned(&view)
+            },
             timestamp: self.timestamp().expect("valid view"),
             updates: self.updates().expect("valid view").to_owned().into(),
         }

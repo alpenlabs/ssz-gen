@@ -68,7 +68,7 @@ pub mod tests {
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for CommonTypeARef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -78,7 +78,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     {
                         let offset = 0usize;
                         let field_bytes = &self.bytes[offset..offset + 4usize];
@@ -185,7 +185,7 @@ pub mod tests {
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for CommonTypeBRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -195,7 +195,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     {
                         let offset = 0usize;
                         let field_bytes = &self.bytes[offset..offset + 8usize];
@@ -333,7 +333,7 @@ pub mod tests {
                 pub fn list(
                     &self,
                 ) -> Result<
-                    VariableListRef<
+                    ListRef<
                         'a,
                         crate::tests::input::test_cross_entry_common::CommonTypeBRef<'a>,
                         10usize,
@@ -362,7 +362,7 @@ pub mod tests {
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for ContainerARef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -372,7 +372,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     {
                         let field = self.field().expect("valid view");
                         let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
@@ -446,12 +446,22 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> ContainerA {
                     ContainerA {
-                        field: self.field().expect("valid view").to_owned(),
-                        list: self
-                            .list()
-                            .expect("valid view")
-                            .to_owned()
-                            .expect("valid view"),
+                        field: {
+                            let view = self.field().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
+                        list: {
+                            let view = self.list().expect("valid view");
+                            let items: Result<Vec<_>, _> = view
+                                .iter()
+                                .map(|item_result| {
+                                    item_result
+                                        .map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                                })
+                                .collect();
+                            let items = items.expect("valid view");
+                            ssz_types::VariableList::from(items)
+                        },
                     }
                 }
             }

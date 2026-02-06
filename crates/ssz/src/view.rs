@@ -19,7 +19,7 @@
 //! use ssz::view::{BytesRef, DecodeView};
 //!
 //! let bytes: &[u8] = &[0x01, 0x02, 0x03];
-//! let view = BytesRef::from_ssz_bytes(bytes).unwrap();
+//! let view = BytesRef::<3>::from_ssz_bytes(bytes).unwrap();
 //! assert_eq!(view.as_bytes(), bytes);
 //! ```
 
@@ -155,7 +155,7 @@ impl<'a, const N: usize> SszTypeInfo for FixedBytesRef<'a, N> {
 /// use ssz::view::{BytesRef, DecodeView};
 ///
 /// let bytes = vec![0x01, 0x02, 0x03];
-/// let view = BytesRef::from_ssz_bytes(&bytes).unwrap();
+/// let view = BytesRef::<3>::from_ssz_bytes(&bytes).unwrap();
 /// assert_eq!(view.as_bytes(), &bytes);
 /// assert_eq!(view.len(), 3);
 ///
@@ -164,12 +164,12 @@ impl<'a, const N: usize> SszTypeInfo for FixedBytesRef<'a, N> {
 /// assert_eq!(owned, bytes);
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct BytesRef<'a> {
+pub struct BytesRef<'a, const N: usize> {
     /// The underlying byte slice.
     bytes: &'a [u8],
 }
 
-impl<'a> BytesRef<'a> {
+impl<'a, const N: usize> BytesRef<'a, N> {
     /// Returns the underlying byte slice.
     pub const fn as_bytes(&self) -> &'a [u8] {
         self.bytes
@@ -191,14 +191,20 @@ impl<'a> BytesRef<'a> {
     }
 }
 
-impl<'a> DecodeView<'a> for BytesRef<'a> {
+impl<'a, const N: usize> DecodeView<'a> for BytesRef<'a, N> {
     fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, DecodeError> {
-        // For a raw byte sequence, we just wrap it
+        if bytes.len() > N {
+            return Err(DecodeError::BytesInvalid(format!(
+                "Bytes length {} exceeds maximum {}",
+                bytes.len(),
+                N
+            )));
+        }
         Ok(Self { bytes })
     }
 }
 
-impl<'a> SszTypeInfo for BytesRef<'a> {
+impl<'a, const N: usize> SszTypeInfo for BytesRef<'a, N> {
     fn is_ssz_fixed_len() -> bool {
         false
     }
@@ -228,11 +234,11 @@ impl<'a> SszTypeInfo for BytesRef<'a> {
 /// }
 ///
 /// // Create a view over the encoded bytes
-/// let view = ListRef::<u64>::new(&encoded).unwrap();
+/// let view = ListRef::<u64, 8>::new(&encoded).unwrap();
 /// assert_eq!(view.len(), 4);
 /// ```
 #[derive(Debug, Copy, Clone)]
-pub struct ListRef<'a, TRef> {
+pub struct ListRef<'a, TRef, const N: usize> {
     /// The underlying byte slice.
     bytes: &'a [u8],
 
@@ -240,7 +246,7 @@ pub struct ListRef<'a, TRef> {
     _marker: PhantomData<TRef>,
 }
 
-impl<'a, TRef: SszTypeInfo> ListRef<'a, TRef> {
+impl<'a, TRef: SszTypeInfo, const N: usize> ListRef<'a, TRef, N> {
     /// Create a new [`ListRef`] from raw bytes.
     ///
     /// - `bytes`: the SSZ-encoded list bytes.
@@ -248,7 +254,7 @@ impl<'a, TRef: SszTypeInfo> ListRef<'a, TRef> {
         let is_fixed_len = TRef::is_ssz_fixed_len();
         let item_size = TRef::ssz_fixed_len();
 
-        if is_fixed_len {
+        let list_len = if is_fixed_len {
             // For fixed-length items, validate that bytes length is a multiple of item_size
             if item_size == 0 {
                 return Err(DecodeError::ZeroLengthItem);
@@ -259,6 +265,7 @@ impl<'a, TRef: SszTypeInfo> ListRef<'a, TRef> {
                     expected: (bytes.len() / item_size) * item_size,
                 });
             }
+            bytes.len() / item_size
         } else {
             // For variable-length items, validate offset structure
             if !bytes.is_empty() {
@@ -267,9 +274,23 @@ impl<'a, TRef: SszTypeInfo> ListRef<'a, TRef> {
                     return Err(DecodeError::InvalidListFixedBytesLen(bytes.len()));
                 }
                 // Validate first offset - it should point to the first byte after all offsets
-                // We don't know the exact fixed portion size yet, so we'll validate during
-                // iteration
+                let first_offset = read_offset(bytes)?;
+                if first_offset < BYTES_PER_LENGTH_OFFSET
+                    || !first_offset.is_multiple_of(BYTES_PER_LENGTH_OFFSET)
+                {
+                    return Err(DecodeError::InvalidListFixedBytesLen(first_offset));
+                }
+                sanitize_offset(first_offset, None, bytes.len(), Some(first_offset))?;
+                first_offset / BYTES_PER_LENGTH_OFFSET
+            } else {
+                0
             }
+        };
+        if list_len > N {
+            return Err(DecodeError::BytesInvalid(format!(
+                "List length {} exceeds maximum {}",
+                list_len, N
+            )));
         }
         Ok(Self {
             bytes,
@@ -307,11 +328,17 @@ impl<'a, TRef: SszTypeInfo> ListRef<'a, TRef> {
     }
 }
 
-impl<'a, TRef: SszTypeInfo> ListRef<'a, TRef> {
+impl<'a, TRef: SszTypeInfo, const N: usize> DecodeView<'a> for ListRef<'a, TRef, N> {
+    fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, DecodeError> {
+        Self::new(bytes)
+    }
+}
+
+impl<'a, TRef: SszTypeInfo, const N: usize> ListRef<'a, TRef, N> {
     /// Returns an [`Iterator`] over the list items.
     ///
     /// Each item is decoded lazily as the iterator advances.
-    pub fn iter(&self) -> ListRefIter<'a, TRef>
+    pub fn iter(&self) -> ListRefIter<'a, TRef, N>
     where
         TRef: DecodeView<'a>,
     {
@@ -327,15 +354,15 @@ impl<'a, TRef: SszTypeInfo> ListRef<'a, TRef> {
 
 /// Iterator over items in a [`ListRef`].
 #[derive(Debug, Clone)]
-pub struct ListRefIter<'a, TRef> {
+pub struct ListRefIter<'a, TRef, const N: usize> {
     /// The underlying list.
-    list: ListRef<'a, TRef>,
+    list: ListRef<'a, TRef, N>,
 
     /// The current index.
     index: usize,
 }
 
-impl<'a, TRef: DecodeView<'a> + SszTypeInfo> Iterator for ListRefIter<'a, TRef> {
+impl<'a, TRef: DecodeView<'a> + SszTypeInfo, const N: usize> Iterator for ListRefIter<'a, TRef, N> {
     type Item = Result<TRef, DecodeError>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -420,7 +447,9 @@ impl<'a, TRef: DecodeView<'a> + SszTypeInfo> Iterator for ListRefIter<'a, TRef> 
     }
 }
 
-impl<'a, TRef: DecodeView<'a> + SszTypeInfo> ExactSizeIterator for ListRefIter<'a, TRef> {
+impl<'a, TRef: DecodeView<'a> + SszTypeInfo, const N: usize> ExactSizeIterator
+    for ListRefIter<'a, TRef, N>
+{
     fn len(&self) -> usize {
         self.list.len().saturating_sub(self.index)
     }
@@ -544,6 +573,12 @@ impl<'a, TRef: SszTypeInfo, const N: usize> VectorRef<'a, TRef, N> {
             let first_offset = read_offset(self.bytes)?;
             let current_offset_pos = index * BYTES_PER_LENGTH_OFFSET;
             let current_offset = read_offset(&self.bytes[current_offset_pos..])?;
+            let previous_offset = if index == 0 {
+                None
+            } else {
+                let previous_offset_pos = (index - 1) * BYTES_PER_LENGTH_OFFSET;
+                Some(read_offset(&self.bytes[previous_offset_pos..])?)
+            };
 
             let next_offset = if index + 1 < N {
                 let next_offset_pos = (index + 1) * BYTES_PER_LENGTH_OFFSET;
@@ -552,7 +587,12 @@ impl<'a, TRef: SszTypeInfo, const N: usize> VectorRef<'a, TRef, N> {
                 self.bytes.len()
             };
 
-            sanitize_offset(current_offset, None, self.bytes.len(), Some(first_offset))?;
+            sanitize_offset(
+                current_offset,
+                previous_offset,
+                self.bytes.len(),
+                Some(first_offset),
+            )?;
 
             if next_offset < current_offset || next_offset > self.bytes.len() {
                 return Err(DecodeError::OffsetsAreDecreasing(next_offset));
@@ -613,7 +653,7 @@ impl<'a, TRef: DecodeView<'a> + SszTypeInfo, const N: usize> ExactSizeIterator
 ///
 /// // A union with selector 0 and a 3-byte payload
 /// let bytes = vec![0u8, 0x01, 0x02, 0x03];
-/// let view = UnionRef::<BytesRef<'_>>::from_ssz_bytes(&bytes).unwrap();
+/// let view = UnionRef::<BytesRef<'_, 3>>::from_ssz_bytes(&bytes).unwrap();
 /// assert_eq!(u8::from(view.selector()), 0);
 /// assert_eq!(view.body().unwrap().as_bytes(), &[0x01, 0x02, 0x03]);
 /// ```
@@ -1102,7 +1142,7 @@ mod tests {
     #[test]
     fn bytes_ref_basic() {
         let bytes = vec![0x01, 0x02, 0x03];
-        let view = BytesRef::from_ssz_bytes(&bytes).unwrap();
+        let view = BytesRef::<3>::from_ssz_bytes(&bytes).unwrap();
         assert_eq!(view.as_bytes(), &bytes);
         assert_eq!(view.len(), 3);
         assert!(!view.is_empty());
@@ -1112,10 +1152,17 @@ mod tests {
     #[test]
     fn bytes_ref_empty() {
         let bytes: &[u8] = &[];
-        let view = BytesRef::from_ssz_bytes(bytes).unwrap();
+        let view = BytesRef::<4>::from_ssz_bytes(bytes).unwrap();
         assert_eq!(view.as_bytes(), bytes);
         assert_eq!(view.len(), 0);
         assert!(view.is_empty());
+    }
+
+    #[test]
+    fn bytes_ref_rejects_over_limit() {
+        let bytes = vec![0x01, 0x02, 0x03];
+        let err = BytesRef::<2>::from_ssz_bytes(&bytes).unwrap_err();
+        assert!(matches!(err, DecodeError::BytesInvalid(_)));
     }
 
     #[test]
@@ -1124,7 +1171,7 @@ mod tests {
         let values = vec![1u64, 2, 3, 4];
         let encoded = encode_list(&values);
 
-        let view = ListRef::<u64>::new(&encoded).unwrap();
+        let view = ListRef::<u64, 8>::new(&encoded).unwrap();
         assert_eq!(view.len(), 4);
         assert!(!view.is_empty());
 
@@ -1135,9 +1182,24 @@ mod tests {
     #[test]
     fn list_ref_empty() {
         let bytes: &[u8] = &[];
-        let view = ListRef::<u64>::new(bytes).unwrap();
+        let view = ListRef::<u64, 4>::new(bytes).unwrap();
         assert_eq!(view.len(), 0);
         assert!(view.is_empty());
+    }
+
+    #[test]
+    fn list_ref_rejects_over_limit() {
+        let values = vec![1u64, 2, 3];
+        let encoded = encode_list(&values);
+        let err = ListRef::<u64, 2>::new(&encoded).unwrap_err();
+        assert!(matches!(err, DecodeError::BytesInvalid(_)));
+    }
+
+    #[test]
+    fn list_ref_rejects_zero_first_offset() {
+        let bytes = vec![0, 0, 0, 0, 0xde, 0xad, 0xbe, 0xef];
+        let err = ListRef::<BytesRef<'_, 8>, 4>::new(&bytes).unwrap_err();
+        assert!(matches!(err, DecodeError::InvalidListFixedBytesLen(_)));
     }
 
     #[test]
@@ -1163,7 +1225,7 @@ mod tests {
     fn union_ref_basic() {
         // Union with selector 0 and a 3-byte payload
         let bytes = vec![0u8, 0x01, 0x02, 0x03];
-        let view = UnionRef::<BytesRef<'_>>::from_ssz_bytes(&bytes).unwrap();
+        let view = UnionRef::<BytesRef<'_, 3>>::from_ssz_bytes(&bytes).unwrap();
         assert_eq!(u8::from(view.selector()), 0);
         assert_eq!(view.body_bytes(), &[0x01, 0x02, 0x03]);
         assert_eq!(view.body().unwrap().as_bytes(), &[0x01, 0x02, 0x03]);
@@ -1278,7 +1340,7 @@ mod tests {
         builder.register_anonymous_variable_length_item().unwrap();
         let mut decoder = builder.build().unwrap();
 
-        let view: BytesRef<'_> = decoder.decode_next_view().unwrap();
+        let view: BytesRef<'_, 4> = decoder.decode_next_view().unwrap();
         assert_eq!(view.as_bytes(), &[0x01, 0x02, 0x03, 0x04]);
     }
 
@@ -1303,7 +1365,7 @@ mod tests {
         encoded.extend_from_slice(&items[1]);
         encoded.extend_from_slice(&items[2]);
 
-        let view = ListRef::<BytesRef<'_>>::new(&encoded).unwrap();
+        let view = ListRef::<BytesRef<'_, 4>, 3>::new(&encoded).unwrap();
         assert_eq!(view.len(), 3);
 
         let decoded: Vec<Vec<u8>> = view.iter().map(|r| r.unwrap().to_owned()).collect();
@@ -1318,6 +1380,34 @@ mod tests {
 
         let result = VectorRef::<u64, 4>::new(&encoded);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn vector_ref_variable_offsets_valid() {
+        let encoded = vec![
+            0x08, 0x00, 0x00, 0x00, // offset[0] = 8
+            0x09, 0x00, 0x00, 0x00, // offset[1] = 9
+            0xAA, 0xBB,
+        ];
+
+        let view = VectorRef::<BytesRef<'_, 16>, 2>::new(&encoded).unwrap();
+        assert_eq!(view.get(0).unwrap().as_bytes(), &[0xAA]);
+        assert_eq!(view.get(1).unwrap().as_bytes(), &[0xBB]);
+    }
+
+    #[test]
+    fn vector_ref_rejects_decreasing_offsets() {
+        let bytes = vec![
+            0x0c, 0x00, 0x00, 0x00, // offset[0] = 12
+            0x14, 0x00, 0x00, 0x00, // offset[1] = 20
+            0x0c, 0x00, 0x00, 0x00, // offset[2] = 12 (decreasing)
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
+            0x0f, 0x10,
+        ];
+
+        let view = VectorRef::<BytesRef<'_, 16>, 3>::new(&bytes).unwrap();
+        let err = view.get(2).unwrap_err();
+        assert!(matches!(err, DecodeError::OffsetsAreDecreasing(_)));
     }
 
     #[test]
@@ -1410,7 +1500,7 @@ mod tests {
     fn list_ref_iterator_exact_size() {
         let values = vec![1u64, 2, 3, 4, 5];
         let encoded = encode_list(&values);
-        let view = ListRef::<u64>::new(&encoded).unwrap();
+        let view = ListRef::<u64, 8>::new(&encoded).unwrap();
 
         let mut iter = view.iter();
         assert_eq!(iter.len(), 5);

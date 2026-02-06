@@ -90,7 +90,7 @@ pub mod tests {
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> NestedAliasContainerRef<'a> {
-                pub fn field1(&self) -> Result<BytesRef<'a>, ssz::DecodeError> {
+                pub fn field1(&self) -> Result<BytesRef<'a, 10usize>, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
                         self.bytes,
                         16usize,
@@ -111,7 +111,10 @@ pub mod tests {
                 }
                 pub fn field2(
                     &self,
-                ) -> Result<FixedVectorRef<'a, BytesRef<'a>, 5usize>, ssz::DecodeError> {
+                ) -> Result<
+                    FixedVectorRef<'a, BytesRef<'a, 10usize>, 5usize>,
+                    ssz::DecodeError,
+                > {
                     let start = ssz::layout::read_variable_offset(
                         self.bytes,
                         16usize,
@@ -130,7 +133,7 @@ pub mod tests {
                     let bytes = &self.bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
-                pub fn field3(&self) -> Result<BytesRef<'a>, ssz::DecodeError> {
+                pub fn field3(&self) -> Result<BytesRef<'a, 10usize>, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
                         self.bytes,
                         16usize,
@@ -152,7 +155,7 @@ pub mod tests {
                 pub fn field4(
                     &self,
                 ) -> Result<
-                    FixedVectorRef<'a, BytesRef<'a>, 10usize>,
+                    FixedVectorRef<'a, BytesRef<'a, 10usize>, 10usize>,
                     ssz::DecodeError,
                 > {
                     let start = ssz::layout::read_variable_offset(
@@ -177,7 +180,7 @@ pub mod tests {
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for NestedAliasContainerRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -187,7 +190,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(4usize);
                     {
                         let field1 = self.field1().expect("valid view");
                         let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<

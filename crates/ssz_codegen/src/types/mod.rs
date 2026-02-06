@@ -522,15 +522,13 @@ impl TypeResolution {
                 }
             }
             TypeResolutionKind::List(ty, size_expr) => {
-                let inner = &**ty;
                 let size = size_expr.value() as usize;
-
-                // Special case: List<u8, N> -> BytesRef<'a>
-                if matches!(inner.resolution, TypeResolutionKind::UInt(8)) {
-                    parse_quote!(BytesRef<'a>)
+                // Special case: List[byte, N] -> BytesRef<'a, N>
+                if matches!(ty.resolution, TypeResolutionKind::UInt(8)) {
+                    parse_quote!(BytesRef<'a, #size>)
                 } else {
                     let inner_view_ty = ty.to_view_type_inner(true, pragmas);
-                    parse_quote!(VariableListRef<'a, #inner_view_ty, #size>)
+                    parse_quote!(ListRef<'a, #inner_view_ty, #size>)
                 }
             }
             TypeResolutionKind::Bitvector(size_expr) => {
@@ -1278,10 +1276,12 @@ impl ClassDef {
                     })
                     .collect();
 
+                let num_fields = self.fields.len();
+
                 quote! {
                     impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ref_ident<'a> {
                         fn tree_hash_type() -> tree_hash::TreeHashType {
-                            tree_hash::TreeHashType::Container
+                            tree_hash::TreeHashType::StableContainer
                         }
 
                         fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
@@ -1295,7 +1295,7 @@ impl ClassDef {
                         fn tree_hash_root(&self) -> H::Output {
                             use tree_hash::TreeHash;
 
-                            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(#num_fields);
                             #(#hash_operations)*
 
                             hasher.finish().expect("finish hasher")
@@ -1309,6 +1309,34 @@ impl ClassDef {
                     .fields
                     .iter()
                     .map(|f| Ident::new(&f.name, Span::call_site()))
+                    .collect();
+                let set_active_fields: Vec<TokenStream> = self
+                    .fields
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, _)| {
+                        let field_name = &field_names[idx];
+                        quote! {
+                            if #field_name.is_some() {
+                                active_fields
+                                    .set(#idx, true)
+                                    .expect("Should not be out of bounds");
+                            }
+                        }
+                    })
+                    .collect();
+                let field_root_pushes: Vec<TokenStream> = self
+                    .fields
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, _)| {
+                        let field_name = &field_names[idx];
+                        quote! {
+                            if let ssz_types::Optional::Some(ref inner) = #field_name {
+                                field_roots.push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                            }
+                        }
+                    })
                     .collect();
 
                 quote! {
@@ -1327,15 +1355,24 @@ impl ClassDef {
 
                         fn tree_hash_root(&self) -> H::Output {
                             use tree_hash::TreeHash;
+                            use ssz_types::BitVector;
 
-                            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(#max);
                             #(
                                 let #field_names = self.#field_names().expect("valid view");
-                                let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<H>::tree_hash_root(&#field_names);
-                                hasher.write(root.as_ref()).expect("write field");
                             )*
-
-                            hasher.finish().expect("finish hasher")
+                            let mut active_fields = BitVector::<#max>::new();
+                            #(
+                                #set_active_fields
+                            )*
+                            let mut field_roots: Vec<<H as tree_hash::TreeHashDigest>::Output> =
+                                Vec::with_capacity(#max);
+                            #(
+                                #field_root_pushes
+                            )*
+                            let hash = tree_hash::merkleize_progressive_with_hasher::<H>(&field_roots);
+                            let active_fields_hash =
+                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(&active_fields);
+                            H::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
                         }
                     }
                 }
@@ -1348,6 +1385,38 @@ impl ClassDef {
                     .map(|f| Ident::new(&f.name, Span::call_site()))
                     .collect();
                 let indices: Vec<usize> = self.fields.iter().map(|f| f.index).collect();
+                let mut set_active_fields = Vec::new();
+                let mut field_root_pushes = Vec::new();
+                for (idx, field) in self.fields.iter().enumerate() {
+                    let field_name = &field_names[idx];
+                    let stable_index = &indices[idx];
+
+                    let is_optional =
+                        matches!(field.ty.resolution, TypeResolutionKind::Optional(_));
+                    if is_optional {
+                        set_active_fields.push(quote! {
+                            if #field_name.is_some() {
+                                active_fields
+                                    .set(#stable_index, true)
+                                    .expect("Should not be out of bounds");
+                            }
+                        });
+                        field_root_pushes.push(quote! {
+                            if let ssz_types::Optional::Some(ref inner) = #field_name {
+                                field_roots.push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                            }
+                        });
+                    } else {
+                        set_active_fields.push(quote! {
+                            active_fields
+                                .set(#stable_index, true)
+                                .expect("Should not be out of bounds");
+                        });
+                        field_root_pushes.push(quote! {
+                            field_roots.push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&#field_name));
+                        });
+                    }
+                }
 
                 quote! {
                     impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ref_ident<'a> {
@@ -1365,21 +1434,26 @@ impl ClassDef {
 
                         fn tree_hash_root(&self) -> H::Output {
                             use tree_hash::TreeHash;
+                            use ssz_types::BitVector;
 
-                            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(#max);
                             #(
                                 {
                                     let #field_names = self.#field_names().expect("valid view");
-                                    // Skip to the stable index
-                                    for _ in 0..#indices {
-                                        // Placeholder for proper index handling
-                                    }
-                                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<H>::tree_hash_root(&#field_names);
-                                    hasher.write(root.as_ref()).expect("write field");
                                 }
                             )*
-
-                            hasher.finish().expect("finish hasher")
+                            let mut active_fields = BitVector::<#max>::new();
+                            #(
+                                #set_active_fields
+                            )*
+                            let mut field_roots: Vec<<H as tree_hash::TreeHashDigest>::Output> =
+                                Vec::with_capacity(#max);
+                            #(
+                                #field_root_pushes
+                            )*
+                            let hash = tree_hash::merkleize_progressive_with_hasher::<H>(&field_roots);
+                            let active_fields_hash =
+                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(&active_fields);
+                            H::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
                         }
                     }
                 }
@@ -1446,38 +1520,39 @@ impl ClassDef {
                     .iter()
                     .map(|f| Ident::new(&f.name, Span::call_site()))
                     .collect();
+                let indices: Vec<usize> = self.fields.iter().map(|f| f.index).collect();
+                let mut set_active_fields = Vec::new();
+                let mut field_root_pushes = Vec::new();
+                for (idx, field) in self.fields.iter().enumerate() {
+                    let field_name = &field_names[idx];
+                    let stable_index = &indices[idx];
 
-                let hashes: Vec<TokenStream> = self
-                    .fields
-                    .iter()
-                    .enumerate()
-                    .map(|(idx, _)| {
-                        let field_name = &field_names[idx];
-                        quote! {
-                            if let ssz_types::Optional::Some(ref #field_name) = self.#field_name {
-                                hasher.write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(#field_name).as_ref())
-                                    .expect("tree hash derive should not apply too many leaves");
-                            } else {
-                                hasher.write(H::get_zero_hash_slice(0))
-                                    .expect("tree hash derive should not apply too many leaves");
-                            }
-                        }
-                    })
-                    .collect();
-
-                let set_active_fields: Vec<TokenStream> = self
-                    .fields
-                    .iter()
-                    .enumerate()
-                    .map(|(idx, _)| {
-                        let field_name = &field_names[idx];
-                        quote! {
+                    let is_optional =
+                        matches!(field.ty.resolution, TypeResolutionKind::Optional(_));
+                    if is_optional {
+                        set_active_fields.push(quote! {
                             if self.#field_name.is_some() {
-                                active_fields.set(#idx, true).expect("Should not be out of bounds");
+                                active_fields
+                                    .set(#stable_index, true)
+                                    .expect("Should not be out of bounds");
                             }
-                        }
-                    })
-                    .collect();
+                        });
+                        field_root_pushes.push(quote! {
+                            if let ssz_types::Optional::Some(ref inner) = self.#field_name {
+                                field_roots.push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                            }
+                        });
+                    } else {
+                        set_active_fields.push(quote! {
+                            active_fields
+                                .set(#stable_index, true)
+                                .expect("Should not be out of bounds");
+                        });
+                        field_root_pushes.push(quote! {
+                            field_roots.push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.#field_name));
+                        });
+                    }
+                }
 
                 quote! {
                     impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ident {
@@ -1504,14 +1579,13 @@ impl ClassDef {
                                 #set_active_fields
                             )*
 
-                            // Hash according to `max_fields` regardless of the actual number of fields
-                            let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(#max_fields);
-
+                            let mut field_roots: Vec<<H as tree_hash::TreeHashDigest>::Output> =
+                                Vec::with_capacity(#max_fields);
                             #(
-                                #hashes
+                                #field_root_pushes
                             )*
 
-                            let hash = hasher.finish().expect("tree hash derive should not have a remaining buffer");
+                            let hash = tree_hash::merkleize_progressive_with_hasher::<H>(&field_roots);
                             let active_fields_hash = <_ as tree_hash::TreeHash<H>>::tree_hash_root(&active_fields);
 
                             H::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
@@ -1550,8 +1624,11 @@ impl ClassDef {
             .count();
 
         let bitvector_offset = match self.base {
-            BaseClass::StableContainer(_) | BaseClass::Profile(_) if optional_count > 0 => {
-                optional_count.div_ceil(8)
+            BaseClass::StableContainer(Some(max_fields))
+            | BaseClass::Profile(Some((_, max_fields)))
+                if optional_count > 0 =>
+            {
+                (max_fields as usize).div_ceil(8)
             }
             _ => 0,
         };
@@ -1929,7 +2006,11 @@ impl ClassDef {
                     .filter(|f| matches!(f.ty.resolution, TypeResolutionKind::Optional(_)))
                     .count();
 
-                let bitvector_length = optional_count.div_ceil(8);
+                let bitvector_length = if optional_count == 0 {
+                    0
+                } else {
+                    max_fields_usize.div_ceil(8)
+                };
 
                 // Generate validation for StableContainer/Profile
                 let validation = if bitvector_length == 0 {
@@ -2133,12 +2214,17 @@ impl ClassDef {
             .iter()
             .map(|field| {
                 let field_name = Ident::new(&field.name, Span::call_site());
+                let is_optional = matches!(field.ty.resolution, TypeResolutionKind::Optional(_));
 
                 // For StableContainer, fields are wrapped in ssz_types::Optional<T>
                 // Getter returns Result<Optional<TRef>, Error>
                 // We need to convert Optional<TRef> to Optional<T>
-                if is_stable_container {
-                    match &field.ty.resolution {
+                if is_stable_container && is_optional {
+                    let inner_resolution = match &field.ty.resolution {
+                        TypeResolutionKind::Optional(inner) => &inner.resolution,
+                        _ => unreachable!("Optional check guarantees Optional resolution"),
+                    };
+                    match inner_resolution {
                         TypeResolutionKind::Boolean | TypeResolutionKind::UInt(_) => {
                             // Primitives: Optional<T> -> Optional<T> (just copy)
                             quote! {
@@ -2186,17 +2272,24 @@ impl ClassDef {
                             }
                         }
                         TypeResolutionKind::List(ty, _size) => {
-                            // Check if it's List<u8, N> which uses BytesRef
                             let inner = &**ty;
                             if matches!(inner.resolution, TypeResolutionKind::UInt(8)) {
-                                // BytesRef::to_owned() returns Vec<u8>, need to convert to VariableList
                                 quote! {
                                     #field_name: self.#field_name().expect("valid view").to_owned().into()
                                 }
                             } else {
-                                // VariableListRef::to_owned() returns Result<VariableList<T, N>, Error>
                                 quote! {
-                                    #field_name: self.#field_name().expect("valid view").to_owned().expect("valid view")
+                                    #field_name: {
+                                        let view = self.#field_name().expect("valid view");
+                                        let items: Result<Vec<_>, _> = view
+                                            .iter()
+                                            .map(|item_result| {
+                                                item_result.map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                                            })
+                                            .collect();
+                                        let items = items.expect("valid view");
+                                        ssz_types::VariableList::from(items)
+                                    }
                                 }
                             }
                         }

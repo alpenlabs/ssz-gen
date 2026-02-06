@@ -73,7 +73,7 @@ impl<'a> ExportEntryRef<'a> {
 }
 impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ExportEntryRef<'a> {
     fn tree_hash_type() -> tree_hash::TreeHashType {
-        tree_hash::TreeHashType::Container
+        tree_hash::TreeHashType::StableContainer
     }
     fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
         unreachable!("Container should never be packed")
@@ -83,7 +83,7 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ExportEntryRef
     }
     fn tree_hash_root(&self) -> H::Output {
         use tree_hash::TreeHash;
-        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
         {
             let offset = 0usize;
             let field_bytes = &self.bytes[offset..offset + 4usize];
@@ -177,7 +177,7 @@ pub struct ViewTypeTestRef<'a> {
 }
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ViewTypeTestRef<'a> {
-    pub fn payload(&self) -> Result<BytesRef<'a>, ssz::DecodeError> {
+    pub fn payload(&self) -> Result<BytesRef<'a, 4096usize>, ssz::DecodeError> {
         let start = ssz::layout::read_variable_offset(
             self.bytes,
             40usize,
@@ -198,7 +198,7 @@ impl<'a> ViewTypeTestRef<'a> {
     }
     pub fn entries(
         &self,
-    ) -> Result<VariableListRef<'a, ExportEntryRef<'a>, 256usize>, ssz::DecodeError> {
+    ) -> Result<ListRef<'a, ExportEntryRef<'a>, 256usize>, ssz::DecodeError> {
         let start = ssz::layout::read_variable_offset(
             self.bytes,
             40usize,
@@ -232,7 +232,7 @@ impl<'a> ViewTypeTestRef<'a> {
 }
 impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ViewTypeTestRef<'a> {
     fn tree_hash_type() -> tree_hash::TreeHashType {
-        tree_hash::TreeHashType::Container
+        tree_hash::TreeHashType::StableContainer
     }
     fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
         unreachable!("Container should never be packed")
@@ -242,7 +242,7 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ViewTypeTestRe
     }
     fn tree_hash_root(&self) -> H::Output {
         use tree_hash::TreeHash;
-        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+        let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
         {
             let payload = self.payload().expect("valid view");
             let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
@@ -313,7 +313,18 @@ impl<'a> ViewTypeTestRef<'a> {
     pub fn to_owned(&self) -> ViewTypeTest {
         ViewTypeTest {
             payload: self.payload().expect("valid view").to_owned().into(),
-            entries: self.entries().expect("valid view").to_owned().expect("valid view"),
+            entries: {
+                let view = self.entries().expect("valid view");
+                let items: Result<Vec<_>, _> = view
+                    .iter()
+                    .map(|item_result| {
+                        item_result
+                            .map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                    })
+                    .collect();
+                let items = items.expect("valid view");
+                ssz_types::VariableList::from(items)
+            },
             hash: ssz_types::FixedBytes(self.hash().expect("valid view").to_owned()),
         }
     }

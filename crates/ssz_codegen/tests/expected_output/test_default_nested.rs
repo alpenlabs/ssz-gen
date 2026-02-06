@@ -703,7 +703,9 @@ pub mod tests {
                     }
                     ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
                 }
-                pub fn as_selector3(&self) -> Result<BytesRef<'a>, ssz::DecodeError> {
+                pub fn as_selector3(
+                    &self,
+                ) -> Result<BytesRef<'a, 12usize>, ssz::DecodeError> {
                     if self.selector() != 3u8 {
                         return Err(
                             ssz::DecodeError::BytesInvalid(
@@ -1195,7 +1197,7 @@ pub mod tests {
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for AlphaRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -1205,7 +1207,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
                     {
                         let offset = 0usize;
                         let field_bytes = &self.bytes[offset..offset + 1usize];
@@ -1326,7 +1328,7 @@ pub mod tests {
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BetaRef<'a> {
-                pub fn d(&self) -> Result<BytesRef<'a>, ssz::DecodeError> {
+                pub fn d(&self) -> Result<BytesRef<'a, 5usize>, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
                         self.bytes,
                         7usize,
@@ -1373,7 +1375,7 @@ pub mod tests {
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for BetaRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -1383,7 +1385,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
                     {
                         let d = self.d().expect("valid view");
                         let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
@@ -1496,32 +1498,20 @@ pub mod tests {
                             .set(1usize, true)
                             .expect("Should not be out of bounds");
                     }
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(42usize);
-                    if let ssz_types::Optional::Some(ref g) = self.g {
-                        hasher
-                            .write(
-                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(g).as_ref(),
-                            )
-                            .expect("tree hash derive should not apply too many leaves");
-                    } else {
-                        hasher
-                            .write(H::get_zero_hash_slice(0))
-                            .expect("tree hash derive should not apply too many leaves");
+                    let mut field_roots: Vec<<H as tree_hash::TreeHashDigest>::Output> = Vec::with_capacity(
+                        42usize,
+                    );
+                    if let ssz_types::Optional::Some(ref inner) = self.g {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
                     }
-                    if let ssz_types::Optional::Some(ref h) = self.h {
-                        hasher
-                            .write(
-                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(h).as_ref(),
-                            )
-                            .expect("tree hash derive should not apply too many leaves");
-                    } else {
-                        hasher
-                            .write(H::get_zero_hash_slice(0))
-                            .expect("tree hash derive should not apply too many leaves");
+                    if let ssz_types::Optional::Some(ref inner) = self.h {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
                     }
-                    let hash = hasher
-                        .finish()
-                        .expect("tree hash derive should not have a remaining buffer");
+                    let hash = tree_hash::merkleize_progressive_with_hasher::<
+                        H,
+                    >(&field_roots);
                     let active_fields_hash = <_ as tree_hash::TreeHash<
                         H,
                     >>::tree_hash_root(&active_fields);
@@ -1541,7 +1531,7 @@ pub mod tests {
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> GammaRef<'a> {
                 pub fn g(&self) -> Result<Optional<u8>, ssz::DecodeError> {
-                    let bitvector_offset = 1usize;
+                    let bitvector_offset = 6usize;
                     let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
                         container_bytes,
@@ -1563,11 +1553,8 @@ pub mod tests {
                 }
                 pub fn h(
                     &self,
-                ) -> Result<
-                    Optional<VariableListRef<'a, u16, 8usize>>,
-                    ssz::DecodeError,
-                > {
-                    let bitvector_offset = 1usize;
+                ) -> Result<Optional<ListRef<'a, u16, 8usize>>, ssz::DecodeError> {
+                    let bitvector_offset = 6usize;
                     let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
                         container_bytes,
@@ -1601,24 +1588,44 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(42usize);
+                    use ssz_types::BitVector;
                     let g = self.g().expect("valid view");
-                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
-                        H,
-                    >::tree_hash_root(&g);
-                    hasher.write(root.as_ref()).expect("write field");
                     let h = self.h().expect("valid view");
-                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                    let mut active_fields = BitVector::<42usize>::new();
+                    if g.is_some() {
+                        active_fields
+                            .set(0usize, true)
+                            .expect("Should not be out of bounds");
+                    }
+                    if h.is_some() {
+                        active_fields
+                            .set(1usize, true)
+                            .expect("Should not be out of bounds");
+                    }
+                    let mut field_roots: Vec<<H as tree_hash::TreeHashDigest>::Output> = Vec::with_capacity(
+                        42usize,
+                    );
+                    if let ssz_types::Optional::Some(ref inner) = g {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                    }
+                    if let ssz_types::Optional::Some(ref inner) = h {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                    }
+                    let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
-                    >::tree_hash_root(&h);
-                    hasher.write(root.as_ref()).expect("write field");
-                    hasher.finish().expect("finish hasher")
+                    >(&field_roots);
+                    let active_fields_hash = <_ as tree_hash::TreeHash<
+                        H,
+                    >>::tree_hash_root(&active_fields);
+                    H::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
                 }
             }
             impl<'a> ssz::view::DecodeView<'a> for GammaRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
                     use ssz::Decode;
-                    let bitvector_length = 1usize;
+                    let bitvector_length = 6usize;
                     if bytes.len() < bitvector_length {
                         return Err(ssz::DecodeError::InvalidByteLength {
                             len: bytes.len(),
@@ -1663,14 +1670,7 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> Gamma {
                     Gamma {
-                        g: match self.g().expect("valid view") {
-                            ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(
-                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
-                                )
-                            }
-                            ssz_types::Optional::None => ssz_types::Optional::None,
-                        },
+                        g: self.g().expect("valid view"),
                         h: match self.h().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
                                 ssz_types::Optional::Some(
@@ -1758,7 +1758,7 @@ pub mod tests {
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for DeltaRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -1768,7 +1768,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     {
                         let offset = 0usize;
                         let field_bytes = &self.bytes[offset..offset + 1usize];
@@ -1866,54 +1866,28 @@ pub mod tests {
                             .set(3usize, true)
                             .expect("Should not be out of bounds");
                     }
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(42usize);
-                    if let ssz_types::Optional::Some(ref g) = self.g {
-                        hasher
-                            .write(
-                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(g).as_ref(),
-                            )
-                            .expect("tree hash derive should not apply too many leaves");
-                    } else {
-                        hasher
-                            .write(H::get_zero_hash_slice(0))
-                            .expect("tree hash derive should not apply too many leaves");
+                    let mut field_roots: Vec<<H as tree_hash::TreeHashDigest>::Output> = Vec::with_capacity(
+                        42usize,
+                    );
+                    if let ssz_types::Optional::Some(ref inner) = self.g {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
                     }
-                    if let ssz_types::Optional::Some(ref h) = self.h {
-                        hasher
-                            .write(
-                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(h).as_ref(),
-                            )
-                            .expect("tree hash derive should not apply too many leaves");
-                    } else {
-                        hasher
-                            .write(H::get_zero_hash_slice(0))
-                            .expect("tree hash derive should not apply too many leaves");
+                    if let ssz_types::Optional::Some(ref inner) = self.h {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
                     }
-                    if let ssz_types::Optional::Some(ref i) = self.i {
-                        hasher
-                            .write(
-                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(i).as_ref(),
-                            )
-                            .expect("tree hash derive should not apply too many leaves");
-                    } else {
-                        hasher
-                            .write(H::get_zero_hash_slice(0))
-                            .expect("tree hash derive should not apply too many leaves");
+                    if let ssz_types::Optional::Some(ref inner) = self.i {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
                     }
-                    if let ssz_types::Optional::Some(ref j) = self.j {
-                        hasher
-                            .write(
-                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(j).as_ref(),
-                            )
-                            .expect("tree hash derive should not apply too many leaves");
-                    } else {
-                        hasher
-                            .write(H::get_zero_hash_slice(0))
-                            .expect("tree hash derive should not apply too many leaves");
+                    if let ssz_types::Optional::Some(ref inner) = self.j {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
                     }
-                    let hash = hasher
-                        .finish()
-                        .expect("tree hash derive should not have a remaining buffer");
+                    let hash = tree_hash::merkleize_progressive_with_hasher::<
+                        H,
+                    >(&field_roots);
                     let active_fields_hash = <_ as tree_hash::TreeHash<
                         H,
                     >>::tree_hash_root(&active_fields);
@@ -1933,7 +1907,7 @@ pub mod tests {
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> EpsilonRef<'a> {
                 pub fn g(&self) -> Result<Optional<u8>, ssz::DecodeError> {
-                    let bitvector_offset = 1usize;
+                    let bitvector_offset = 6usize;
                     let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
                         container_bytes,
@@ -1955,11 +1929,8 @@ pub mod tests {
                 }
                 pub fn h(
                     &self,
-                ) -> Result<
-                    Optional<VariableListRef<'a, u16, 8usize>>,
-                    ssz::DecodeError,
-                > {
-                    let bitvector_offset = 1usize;
+                ) -> Result<Optional<ListRef<'a, u16, 8usize>>, ssz::DecodeError> {
+                    let bitvector_offset = 6usize;
                     let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
                         container_bytes,
@@ -1980,7 +1951,7 @@ pub mod tests {
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn i(&self) -> Result<Optional<u8>, ssz::DecodeError> {
-                    let bitvector_offset = 1usize;
+                    let bitvector_offset = 6usize;
                     let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
                         container_bytes,
@@ -2001,7 +1972,7 @@ pub mod tests {
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn j(&self) -> Result<Optional<u16>, ssz::DecodeError> {
-                    let bitvector_offset = 1usize;
+                    let bitvector_offset = 6usize;
                     let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
                         container_bytes,
@@ -2035,34 +2006,64 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(42usize);
+                    use ssz_types::BitVector;
                     let g = self.g().expect("valid view");
-                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
-                        H,
-                    >::tree_hash_root(&g);
-                    hasher.write(root.as_ref()).expect("write field");
                     let h = self.h().expect("valid view");
-                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
-                        H,
-                    >::tree_hash_root(&h);
-                    hasher.write(root.as_ref()).expect("write field");
                     let i = self.i().expect("valid view");
-                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
-                        H,
-                    >::tree_hash_root(&i);
-                    hasher.write(root.as_ref()).expect("write field");
                     let j = self.j().expect("valid view");
-                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                    let mut active_fields = BitVector::<42usize>::new();
+                    if g.is_some() {
+                        active_fields
+                            .set(0usize, true)
+                            .expect("Should not be out of bounds");
+                    }
+                    if h.is_some() {
+                        active_fields
+                            .set(1usize, true)
+                            .expect("Should not be out of bounds");
+                    }
+                    if i.is_some() {
+                        active_fields
+                            .set(2usize, true)
+                            .expect("Should not be out of bounds");
+                    }
+                    if j.is_some() {
+                        active_fields
+                            .set(3usize, true)
+                            .expect("Should not be out of bounds");
+                    }
+                    let mut field_roots: Vec<<H as tree_hash::TreeHashDigest>::Output> = Vec::with_capacity(
+                        42usize,
+                    );
+                    if let ssz_types::Optional::Some(ref inner) = g {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                    }
+                    if let ssz_types::Optional::Some(ref inner) = h {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                    }
+                    if let ssz_types::Optional::Some(ref inner) = i {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                    }
+                    if let ssz_types::Optional::Some(ref inner) = j {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                    }
+                    let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
-                    >::tree_hash_root(&j);
-                    hasher.write(root.as_ref()).expect("write field");
-                    hasher.finish().expect("finish hasher")
+                    >(&field_roots);
+                    let active_fields_hash = <_ as tree_hash::TreeHash<
+                        H,
+                    >>::tree_hash_root(&active_fields);
+                    H::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
                 }
             }
             impl<'a> ssz::view::DecodeView<'a> for EpsilonRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
                     use ssz::Decode;
-                    let bitvector_length = 1usize;
+                    let bitvector_length = 6usize;
                     if bytes.len() < bitvector_length {
                         return Err(ssz::DecodeError::InvalidByteLength {
                             len: bytes.len(),
@@ -2107,14 +2108,7 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> Epsilon {
                     Epsilon {
-                        g: match self.g().expect("valid view") {
-                            ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(
-                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
-                                )
-                            }
-                            ssz_types::Optional::None => ssz_types::Optional::None,
-                        },
+                        g: self.g().expect("valid view"),
                         h: match self.h().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
                                 ssz_types::Optional::Some(
@@ -2123,22 +2117,8 @@ pub mod tests {
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
-                        i: match self.i().expect("valid view") {
-                            ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(
-                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
-                                )
-                            }
-                            ssz_types::Optional::None => ssz_types::Optional::None,
-                        },
-                        j: match self.j().expect("valid view") {
-                            ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(
-                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
-                                )
-                            }
-                            ssz_types::Optional::None => ssz_types::Optional::None,
-                        },
+                        i: self.i().expect("valid view"),
+                        j: self.j().expect("valid view"),
                     }
                 }
             }
@@ -2172,32 +2152,20 @@ pub mod tests {
                             .set(1usize, true)
                             .expect("Should not be out of bounds");
                     }
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(128usize);
-                    if let ssz_types::Optional::Some(ref u) = self.u {
-                        hasher
-                            .write(
-                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(u).as_ref(),
-                            )
-                            .expect("tree hash derive should not apply too many leaves");
-                    } else {
-                        hasher
-                            .write(H::get_zero_hash_slice(0))
-                            .expect("tree hash derive should not apply too many leaves");
+                    let mut field_roots: Vec<<H as tree_hash::TreeHashDigest>::Output> = Vec::with_capacity(
+                        128usize,
+                    );
+                    if let ssz_types::Optional::Some(ref inner) = self.u {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
                     }
-                    if let ssz_types::Optional::Some(ref v) = self.v {
-                        hasher
-                            .write(
-                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(v).as_ref(),
-                            )
-                            .expect("tree hash derive should not apply too many leaves");
-                    } else {
-                        hasher
-                            .write(H::get_zero_hash_slice(0))
-                            .expect("tree hash derive should not apply too many leaves");
+                    if let ssz_types::Optional::Some(ref inner) = self.v {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
                     }
-                    let hash = hasher
-                        .finish()
-                        .expect("tree hash derive should not have a remaining buffer");
+                    let hash = tree_hash::merkleize_progressive_with_hasher::<
+                        H,
+                    >(&field_roots);
                     let active_fields_hash = <_ as tree_hash::TreeHash<
                         H,
                     >>::tree_hash_root(&active_fields);
@@ -2219,7 +2187,7 @@ pub mod tests {
                 pub fn u(
                     &self,
                 ) -> Result<Optional<FixedBytesRef<'a, 16usize>>, ssz::DecodeError> {
-                    let bitvector_offset = 1usize;
+                    let bitvector_offset = 16usize;
                     let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
                         container_bytes,
@@ -2239,8 +2207,10 @@ pub mod tests {
                     let bytes = &container_bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
-                pub fn v(&self) -> Result<Optional<BytesRef<'a>>, ssz::DecodeError> {
-                    let bitvector_offset = 1usize;
+                pub fn v(
+                    &self,
+                ) -> Result<Optional<BytesRef<'a, 5usize>>, ssz::DecodeError> {
+                    let bitvector_offset = 16usize;
                     let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
                         container_bytes,
@@ -2274,24 +2244,44 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(128usize);
+                    use ssz_types::BitVector;
                     let u = self.u().expect("valid view");
-                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
-                        H,
-                    >::tree_hash_root(&u);
-                    hasher.write(root.as_ref()).expect("write field");
                     let v = self.v().expect("valid view");
-                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                    let mut active_fields = BitVector::<128usize>::new();
+                    if u.is_some() {
+                        active_fields
+                            .set(0usize, true)
+                            .expect("Should not be out of bounds");
+                    }
+                    if v.is_some() {
+                        active_fields
+                            .set(1usize, true)
+                            .expect("Should not be out of bounds");
+                    }
+                    let mut field_roots: Vec<<H as tree_hash::TreeHashDigest>::Output> = Vec::with_capacity(
+                        128usize,
+                    );
+                    if let ssz_types::Optional::Some(ref inner) = u {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                    }
+                    if let ssz_types::Optional::Some(ref inner) = v {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                    }
+                    let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
-                    >::tree_hash_root(&v);
-                    hasher.write(root.as_ref()).expect("write field");
-                    hasher.finish().expect("finish hasher")
+                    >(&field_roots);
+                    let active_fields_hash = <_ as tree_hash::TreeHash<
+                        H,
+                    >>::tree_hash_root(&active_fields);
+                    H::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
                 }
             }
             impl<'a> ssz::view::DecodeView<'a> for ZetaRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
                     use ssz::Decode;
-                    let bitvector_length = 1usize;
+                    let bitvector_length = 16usize;
                     if bytes.len() < bitvector_length {
                         return Err(ssz::DecodeError::InvalidByteLength {
                             len: bytes.len(),
@@ -2452,9 +2442,7 @@ pub mod tests {
                     let bytes = &self.bytes[offset..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
-                pub fn eee(
-                    &self,
-                ) -> Result<VariableListRef<'a, u16, 3usize>, ssz::DecodeError> {
+                pub fn eee(&self) -> Result<ListRef<'a, u16, 3usize>, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
                         self.bytes,
                         54usize,
@@ -2501,7 +2489,7 @@ pub mod tests {
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for TestTypeRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -2511,7 +2499,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(5usize);
                     {
                         let offset = 0usize;
                         let field_bytes = &self.bytes[offset..offset + 1usize];
@@ -2600,11 +2588,18 @@ pub mod tests {
                     TestType {
                         ccc: self.ccc().expect("valid view"),
                         ddd: self.ddd().expect("valid view"),
-                        eee: self
-                            .eee()
-                            .expect("valid view")
-                            .to_owned()
-                            .expect("valid view"),
+                        eee: {
+                            let view = self.eee().expect("valid view");
+                            let items: Result<Vec<_>, _> = view
+                                .iter()
+                                .map(|item_result| {
+                                    item_result
+                                        .map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                                })
+                                .collect();
+                            let items = items.expect("valid view");
+                            ssz_types::VariableList::from(items)
+                        },
                         large_int_128: self.large_int_128().expect("valid view"),
                         large_int_256: self.large_int_256().expect("valid view"),
                     }
@@ -2726,7 +2721,7 @@ pub mod tests {
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for EtaRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -2736,7 +2731,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
                     {
                         let l = self.l().expect("valid view");
                         let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
@@ -2941,7 +2936,7 @@ pub mod tests {
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for ThetaRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -2951,7 +2946,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
                     {
                         let o = self.o().expect("valid view");
                         let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
@@ -3100,76 +3095,36 @@ pub mod tests {
                             .set(5usize, true)
                             .expect("Should not be out of bounds");
                     }
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(42usize);
-                    if let ssz_types::Optional::Some(ref g) = self.g {
-                        hasher
-                            .write(
-                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(g).as_ref(),
-                            )
-                            .expect("tree hash derive should not apply too many leaves");
-                    } else {
-                        hasher
-                            .write(H::get_zero_hash_slice(0))
-                            .expect("tree hash derive should not apply too many leaves");
+                    let mut field_roots: Vec<<H as tree_hash::TreeHashDigest>::Output> = Vec::with_capacity(
+                        42usize,
+                    );
+                    if let ssz_types::Optional::Some(ref inner) = self.g {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
                     }
-                    if let ssz_types::Optional::Some(ref h) = self.h {
-                        hasher
-                            .write(
-                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(h).as_ref(),
-                            )
-                            .expect("tree hash derive should not apply too many leaves");
-                    } else {
-                        hasher
-                            .write(H::get_zero_hash_slice(0))
-                            .expect("tree hash derive should not apply too many leaves");
+                    if let ssz_types::Optional::Some(ref inner) = self.h {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
                     }
-                    if let ssz_types::Optional::Some(ref i) = self.i {
-                        hasher
-                            .write(
-                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(i).as_ref(),
-                            )
-                            .expect("tree hash derive should not apply too many leaves");
-                    } else {
-                        hasher
-                            .write(H::get_zero_hash_slice(0))
-                            .expect("tree hash derive should not apply too many leaves");
+                    if let ssz_types::Optional::Some(ref inner) = self.i {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
                     }
-                    if let ssz_types::Optional::Some(ref j) = self.j {
-                        hasher
-                            .write(
-                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(j).as_ref(),
-                            )
-                            .expect("tree hash derive should not apply too many leaves");
-                    } else {
-                        hasher
-                            .write(H::get_zero_hash_slice(0))
-                            .expect("tree hash derive should not apply too many leaves");
+                    if let ssz_types::Optional::Some(ref inner) = self.j {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
                     }
-                    if let ssz_types::Optional::Some(ref r) = self.r {
-                        hasher
-                            .write(
-                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(r).as_ref(),
-                            )
-                            .expect("tree hash derive should not apply too many leaves");
-                    } else {
-                        hasher
-                            .write(H::get_zero_hash_slice(0))
-                            .expect("tree hash derive should not apply too many leaves");
+                    if let ssz_types::Optional::Some(ref inner) = self.r {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
                     }
-                    if let ssz_types::Optional::Some(ref s) = self.s {
-                        hasher
-                            .write(
-                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(s).as_ref(),
-                            )
-                            .expect("tree hash derive should not apply too many leaves");
-                    } else {
-                        hasher
-                            .write(H::get_zero_hash_slice(0))
-                            .expect("tree hash derive should not apply too many leaves");
+                    if let ssz_types::Optional::Some(ref inner) = self.s {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
                     }
-                    let hash = hasher
-                        .finish()
-                        .expect("tree hash derive should not have a remaining buffer");
+                    let hash = tree_hash::merkleize_progressive_with_hasher::<
+                        H,
+                    >(&field_roots);
                     let active_fields_hash = <_ as tree_hash::TreeHash<
                         H,
                     >>::tree_hash_root(&active_fields);
@@ -3189,7 +3144,7 @@ pub mod tests {
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> IotaRef<'a> {
                 pub fn g(&self) -> Result<Optional<u8>, ssz::DecodeError> {
-                    let bitvector_offset = 1usize;
+                    let bitvector_offset = 6usize;
                     let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
                         container_bytes,
@@ -3211,11 +3166,8 @@ pub mod tests {
                 }
                 pub fn h(
                     &self,
-                ) -> Result<
-                    Optional<VariableListRef<'a, u16, 8usize>>,
-                    ssz::DecodeError,
-                > {
-                    let bitvector_offset = 1usize;
+                ) -> Result<Optional<ListRef<'a, u16, 8usize>>, ssz::DecodeError> {
+                    let bitvector_offset = 6usize;
                     let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
                         container_bytes,
@@ -3236,7 +3188,7 @@ pub mod tests {
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn i(&self) -> Result<Optional<u8>, ssz::DecodeError> {
-                    let bitvector_offset = 1usize;
+                    let bitvector_offset = 6usize;
                     let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
                         container_bytes,
@@ -3257,7 +3209,7 @@ pub mod tests {
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn j(&self) -> Result<Optional<u16>, ssz::DecodeError> {
-                    let bitvector_offset = 1usize;
+                    let bitvector_offset = 6usize;
                     let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
                         container_bytes,
@@ -3279,11 +3231,8 @@ pub mod tests {
                 }
                 pub fn r(
                     &self,
-                ) -> Result<
-                    Optional<VariableListRef<'a, u16, 2usize>>,
-                    ssz::DecodeError,
-                > {
-                    let bitvector_offset = 1usize;
+                ) -> Result<Optional<ListRef<'a, u16, 2usize>>, ssz::DecodeError> {
+                    let bitvector_offset = 6usize;
                     let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
                         container_bytes,
@@ -3304,7 +3253,7 @@ pub mod tests {
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn s(&self) -> Result<Optional<u8>, ssz::DecodeError> {
-                    let bitvector_offset = 1usize;
+                    let bitvector_offset = 6usize;
                     let container_bytes = &self.bytes[bitvector_offset..];
                     let start = ssz::layout::read_variable_offset(
                         container_bytes,
@@ -3338,44 +3287,84 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(42usize);
+                    use ssz_types::BitVector;
                     let g = self.g().expect("valid view");
-                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
-                        H,
-                    >::tree_hash_root(&g);
-                    hasher.write(root.as_ref()).expect("write field");
                     let h = self.h().expect("valid view");
-                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
-                        H,
-                    >::tree_hash_root(&h);
-                    hasher.write(root.as_ref()).expect("write field");
                     let i = self.i().expect("valid view");
-                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
-                        H,
-                    >::tree_hash_root(&i);
-                    hasher.write(root.as_ref()).expect("write field");
                     let j = self.j().expect("valid view");
-                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
-                        H,
-                    >::tree_hash_root(&j);
-                    hasher.write(root.as_ref()).expect("write field");
                     let r = self.r().expect("valid view");
-                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
-                        H,
-                    >::tree_hash_root(&r);
-                    hasher.write(root.as_ref()).expect("write field");
                     let s = self.s().expect("valid view");
-                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                    let mut active_fields = BitVector::<42usize>::new();
+                    if g.is_some() {
+                        active_fields
+                            .set(0usize, true)
+                            .expect("Should not be out of bounds");
+                    }
+                    if h.is_some() {
+                        active_fields
+                            .set(1usize, true)
+                            .expect("Should not be out of bounds");
+                    }
+                    if i.is_some() {
+                        active_fields
+                            .set(2usize, true)
+                            .expect("Should not be out of bounds");
+                    }
+                    if j.is_some() {
+                        active_fields
+                            .set(3usize, true)
+                            .expect("Should not be out of bounds");
+                    }
+                    if r.is_some() {
+                        active_fields
+                            .set(4usize, true)
+                            .expect("Should not be out of bounds");
+                    }
+                    if s.is_some() {
+                        active_fields
+                            .set(5usize, true)
+                            .expect("Should not be out of bounds");
+                    }
+                    let mut field_roots: Vec<<H as tree_hash::TreeHashDigest>::Output> = Vec::with_capacity(
+                        42usize,
+                    );
+                    if let ssz_types::Optional::Some(ref inner) = g {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                    }
+                    if let ssz_types::Optional::Some(ref inner) = h {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                    }
+                    if let ssz_types::Optional::Some(ref inner) = i {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                    }
+                    if let ssz_types::Optional::Some(ref inner) = j {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                    }
+                    if let ssz_types::Optional::Some(ref inner) = r {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                    }
+                    if let ssz_types::Optional::Some(ref inner) = s {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                    }
+                    let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
-                    >::tree_hash_root(&s);
-                    hasher.write(root.as_ref()).expect("write field");
-                    hasher.finish().expect("finish hasher")
+                    >(&field_roots);
+                    let active_fields_hash = <_ as tree_hash::TreeHash<
+                        H,
+                    >>::tree_hash_root(&active_fields);
+                    H::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
                 }
             }
             impl<'a> ssz::view::DecodeView<'a> for IotaRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
                     use ssz::Decode;
-                    let bitvector_length = 1usize;
+                    let bitvector_length = 6usize;
                     if bytes.len() < bitvector_length {
                         return Err(ssz::DecodeError::InvalidByteLength {
                             len: bytes.len(),
@@ -3420,14 +3409,7 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> Iota {
                     Iota {
-                        g: match self.g().expect("valid view") {
-                            ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(
-                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
-                                )
-                            }
-                            ssz_types::Optional::None => ssz_types::Optional::None,
-                        },
+                        g: self.g().expect("valid view"),
                         h: match self.h().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
                                 ssz_types::Optional::Some(
@@ -3436,22 +3418,8 @@ pub mod tests {
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
-                        i: match self.i().expect("valid view") {
-                            ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(
-                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
-                                )
-                            }
-                            ssz_types::Optional::None => ssz_types::Optional::None,
-                        },
-                        j: match self.j().expect("valid view") {
-                            ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(
-                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
-                                )
-                            }
-                            ssz_types::Optional::None => ssz_types::Optional::None,
-                        },
+                        i: self.i().expect("valid view"),
+                        j: self.j().expect("valid view"),
                         r: match self.r().expect("valid view") {
                             ssz_types::Optional::Some(inner) => {
                                 ssz_types::Optional::Some(
@@ -3460,14 +3428,7 @@ pub mod tests {
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
-                        s: match self.s().expect("valid view") {
-                            ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(
-                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
-                                )
-                            }
-                            ssz_types::Optional::None => ssz_types::Optional::None,
-                        },
+                        s: self.s().expect("valid view"),
                     }
                 }
             }
@@ -3580,7 +3541,7 @@ pub mod tests {
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for KappaRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -3590,7 +3551,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
                     {
                         let t = self.t().expect("valid view");
                         let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
@@ -3713,32 +3674,20 @@ pub mod tests {
                             .set(1usize, true)
                             .expect("Should not be out of bounds");
                     }
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(4usize);
-                    if let ssz_types::Optional::Some(ref w) = self.w {
-                        hasher
-                            .write(
-                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(w).as_ref(),
-                            )
-                            .expect("tree hash derive should not apply too many leaves");
-                    } else {
-                        hasher
-                            .write(H::get_zero_hash_slice(0))
-                            .expect("tree hash derive should not apply too many leaves");
+                    let mut field_roots: Vec<<H as tree_hash::TreeHashDigest>::Output> = Vec::with_capacity(
+                        4usize,
+                    );
+                    if let ssz_types::Optional::Some(ref inner) = self.w {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
                     }
-                    if let ssz_types::Optional::Some(ref x) = self.x {
-                        hasher
-                            .write(
-                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(x).as_ref(),
-                            )
-                            .expect("tree hash derive should not apply too many leaves");
-                    } else {
-                        hasher
-                            .write(H::get_zero_hash_slice(0))
-                            .expect("tree hash derive should not apply too many leaves");
+                    if let ssz_types::Optional::Some(ref inner) = self.x {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
                     }
-                    let hash = hasher
-                        .finish()
-                        .expect("tree hash derive should not have a remaining buffer");
+                    let hash = tree_hash::merkleize_progressive_with_hasher::<
+                        H,
+                    >(&field_roots);
                     let active_fields_hash = <_ as tree_hash::TreeHash<
                         H,
                     >>::tree_hash_root(&active_fields);
@@ -3813,18 +3762,38 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(4usize);
+                    use ssz_types::BitVector;
                     let w = self.w().expect("valid view");
-                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
-                        H,
-                    >::tree_hash_root(&w);
-                    hasher.write(root.as_ref()).expect("write field");
                     let x = self.x().expect("valid view");
-                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                    let mut active_fields = BitVector::<4usize>::new();
+                    if w.is_some() {
+                        active_fields
+                            .set(0usize, true)
+                            .expect("Should not be out of bounds");
+                    }
+                    if x.is_some() {
+                        active_fields
+                            .set(1usize, true)
+                            .expect("Should not be out of bounds");
+                    }
+                    let mut field_roots: Vec<<H as tree_hash::TreeHashDigest>::Output> = Vec::with_capacity(
+                        4usize,
+                    );
+                    if let ssz_types::Optional::Some(ref inner) = w {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                    }
+                    if let ssz_types::Optional::Some(ref inner) = x {
+                        field_roots
+                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                    }
+                    let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
-                    >::tree_hash_root(&x);
-                    hasher.write(root.as_ref()).expect("write field");
-                    hasher.finish().expect("finish hasher")
+                    >(&field_roots);
+                    let active_fields_hash = <_ as tree_hash::TreeHash<
+                        H,
+                    >>::tree_hash_root(&active_fields);
+                    H::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
                 }
             }
             impl<'a> ssz::view::DecodeView<'a> for LambdaRef<'a> {
@@ -3875,22 +3844,8 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> Lambda {
                     Lambda {
-                        w: match self.w().expect("valid view") {
-                            ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(
-                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
-                                )
-                            }
-                            ssz_types::Optional::None => ssz_types::Optional::None,
-                        },
-                        x: match self.x().expect("valid view") {
-                            ssz_types::Optional::Some(inner) => {
-                                ssz_types::Optional::Some(
-                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
-                                )
-                            }
-                            ssz_types::Optional::None => ssz_types::Optional::None,
-                        },
+                        w: self.w().expect("valid view"),
+                        x: self.x().expect("valid view"),
                     }
                 }
             }
@@ -3983,7 +3938,7 @@ pub mod tests {
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for MuRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -3993,7 +3948,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     {
                         let y = self.y().expect("valid view");
                         let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
@@ -4237,7 +4192,7 @@ pub mod tests {
             }
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for NuRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -4247,7 +4202,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(4usize);
                     {
                         let zz = self.zz().expect("valid view");
                         let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<

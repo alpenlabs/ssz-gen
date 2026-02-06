@@ -1,6 +1,9 @@
 //! Tests for the ssz_codegen crate.
 
-use std::fs;
+use std::{
+    error, fs,
+    sync::{LazyLock, Mutex},
+};
 
 use prettyplease as _;
 use proc_macro2 as _;
@@ -8,7 +11,10 @@ use quote as _;
 use serde as _;
 use sizzle_parser as _;
 use ssz as _;
-use ssz_codegen::{ModuleGeneration, build_ssz_files, build_ssz_files_with_derives};
+use ssz_codegen::{
+    ModuleGeneration, build_ssz_files as build_ssz_files_unlocked,
+    build_ssz_files_with_derives as build_ssz_files_with_derives_unlocked,
+};
 use ssz_derive as _;
 use ssz_primitives as _;
 use ssz_types as _;
@@ -16,6 +22,50 @@ use syn as _;
 use toml as _;
 use tree_hash as _;
 use tree_hash_derive as _;
+
+static CODEGEN_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
+
+fn build_ssz_files(
+    entry_points: &[&str],
+    base_dir: &str,
+    crates: &[&str],
+    output_file_path: &str,
+    module_generation: ModuleGeneration,
+) -> Result<(), Box<dyn error::Error>> {
+    let _guard = CODEGEN_LOCK
+        .lock()
+        .unwrap_or_else(|poison| poison.into_inner());
+    build_ssz_files_unlocked(
+        entry_points,
+        base_dir,
+        crates,
+        output_file_path,
+        module_generation,
+    )
+}
+
+fn build_ssz_files_with_derives(
+    entry_points: &[&str],
+    base_dir: &str,
+    crates: &[&str],
+    output_file_path: &str,
+    module_generation: ModuleGeneration,
+    derives: Option<ssz_codegen::derive_config::DeriveConfig>,
+    derives_toml_path: Option<&str>,
+) -> Result<(), Box<dyn error::Error>> {
+    let _guard = CODEGEN_LOCK
+        .lock()
+        .unwrap_or_else(|poison| poison.into_inner());
+    build_ssz_files_with_derives_unlocked(
+        entry_points,
+        base_dir,
+        crates,
+        output_file_path,
+        module_generation,
+        derives,
+        derives_toml_path,
+    )
+}
 
 /// Module simulating existing Rust code with types referenced by generated SSZ code
 pub(crate) mod existing_module {
@@ -929,12 +979,12 @@ class DocAndPragma(Container):
     assert!(fields[0].pragmas()[0].contains("field-pragma"));
 }
 
-/// Test that view types ([`VariableListRef`], [`FixedVectorRef`])
+/// Test that view types ([`ListRef`], [`BytesRef`], [`FixedVectorRef`])
 /// are properly imported and that [`ToOwnedSsz::to_owned`]
 /// methods work correctly for different types:
 ///
-/// - `List<u8, N>` uses [`BytesRef`] and needs .into() conversion
-/// - `List<T, N>` uses [`VariableListRef`] and returns Result
+/// - `List<u8, N>` uses [`BytesRef`] and returns a list via `into()`
+/// - `List<T, N>` uses [`ListRef`] and collects into `VariableList`
 /// - `Vector<T, N>` uses [`FixedVectorRef`] and returns Result
 #[test]
 fn test_view_types_imports_and_to_owned() {
@@ -950,28 +1000,34 @@ fn test_view_types_imports_and_to_owned() {
     let generated = fs::read_to_string("tests/output/test_view_types.rs")
         .expect("Failed to read generated output");
 
-    // Verify that VariableListRef and FixedVectorRef are imported
+    // Verify that FixedVectorRef is imported
     assert!(
-        generated.contains("use ssz_types::view::{FixedVectorRef, VariableListRef}"),
-        "Generated code should import VariableListRef and FixedVectorRef"
+        generated.contains("FixedVectorRef"),
+        "Generated code should import FixedVectorRef"
     );
 
-    // Verify that List<u8, N> (BytesRef) uses .into() for to_owned conversion
+    // Verify that List<u8, N> uses BytesRef
     assert!(
-        generated.contains(".to_owned().into()"),
-        "List<u8, N> fields should use .into() to convert Vec<u8> to VariableList"
+        generated.contains("BytesRef<'a, 4096usize>"),
+        "List<u8, N> fields should use BytesRef in view types"
     );
 
-    // Verify that List<T, N> (VariableListRef) uses .expect() to unwrap Result
+    // Verify that List<T, N> uses ListRef
     assert!(
-        generated.contains(".to_owned().expect(\"valid view\")"),
-        "VariableListRef::to_owned() should use .expect() to unwrap Result"
+        generated.contains("ListRef<'a, ExportEntryRef<'a>, 256usize>"),
+        "List<T, N> fields should use ListRef in view types"
     );
 
-    // Verify that Vector<T, N> (FixedVectorRef) uses .expect() to unwrap Result
+    // Verify that list to_owned conversion builds VariableList from items
     assert!(
-        generated.contains("to_owned().expect(\"valid view\")"),
-        "FixedVectorRef::to_owned() should use .expect() to unwrap Result"
+        generated.contains("VariableList::from(items)"),
+        "ListRef to_owned conversion should build VariableList"
+    );
+
+    // Verify that Vector[byte, N] uses FixedBytes conversion
+    assert!(
+        generated.contains("FixedBytes(self.hash().expect(\"valid view\").to_owned())"),
+        "Vector[byte, N] should convert via FixedBytes"
     );
 
     // Verify that tree_hash_root uses explicit type annotations for type inference
@@ -989,6 +1045,90 @@ fn test_view_types_imports_and_to_owned() {
     assert!(
         generated.contains("pub struct ViewTypeTest"),
         "Should generate owned struct"
+    );
+}
+
+#[test]
+fn test_stable_container_optional_bitvector_length() {
+    build_ssz_files(
+        &["test_bitvector_len.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_bitvector_len_optional.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types");
+
+    let actual_output = fs::read_to_string("tests/output/test_bitvector_len_optional.rs")
+        .expect("Failed to read actual output");
+
+    assert!(
+        actual_output.contains("let bitvector_length = 2usize;"),
+        "Expected bitvector length based on max_fields"
+    );
+    assert!(
+        actual_output.contains("let bitvector_offset = 2usize;"),
+        "Expected bitvector offset based on max_fields"
+    );
+}
+
+#[test]
+fn test_view_type_list_u8_uses_bytes_ref() {
+    build_ssz_files(
+        &["test_view_types.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_view_types_check.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types");
+
+    let actual_output = fs::read_to_string("tests/output/test_view_types_check.rs")
+        .expect("Failed to read actual output");
+
+    assert!(
+        actual_output.contains("BytesRef<'a, 4096usize>"),
+        "Expected List[uint8, N] to use BytesRef in view types"
+    );
+}
+
+#[test]
+fn test_view_container_tree_hash_uses_field_count() {
+    build_ssz_files(
+        &["test_1.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_1_view_hash.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types");
+
+    let actual_output = fs::read_to_string("tests/output/test_1_view_hash.rs")
+        .expect("Failed to read actual output");
+
+    assert!(
+        actual_output.contains("MerkleHasher::<H>::with_leaves(3usize)"),
+        "Expected container view hash to use the number of fields as leaf count"
+    );
+}
+
+#[test]
+fn test_view_stable_container_tree_hash_mixes_active_fields() {
+    build_ssz_files(
+        &["test_2.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_2_view_hash.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types");
+
+    let actual_output = fs::read_to_string("tests/output/test_2_view_hash.rs")
+        .expect("Failed to read actual output");
+
+    assert!(
+        actual_output.contains("active_fields_hash"),
+        "Expected stable container view hash to mix in active fields bitvector"
     );
 }
 
@@ -1824,10 +1964,10 @@ fn test_union_type_alias_in_list() {
         &generated.chars().take(3000).collect::<String>()
     );
 
-    // Verify that Lists use VariableListRef with the union Ref types
+    // Verify that Lists use ListRef with the union Ref types
     assert!(
-        generated.contains("VariableListRef<'a, UnionTypeAliasRef<'a>"),
-        "Container with Union[Type1, Type2] should use VariableListRef with UnionTypeAliasRef"
+        generated.contains("ListRef<'a, UnionTypeAliasRef<'a>"),
+        "Container with Union[Type1, Type2] should use ListRef with UnionTypeAliasRef"
     );
 }
 
@@ -1871,14 +2011,14 @@ fn test_union_class_in_list() {
         &generated.chars().take(3000).collect::<String>()
     );
 
-    // Verify that Lists use VariableListRef with the union Ref types
+    // Verify that Lists use ListRef with the union Ref types
     assert!(
-        generated.contains("VariableListRef<'a, UnionClassRef<'a>"),
-        "Container with class Name(Union): should use VariableListRef with UnionClassRef"
+        generated.contains("ListRef<'a, UnionClassRef<'a>"),
+        "Container with class Name(Union): should use ListRef with UnionClassRef"
     );
     assert!(
-        generated.contains("VariableListRef<'a, UnionClassWithExternalRef<'a>"),
-        "Container with class Name(Union): external should use VariableListRef with UnionClassWithExternalRef"
+        generated.contains("ListRef<'a, UnionClassWithExternalRef<'a>"),
+        "Container with class Name(Union): external should use ListRef with UnionClassWithExternalRef"
     );
 }
 

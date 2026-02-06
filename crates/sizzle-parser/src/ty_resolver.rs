@@ -8,7 +8,7 @@ use thiserror::Error;
 
 use crate::{
     Identifier,
-    ast::{TyArgSpec, TyExprSpec},
+    ast::{ImportedComplexTySpec, ImportedTySpec, TyArgSpec, TyExprSpec},
     tysys::{ConstValue, Ty, TyExpr},
 };
 
@@ -459,6 +459,63 @@ impl<'a> TypeResolver<'a> {
                                     }
                                 }
                             }
+                            (CtorArg::Ty, TyArgSpec::ImportedComplex(imported)) => {
+                                let Some(ident_targets) =
+                                    self.cross_module_types.get(imported.module_path())
+                                else {
+                                    return Err(ResolverError::UnknownImport(
+                                        imported.module_name().clone(),
+                                    ));
+                                };
+
+                                // If external or empty internal (existing Rust module), skip
+                                // validation
+                                if ident_targets.is_external() || ident_targets.is_empty_internal()
+                                {
+                                    let args = imported
+                                        .args()
+                                        .iter()
+                                        .map(|arg| self.resolve_ty_arg_as_expr(arg))
+                                        .collect::<Result<Vec<_>, _>>()?;
+                                    TyExpr::Ty(Ty::ImportedComplex(
+                                        imported.module_path().clone(),
+                                        imported.base_name().clone(),
+                                        imported.full_name(),
+                                        args,
+                                    ))
+                                } else {
+                                    // Otherwise, we need to make sure it's a valid identifier.
+                                    let Some(ident_target) =
+                                        ident_targets.get(imported.base_name())
+                                    else {
+                                        return Err(ResolverError::UnknownImportItem(
+                                            imported.module_name().clone(),
+                                            imported.base_name().clone(),
+                                        ));
+                                    };
+
+                                    match ident_target {
+                                        IdentTarget::Ty(_) => {
+                                            let args = imported
+                                                .args()
+                                                .iter()
+                                                .map(|arg| self.resolve_ty_arg_as_expr(arg))
+                                                .collect::<Result<Vec<_>, _>>()?;
+                                            TyExpr::Ty(Ty::ImportedComplex(
+                                                imported.module_path().clone(),
+                                                imported.base_name().clone(),
+                                                imported.full_name(),
+                                                args,
+                                            ))
+                                        }
+                                        _ => {
+                                            return Err(ResolverError::MismatchedArgKind(
+                                                ident.clone(),
+                                            ));
+                                        }
+                                    }
+                                }
+                            }
                             (CtorArg::Int, TyArgSpec::Imported(imported)) => {
                                 let Some(ident_targets) =
                                     self.cross_module_types.get(imported.module_path())
@@ -501,6 +558,9 @@ impl<'a> TypeResolver<'a> {
                                         }
                                     }
                                 }
+                            }
+                            (CtorArg::Int, TyArgSpec::ImportedComplex(_)) => {
+                                return Err(ResolverError::MismatchedArgKind(ident.clone()));
                             }
                         };
 
@@ -577,6 +637,63 @@ impl<'a> TypeResolver<'a> {
                                     }
                                 }
                             }
+                            TyArgSpec::ImportedComplex(imported) => {
+                                let Some(ident_targets) =
+                                    self.cross_module_types.get(imported.module_path())
+                                else {
+                                    return Err(ResolverError::UnknownImport(
+                                        imported.module_name().clone(),
+                                    ));
+                                };
+
+                                // If external or empty internal (existing Rust module), skip
+                                // validation
+                                if ident_targets.is_external() || ident_targets.is_empty_internal()
+                                {
+                                    let args = imported
+                                        .args()
+                                        .iter()
+                                        .map(|arg| self.resolve_ty_arg_as_expr(arg))
+                                        .collect::<Result<Vec<_>, _>>()?;
+                                    TyExpr::Ty(Ty::ImportedComplex(
+                                        imported.module_path().clone(),
+                                        imported.base_name().clone(),
+                                        imported.full_name(),
+                                        args,
+                                    ))
+                                } else {
+                                    // Otherwise, we need to make sure it's a valid identifier.
+                                    let Some(ident_target) =
+                                        ident_targets.get(imported.base_name())
+                                    else {
+                                        return Err(ResolverError::UnknownImportItem(
+                                            imported.module_name().clone(),
+                                            imported.base_name().clone(),
+                                        ));
+                                    };
+
+                                    match ident_target {
+                                        IdentTarget::Ty(_) => {
+                                            let args = imported
+                                                .args()
+                                                .iter()
+                                                .map(|arg| self.resolve_ty_arg_as_expr(arg))
+                                                .collect::<Result<Vec<_>, _>>()?;
+                                            TyExpr::Ty(Ty::ImportedComplex(
+                                                imported.module_path().clone(),
+                                                imported.base_name().clone(),
+                                                imported.full_name(),
+                                                args,
+                                            ))
+                                        }
+                                        _ => {
+                                            return Err(ResolverError::MismatchedArgKind(
+                                                ident.clone(),
+                                            ));
+                                        }
+                                    }
+                                }
+                            }
                         };
 
                         args.push(arg);
@@ -588,6 +705,99 @@ impl<'a> TypeResolver<'a> {
                 // All other cases are mismatched arity in some way or another.
                 _ => Err(ResolverError::MismatchTypeArity(ident.clone())),
             },
+        }
+    }
+
+    fn resolve_imported_ty_spec(&self, imported: &ImportedTySpec) -> Result<Ty, ResolverError> {
+        let Some(ident_targets) = self.cross_module_types.get(imported.module_path()) else {
+            return Err(ResolverError::UnknownImport(imported.module_name().clone()));
+        };
+
+        // If external or empty internal (existing Rust module), skip validation
+        if ident_targets.is_external() || ident_targets.is_empty_internal() {
+            return Ok(Ty::Imported(
+                imported.module_path().clone(),
+                imported.base_name().clone(),
+                imported.full_name(),
+            ));
+        }
+
+        // Otherwise, we need to make sure it's a valid identifier.
+        if !ident_targets.contains_key(imported.base_name()) {
+            return Err(ResolverError::UnknownImportItem(
+                imported.module_name().clone(),
+                imported.base_name().clone(),
+            ));
+        }
+
+        Ok(Ty::Imported(
+            imported.module_path().clone(),
+            imported.base_name().clone(),
+            imported.full_name(),
+        ))
+    }
+
+    fn resolve_imported_complex_ty_spec(
+        &self,
+        imported: &ImportedComplexTySpec,
+    ) -> Result<Ty, ResolverError> {
+        let Some(ident_targets) = self.cross_module_types.get(imported.module_path()) else {
+            return Err(ResolverError::UnknownImport(imported.module_name().clone()));
+        };
+
+        // If external or empty internal (existing Rust module), skip validation
+        if ident_targets.is_external() || ident_targets.is_empty_internal() {
+            let args = imported
+                .args()
+                .iter()
+                .map(|arg| self.resolve_ty_arg_as_expr(arg))
+                .collect::<Result<Vec<_>, _>>()?;
+            return Ok(Ty::ImportedComplex(
+                imported.module_path().clone(),
+                imported.base_name().clone(),
+                imported.full_name(),
+                args,
+            ));
+        }
+
+        // Otherwise, we need to make sure it's a valid identifier.
+        if !ident_targets.contains_key(imported.base_name()) {
+            return Err(ResolverError::UnknownImportItem(
+                imported.module_name().clone(),
+                imported.base_name().clone(),
+            ));
+        }
+
+        let args = imported
+            .args()
+            .iter()
+            .map(|arg| self.resolve_ty_arg_as_expr(arg))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(Ty::ImportedComplex(
+            imported.module_path().clone(),
+            imported.base_name().clone(),
+            imported.full_name(),
+            args,
+        ))
+    }
+
+    fn resolve_ty_arg_as_expr(&self, arg: &TyArgSpec) -> Result<TyExpr, ResolverError> {
+        match arg {
+            TyArgSpec::Ident(ident) => self.resolve_ident_with_args(ident, None),
+            TyArgSpec::Complex(complex) => {
+                self.resolve_ident_with_args(complex.base_name(), Some(complex.args()))
+            }
+            TyArgSpec::Imported(imported) => {
+                let ty = self.resolve_imported_ty_spec(imported)?;
+                Ok(TyExpr::Ty(ty))
+            }
+            TyArgSpec::ImportedComplex(imported) => {
+                let ty = self.resolve_imported_complex_ty_spec(imported)?;
+                Ok(TyExpr::Ty(ty))
+            }
+            TyArgSpec::IntLiteral(v) => Ok(TyExpr::Int(ConstValue::Int(*v))),
+            TyArgSpec::None => Ok(TyExpr::None),
         }
     }
 
@@ -603,33 +813,12 @@ impl<'a> TypeResolver<'a> {
             }
             TyExprSpec::None => TyExpr::None,
             TyExprSpec::Imported(imported) => {
-                let Some(ident_targets) = self.cross_module_types.get(imported.module_path())
-                else {
-                    return Err(ResolverError::UnknownImport(imported.module_name().clone()));
-                };
-
-                // If external or empty internal (existing Rust module), skip validation
-                if ident_targets.is_external() || ident_targets.is_empty_internal() {
-                    return Ok(Ty::Imported(
-                        imported.module_path().clone(),
-                        imported.base_name().clone(),
-                        imported.full_name(),
-                    ));
-                }
-
-                // Otherwise, we need to make sure it's a valid identifier.
-                if !ident_targets.contains_key(imported.base_name()) {
-                    return Err(ResolverError::UnknownImportItem(
-                        imported.module_name().clone(),
-                        imported.base_name().clone(),
-                    ));
-                }
-
-                TyExpr::Ty(Ty::Imported(
-                    imported.module_path().clone(),
-                    imported.base_name().clone(),
-                    imported.full_name(),
-                ))
+                let ty = self.resolve_imported_ty_spec(imported)?;
+                TyExpr::Ty(ty)
+            }
+            TyExprSpec::ImportedComplex(imported) => {
+                let ty = self.resolve_imported_complex_ty_spec(imported)?;
+                TyExpr::Ty(ty)
             }
         };
 

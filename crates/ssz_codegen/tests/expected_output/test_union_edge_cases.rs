@@ -206,7 +206,9 @@ pub mod tests {
                 pub fn selector(&self) -> u8 {
                     self.bytes[0]
                 }
-                pub fn as_selector0(&self) -> Result<BytesRef<'a>, ssz::DecodeError> {
+                pub fn as_selector0(
+                    &self,
+                ) -> Result<BytesRef<'a, 10usize>, ssz::DecodeError> {
                     if self.selector() != 0u8 {
                         return Err(
                             ssz::DecodeError::BytesInvalid(
@@ -1014,7 +1016,7 @@ pub mod tests {
                 }
                 pub fn opt_complex(
                     &self,
-                ) -> Result<Option<VariableListRef<'a, u16, 8usize>>, ssz::DecodeError> {
+                ) -> Result<Option<ListRef<'a, u16, 8usize>>, ssz::DecodeError> {
                     let start = ssz::layout::read_variable_offset(
                         self.bytes,
                         24usize,
@@ -1041,7 +1043,7 @@ pub mod tests {
                     match selector {
                         0 => Ok(None),
                         1 => {
-                            let inner = <VariableListRef<
+                            let inner = <ListRef<
                                 'a,
                                 u16,
                                 8usize,
@@ -1104,7 +1106,7 @@ pub mod tests {
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for UnionEdgeCasesRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -1114,7 +1116,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(6usize);
                     {
                         let simple = self.simple().expect("valid view");
                         let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
@@ -1382,7 +1384,7 @@ pub mod tests {
             impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
             for AllUnionsRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -1392,7 +1394,7 @@ pub mod tests {
                 }
                 fn tree_hash_root(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
                     {
                         let union1 = self.union1().expect("valid view");
                         let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
