@@ -1211,7 +1211,7 @@ fn test_container_in_list() {
         generated.contains(
             "impl<'a> ssz_types::view::ToOwnedSsz<ExportContainer> for ExportContainerRef<'a>"
         ),
-        "ToOwnedSsz should 
+        "ToOwnedSsz should
             be implemented for ExportContainerRef"
     );
 
