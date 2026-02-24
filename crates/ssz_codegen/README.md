@@ -63,7 +63,7 @@ The parser supports four types of comments:
       ### Y coordinate of the point
       y: uint32
   ```
-  
+
   **Merging docstrings and doc comments**: When both docstrings (`"""..."""`) and doc comments (`###`) are present on a class, they are merged in the generated Rust code with the docstring appearing first, followed by a blank line, then the doc comments:
   ```python
   ### This doc comment comes after the docstring
@@ -75,16 +75,16 @@ The parser supports four types of comments:
   ```
 
 - **Pragma comments** (`#~#`): Special directive comments that control code generation behavior. Pragmas can specify additional derive macros or custom attributes.
-  
+
   **Class-level pragmas** are placed before class definitions:
   ```python
-  #~# derive: Serialize, Deserialize
+  #~# derive: serde::Serialize, serde::Deserialize
   #~# attr: #[repr(C)]
   class Point(Container):
       x: uint32
       y: uint32
   ```
-  
+
   **Field-level pragmas** are placed before field definitions:
   ```python
   class Point(Container):
@@ -92,28 +92,30 @@ The parser supports four types of comments:
       x: uint32
       y: uint32
   ```
-  
+
   **Supported pragma formats:**
-  - `derive: Trait1, Trait2, ...` - Adds additional derive macros to the generated type. These are merged with configured derives and required SSZ derives (Encode, Decode, TreeHash).
+  - `derive: Path1, Path2, ...` - Adds additional derive macros to the generated type. Use fully qualified Rust paths for external derives (e.g., `serde::Serialize`, `rkyv::Archive`). These are merged with configured derives and required SSZ derives (Encode, Decode, TreeHash).
   - `attr: #[attribute]` - Adds struct-level attributes (e.g., `#[repr(C)]`, `#[cfg(test)]`).
   - `field_attr: #[attribute]` - Adds field-level attributes (e.g., `#[serde(rename = "field_name")]`).
   - `external_kind: <kind>` - (Field-level) Controls `Ref` type generation for external types.
     - `container`: Generates a Ref variant (e.g. `MyTypeRef`) for the field. Use this for external container types that need zero-copy views.
     - `primitive`: Uses the type directly without a Ref wrapper. Use this for external primitive types.
-  
+
   Multiple pragmas can be specified on separate lines:
   ```python
-  #~# derive: Serialize, Deserialize
+  #~# derive: serde::Serialize, serde::Deserialize
   #~# attr: #[repr(C)]
   #~# attr: #[derive(Default)]
   class Point(Container):
       x: uint32
   ```
 
-  When derives include `Serialize`/`Deserialize` or `RkyvArchive`/`RkyvSerialize`/`RkyvDeserialize`,
-  the generated Rust code automatically adds the corresponding `use serde::{...}` or
-  `use rkyv::{... as Rkyv...}` imports so the derive macros resolve correctly.
-  
+  The generator does not inject crate imports for derives. Derive entries are emitted exactly as
+  provided, so external derives should be fully qualified in pragmas/config.
+
+  Legacy shorthand aliases like `RkyvArchive`, `RkyvSerialize`, and `RkyvDeserialize` are no longer
+  supported. Use the real paths `rkyv::Archive`, `rkyv::Serialize`, and `rkyv::Deserialize` instead.
+
   Pragmas are preserved through inheritance - child classes inherit parent pragmas and can add their own.
 
 - **Regular comments** (`#`): Standard comments that are discarded during parsing
