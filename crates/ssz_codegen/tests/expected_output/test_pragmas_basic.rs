@@ -12,7 +12,15 @@ pub mod tests {
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
             /// Test basic pragma with derive
-            #[derive(Clone, Debug, PartialEq, Eq, Default, Encode, Decode)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                std::default::Default,
+                ssz_derive::Encode,
+                ssz_derive::Decode
+            )]
             #[ssz(struct_behaviour = "container")]
             pub struct BasicContainer {
                 pub a: u8,
@@ -48,7 +56,14 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Clone, Debug, PartialEq, Eq, Default, Copy)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                std::default::Default,
+                std::marker::Copy
+            )]
             pub struct BasicContainerRef<'a> {
                 bytes: &'a [u8],
             }

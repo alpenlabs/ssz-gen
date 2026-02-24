@@ -11,17 +11,16 @@ pub mod tests {
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
-            use serde::{Serialize, Deserialize};
             /// Test multiple pragmas on a class
             #[derive(
-                Clone,
-                Debug,
-                PartialEq,
-                Eq,
-                Serialize,
-                Deserialize,
-                Encode,
-                Decode
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                serde::Serialize,
+                serde::Deserialize,
+                ssz_derive::Encode,
+                ssz_derive::Decode
             )]
             #[repr(C)]
             #[ssz(struct_behaviour = "container")]
@@ -66,7 +65,15 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Copy)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                serde::Serialize,
+                serde::Deserialize,
+                std::marker::Copy
+            )]
             pub struct MultiPragmaContainerRef<'a> {
                 bytes: &'a [u8],
             }

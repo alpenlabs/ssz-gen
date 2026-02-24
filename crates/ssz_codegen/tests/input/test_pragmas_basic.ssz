@@ -1,4 +1,4 @@
 ### Test basic pragma with derive
-#~# derive: Default
+#~# derive: std::default::Default
 class BasicContainer(Container):
     a: uint8
