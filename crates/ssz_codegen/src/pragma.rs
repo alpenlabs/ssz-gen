@@ -1,8 +1,8 @@
 //! Pragma parsing and processing utilities
 
-use proc_macro2::{Span, TokenStream};
+use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{Ident, parse_str};
+use syn::parse_str;
 
 /// Parsed pragma directives
 #[derive(Debug, Clone, Default)]
@@ -16,6 +16,10 @@ pub struct ParsedPragma {
 }
 
 impl ParsedPragma {
+    fn parse_derive_path(name: &str) -> syn::Path {
+        parse_str::<syn::Path>(name).expect("invalid derive path")
+    }
+
     /// Parse a list of pragma strings into structured directives
     pub fn parse(pragmas: &[String]) -> Self {
         let mut derives = Vec::new();
@@ -34,6 +38,14 @@ impl ParsedPragma {
                     .split(',')
                     .map(|s| s.trim().to_string())
                     .filter(|s| !s.is_empty())
+                    .inspect(|name| {
+                        let path = parse_str::<syn::Path>(name)
+                            .unwrap_or_else(|_| panic!("invalid derive path: {name}"));
+                        assert!(
+                            path.segments.len() >= 2,
+                            "derive pragma `{name}` must specify a crate"
+                        );
+                    })
                     .collect();
                 derives.extend(traits);
             }
@@ -88,12 +100,12 @@ impl ParsedPragma {
             return quote! {};
         }
 
-        let idents: Vec<Ident> = self
+        let paths: Vec<syn::Path> = self
             .derives
             .iter()
-            .map(|n| Ident::new(n, Span::call_site()))
+            .map(|n| Self::parse_derive_path(n))
             .collect();
 
-        quote! { #[derive( #(#idents),* )] }
+        quote! { #[derive( #(#paths),* )] }
     }
 }

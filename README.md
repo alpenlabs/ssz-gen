@@ -24,7 +24,11 @@ These libraries have been modified to add `StableContainer` support and other en
 - Union types
 - Constants and type aliases
 - Built-in type aliases (`byte`, `bit`, `null`, `BytesX`)
-- Documentation comments (`###`) and pragma comments (`#~#`) for controlling code generation (additional derives like Serde/Rkyv, custom attributes)
+- Documentation comments (`###`) and pragma comments (`#~#`) for controlling code generation (fully-qualified custom derives, custom attributes)
+- Derive pragmas support fully qualified Rust paths (for example, `serde::Serialize`,
+  `serde::Deserialize`, `rkyv::Archive`, `rkyv::Serialize`, `rkyv::Deserialize`)
+- Derives are emitted exactly as configured in schema pragmas / derive config (the generator does
+  not inject serde/rkyv imports based on derive names)
 
 ## Usage
 
@@ -52,6 +56,7 @@ In order to use `ssz-gen`:
             "specs/",                  // Base directory containing SSZ files
             &["external_ssz_crate"],   // External crates you would like to import and use in your SSZ schemas
             output_path.to_str().unwrap(),
+            ssz_codegen::ModuleGeneration::NestedModules,
         )
         .expect("Failed to generate SSZ types");
     }

@@ -4,7 +4,7 @@
 //! zero-copy view types.
 use std::collections::{HashMap, HashSet};
 
-use proc_macro2::{Ident, Span, TokenStream};
+use proc_macro2::TokenStream;
 use quote::quote;
 use serde::Deserialize;
 
@@ -32,6 +32,61 @@ pub struct DeriveConfig {
 }
 
 impl DeriveConfig {
+    fn parse_derive_path(name: &str) -> syn::Path {
+        syn::parse_str::<syn::Path>(name).expect("invalid derive path")
+    }
+
+    fn canonical_path_key(path: &syn::Path) -> String {
+        quote!(#path)
+            .to_string()
+            .replace(' ', "")
+            .trim_start_matches("::")
+            .to_string()
+    }
+
+    fn parse_derive_paths(derives: Vec<String>) -> Vec<syn::Path> {
+        derives
+            .into_iter()
+            .map(|n| Self::parse_derive_path(&n))
+            .collect()
+    }
+
+    fn dedup_derive_paths(paths: Vec<syn::Path>) -> Vec<syn::Path> {
+        let mut seen: HashSet<String> = HashSet::new();
+        let mut deduped: Vec<syn::Path> = Vec::new();
+
+        for path in paths {
+            let key = Self::canonical_path_key(&path);
+            if seen.insert(key) {
+                deduped.push(path);
+            }
+        }
+
+        deduped
+    }
+
+    fn is_view_filtered_derive(path: &syn::Path) -> bool {
+        matches!(
+            Self::canonical_path_key(path).as_str(),
+            "ssz_derive::Encode" | "ssz_derive::Decode" | "tree_hash_derive::TreeHash"
+        )
+    }
+
+    fn is_container_ordering_derive(path: &syn::Path) -> bool {
+        matches!(
+            Self::canonical_path_key(path).as_str(),
+            "std::cmp::Ord" | "core::cmp::Ord" | "std::cmp::PartialOrd" | "core::cmp::PartialOrd"
+        )
+    }
+
+    fn derive_attr_from_paths(paths: Vec<syn::Path>) -> TokenStream {
+        if paths.is_empty() {
+            quote! {}
+        } else {
+            quote! { #[derive( #(#paths),* )] }
+        }
+    }
+
     /// Parse a [`DeriveConfig`] from a TOML string.
     pub fn from_toml_str(s: &str) -> Result<Self, toml::de::Error> {
         #[derive(Deserialize)]
@@ -58,10 +113,10 @@ impl DeriveConfig {
         // via TOML or pragmas for types that support them.
         Self {
             default: vec![
-                "Clone".into(),
-                "Debug".into(),
-                "PartialEq".into(),
-                "Eq".into(),
+                "std::clone::Clone".into(),
+                "std::fmt::Debug".into(),
+                "std::cmp::PartialEq".into(),
+                "std::cmp::Eq".into(),
             ],
             types: HashMap::new(),
         }
@@ -83,55 +138,24 @@ impl DeriveConfig {
         // Note: TreeHash is NOT included here - we generate a generic TreeHash<H> implementation
         // manually instead of using the derive macro which only generates TreeHash<Sha256Hasher>
         let mut combined: Vec<String> = self.derives_for_type(type_name);
-        combined.push("Clone".to_string());
-        combined.push("Encode".to_string());
-        combined.push("Decode".to_string());
-
-        // Deduplicate while preserving order
-        let mut seen: HashSet<String> = HashSet::new();
-        let mut deduped: Vec<String> = Vec::new();
-        for s in combined.into_iter() {
-            if seen.insert(s.clone()) {
-                deduped.push(s);
-            }
-        }
-
-        let paths: Vec<Ident> = deduped
-            .into_iter()
-            .map(|n| Ident::new(&n, Span::call_site()))
-            .collect();
-        quote! { #[derive( #(#paths),* )] }
+        combined.push("std::clone::Clone".to_string());
+        combined.push("ssz_derive::Encode".to_string());
+        combined.push("ssz_derive::Decode".to_string());
+        let deduped_paths = Self::dedup_derive_paths(Self::parse_derive_paths(combined));
+        Self::derive_attr_from_paths(deduped_paths)
     }
 
     /// Build a #[derive(...)] attribute token stream for a view type.
     /// Same configured derives as owned, but never includes SSZ derives.
     pub fn view_derive_attr(&self, type_name: &str) -> TokenStream {
         // Start from configured derives, but strip SSZ derives for view types; ensure Copy+Clone
-        let mut combined: Vec<String> = self
-            .derives_for_type(type_name)
-            .into_iter()
-            .filter(|n| n != "Encode" && n != "Decode" && n != "TreeHash")
-            .collect();
-        combined.push("Copy".to_string());
-        combined.push("Clone".to_string());
+        let mut paths = Self::parse_derive_paths(self.derives_for_type(type_name));
+        paths.retain(|p| !Self::is_view_filtered_derive(p));
+        paths.push(Self::parse_derive_path("std::marker::Copy"));
+        paths.push(Self::parse_derive_path("std::clone::Clone"));
 
-        let mut seen: HashSet<String> = HashSet::new();
-        let mut deduped: Vec<String> = Vec::new();
-        for s in combined.into_iter() {
-            if seen.insert(s.clone()) {
-                deduped.push(s);
-            }
-        }
-
-        let idents: Vec<Ident> = deduped
-            .into_iter()
-            .map(|n| Ident::new(&n, Span::call_site()))
-            .collect();
-        if idents.is_empty() {
-            quote! {}
-        } else {
-            quote! { #[derive( #(#idents),* )] }
-        }
+        let deduped_paths = Self::dedup_derive_paths(paths);
+        Self::derive_attr_from_paths(deduped_paths)
     }
 
     /// Build a #[derive(...)] attribute token stream for an owned type, incorporating pragmas
@@ -153,34 +177,22 @@ impl DeriveConfig {
         is_container: bool,
     ) -> TokenStream {
         // Combine configured derives + pragma derives + required SSZ derives
-        let mut combined: Vec<String> = self.derives_for_type(type_name);
+        let mut combined = self.derives_for_type(type_name);
         combined.extend(pragmas.derives.iter().cloned());
+        let mut paths = Self::parse_derive_paths(combined);
 
-        // Filter out PartialOrd and Ord for Container types
+        // Filter out ordering derives for Container types
         if is_container {
-            combined.retain(|d| d != "PartialOrd" && d != "Ord");
+            paths.retain(|p| !Self::is_container_ordering_derive(p));
         }
 
-        combined.push("Clone".to_string());
-        combined.push("Encode".to_string());
-        combined.push("Decode".to_string());
+        paths.push(Self::parse_derive_path("std::clone::Clone"));
+        paths.push(Self::parse_derive_path("ssz_derive::Encode"));
+        paths.push(Self::parse_derive_path("ssz_derive::Decode"));
         // Note: TreeHash is NOT included here - we generate a generic TreeHash<H> implementation
         // manually instead of using the derive macro which only generates TreeHash<Sha256Hasher>
-
-        // Deduplicate while preserving order
-        let mut seen: HashSet<String> = HashSet::new();
-        let mut deduped: Vec<String> = Vec::new();
-        for s in combined.into_iter() {
-            if seen.insert(s.clone()) {
-                deduped.push(s);
-            }
-        }
-
-        let paths: Vec<Ident> = deduped
-            .into_iter()
-            .map(|n| Ident::new(&n, Span::call_site()))
-            .collect();
-        quote! { #[derive( #(#paths),* )] }
+        let deduped_paths = Self::dedup_derive_paths(paths);
+        Self::derive_attr_from_paths(deduped_paths)
     }
 
     /// Build a #[derive(...)] attribute token stream for a view type, incorporating pragmas
@@ -202,37 +214,23 @@ impl DeriveConfig {
         is_container: bool,
     ) -> TokenStream {
         // Start from configured derives + pragma derives, but strip SSZ derives for view types
-        let mut combined: Vec<String> = self
+        let combined: Vec<String> = self
             .derives_for_type(type_name)
             .into_iter()
             .chain(pragmas.derives.iter().cloned())
-            .filter(|n| n != "Encode" && n != "Decode" && n != "TreeHash")
             .collect();
+        let mut paths = Self::parse_derive_paths(combined);
+        paths.retain(|p| !Self::is_view_filtered_derive(p));
 
         // Filter out PartialOrd and Ord for Container types
         if is_container {
-            combined.retain(|d| d != "PartialOrd" && d != "Ord");
+            paths.retain(|p| !Self::is_container_ordering_derive(p));
         }
 
-        combined.push("Copy".to_string());
-        combined.push("Clone".to_string());
+        paths.push(Self::parse_derive_path("std::marker::Copy"));
+        paths.push(Self::parse_derive_path("std::clone::Clone"));
 
-        let mut seen: HashSet<String> = HashSet::new();
-        let mut deduped: Vec<String> = Vec::new();
-        for s in combined.into_iter() {
-            if seen.insert(s.clone()) {
-                deduped.push(s);
-            }
-        }
-
-        let idents: Vec<Ident> = deduped
-            .into_iter()
-            .map(|n| Ident::new(&n, Span::call_site()))
-            .collect();
-        if idents.is_empty() {
-            quote! {}
-        } else {
-            quote! { #[derive( #(#idents),* )] }
-        }
+        let deduped_paths = Self::dedup_derive_paths(paths);
+        Self::derive_attr_from_paths(deduped_paths)
     }
 }
