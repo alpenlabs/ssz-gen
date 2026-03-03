@@ -12,7 +12,14 @@ pub mod tests {
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
             /// This is a foo.
-            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                ssz_derive::Encode,
+                ssz_derive::Decode
+            )]
             #[ssz(struct_behaviour = "container")]
             pub struct Foo {}
             impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Foo {
@@ -39,7 +46,13 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                std::marker::Copy
+            )]
             pub struct FooRef<'a> {
                 bytes: &'a [u8],
             }
@@ -104,7 +117,14 @@ pub mod tests {
             /// This is a docstring that should come first.
             ///
             /// This is a doc comment
-            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                ssz_derive::Encode,
+                ssz_derive::Decode
+            )]
             #[ssz(struct_behaviour = "container")]
             pub struct PointWithBoth {
                 /// X coordinate
@@ -148,7 +168,13 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                std::marker::Copy
+            )]
             pub struct PointWithBothRef<'a> {
                 bytes: &'a [u8],
             }
@@ -252,7 +278,14 @@ pub mod tests {
             /// First comes the docstring. It has multiple lines.
             ///
             /// This should come after the docstring
-            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                ssz_derive::Encode,
+                ssz_derive::Decode
+            )]
             #[ssz(struct_behaviour = "container")]
             pub struct TestMerge {
                 pub field: u8,
@@ -287,7 +320,13 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                std::marker::Copy
+            )]
             pub struct TestMergeRef<'a> {
                 bytes: &'a [u8],
             }

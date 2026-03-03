@@ -25,7 +25,14 @@ pub mod tests {
             pub type TinyBitvector = BitVector<{ SMALL_SIZE as usize }>;
             pub type StandardBitvector = BitVector<{ MEDIUM_SIZE as usize }>;
             pub type LargeBitvector = BitVector<{ POWER_OF_TWO as usize }>;
-            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                ssz_derive::Encode,
+                ssz_derive::Decode
+            )]
             #[ssz(struct_behaviour = "container")]
             pub struct BitfieldContainer {
                 pub tiny_list: TinyBitlist,
@@ -102,7 +109,13 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                std::marker::Copy
+            )]
             pub struct BitfieldContainerRef<'a> {
                 bytes: &'a [u8],
             }

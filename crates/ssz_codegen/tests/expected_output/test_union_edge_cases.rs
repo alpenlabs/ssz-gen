@@ -833,7 +833,14 @@ pub mod tests {
             pub type OptionalSimple = Option<u8>;
             pub type OptionalComplex = Option<VariableList<u16, 8usize>>;
             pub type OptionalUnion = Option<SimpleUnion>;
-            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                ssz_derive::Encode,
+                ssz_derive::Decode
+            )]
             #[ssz(struct_behaviour = "container")]
             pub struct UnionEdgeCases {
                 pub simple: SimpleUnion,
@@ -910,7 +917,13 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                std::marker::Copy
+            )]
             pub struct UnionEdgeCasesRef<'a> {
                 bytes: &'a [u8],
             }
@@ -1246,7 +1259,14 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                ssz_derive::Encode,
+                ssz_derive::Decode
+            )]
             #[ssz(struct_behaviour = "container")]
             pub struct AllUnions {
                 pub union1: SimpleUnion,
@@ -1295,7 +1315,13 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                std::marker::Copy
+            )]
             pub struct AllUnionsRef<'a> {
                 bytes: &'a [u8],
             }

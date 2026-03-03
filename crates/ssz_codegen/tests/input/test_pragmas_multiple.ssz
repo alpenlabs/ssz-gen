@@ -1,5 +1,5 @@
 ### Test multiple pragmas on a class
-#~# derive: Serialize, Deserialize
+#~# derive: serde::Serialize, serde::Deserialize
 #~# attr: #[repr(C)]
 class MultiPragmaContainer(Container):
     x: uint32

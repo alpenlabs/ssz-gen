@@ -94,6 +94,14 @@ fn get_struct_derives(generated: &str, struct_name: &str) -> Option<String> {
     Some(derive_line[..=derive_end].to_string())
 }
 
+fn normalized_tokens(tokens: proc_macro2::TokenStream) -> String {
+    tokens
+        .to_string()
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .collect()
+}
+
 #[test]
 fn test_basic_codegen() {
     build_ssz_files(
@@ -611,15 +619,19 @@ fn test_allow_attribute_and_default_derives() {
         }
     }
     let ref_idx = ref_idx.expect("AlphaRef not found");
-    let mut found_attr = false;
-    for line in lines.iter().take(ref_idx).skip(ref_idx.saturating_sub(8)) {
-        if line.contains("#[derive(") {
-            assert!(line.contains("Copy") && line.contains("Clone"));
-            found_attr = true;
-            break;
-        }
-    }
-    assert!(found_attr, "derive attribute not found above AlphaRef")
+    let region = lines[ref_idx.saturating_sub(8)..ref_idx].join("\n");
+    assert!(
+        region.contains("#[derive("),
+        "derive attribute not found above AlphaRef"
+    );
+    assert!(
+        region.contains("Copy"),
+        "Copy not in derive above AlphaRef: {region}"
+    );
+    assert!(
+        region.contains("Clone"),
+        "Clone not in derive above AlphaRef: {region}"
+    )
 }
 
 #[test]
@@ -1199,7 +1211,7 @@ fn test_container_in_list() {
         generated.contains(
             "impl<'a> ssz_types::view::ToOwnedSsz<ExportContainer> for ExportContainerRef<'a>"
         ),
-        "ToOwnedSsz should 
+        "ToOwnedSsz should
             be implemented for ExportContainerRef"
     );
 
@@ -1661,10 +1673,10 @@ fn test_serde_derives() {
     let generated = fs::read_to_string("tests/output/test_serde_derives.rs")
         .expect("Failed to read generated output");
 
-    // Verify serde import is added
+    // Serde import is NOT injected — derives are emitted as-is
     assert!(
-        generated.contains("use serde::{Serialize, Deserialize};"),
-        "Serde import should be added when types use Serialize/Deserialize derives"
+        !generated.contains("use serde::{"),
+        "serde import should not be injected"
     );
 
     // Verify BlockCommitment has serde derives along with Copy and Hash
@@ -1672,22 +1684,22 @@ fn test_serde_derives() {
         .expect("BlockCommitment should have derive attributes");
 
     assert!(
-        block_commitment_derives.contains("Serialize")
-            && block_commitment_derives.contains("Deserialize"),
-        "BlockCommitment should have Serialize and Deserialize in derives"
+        block_commitment_derives.contains("serde::Serialize")
+            && block_commitment_derives.contains("serde::Deserialize"),
+        "BlockCommitment should have serde::Serialize and serde::Deserialize in derives"
     );
 
     assert!(
-        block_commitment_derives.contains("Copy") && block_commitment_derives.contains("Hash"),
-        "BlockCommitment should also have Copy and Hash derives"
+        block_commitment_derives.contains("std::marker::Copy")
+            && block_commitment_derives.contains("std::hash::Hash"),
+        "BlockCommitment should also have std::marker::Copy and std::hash::Hash derives"
     );
 
-    // Verify OtherType does NOT have serde derives (but serde import is still present since
-    // BlockCommitment uses it)
+    // Verify OtherType does NOT have serde derives
     if let Some(other_type_derives) = get_struct_derives(&generated, "OtherType") {
         assert!(
-            !other_type_derives.contains("Serialize"),
-            "OtherType should not have Serialize derive"
+            !other_type_derives.contains("serde::Serialize"),
+            "OtherType should not have serde::Serialize derive"
         );
     }
 }
@@ -1706,10 +1718,10 @@ fn test_serde_derives_single_module() {
     let generated = fs::read_to_string("tests/output/test_serde_derives_single.rs")
         .expect("Failed to read generated output");
 
-    // Verify serde import is added in SingleModule mode
+    // Serde import is NOT injected — derives are emitted as-is
     assert!(
-        generated.contains("use serde::{Serialize, Deserialize};"),
-        "Serde import should be added in SingleModule mode when types use Serialize/Deserialize derives"
+        !generated.contains("use serde::{"),
+        "serde import should not be injected in SingleModule mode"
     );
 
     // Verify BlockCommitment has serde derives
@@ -1717,21 +1729,22 @@ fn test_serde_derives_single_module() {
         .expect("BlockCommitment should have derive attributes");
 
     assert!(
-        block_commitment_derives.contains("Serialize")
-            && block_commitment_derives.contains("Deserialize"),
-        "BlockCommitment should have Serialize and Deserialize derives in SingleModule mode"
+        block_commitment_derives.contains("serde::Serialize")
+            && block_commitment_derives.contains("serde::Deserialize"),
+        "BlockCommitment should have serde::Serialize and serde::Deserialize derives in SingleModule mode"
     );
 
     assert!(
-        block_commitment_derives.contains("Copy") && block_commitment_derives.contains("Hash"),
-        "BlockCommitment should also have Copy and Hash derives"
+        block_commitment_derives.contains("std::marker::Copy")
+            && block_commitment_derives.contains("std::hash::Hash"),
+        "BlockCommitment should also have std::marker::Copy and std::hash::Hash derives"
     );
 
     // Verify OtherType does NOT have serde derives
     if let Some(other_type_derives) = get_struct_derives(&generated, "OtherType") {
         assert!(
-            !other_type_derives.contains("Serialize"),
-            "OtherType should not have Serialize derive"
+            !other_type_derives.contains("serde::Serialize"),
+            "OtherType should not have serde::Serialize derive"
         );
     }
 }
@@ -1750,10 +1763,10 @@ fn test_serde_derives_flat_modules() {
     let generated = fs::read_to_string("tests/output/test_serde_derives_flat.rs")
         .expect("Failed to read generated output");
 
-    // Verify serde import is added in FlatModules mode (inside the module)
+    // Serde import is NOT injected — derives are emitted as-is
     assert!(
-        generated.contains("use serde::{Serialize, Deserialize};"),
-        "Serde import should be added in FlatModules mode when types use Serialize/Deserialize derives"
+        !generated.contains("use serde::{"),
+        "serde import should not be injected in FlatModules mode"
     );
 
     // Verify the module structure
@@ -1767,21 +1780,22 @@ fn test_serde_derives_flat_modules() {
         .expect("BlockCommitment should have derive attributes");
 
     assert!(
-        block_commitment_derives.contains("Serialize")
-            && block_commitment_derives.contains("Deserialize"),
-        "BlockCommitment should have Serialize and Deserialize derives in FlatModules mode"
+        block_commitment_derives.contains("serde::Serialize")
+            && block_commitment_derives.contains("serde::Deserialize"),
+        "BlockCommitment should have serde::Serialize and serde::Deserialize derives in FlatModules mode"
     );
 
     assert!(
-        block_commitment_derives.contains("Copy") && block_commitment_derives.contains("Hash"),
-        "BlockCommitment should also have Copy and Hash derives"
+        block_commitment_derives.contains("std::marker::Copy")
+            && block_commitment_derives.contains("std::hash::Hash"),
+        "BlockCommitment should also have std::marker::Copy and std::hash::Hash derives"
     );
 
     // Verify OtherType does NOT have serde derives
     if let Some(other_type_derives) = get_struct_derives(&generated, "OtherType") {
         assert!(
-            !other_type_derives.contains("Serialize"),
-            "OtherType should not have Serialize derive"
+            !other_type_derives.contains("serde::Serialize"),
+            "OtherType should not have serde::Serialize derive"
         );
     }
 }
@@ -1800,13 +1814,10 @@ fn test_rkyv_derives() {
     let generated = fs::read_to_string("tests/output/test_rkyv_derives.rs")
         .expect("Failed to read generated output");
 
-    // Verify rkyv import is added
+    // Rkyv import is NOT injected — derives are emitted as-is
     assert!(
-        generated.contains("use rkyv::{")
-            && generated.contains("Archive as RkyvArchive")
-            && generated.contains("Deserialize as RkyvDeserialize")
-            && generated.contains("Serialize as RkyvSerialize"),
-        "Rkyv import should be added when types use RkyvArchive/RkyvSerialize/RkyvDeserialize derives"
+        !generated.contains("use rkyv::{"),
+        "rkyv import should not be injected"
     );
 
     // Verify BlockCommitment has rkyv derives along with Copy and Hash
@@ -1814,23 +1825,23 @@ fn test_rkyv_derives() {
         .expect("BlockCommitment should have derive attributes");
 
     assert!(
-        block_commitment_derives.contains("RkyvArchive")
-            && block_commitment_derives.contains("RkyvSerialize")
-            && block_commitment_derives.contains("RkyvDeserialize"),
-        "BlockCommitment should have RkyvArchive, RkyvSerialize, and RkyvDeserialize in derives"
+        block_commitment_derives.contains("rkyv::Archive")
+            && block_commitment_derives.contains("rkyv::Serialize")
+            && block_commitment_derives.contains("rkyv::Deserialize"),
+        "BlockCommitment should have rkyv::Archive, rkyv::Serialize, and rkyv::Deserialize in derives"
     );
 
     assert!(
-        block_commitment_derives.contains("Copy") && block_commitment_derives.contains("Hash"),
-        "BlockCommitment should also have Copy and Hash derives"
+        block_commitment_derives.contains("std::marker::Copy")
+            && block_commitment_derives.contains("std::hash::Hash"),
+        "BlockCommitment should also have std::marker::Copy and std::hash::Hash derives"
     );
 
-    // Verify OtherType does NOT have rkyv derives (but rkyv import is still present since
-    // BlockCommitment uses it)
+    // Verify OtherType does NOT have rkyv derives
     if let Some(other_type_derives) = get_struct_derives(&generated, "OtherType") {
         assert!(
-            !other_type_derives.contains("RkyvArchive"),
-            "OtherType should not have RkyvArchive derive"
+            !other_type_derives.contains("rkyv::Archive"),
+            "OtherType should not have rkyv::Archive derive"
         );
     }
 }
@@ -1849,13 +1860,10 @@ fn test_rkyv_derives_single_module() {
     let generated = fs::read_to_string("tests/output/test_rkyv_derives_single.rs")
         .expect("Failed to read generated output");
 
-    // Verify rkyv import is added in SingleModule mode
+    // Rkyv import is NOT injected — derives are emitted as-is
     assert!(
-        generated.contains("use rkyv::{")
-            && generated.contains("Archive as RkyvArchive")
-            && generated.contains("Deserialize as RkyvDeserialize")
-            && generated.contains("Serialize as RkyvSerialize"),
-        "Rkyv import should be added in SingleModule mode when types use RkyvArchive/RkyvSerialize/RkyvDeserialize derives"
+        !generated.contains("use rkyv::{"),
+        "rkyv import should not be injected in SingleModule mode"
     );
 
     // Verify BlockCommitment has rkyv derives
@@ -1863,22 +1871,23 @@ fn test_rkyv_derives_single_module() {
         .expect("BlockCommitment should have derive attributes");
 
     assert!(
-        block_commitment_derives.contains("RkyvArchive")
-            && block_commitment_derives.contains("RkyvSerialize")
-            && block_commitment_derives.contains("RkyvDeserialize"),
-        "BlockCommitment should have RkyvArchive, RkyvSerialize, and RkyvDeserialize derives in SingleModule mode"
+        block_commitment_derives.contains("rkyv::Archive")
+            && block_commitment_derives.contains("rkyv::Serialize")
+            && block_commitment_derives.contains("rkyv::Deserialize"),
+        "BlockCommitment should have rkyv::Archive, rkyv::Serialize, and rkyv::Deserialize derives in SingleModule mode"
     );
 
     assert!(
-        block_commitment_derives.contains("Copy") && block_commitment_derives.contains("Hash"),
-        "BlockCommitment should also have Copy and Hash derives"
+        block_commitment_derives.contains("std::marker::Copy")
+            && block_commitment_derives.contains("std::hash::Hash"),
+        "BlockCommitment should also have std::marker::Copy and std::hash::Hash derives"
     );
 
     // Verify OtherType does NOT have rkyv derives
     if let Some(other_type_derives) = get_struct_derives(&generated, "OtherType") {
         assert!(
-            !other_type_derives.contains("RkyvArchive"),
-            "OtherType should not have RkyvArchive derive"
+            !other_type_derives.contains("rkyv::Archive"),
+            "OtherType should not have rkyv::Archive derive"
         );
     }
 }
@@ -1897,13 +1906,10 @@ fn test_rkyv_derives_flat_modules() {
     let generated = fs::read_to_string("tests/output/test_rkyv_derives_flat.rs")
         .expect("Failed to read generated output");
 
-    // Verify rkyv import is added in FlatModules mode (inside the module)
+    // Rkyv import is NOT injected — derives are emitted as-is
     assert!(
-        generated.contains("use rkyv::{")
-            && generated.contains("Archive as RkyvArchive")
-            && generated.contains("Deserialize as RkyvDeserialize")
-            && generated.contains("Serialize as RkyvSerialize"),
-        "Rkyv import should be added in FlatModules mode when types use RkyvArchive/RkyvSerialize/RkyvDeserialize derives"
+        !generated.contains("use rkyv::{"),
+        "rkyv import should not be injected in FlatModules mode"
     );
 
     // Verify the module structure
@@ -1917,22 +1923,23 @@ fn test_rkyv_derives_flat_modules() {
         .expect("BlockCommitment should have derive attributes");
 
     assert!(
-        block_commitment_derives.contains("RkyvArchive")
-            && block_commitment_derives.contains("RkyvSerialize")
-            && block_commitment_derives.contains("RkyvDeserialize"),
-        "BlockCommitment should have RkyvArchive, RkyvSerialize, and RkyvDeserialize derives in FlatModules mode"
+        block_commitment_derives.contains("rkyv::Archive")
+            && block_commitment_derives.contains("rkyv::Serialize")
+            && block_commitment_derives.contains("rkyv::Deserialize"),
+        "BlockCommitment should have rkyv::Archive, rkyv::Serialize, and rkyv::Deserialize derives in FlatModules mode"
     );
 
     assert!(
-        block_commitment_derives.contains("Copy") && block_commitment_derives.contains("Hash"),
-        "BlockCommitment should also have Copy and Hash derives"
+        block_commitment_derives.contains("std::marker::Copy")
+            && block_commitment_derives.contains("std::hash::Hash"),
+        "BlockCommitment should also have std::marker::Copy and std::hash::Hash derives"
     );
 
     // Verify OtherType does NOT have rkyv derives
     if let Some(other_type_derives) = get_struct_derives(&generated, "OtherType") {
         assert!(
-            !other_type_derives.contains("RkyvArchive"),
-            "OtherType should not have RkyvArchive derive"
+            !other_type_derives.contains("rkyv::Archive"),
+            "OtherType should not have rkyv::Archive derive"
         );
     }
 }
@@ -2122,4 +2129,110 @@ fn test_union_empty_variant() {
         "Expected at least 2 occurrences of zero_root pattern (owned and Ref), found {}",
         pattern_count
     );
+}
+
+// --- Section 5A: Unit tests for fully qualified derive path support ---
+
+#[test]
+fn test_pragma_derive_attr_emits_qualified_paths() {
+    let pragma = ssz_codegen::pragma::ParsedPragma {
+        derives: vec!["serde::Serialize".into(), "rkyv::Archive".into()],
+        ..Default::default()
+    };
+
+    let attr = normalized_tokens(pragma.derive_attr());
+    assert!(
+        attr.contains("serde::Serialize"),
+        "qualified serde path missing: {attr}"
+    );
+    assert!(
+        attr.contains("rkyv::Archive"),
+        "qualified rkyv path missing: {attr}"
+    );
+}
+
+#[test]
+fn test_owned_derive_keeps_namespace_distinct_derives() {
+    let cfg = ssz_codegen::derive_config::DeriveConfig {
+        default: vec!["serde::Serialize".into(), "rkyv::Serialize".into()],
+        types: std::collections::HashMap::new(),
+    };
+
+    let attr = normalized_tokens(cfg.owned_derive_attr("TestType"));
+    assert!(attr.contains("serde::Serialize"));
+    assert!(attr.contains("rkyv::Serialize"));
+}
+
+#[test]
+fn test_owned_derive_dedups_identical_full_paths() {
+    let cfg = ssz_codegen::derive_config::DeriveConfig {
+        default: vec!["serde::Serialize".into(), "serde::Serialize".into()],
+        types: std::collections::HashMap::new(),
+    };
+
+    let attr = normalized_tokens(cfg.owned_derive_attr("TestType"));
+    assert_eq!(attr.matches("serde::Serialize").count(), 1);
+}
+
+#[test]
+fn test_view_derive_filters_qualified_internal_derives() {
+    let cfg = ssz_codegen::derive_config::DeriveConfig {
+        default: vec![
+            "ssz_derive::Encode".into(),
+            "ssz_derive::Decode".into(),
+            "tree_hash_derive::TreeHash".into(),
+            "serde::Serialize".into(),
+        ],
+        types: std::collections::HashMap::new(),
+    };
+
+    let attr = normalized_tokens(cfg.view_derive_attr("TestType"));
+    assert!(
+        !attr.contains("ssz_derive::Encode"),
+        "ssz_derive::Encode should be filtered: {attr}"
+    );
+    assert!(
+        !attr.contains("ssz_derive::Decode"),
+        "ssz_derive::Decode should be filtered: {attr}"
+    );
+    assert!(
+        !attr.contains("tree_hash_derive::TreeHash"),
+        "tree_hash_derive::TreeHash should be filtered: {attr}"
+    );
+    assert!(
+        attr.contains("serde::Serialize"),
+        "serde::Serialize should survive filtering: {attr}"
+    );
+}
+
+#[test]
+fn test_container_filter_removes_qualified_ordering_derives() {
+    let cfg = ssz_codegen::derive_config::DeriveConfig {
+        default: vec![
+            "std::cmp::Ord".into(),
+            "std::cmp::PartialOrd".into(),
+            "core::cmp::Ord".into(),
+            "core::cmp::PartialOrd".into(),
+            "serde::Serialize".into(),
+        ],
+        types: std::collections::HashMap::new(),
+    };
+
+    let attr = normalized_tokens(cfg.owned_derive_attr_with_pragmas_filtered(
+        "TestType",
+        &ssz_codegen::pragma::ParsedPragma::default(),
+        true,
+    ));
+
+    assert!(!attr.contains("std::cmp::Ord"));
+    assert!(!attr.contains("std::cmp::PartialOrd"));
+    assert!(!attr.contains("core::cmp::Ord"));
+    assert!(!attr.contains("core::cmp::PartialOrd"));
+    assert!(attr.contains("serde::Serialize"));
+}
+
+#[test]
+#[should_panic(expected = "must specify a crate")]
+fn test_unqualified_pragma_derive_panics() {
+    ssz_codegen::pragma::ParsedPragma::parse(&["derive: Copy".to_string()]);
 }

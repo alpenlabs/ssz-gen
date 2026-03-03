@@ -1,7 +1,7 @@
 Slot = uint64
 
-### Test that rkyv derives add proper imports (mirrors identifiers use case)
-#~# derive: Copy, Hash, RkyvArchive, RkyvSerialize, RkyvDeserialize
+### Test that rkyv derives use fully qualified paths (mirrors identifiers use case)
+#~# derive: std::marker::Copy, std::hash::Hash, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize
 class BlockCommitment(Container):
     ### Slot number
     slot: Slot

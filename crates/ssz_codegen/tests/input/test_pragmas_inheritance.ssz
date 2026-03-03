@@ -1,10 +1,10 @@
 ### Test pragmas with inheritance
-#~# derive: Default
+#~# derive: std::default::Default
 class Parent(StableContainer[5]):
     a: Optional[uint8]
     b: Optional[uint8]
 
-#~# derive: Serialize
+#~# derive: serde::Serialize
 #~# attr: #[repr(C)]
 class Child(Parent):
     b: Optional[uint16]

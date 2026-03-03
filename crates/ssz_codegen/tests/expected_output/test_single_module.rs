@@ -946,7 +946,14 @@ pub type AliasListAlias = VariableList<u8, 5usize>;
 pub type AliasNested = AliasUintAlias;
 pub type BitAlias = BitList<{ VAL_X as usize }>;
 pub type UnionE = UnionD;
-#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    ssz_derive::Encode,
+    ssz_derive::Decode
+)]
 #[ssz(struct_behaviour = "container")]
 pub struct Alpha {
     pub a: u8,
@@ -984,7 +991,13 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Alpha {
 /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
 /// needed.
 #[allow(dead_code, reason = "generated code using ssz-gen")]
-#[derive(Clone, Debug, PartialEq, Eq, Copy)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    std::marker::Copy
+)]
 pub struct AlphaRef<'a> {
     bytes: &'a [u8],
 }
@@ -1097,7 +1110,14 @@ impl<'a> AlphaRef<'a> {
         }
     }
 }
-#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    ssz_derive::Encode,
+    ssz_derive::Decode
+)]
 #[ssz(struct_behaviour = "container")]
 pub struct Beta {
     pub d: AliasListAlias,
@@ -1135,7 +1155,13 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Beta {
 /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
 /// needed.
 #[allow(dead_code, reason = "generated code using ssz-gen")]
-#[derive(Clone, Debug, PartialEq, Eq, Copy)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    std::marker::Copy
+)]
 pub struct BetaRef<'a> {
     bytes: &'a [u8],
 }
@@ -1269,7 +1295,14 @@ impl<'a> BetaRef<'a> {
         }
     }
 }
-#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    ssz_derive::Encode,
+    ssz_derive::Decode
+)]
 #[ssz(struct_behaviour = "stable_container", max_fields = 42usize)]
 pub struct Gamma {
     pub g: Optional<u8>,
@@ -1317,7 +1350,13 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Gamma {
 /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
 /// needed.
 #[allow(dead_code, reason = "generated code using ssz-gen")]
-#[derive(Clone, Debug, PartialEq, Eq, Copy)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    std::marker::Copy
+)]
 pub struct GammaRef<'a> {
     bytes: &'a [u8],
 }
@@ -1458,7 +1497,14 @@ impl<'a> GammaRef<'a> {
         }
     }
 }
-#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    ssz_derive::Encode,
+    ssz_derive::Decode
+)]
 #[ssz(struct_behaviour = "container")]
 pub struct Delta {
     pub z: bool,
@@ -1492,7 +1538,13 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Delta {
 /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
 /// needed.
 #[allow(dead_code, reason = "generated code using ssz-gen")]
-#[derive(Clone, Debug, PartialEq, Eq, Copy)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    std::marker::Copy
+)]
 pub struct DeltaRef<'a> {
     bytes: &'a [u8],
 }
@@ -1585,7 +1637,14 @@ impl<'a> DeltaRef<'a> {
         }
     }
 }
-#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    ssz_derive::Encode,
+    ssz_derive::Decode
+)]
 #[ssz(struct_behaviour = "stable_container", max_fields = 42usize)]
 pub struct Epsilon {
     pub g: Optional<u8>,
@@ -1647,7 +1706,13 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Epsilon {
 /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
 /// needed.
 #[allow(dead_code, reason = "generated code using ssz-gen")]
-#[derive(Clone, Debug, PartialEq, Eq, Copy)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    std::marker::Copy
+)]
 pub struct EpsilonRef<'a> {
     bytes: &'a [u8],
 }
@@ -1846,7 +1911,14 @@ impl<'a> EpsilonRef<'a> {
         }
     }
 }
-#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    ssz_derive::Encode,
+    ssz_derive::Decode
+)]
 #[ssz(struct_behaviour = "stable_container", max_fields = 128usize)]
 pub struct Zeta {
     pub u: Optional<FixedBytes<16usize>>,
@@ -1894,7 +1966,13 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Zeta {
 /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
 /// needed.
 #[allow(dead_code, reason = "generated code using ssz-gen")]
-#[derive(Clone, Debug, PartialEq, Eq, Copy)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    std::marker::Copy
+)]
 pub struct ZetaRef<'a> {
     bytes: &'a [u8],
 }
@@ -2042,7 +2120,14 @@ impl<'a> ZetaRef<'a> {
         }
     }
 }
-#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    ssz_derive::Encode,
+    ssz_derive::Decode
+)]
 #[ssz(struct_behaviour = "container")]
 pub struct TestType {
     pub ccc: u8,
@@ -2094,7 +2179,13 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for TestType {
 /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
 /// needed.
 #[allow(dead_code, reason = "generated code using ssz-gen")]
-#[derive(Clone, Debug, PartialEq, Eq, Copy)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    std::marker::Copy
+)]
 pub struct TestTypeRef<'a> {
     bytes: &'a [u8],
 }
@@ -2275,7 +2366,14 @@ impl<'a> TestTypeRef<'a> {
         }
     }
 }
-#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    ssz_derive::Encode,
+    ssz_derive::Decode
+)]
 #[ssz(struct_behaviour = "container")]
 pub struct Eta {
     pub l: Zeta,
@@ -2313,7 +2411,13 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Eta {
 /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
 /// needed.
 #[allow(dead_code, reason = "generated code using ssz-gen")]
-#[derive(Clone, Debug, PartialEq, Eq, Copy)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    std::marker::Copy
+)]
 pub struct EtaRef<'a> {
     bytes: &'a [u8],
 }
@@ -2474,7 +2578,14 @@ impl<'a> EtaRef<'a> {
         }
     }
 }
-#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    ssz_derive::Encode,
+    ssz_derive::Decode
+)]
 #[ssz(struct_behaviour = "container")]
 pub struct Theta {
     pub o: UnionB,
@@ -2512,7 +2623,13 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Theta {
 /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
 /// needed.
 #[allow(dead_code, reason = "generated code using ssz-gen")]
-#[derive(Clone, Debug, PartialEq, Eq, Copy)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    std::marker::Copy
+)]
 pub struct ThetaRef<'a> {
     bytes: &'a [u8],
 }
@@ -2663,7 +2780,14 @@ impl<'a> ThetaRef<'a> {
         }
     }
 }
-#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    ssz_derive::Encode,
+    ssz_derive::Decode
+)]
 #[ssz(struct_behaviour = "stable_container", max_fields = 42usize)]
 pub struct Iota {
     pub g: Optional<u8>,
@@ -2739,7 +2863,13 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Iota {
 /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
 /// needed.
 #[allow(dead_code, reason = "generated code using ssz-gen")]
-#[derive(Clone, Debug, PartialEq, Eq, Copy)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    std::marker::Copy
+)]
 pub struct IotaRef<'a> {
     bytes: &'a [u8],
 }
@@ -3003,7 +3133,14 @@ impl<'a> IotaRef<'a> {
         }
     }
 }
-#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    ssz_derive::Encode,
+    ssz_derive::Decode
+)]
 #[ssz(struct_behaviour = "container")]
 pub struct Kappa {
     pub t: Alpha,
@@ -3041,7 +3178,13 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Kappa {
 /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
 /// needed.
 #[allow(dead_code, reason = "generated code using ssz-gen")]
-#[derive(Clone, Debug, PartialEq, Eq, Copy)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    std::marker::Copy
+)]
 pub struct KappaRef<'a> {
     bytes: &'a [u8],
 }
@@ -3192,7 +3335,14 @@ impl<'a> KappaRef<'a> {
         }
     }
 }
-#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    ssz_derive::Encode,
+    ssz_derive::Decode
+)]
 #[ssz(struct_behaviour = "stable_container", max_fields = 4usize)]
 pub struct Lambda {
     pub w: Optional<u16>,
@@ -3240,7 +3390,13 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Lambda {
 /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
 /// needed.
 #[allow(dead_code, reason = "generated code using ssz-gen")]
-#[derive(Clone, Debug, PartialEq, Eq, Copy)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    std::marker::Copy
+)]
 pub struct LambdaRef<'a> {
     bytes: &'a [u8],
 }
@@ -3374,7 +3530,14 @@ impl<'a> LambdaRef<'a> {
         }
     }
 }
-#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    ssz_derive::Encode,
+    ssz_derive::Decode
+)]
 #[ssz(struct_behaviour = "container")]
 pub struct Mu {
     pub y: Lambda,
@@ -3408,7 +3571,13 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Mu {
 /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
 /// needed.
 #[allow(dead_code, reason = "generated code using ssz-gen")]
-#[derive(Clone, Debug, PartialEq, Eq, Copy)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    std::marker::Copy
+)]
 pub struct MuRef<'a> {
     bytes: &'a [u8],
 }
@@ -3540,7 +3709,14 @@ impl<'a> MuRef<'a> {
     }
 }
 pub type AliasMu = Mu;
-#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    ssz_derive::Encode,
+    ssz_derive::Decode
+)]
 #[ssz(struct_behaviour = "container")]
 pub struct Nu {
     pub zz: AliasMu,
@@ -3582,7 +3758,13 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Nu {
 /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
 /// needed.
 #[allow(dead_code, reason = "generated code using ssz-gen")]
-#[derive(Clone, Debug, PartialEq, Eq, Copy)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    std::marker::Copy
+)]
 pub struct NuRef<'a> {
     bytes: &'a [u8],
 }

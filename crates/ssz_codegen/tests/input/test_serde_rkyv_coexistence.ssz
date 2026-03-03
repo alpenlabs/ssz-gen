@@ -1,0 +1,4 @@
+### Test that derives with the same leaf name from different crates coexist
+#~# derive: serde::Serialize, rkyv::Serialize, serde::Deserialize, rkyv::Deserialize
+class SameLeafDerives(Container):
+    value: uint64

@@ -1,7 +1,7 @@
 Slot = uint64
 
-### Test that serde derives add proper imports (mirrors identifiers use case)
-#~# derive: Copy, Hash, Serialize, Deserialize
+### Test that serde derives use fully qualified paths (mirrors identifiers use case)
+#~# derive: std::marker::Copy, std::hash::Hash, serde::Serialize, serde::Deserialize
 class BlockCommitment(Container):
     ### Slot number
     slot: Slot

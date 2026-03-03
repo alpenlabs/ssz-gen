@@ -11,9 +11,16 @@ pub mod tests {
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
-            use serde::{Serialize, Deserialize};
             /// Test pragmas with inheritance
-            #[derive(Clone, Debug, PartialEq, Eq, Default, Encode, Decode)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                std::default::Default,
+                ssz_derive::Encode,
+                ssz_derive::Decode
+            )]
             #[ssz(struct_behaviour = "stable_container", max_fields = 5usize)]
             pub struct Parent {
                 pub a: Optional<u8>,
@@ -69,7 +76,14 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Clone, Debug, PartialEq, Eq, Default, Copy)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                std::default::Default,
+                std::marker::Copy
+            )]
             pub struct ParentRef<'a> {
                 bytes: &'a [u8],
             }
@@ -218,7 +232,15 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Clone, Debug, PartialEq, Eq, Serialize, Encode, Decode)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                serde::Serialize,
+                ssz_derive::Encode,
+                ssz_derive::Decode
+            )]
             #[repr(C)]
             #[ssz(struct_behaviour = "stable_container", max_fields = 5usize)]
             pub struct Child {
@@ -285,7 +307,14 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Clone, Debug, PartialEq, Eq, Serialize, Copy)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                serde::Serialize,
+                std::marker::Copy
+            )]
             pub struct ChildRef<'a> {
                 bytes: &'a [u8],
             }
