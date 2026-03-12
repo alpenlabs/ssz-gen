@@ -295,20 +295,20 @@ pub struct ContainerWithUnion {
 #[test]
 fn test_uint64_tree_hash() {
     assert_eq!(
-        <u64 as TreeHash<Sha256Hasher>>::tree_hash_root(&0u64),
+        <u64 as TreeHash>::tree_hash_root::<Sha256Hasher>(&0u64),
         Hash256::ZERO,
         "uint64(0) should hash to all zeros"
     );
 
     assert_eq!(
-        <u64 as TreeHash<Sha256Hasher>>::tree_hash_root(&1u64),
+        <u64 as TreeHash>::tree_hash_root::<Sha256Hasher>(&1u64),
         Hash256::from_slice(&HASH_U64_ONE),
         "tree_hash_root of uint64(1)"
     );
 
     // Additional uint64 tests
     assert_eq!(
-        <u64 as TreeHash<Sha256Hasher>>::tree_hash_root(&42u64),
+        <u64 as TreeHash>::tree_hash_root::<Sha256Hasher>(&42u64),
         Hash256::from_slice(&[
             0x2a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -318,7 +318,7 @@ fn test_uint64_tree_hash() {
     );
 
     assert_eq!(
-        <u64 as TreeHash<Sha256Hasher>>::tree_hash_root(&u64::MAX),
+        <u64 as TreeHash>::tree_hash_root::<Sha256Hasher>(&u64::MAX),
         Hash256::from_slice(&[
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -331,19 +331,19 @@ fn test_uint64_tree_hash() {
 #[test]
 fn test_uint32_tree_hash() {
     assert_eq!(
-        <u32 as TreeHash<Sha256Hasher>>::tree_hash_root(&0u32),
+        <u32 as TreeHash>::tree_hash_root::<Sha256Hasher>(&0u32),
         Hash256::ZERO,
         "uint32(0) should hash to all zeros"
     );
 
     assert_eq!(
-        <u32 as TreeHash<Sha256Hasher>>::tree_hash_root(&1u32),
+        <u32 as TreeHash>::tree_hash_root::<Sha256Hasher>(&1u32),
         Hash256::from_slice(&HASH_U64_ONE),
         "tree_hash_root of uint32(1)"
     );
 
     assert_eq!(
-        <u32 as TreeHash<Sha256Hasher>>::tree_hash_root(&u32::MAX),
+        <u32 as TreeHash>::tree_hash_root::<Sha256Hasher>(&u32::MAX),
         Hash256::from_slice(&[
             0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -356,13 +356,13 @@ fn test_uint32_tree_hash() {
 #[test]
 fn test_uint16_tree_hash() {
     assert_eq!(
-        <u16 as TreeHash<Sha256Hasher>>::tree_hash_root(&0u16),
+        <u16 as TreeHash>::tree_hash_root::<Sha256Hasher>(&0u16),
         Hash256::ZERO,
         "uint16(0) should hash to all zeros"
     );
 
     assert_eq!(
-        <u16 as TreeHash<Sha256Hasher>>::tree_hash_root(&1u16),
+        <u16 as TreeHash>::tree_hash_root::<Sha256Hasher>(&1u16),
         Hash256::from_slice(&HASH_U64_ONE),
         "tree_hash_root of uint16(1)"
     );
@@ -371,19 +371,19 @@ fn test_uint16_tree_hash() {
 #[test]
 fn test_uint8_tree_hash() {
     assert_eq!(
-        <u8 as TreeHash<Sha256Hasher>>::tree_hash_root(&0u8),
+        <u8 as TreeHash>::tree_hash_root::<Sha256Hasher>(&0u8),
         Hash256::ZERO,
         "uint8(0) should hash to all zeros"
     );
 
     assert_eq!(
-        <u8 as TreeHash<Sha256Hasher>>::tree_hash_root(&1u8),
+        <u8 as TreeHash>::tree_hash_root::<Sha256Hasher>(&1u8),
         Hash256::from_slice(&HASH_U64_ONE),
         "tree_hash_root of uint8(1)"
     );
 
     assert_eq!(
-        <u8 as TreeHash<Sha256Hasher>>::tree_hash_root(&255u8),
+        <u8 as TreeHash>::tree_hash_root::<Sha256Hasher>(&255u8),
         Hash256::from_slice(&[
             0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -396,13 +396,13 @@ fn test_uint8_tree_hash() {
 #[test]
 fn test_bool_tree_hash() {
     assert_eq!(
-        <bool as TreeHash<Sha256Hasher>>::tree_hash_root(&false),
+        <bool as TreeHash>::tree_hash_root::<Sha256Hasher>(&false),
         Hash256::ZERO,
         "bool(false) should hash to all zeros"
     );
 
     assert_eq!(
-        <bool as TreeHash<Sha256Hasher>>::tree_hash_root(&true),
+        <bool as TreeHash>::tree_hash_root::<Sha256Hasher>(&true),
         Hash256::from_slice(&HASH_U64_ONE),
         "tree_hash_root of bool(true)"
     );
@@ -417,7 +417,7 @@ fn test_bytes32_tree_hash() {
     // Bytes32 of all zeros - root equals itself (identity)
     let zeros: [u8; 32] = [0u8; 32];
     assert_eq!(
-        <[u8; 32] as TreeHash<Sha256Hasher>>::tree_hash_root(&zeros),
+        <[u8; 32] as TreeHash>::tree_hash_root::<Sha256Hasher>(&zeros),
         Hash256::ZERO,
         "Bytes32(zeros) should equal itself"
     );
@@ -425,7 +425,7 @@ fn test_bytes32_tree_hash() {
     // Bytes32 of all 0x11 - root equals itself (identity)
     let elevens: [u8; 32] = [0x11; 32];
     assert_eq!(
-        <[u8; 32] as TreeHash<Sha256Hasher>>::tree_hash_root(&elevens),
+        <[u8; 32] as TreeHash>::tree_hash_root::<Sha256Hasher>(&elevens),
         Hash256::from_slice(&HASH_BYTES32_11),
         "Bytes32(0x11...) should equal itself"
     );
@@ -433,7 +433,7 @@ fn test_bytes32_tree_hash() {
     // Bytes32 of all 0xFF - root equals itself (identity)
     let ones: [u8; 32] = [0xFF; 32];
     assert_eq!(
-        <[u8; 32] as TreeHash<Sha256Hasher>>::tree_hash_root(&ones),
+        <[u8; 32] as TreeHash>::tree_hash_root::<Sha256Hasher>(&ones),
         Hash256::from_slice(&HASH_BYTES32_FF),
         "Bytes32(0xFF...) should equal itself"
     );
@@ -443,7 +443,7 @@ fn test_bytes32_tree_hash() {
 fn test_fixed_vector_tree_hash() {
     // FixedVector of 4 uint64 zeros
     let vec: FixedVector<u64, 4> = FixedVector::from(vec![0u64, 0, 0, 0]);
-    let hash = <FixedVector<u64, 4> as TreeHash<Sha256Hasher>>::tree_hash_root(&vec);
+    let hash = <FixedVector<u64, 4> as TreeHash>::tree_hash_root::<Sha256Hasher>(&vec);
 
     // 4 uint64s pack into 1 chunk (4 * 8 = 32 bytes)
     // All zeros -> chunk is [0; 32]
@@ -459,21 +459,21 @@ fn test_fixed_vector_tree_hash() {
 fn test_union_tree_hash() {
     // Empty variant (selector 0)
     assert_eq!(
-        UnionNoneU64::Empty.tree_hash_root(),
+        UnionNoneU64::Empty.tree_hash_root::<Sha256Hasher>(),
         Hash256::from_slice(&HASH_UNION_EMPTY),
         "Union::Empty should be SHA256([0; 64])"
     );
 
     // Value(0) variant (selector 1)
     assert_eq!(
-        UnionNoneU64::Value(0).tree_hash_root(),
+        UnionNoneU64::Value(0).tree_hash_root::<Sha256Hasher>(),
         Hash256::from_slice(&HASH_UNION_VALUE_0),
         "Union::Value(0) should match expected hash"
     );
 
     // Verify different values produce different hashes
-    let hash_value_1 = UnionNoneU64::Value(1).tree_hash_root();
-    let hash_value_42 = UnionNoneU64::Value(42).tree_hash_root();
+    let hash_value_1 = UnionNoneU64::Value(1).tree_hash_root::<Sha256Hasher>();
+    let hash_value_42 = UnionNoneU64::Value(42).tree_hash_root::<Sha256Hasher>();
 
     assert_ne!(
         hash_value_1,
@@ -500,7 +500,7 @@ fn test_container_tree_hash() {
     // Container with all zeros
     let container_zeros = SimpleContainer { a: 0, b: false };
     assert_eq!(
-        container_zeros.tree_hash_root(),
+        container_zeros.tree_hash_root::<Sha256Hasher>(),
         Hash256::from_slice(&HASH_CONTAINER_ZEROS),
         "Container(0, false) should equal merkle root of two zero leaves"
     );
@@ -508,7 +508,7 @@ fn test_container_tree_hash() {
     // Container with non-zero values should differ
     let container_ones = SimpleContainer { a: 1, b: true };
     assert_ne!(
-        container_ones.tree_hash_root(),
+        container_ones.tree_hash_root::<Sha256Hasher>(),
         Hash256::from_slice(&HASH_CONTAINER_ZEROS),
         "Container(1, true) should differ from Container(0, false)"
     );
@@ -518,9 +518,9 @@ fn test_container_tree_hash() {
     let c2 = SimpleContainer { a: 0, b: true };
     let c3 = SimpleContainer { a: 1, b: true };
 
-    assert_ne!(c1.tree_hash_root(), c2.tree_hash_root());
-    assert_ne!(c1.tree_hash_root(), c3.tree_hash_root());
-    assert_ne!(c2.tree_hash_root(), c3.tree_hash_root());
+    assert_ne!(c1.tree_hash_root::<Sha256Hasher>(), c2.tree_hash_root::<Sha256Hasher>());
+    assert_ne!(c1.tree_hash_root::<Sha256Hasher>(), c3.tree_hash_root::<Sha256Hasher>());
+    assert_ne!(c2.tree_hash_root::<Sha256Hasher>(), c3.tree_hash_root::<Sha256Hasher>());
 }
 
 #[test]
@@ -536,8 +536,8 @@ fn test_nested_container_tree_hash() {
     };
 
     // Nested containers should produce valid hashes
-    let hash_zeros = nested_zeros.tree_hash_root();
-    let hash_ones = nested_ones.tree_hash_root();
+    let hash_zeros = nested_zeros.tree_hash_root::<Sha256Hasher>();
+    let hash_ones = nested_ones.tree_hash_root::<Sha256Hasher>();
 
     assert_ne!(
         hash_zeros, hash_ones,
@@ -551,7 +551,7 @@ fn test_nested_container_tree_hash() {
     };
     assert_ne!(
         hash_zeros,
-        nested_outer_changed.tree_hash_root(),
+        nested_outer_changed.tree_hash_root::<Sha256Hasher>(),
         "Changing outer field should change hash"
     );
 
@@ -562,7 +562,7 @@ fn test_nested_container_tree_hash() {
     };
     assert_ne!(
         hash_zeros,
-        nested_inner_changed.tree_hash_root(),
+        nested_inner_changed.tree_hash_root::<Sha256Hasher>(),
         "Changing inner field should change hash"
     );
 }
@@ -572,8 +572,8 @@ fn test_container_with_bytes32() {
     let container_zeros = ContainerWithBytes32 { data: [0u8; 32] };
     let container_ones = ContainerWithBytes32 { data: [0xFF; 32] };
 
-    let hash_zeros = container_zeros.tree_hash_root();
-    let hash_ones = container_ones.tree_hash_root();
+    let hash_zeros = container_zeros.tree_hash_root::<Sha256Hasher>();
+    let hash_ones = container_ones.tree_hash_root::<Sha256Hasher>();
 
     assert_ne!(
         hash_zeros, hash_ones,
@@ -612,7 +612,7 @@ fn test_fixed_vector_with_values() {
     // Vector[uint64, 4](1, 2, 3, 4) - packs into single 32-byte chunk
     let vec: FixedVector<u64, 4> = FixedVector::from(vec![1u64, 2, 3, 4]);
     assert_eq!(
-        <FixedVector<u64, 4> as TreeHash<Sha256Hasher>>::tree_hash_root(&vec),
+        <FixedVector<u64, 4> as TreeHash>::tree_hash_root::<Sha256Hasher>(&vec),
         Hash256::from_slice(&HASH_FIXED_VECTOR_1234),
         "FixedVector[1,2,3,4] should pack to identity"
     );
@@ -627,7 +627,7 @@ fn test_variable_list_tree_hash() {
     // Empty list: List[uint64, 8]()
     let empty: VariableList<u64, 8> = VariableList::empty();
     assert_eq!(
-        <VariableList<u64, 8> as TreeHash<Sha256Hasher>>::tree_hash_root(&empty),
+        <VariableList<u64, 8> as TreeHash>::tree_hash_root::<Sha256Hasher>(&empty),
         Hash256::from_slice(&HASH_LIST_U64_EMPTY),
         "Empty List[uint64, 8] should match reference value"
     );
@@ -635,7 +635,7 @@ fn test_variable_list_tree_hash() {
     // List with values: List[uint64, 8](1, 2, 3, 4)
     let with_values: VariableList<u64, 8> = VariableList::from(vec![1u64, 2, 3, 4]);
     assert_eq!(
-        <VariableList<u64, 8> as TreeHash<Sha256Hasher>>::tree_hash_root(&with_values),
+        <VariableList<u64, 8> as TreeHash>::tree_hash_root::<Sha256Hasher>(&with_values),
         Hash256::from_slice(&HASH_LIST_U64_1234),
         "List[uint64, 8](1,2,3,4) should match reference value"
     );
@@ -650,7 +650,7 @@ fn test_bitvector_tree_hash() {
     // Bitvector[8] all zeros
     let zeros: BitVector<8> = BitVector::new();
     assert_eq!(
-        <BitVector<8> as TreeHash<Sha256Hasher>>::tree_hash_root(&zeros),
+        <BitVector<8> as TreeHash>::tree_hash_root::<Sha256Hasher>(&zeros),
         Hash256::ZERO,
         "Bitvector[8] zeros should be all zeros"
     );
@@ -661,7 +661,7 @@ fn test_bitvector_tree_hash() {
         all_true.set(i, true).expect("valid index");
     }
     assert_eq!(
-        <BitVector<8> as TreeHash<Sha256Hasher>>::tree_hash_root(&all_true),
+        <BitVector<8> as TreeHash>::tree_hash_root::<Sha256Hasher>(&all_true),
         Hash256::from_slice(&HASH_BITVECTOR_8_ALL_TRUE),
         "tree_hash_root of Bitvector[8] all true"
     );
@@ -676,7 +676,7 @@ fn test_bitlist_tree_hash() {
     // Bitlist[8] empty (length 0)
     let empty: BitList<8> = BitList::with_capacity(0).expect("valid capacity");
     assert_eq!(
-        <BitList<8> as TreeHash<Sha256Hasher>>::tree_hash_root(&empty),
+        <BitList<8> as TreeHash>::tree_hash_root::<Sha256Hasher>(&empty),
         Hash256::from_slice(&HASH_BITLIST_8_EMPTY),
         "Empty Bitlist[8] should match reference value"
     );
@@ -688,7 +688,7 @@ fn test_bitlist_tree_hash() {
     with_bits.set(2, true).expect("valid index"); // True
     with_bits.set(3, false).expect("valid index"); // False
     assert_eq!(
-        <BitList<8> as TreeHash<Sha256Hasher>>::tree_hash_root(&with_bits),
+        <BitList<8> as TreeHash>::tree_hash_root::<Sha256Hasher>(&with_bits),
         Hash256::from_slice(&HASH_BITLIST_8_TFTT),
         "Bitlist[8](T,F,T,F) should match reference value"
     );
@@ -702,21 +702,21 @@ fn test_bitlist_tree_hash() {
 fn test_multi_variant_union() {
     // Empty variant at selector 0
     assert_eq!(
-        MultiUnion::Empty.tree_hash_root(),
+        MultiUnion::Empty.tree_hash_root::<Sha256Hasher>(),
         Hash256::from_slice(&HASH_UNION_EMPTY),
         "MultiUnion::Empty (selector 0) should match HASH_UNION_EMPTY"
     );
 
     // U8(1) at selector 1
     assert_eq!(
-        MultiUnion::U8(1).tree_hash_root(),
+        MultiUnion::U8(1).tree_hash_root::<Sha256Hasher>(),
         Hash256::from_slice(&HASH_MULTI_UNION_U8_1),
         "MultiUnion::U8(1) (selector 1) should match reference value"
     );
 
     // U16(1000) at selector 2
     assert_eq!(
-        MultiUnion::U16(1000).tree_hash_root(),
+        MultiUnion::U16(1000).tree_hash_root::<Sha256Hasher>(),
         Hash256::from_slice(&HASH_MULTI_UNION_U16_1000),
         "MultiUnion::U16(1000) (selector 2) should match reference value"
     );
@@ -731,7 +731,7 @@ fn test_hash256_identity() {
     // Hash256 / Bytes32 should be its own root (32 bytes = identity)
     let value: [u8; 32] = [0xAB; 32];
     assert_eq!(
-        <[u8; 32] as TreeHash<Sha256Hasher>>::tree_hash_root(&value),
+        <[u8; 32] as TreeHash>::tree_hash_root::<Sha256Hasher>(&value),
         Hash256::from_slice(&value),
         "Bytes32([0xAB; 32]) should equal itself"
     );
@@ -739,7 +739,7 @@ fn test_hash256_identity() {
     // Also verify Hash256 type specifically
     let h256 = Hash256::from_slice(&value);
     assert_eq!(
-        <Hash256 as TreeHash<Sha256Hasher>>::tree_hash_root(&h256),
+        <Hash256 as TreeHash>::tree_hash_root::<Sha256Hasher>(&h256),
         h256,
         "Hash256 should be its own root"
     );
@@ -753,7 +753,7 @@ fn test_hash256_identity() {
 fn test_union_value_42() {
     // Union[None, uint64]::Value(42) at selector 1
     assert_eq!(
-        UnionNoneU64::Value(42).tree_hash_root(),
+        UnionNoneU64::Value(42).tree_hash_root::<Sha256Hasher>(),
         Hash256::from_slice(&HASH_UNION_VALUE_42),
         "Union::Value(42) should match reference value"
     );
@@ -767,7 +767,7 @@ fn test_union_value_42() {
 fn test_container_with_hardcoded_hash() {
     let container = SimpleContainer { a: 1, b: true };
     assert_eq!(
-        container.tree_hash_root(),
+        container.tree_hash_root::<Sha256Hasher>(),
         Hash256::from_slice(&HASH_CONTAINER_ONES),
         "SimpleContainer(1, true) should match reference value"
     );
@@ -781,7 +781,7 @@ fn test_container_with_hardcoded_hash() {
 fn test_union_max_u64() {
     // Union[None, u64]::Value(MAX) at selector 1
     assert_eq!(
-        UnionNoneU64::Value(u64::MAX).tree_hash_root(),
+        UnionNoneU64::Value(u64::MAX).tree_hash_root::<Sha256Hasher>(),
         Hash256::from_slice(&HASH_UNION_MAX_U64),
         "Union::Value(u64::MAX) should match reference value"
     );
@@ -791,25 +791,25 @@ fn test_union_max_u64() {
 fn test_big_union_no_none_variant() {
     // BigUnion has no None variant - selector 0 is u8
     assert_eq!(
-        BigUnion::U8(255).tree_hash_root(),
+        BigUnion::U8(255).tree_hash_root::<Sha256Hasher>(),
         Hash256::from_slice(&HASH_BIG_UNION_U8_255_SEL0),
         "BigUnion::U8(255) (selector 0) should match reference value"
     );
 
     assert_eq!(
-        BigUnion::U16(65535).tree_hash_root(),
+        BigUnion::U16(65535).tree_hash_root::<Sha256Hasher>(),
         Hash256::from_slice(&HASH_BIG_UNION_U16_MAX_SEL1),
         "BigUnion::U16(MAX) (selector 1) should match reference value"
     );
 
     assert_eq!(
-        BigUnion::U32(u32::MAX).tree_hash_root(),
+        BigUnion::U32(u32::MAX).tree_hash_root::<Sha256Hasher>(),
         Hash256::from_slice(&HASH_BIG_UNION_U32_MAX_SEL2),
         "BigUnion::U32(MAX) (selector 2) should match reference value"
     );
 
     assert_eq!(
-        BigUnion::U64(0xDEADBEEFCAFEBABE).tree_hash_root(),
+        BigUnion::U64(0xDEADBEEFCAFEBABE).tree_hash_root::<Sha256Hasher>(),
         Hash256::from_slice(&HASH_BIG_UNION_U64_DEADBEEF_SEL3),
         "BigUnion::U64(DEADBEEF) (selector 3) should match reference value"
     );
@@ -819,13 +819,13 @@ fn test_big_union_no_none_variant() {
 fn test_union_with_container_variant() {
     // UnionEmptyData::Empty at selector 0
     assert_eq!(
-        UnionEmptyData::Empty.tree_hash_root(),
+        UnionEmptyData::Empty.tree_hash_root::<Sha256Hasher>(),
         Hash256::from_slice(&HASH_UNION_EMPTY),
         "UnionEmptyData::Empty should equal HASH_UNION_EMPTY"
     );
 
     assert_eq!(
-        UnionEmptyData::Data(DataVariant { value: 42 }).tree_hash_root(),
+        UnionEmptyData::Data(DataVariant { value: 42 }).tree_hash_root::<Sha256Hasher>(),
         Hash256::from_slice(&HASH_UNION_CONTAINER_42),
         "tree_hash_root of UnionEmptyData::Data(42)"
     );
@@ -838,7 +838,7 @@ fn test_container_with_union_field() {
         state: UnionNoneU64::Empty,
     };
     assert_eq!(
-        c_empty.tree_hash_root(),
+        c_empty.tree_hash_root::<Sha256Hasher>(),
         Hash256::from_slice(&HASH_UNION_EMPTY),
         "tree_hash_root of ContainerWithUnion(Empty)"
     );
@@ -848,7 +848,7 @@ fn test_container_with_union_field() {
         state: UnionNoneU64::Value(100),
     };
     assert_eq!(
-        c_value.tree_hash_root(),
+        c_value.tree_hash_root::<Sha256Hasher>(),
         Hash256::from_slice(&HASH_CONTAINER_UNION_100),
         "tree_hash_root of ContainerWithUnion(Value(100))"
     );
@@ -858,7 +858,7 @@ fn test_container_with_union_field() {
 fn test_multi_union_u64_at_selector_3() {
     // MultiUnion::U64(1000000) at selector 3
     assert_eq!(
-        MultiUnion::U64(1000000).tree_hash_root(),
+        MultiUnion::U64(1000000).tree_hash_root::<Sha256Hasher>(),
         Hash256::from_slice(&HASH_MULTI_UNION_U64_1000000),
         "MultiUnion::U64(1000000) (selector 3) should match reference value"
     );
@@ -869,7 +869,7 @@ fn test_data_variant_container_identity() {
     // DataVariant has a single u64 field, so its tree hash should be identity
     let dv = DataVariant { value: 42 };
     assert_eq!(
-        dv.tree_hash_root(),
+        dv.tree_hash_root::<Sha256Hasher>(),
         Hash256::from_slice(&HASH_DATA_VARIANT_42),
         "tree_hash_root of DataVariant(value=42)"
     );

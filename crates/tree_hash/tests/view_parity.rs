@@ -18,8 +18,8 @@ fn bitlistref_tree_hash_matches_owned_small() {
     let bytes = owned.as_ssz_bytes();
     let view = BitListRef::<32>::from_ssz_bytes(&bytes).unwrap();
 
-    let owned_hash = TreeHash::<Sha256Hasher>::tree_hash_root(&owned);
-    let view_hash = TreeHash::<Sha256Hasher>::tree_hash_root(&view);
+    let owned_hash = TreeHash::tree_hash_root::<Sha256Hasher>(&owned);
+    let view_hash = TreeHash::tree_hash_root::<Sha256Hasher>(&view);
 
     assert_eq!(owned_hash, view_hash);
 }
@@ -35,8 +35,8 @@ fn bitlistref_tree_hash_matches_owned_large_capacity() {
     let bytes = owned.as_ssz_bytes();
     let view = BitListRef::<512>::from_ssz_bytes(&bytes).unwrap();
 
-    let owned_hash = TreeHash::<Sha256Hasher>::tree_hash_root(&owned);
-    let view_hash = TreeHash::<Sha256Hasher>::tree_hash_root(&view);
+    let owned_hash = TreeHash::tree_hash_root::<Sha256Hasher>(&owned);
+    let view_hash = TreeHash::tree_hash_root::<Sha256Hasher>(&view);
 
     assert_eq!(owned_hash, view_hash);
 }
@@ -47,8 +47,8 @@ fn bytesref_tree_hash_matches_owned_empty() {
     let bytes = owned.as_ssz_bytes();
     let view = BytesRef::<64>::from_ssz_bytes(&bytes).unwrap();
 
-    let owned_hash = TreeHash::<Sha256Hasher>::tree_hash_root(&owned);
-    let view_hash = TreeHash::<Sha256Hasher>::tree_hash_root(&view);
+    let owned_hash = TreeHash::tree_hash_root::<Sha256Hasher>(&owned);
+    let view_hash = TreeHash::tree_hash_root::<Sha256Hasher>(&view);
 
     assert_eq!(owned_hash, view_hash);
 }
@@ -59,8 +59,8 @@ fn bytesref_tree_hash_matches_owned_short() {
     let bytes = owned.as_ssz_bytes();
     let view = BytesRef::<64>::from_ssz_bytes(&bytes).unwrap();
 
-    let owned_hash = TreeHash::<Sha256Hasher>::tree_hash_root(&owned);
-    let view_hash = TreeHash::<Sha256Hasher>::tree_hash_root(&view);
+    let owned_hash = TreeHash::tree_hash_root::<Sha256Hasher>(&owned);
+    let view_hash = TreeHash::tree_hash_root::<Sha256Hasher>(&view);
 
     assert_eq!(owned_hash, view_hash);
 }
@@ -71,8 +71,8 @@ fn listref_tree_hash_matches_owned_empty_basic() {
     let bytes = owned.as_ssz_bytes();
     let view = ListRef::<u16, 17>::from_ssz_bytes(&bytes).unwrap();
 
-    let owned_hash = TreeHash::<Sha256Hasher>::tree_hash_root(&owned);
-    let view_hash = TreeHash::<Sha256Hasher>::tree_hash_root(&view);
+    let owned_hash = TreeHash::tree_hash_root::<Sha256Hasher>(&owned);
+    let view_hash = TreeHash::tree_hash_root::<Sha256Hasher>(&view);
 
     assert_eq!(owned_hash, view_hash);
 }
@@ -83,8 +83,8 @@ fn listref_tree_hash_matches_owned_empty_composite() {
     let bytes = owned.as_ssz_bytes();
     let view = ListRef::<BytesRef<'_, 4>, 2>::from_ssz_bytes(&bytes).unwrap();
 
-    let owned_hash = TreeHash::<Sha256Hasher>::tree_hash_root(&owned);
-    let view_hash = TreeHash::<Sha256Hasher>::tree_hash_root(&view);
+    let owned_hash = TreeHash::tree_hash_root::<Sha256Hasher>(&owned);
+    let view_hash = TreeHash::tree_hash_root::<Sha256Hasher>(&view);
 
     assert_eq!(owned_hash, view_hash);
 }

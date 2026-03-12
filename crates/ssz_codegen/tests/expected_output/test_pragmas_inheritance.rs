@@ -26,7 +26,7 @@ pub mod tests {
                 pub a: Optional<u8>,
                 pub b: Optional<u8>,
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Parent {
+            impl tree_hash::TreeHash for Parent {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::StableContainer
                 }
@@ -36,7 +36,7 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("StableContainer/Profile should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
                     let mut active_fields = BitVector::<5usize>::new();
@@ -55,18 +55,22 @@ pub mod tests {
                     );
                     if let ssz_types::Optional::Some(ref inner) = self.a {
                         field_roots
-                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                            .push(
+                                <_ as tree_hash::TreeHash>::tree_hash_root::<H>(inner),
+                            );
                     }
                     if let ssz_types::Optional::Some(ref inner) = self.b {
                         field_roots
-                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                            .push(
+                                <_ as tree_hash::TreeHash>::tree_hash_root::<H>(inner),
+                            );
                     }
                     let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
                     >(&field_roots);
-                    let active_fields_hash = <_ as tree_hash::TreeHash<
+                    let active_fields_hash = <_ as tree_hash::TreeHash>::tree_hash_root::<
                         H,
-                    >>::tree_hash_root(&active_fields);
+                    >(&active_fields);
                     H::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
                 }
             }
@@ -132,8 +136,7 @@ pub mod tests {
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for ParentRef<'a> {
+            impl<'a> tree_hash::TreeHash for ParentRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::StableContainer
                 }
@@ -143,7 +146,7 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("StableContainer should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
                     let a = self.a().expect("valid view");
@@ -164,18 +167,22 @@ pub mod tests {
                     );
                     if let ssz_types::Optional::Some(ref inner) = a {
                         field_roots
-                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                            .push(
+                                <_ as tree_hash::TreeHash>::tree_hash_root::<H>(inner),
+                            );
                     }
                     if let ssz_types::Optional::Some(ref inner) = b {
                         field_roots
-                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                            .push(
+                                <_ as tree_hash::TreeHash>::tree_hash_root::<H>(inner),
+                            );
                     }
                     let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
                     >(&field_roots);
-                    let active_fields_hash = <_ as tree_hash::TreeHash<
+                    let active_fields_hash = <_ as tree_hash::TreeHash>::tree_hash_root::<
                         H,
-                    >>::tree_hash_root(&active_fields);
+                    >(&active_fields);
                     H::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
                 }
             }
@@ -248,7 +255,7 @@ pub mod tests {
                 pub b: Optional<u16>,
                 pub c: Optional<u8>,
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Child {
+            impl tree_hash::TreeHash for Child {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::StableContainer
                 }
@@ -258,7 +265,7 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("StableContainer/Profile should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
                     let mut active_fields = BitVector::<5usize>::new();
@@ -282,22 +289,28 @@ pub mod tests {
                     );
                     if let ssz_types::Optional::Some(ref inner) = self.a {
                         field_roots
-                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                            .push(
+                                <_ as tree_hash::TreeHash>::tree_hash_root::<H>(inner),
+                            );
                     }
                     if let ssz_types::Optional::Some(ref inner) = self.b {
                         field_roots
-                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                            .push(
+                                <_ as tree_hash::TreeHash>::tree_hash_root::<H>(inner),
+                            );
                     }
                     if let ssz_types::Optional::Some(ref inner) = self.c {
                         field_roots
-                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                            .push(
+                                <_ as tree_hash::TreeHash>::tree_hash_root::<H>(inner),
+                            );
                     }
                     let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
                     >(&field_roots);
-                    let active_fields_hash = <_ as tree_hash::TreeHash<
+                    let active_fields_hash = <_ as tree_hash::TreeHash>::tree_hash_root::<
                         H,
-                    >>::tree_hash_root(&active_fields);
+                    >(&active_fields);
                     H::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
                 }
             }
@@ -384,8 +397,7 @@ pub mod tests {
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for ChildRef<'a> {
+            impl<'a> tree_hash::TreeHash for ChildRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::StableContainer
                 }
@@ -395,7 +407,7 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("StableContainer should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     use ssz_types::BitVector;
                     let a = self.a().expect("valid view");
@@ -422,22 +434,28 @@ pub mod tests {
                     );
                     if let ssz_types::Optional::Some(ref inner) = a {
                         field_roots
-                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                            .push(
+                                <_ as tree_hash::TreeHash>::tree_hash_root::<H>(inner),
+                            );
                     }
                     if let ssz_types::Optional::Some(ref inner) = b {
                         field_roots
-                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                            .push(
+                                <_ as tree_hash::TreeHash>::tree_hash_root::<H>(inner),
+                            );
                     }
                     if let ssz_types::Optional::Some(ref inner) = c {
                         field_roots
-                            .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                            .push(
+                                <_ as tree_hash::TreeHash>::tree_hash_root::<H>(inner),
+                            );
                     }
                     let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
                     >(&field_roots);
-                    let active_fields_hash = <_ as tree_hash::TreeHash<
+                    let active_fields_hash = <_ as tree_hash::TreeHash>::tree_hash_root::<
                         H,
-                    >>::tree_hash_root(&active_fields);
+                    >(&active_fields);
                     H::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
                 }
             }

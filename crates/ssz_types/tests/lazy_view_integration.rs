@@ -31,8 +31,8 @@ fn test_variable_list_lazy_decode() {
     assert_eq!(owned, view_owned);
 
     // Verify tree hashes match
-    let owned_hash: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&owned);
-    let view_hash: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&view);
+    let owned_hash: tree_hash::Hash256 = TreeHash::tree_hash_root::<Sha256Hasher>(&owned);
+    let view_hash: tree_hash::Hash256 = TreeHash::tree_hash_root::<Sha256Hasher>(&view);
     assert_eq!(owned_hash, view_hash);
 }
 
@@ -55,8 +55,8 @@ fn test_fixed_vector_lazy_decode() {
     assert_eq!(owned, view_owned);
 
     // Verify tree hashes match
-    let owned_hash: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&owned);
-    let view_hash: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&view);
+    let owned_hash: tree_hash::Hash256 = TreeHash::tree_hash_root::<Sha256Hasher>(&owned);
+    let view_hash: tree_hash::Hash256 = TreeHash::tree_hash_root::<Sha256Hasher>(&view);
     assert_eq!(owned_hash, view_hash);
 }
 

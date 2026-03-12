@@ -1268,7 +1268,7 @@ impl ClassDef {
                             quote! {
                                 {
                                     let #field_name = self.#field_name().expect("valid view");
-                                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<H>::tree_hash_root(&#field_name);
+                                    let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::tree_hash_root::<H>(&#field_name);
                                     hasher.write(root.as_ref()).expect("write field");
                                 }
                             }
@@ -1279,7 +1279,7 @@ impl ClassDef {
                 let num_fields = self.fields.len();
 
                 quote! {
-                    impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ref_ident<'a> {
+                    impl<'a> tree_hash::TreeHash for #ref_ident<'a> {
                         fn tree_hash_type() -> tree_hash::TreeHashType {
                             tree_hash::TreeHashType::StableContainer
                         }
@@ -1292,7 +1292,7 @@ impl ClassDef {
                             unreachable!("Container should never be packed")
                         }
 
-                        fn tree_hash_root(&self) -> H::Output {
+                        fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                             use tree_hash::TreeHash;
 
                             let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(#num_fields);
@@ -1333,14 +1333,14 @@ impl ClassDef {
                         let field_name = &field_names[idx];
                         quote! {
                             if let ssz_types::Optional::Some(ref inner) = #field_name {
-                                field_roots.push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                                field_roots.push(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(inner));
                             }
                         }
                     })
                     .collect();
 
                 quote! {
-                    impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ref_ident<'a> {
+                    impl<'a> tree_hash::TreeHash for #ref_ident<'a> {
                         fn tree_hash_type() -> tree_hash::TreeHashType {
                             tree_hash::TreeHashType::StableContainer
                         }
@@ -1353,7 +1353,7 @@ impl ClassDef {
                             unreachable!("StableContainer should never be packed")
                         }
 
-                        fn tree_hash_root(&self) -> H::Output {
+                        fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                             use tree_hash::TreeHash;
                             use ssz_types::BitVector;
 
@@ -1371,7 +1371,7 @@ impl ClassDef {
                             )*
                             let hash = tree_hash::merkleize_progressive_with_hasher::<H>(&field_roots);
                             let active_fields_hash =
-                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(&active_fields);
+                                <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&active_fields);
                             H::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
                         }
                     }
@@ -1403,7 +1403,7 @@ impl ClassDef {
                         });
                         field_root_pushes.push(quote! {
                             if let ssz_types::Optional::Some(ref inner) = #field_name {
-                                field_roots.push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                                field_roots.push(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(inner));
                             }
                         });
                     } else {
@@ -1413,13 +1413,13 @@ impl ClassDef {
                                 .expect("Should not be out of bounds");
                         });
                         field_root_pushes.push(quote! {
-                            field_roots.push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&#field_name));
+                            field_roots.push(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&#field_name));
                         });
                     }
                 }
 
                 quote! {
-                    impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ref_ident<'a> {
+                    impl<'a> tree_hash::TreeHash for #ref_ident<'a> {
                         fn tree_hash_type() -> tree_hash::TreeHashType {
                             tree_hash::TreeHashType::Container
                         }
@@ -1432,7 +1432,7 @@ impl ClassDef {
                             unreachable!("Profile should never be packed")
                         }
 
-                        fn tree_hash_root(&self) -> H::Output {
+                        fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                             use tree_hash::TreeHash;
                             use ssz_types::BitVector;
 
@@ -1452,7 +1452,7 @@ impl ClassDef {
                             )*
                             let hash = tree_hash::merkleize_progressive_with_hasher::<H>(&field_roots);
                             let active_fields_hash =
-                                <_ as tree_hash::TreeHash<H>>::tree_hash_root(&active_fields);
+                                <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&active_fields);
                             H::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
                         }
                     }
@@ -1467,8 +1467,8 @@ impl ClassDef {
 
     /// Generates generic TreeHash implementation for owned structs.
     ///
-    /// This generates `impl<H: TreeHashDigest> TreeHash<H> for Type` instead of using
-    /// the derive macro which only generates `TreeHash<Sha256Hasher>`.
+    /// This generates `impl TreeHash for Type` with a generic `tree_hash_root<H>` method
+    /// instead of using the derive macro.
     ///
     /// # Arguments
     ///
@@ -1488,7 +1488,7 @@ impl ClassDef {
             BaseClass::Container => {
                 let num_leaves = field_names.len();
                 quote! {
-                    impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ident {
+                    impl tree_hash::TreeHash for #ident {
                         fn tree_hash_type() -> tree_hash::TreeHashType {
                             tree_hash::TreeHashType::Container
                         }
@@ -1501,11 +1501,11 @@ impl ClassDef {
                             unreachable!("Container should never be packed")
                         }
 
-                        fn tree_hash_root(&self) -> H::Output {
+                        fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                             use tree_hash::TreeHash;
                             let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(#num_leaves);
                             #(
-                                hasher.write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.#field_names).as_ref())
+                                hasher.write(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.#field_names).as_ref())
                                     .expect("tree hash derive should not apply too many leaves");
                             )*
                             hasher.finish().expect("tree hash derive should not have a remaining buffer")
@@ -1539,7 +1539,7 @@ impl ClassDef {
                         });
                         field_root_pushes.push(quote! {
                             if let ssz_types::Optional::Some(ref inner) = self.#field_name {
-                                field_roots.push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
+                                field_roots.push(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(inner));
                             }
                         });
                     } else {
@@ -1549,13 +1549,13 @@ impl ClassDef {
                                 .expect("Should not be out of bounds");
                         });
                         field_root_pushes.push(quote! {
-                            field_roots.push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.#field_name));
+                            field_roots.push(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.#field_name));
                         });
                     }
                 }
 
                 quote! {
-                    impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ident {
+                    impl tree_hash::TreeHash for #ident {
                         fn tree_hash_type() -> tree_hash::TreeHashType {
                             tree_hash::TreeHashType::StableContainer
                         }
@@ -1568,7 +1568,7 @@ impl ClassDef {
                             unreachable!("StableContainer/Profile should never be packed")
                         }
 
-                        fn tree_hash_root(&self) -> H::Output {
+                        fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                             use tree_hash::TreeHash;
                             use ssz_types::BitVector;
 
@@ -1586,7 +1586,7 @@ impl ClassDef {
                             )*
 
                             let hash = tree_hash::merkleize_progressive_with_hasher::<H>(&field_roots);
-                            let active_fields_hash = <_ as tree_hash::TreeHash<H>>::tree_hash_root(&active_fields);
+                            let active_fields_hash = <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&active_fields);
 
                             H::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
                         }

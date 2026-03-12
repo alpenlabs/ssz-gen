@@ -24,8 +24,6 @@ struct StructOpts {
     enum_behaviour: Option<String>,
     #[darling(default)]
     max_fields: Option<usize>,
-    #[darling(default)]
-    hasher: Option<String>,
 }
 
 /// Field-level configuration.
@@ -164,23 +162,12 @@ fn parse_tree_hash_fields(
 /// Implements `tree_hash::TreeHash` for some `struct`.
 ///
 /// Fields are hashed in the order they are defined.
-///
-/// Supports an optional `hasher` parameter to specify the hasher type:
-/// `#[tree_hash(hasher = "MyHasher")]`
 #[proc_macro_derive(TreeHash, attributes(tree_hash))]
 pub fn tree_hash_derive(input: TokenStream) -> TokenStream {
     let item = parse_macro_input!(input as DeriveInput);
     let opts = StructOpts::from_derive_input(&item).unwrap();
     let enum_opt = EnumBehaviour::new(opts.enum_behaviour);
     let struct_opt = StructBehaviour::new(opts.struct_behaviour);
-
-    let hasher_type = opts
-        .hasher
-        .map(|s| syn::parse_str::<syn::Type>(&s).expect("\"hasher\" is not a valid type."))
-        .unwrap_or_else(|| {
-            syn::parse_str::<syn::Type>("tree_hash::Sha256Hasher")
-                .expect("Default hasher type should be valid")
-        });
 
     match &item.data {
         syn::Data::Struct(s) => {
@@ -189,7 +176,7 @@ pub fn tree_hash_derive(input: TokenStream) -> TokenStream {
             }
             match struct_opt {
                 Some(StructBehaviour::Container) => {
-                    tree_hash_derive_struct_container(&item, s, &hasher_type)
+                    tree_hash_derive_struct_container(&item, s)
                 }
                 Some(StructBehaviour::StableContainer) => {
                     if let Some(max_fields_value) = opts.max_fields {
@@ -197,7 +184,6 @@ pub fn tree_hash_derive(input: TokenStream) -> TokenStream {
                             &item,
                             s,
                             max_fields_value,
-                            &hasher_type,
                         )
                     } else {
                         panic!("stable_container requires \"max_fields\"")
@@ -205,13 +191,13 @@ pub fn tree_hash_derive(input: TokenStream) -> TokenStream {
                 }
                 Some(StructBehaviour::Profile) => {
                     if let Some(max_fields_value) = opts.max_fields {
-                        tree_hash_derive_struct_profile(&item, s, max_fields_value, &hasher_type)
+                        tree_hash_derive_struct_profile(&item, s, max_fields_value)
                     } else {
                         panic!("profile requires \"max_fields\"")
                     }
                 }
                 // Default to container.
-                None => tree_hash_derive_struct_container(&item, s, &hasher_type),
+                None => tree_hash_derive_struct_container(&item, s),
             }
         }
         syn::Data::Enum(s) => {
@@ -223,15 +209,13 @@ pub fn tree_hash_derive(input: TokenStream) -> TokenStream {
                     &item,
                     s,
                     syn::parse_str("Container").unwrap(),
-                    &hasher_type,
                 ),
                 EnumBehaviour::TransparentStable => tree_hash_derive_enum_transparent(
                     &item,
                     s,
                     syn::parse_str("StableContainer").unwrap(),
-                    &hasher_type,
                 ),
-                EnumBehaviour::Union => tree_hash_derive_enum_union(&item, s, &hasher_type),
+                EnumBehaviour::Union => tree_hash_derive_enum_union(&item, s),
             }
         }
         _ => panic!("tree_hash_derive only supports structs and enums."),
@@ -241,7 +225,6 @@ pub fn tree_hash_derive(input: TokenStream) -> TokenStream {
 fn tree_hash_derive_struct_container(
     item: &DeriveInput,
     struct_data: &DataStruct,
-    hasher_type: &syn::Type,
 ) -> TokenStream {
     let name = &item.ident;
     let (impl_generics, ty_generics, where_clause) = &item.generics.split_for_impl();
@@ -250,7 +233,7 @@ fn tree_hash_derive_struct_container(
     let num_leaves = idents.len();
 
     let output = quote! {
-        impl #impl_generics tree_hash::TreeHash<#hasher_type> for #name #ty_generics #where_clause {
+        impl #impl_generics tree_hash::TreeHash for #name #ty_generics #where_clause {
             fn tree_hash_type() -> tree_hash::TreeHashType {
                 tree_hash::TreeHashType::Container
             }
@@ -263,11 +246,11 @@ fn tree_hash_derive_struct_container(
                 unreachable!("Struct should never be packed.")
             }
 
-            fn tree_hash_root(&self) -> <#hasher_type as tree_hash::TreeHashDigest>::Output {
-                let mut hasher = tree_hash::MerkleHasher::<#hasher_type>::with_leaves(#num_leaves);
+            fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
+                let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(#num_leaves);
 
                 #(
-                    hasher.write(<_ as tree_hash::TreeHash<#hasher_type>>::tree_hash_root(&self.#idents).as_ref())
+                    hasher.write(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.#idents).as_ref())
                         .expect("tree hash derive should not apply too many leaves");
                 )*
 
@@ -283,7 +266,6 @@ fn tree_hash_derive_struct_stable_container(
     item: &DeriveInput,
     struct_data: &DataStruct,
     max_fields: usize,
-    hasher_type: &syn::Type,
 ) -> TokenStream {
     let name = &item.ident;
     let (impl_generics, ty_generics, where_clause) = &item.generics.split_for_impl();
@@ -297,7 +279,7 @@ fn tree_hash_derive_struct_stable_container(
     let num_fields = idents.len();
 
     let output = quote! {
-        impl #impl_generics tree_hash::TreeHash<#hasher_type> for #name #ty_generics #where_clause {
+        impl #impl_generics tree_hash::TreeHash for #name #ty_generics #where_clause {
             fn tree_hash_type() -> tree_hash::TreeHashType {
                 tree_hash::TreeHashType::StableContainer
             }
@@ -310,7 +292,7 @@ fn tree_hash_derive_struct_stable_container(
                 unreachable!("Struct should never be packed.")
             }
 
-            fn tree_hash_root(&self) -> <#hasher_type as tree_hash::TreeHashDigest>::Output {
+            fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                 // Construct BitVector
                 let mut active_fields = BitVector::<#max_fields>::new();
 
@@ -323,17 +305,17 @@ fn tree_hash_derive_struct_stable_container(
                     working_field += 1;
                 )*
 
-                let mut field_roots: Vec<<#hasher_type as tree_hash::TreeHashDigest>::Output> =
+                let mut field_roots: Vec<H::Output> =
                     Vec::with_capacity(#num_fields);
                 #(
                     if self.#idents.is_some() {
-                        field_roots.push(<_ as tree_hash::TreeHash<#hasher_type>>::tree_hash_root(&self.#idents));
+                        field_roots.push(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.#idents));
                     }
                 )*
-                let hash = tree_hash::merkleize_progressive_with_hasher::<#hasher_type>(&field_roots);
-                let active_fields_hash = <_ as tree_hash::TreeHash<#hasher_type>>::tree_hash_root(&active_fields);
+                let hash = tree_hash::merkleize_progressive_with_hasher::<H>(&field_roots);
+                let active_fields_hash = <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&active_fields);
 
-                <#hasher_type as tree_hash::TreeHashDigest>::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
+                H::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
             }
         }
     };
@@ -344,7 +326,6 @@ fn tree_hash_derive_struct_profile(
     item: &DeriveInput,
     struct_data: &DataStruct,
     max_fields: usize,
-    hasher_type: &syn::Type,
 ) -> TokenStream {
     let name = &item.ident;
     let (impl_generics, ty_generics, where_clause) = &item.generics.split_for_impl();
@@ -387,7 +368,7 @@ fn tree_hash_derive_struct_profile(
 
             field_root_pushes.push(quote! {
                 if self.#ident.is_some() {
-                    field_roots.push(<_ as tree_hash::TreeHash<#hasher_type>>::tree_hash_root(&self.#ident));
+                    field_roots.push(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.#ident));
                 }
             });
         } else {
@@ -395,7 +376,7 @@ fn tree_hash_derive_struct_profile(
                 active_fields.set(#index, true).expect("Should not be out of bounds");
             });
             field_root_pushes.push(quote! {
-                field_roots.push(<_ as tree_hash::TreeHash<#hasher_type>>::tree_hash_root(&self.#ident));
+                field_roots.push(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.#ident));
             });
         }
 
@@ -404,7 +385,7 @@ fn tree_hash_derive_struct_profile(
     }
 
     let output = quote! {
-        impl #impl_generics tree_hash::TreeHash<#hasher_type> for #name #ty_generics #where_clause {
+        impl #impl_generics tree_hash::TreeHash for #name #ty_generics #where_clause {
             fn tree_hash_type() -> tree_hash::TreeHashType {
                 tree_hash::TreeHashType::StableContainer
             }
@@ -417,7 +398,7 @@ fn tree_hash_derive_struct_profile(
                 unreachable!("Struct should never be packed.")
             }
 
-            fn tree_hash_root(&self) -> <#hasher_type as tree_hash::TreeHashDigest>::Output {
+            fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                 // Construct BitVector
                 let mut active_fields = BitVector::<#max_fields>::new();
 
@@ -425,16 +406,16 @@ fn tree_hash_derive_struct_profile(
                     #set_active_fields
                 )*
 
-                let mut field_roots: Vec<<#hasher_type as tree_hash::TreeHashDigest>::Output> =
+                let mut field_roots: Vec<H::Output> =
                     Vec::with_capacity(#max_fields);
                 #(
                     #field_root_pushes
                 )*
 
-                let hash = tree_hash::merkleize_progressive_with_hasher::<#hasher_type>(&field_roots);
-                let active_fields_hash = <_ as tree_hash::TreeHash<#hasher_type>>::tree_hash_root(&active_fields);
+                let hash = tree_hash::merkleize_progressive_with_hasher::<H>(&field_roots);
+                let active_fields_hash = <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&active_fields);
 
-                <#hasher_type as tree_hash::TreeHashDigest>::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
+                H::hash32_concat(hash.as_ref(), active_fields_hash.as_ref())
             }
         }
     };
@@ -461,7 +442,6 @@ fn tree_hash_derive_enum_transparent(
     derive_input: &DeriveInput,
     enum_data: &DataEnum,
     inner_container_type: Expr,
-    hasher_type: &syn::Type,
 ) -> TokenStream {
     let name = &derive_input.ident;
     let (impl_generics, ty_generics, where_clause) = &derive_input.generics.split_for_impl();
@@ -482,14 +462,14 @@ fn tree_hash_derive_enum_transparent(
 
             let ty = &(&variant.fields).into_iter().next().unwrap().ty;
             let type_expr = quote! {
-                <#ty as tree_hash::TreeHash<#hasher_type>>::tree_hash_type()
+                <#ty as tree_hash::TreeHash>::tree_hash_type()
             };
             (pattern, type_expr)
         })
         .unzip();
 
     let output = quote! {
-        impl #impl_generics tree_hash::TreeHash<#hasher_type> for #name #ty_generics #where_clause {
+        impl #impl_generics tree_hash::TreeHash for #name #ty_generics #where_clause {
             fn tree_hash_type() -> tree_hash::TreeHashType {
                 #(
                     assert_eq!(
@@ -509,10 +489,10 @@ fn tree_hash_derive_enum_transparent(
                 unreachable!("Enum should never be packed")
             }
 
-            fn tree_hash_root(&self) -> <#hasher_type as tree_hash::TreeHashDigest>::Output {
+            fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                 match self {
                     #(
-                        #patterns => <_ as tree_hash::TreeHash<#hasher_type>>::tree_hash_root(inner),
+                        #patterns => <_ as tree_hash::TreeHash>::tree_hash_root::<H>(inner),
                     )*
                 }
             }
@@ -533,7 +513,6 @@ fn tree_hash_derive_enum_transparent(
 fn tree_hash_derive_enum_union(
     derive_input: &DeriveInput,
     enum_data: &DataEnum,
-    hasher_type: &syn::Type,
 ) -> TokenStream {
     let name = &derive_input.ident;
     let (impl_generics, ty_generics, where_clause) = &derive_input.generics.split_for_impl();
@@ -557,18 +536,18 @@ fn tree_hash_derive_enum_union(
             if fields_len == 0 {
                 quote! {
                     #name::#variant_name => {
-                        let root = #hasher_type::get_zero_hash(0);
+                        let root = H::get_zero_hash(0);
                         let selector = #selector_index;
-                        tree_hash::mix_in_selector_with_hasher::<#hasher_type>(&root, selector)
+                        tree_hash::mix_in_selector_with_hasher::<H>(&root, selector)
                             .expect("derive macro should prevent out-of-bounds selectors")
                     }
                 }
             } else {
                 quote! {
                     #name::#variant_name(inner) => {
-                        let root = <_ as tree_hash::TreeHash<#hasher_type>>::tree_hash_root(inner);
+                        let root = <_ as tree_hash::TreeHash>::tree_hash_root::<H>(inner);
                         let selector = #selector_index;
-                        tree_hash::mix_in_selector_with_hasher::<#hasher_type>(&root, selector)
+                        tree_hash::mix_in_selector_with_hasher::<H>(&root, selector)
                             .expect("derive macro should prevent out-of-bounds selectors")
                     }
                 }
@@ -580,7 +559,7 @@ fn tree_hash_derive_enum_union(
     compute_union_selectors(patterns.len());
 
     let output = quote! {
-        impl #impl_generics tree_hash::TreeHash<#hasher_type> for #name #ty_generics #where_clause {
+        impl #impl_generics tree_hash::TreeHash for #name #ty_generics #where_clause {
             fn tree_hash_type() -> tree_hash::TreeHashType {
                 tree_hash::TreeHashType::Container
             }
@@ -593,7 +572,7 @@ fn tree_hash_derive_enum_union(
                 unreachable!("Enum should never be packed")
             }
 
-            fn tree_hash_root(&self) -> <#hasher_type as tree_hash::TreeHashDigest>::Output {
+            fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                 match self {
                     #(#patterns,)*
                 }

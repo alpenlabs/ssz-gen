@@ -6,13 +6,20 @@ use ssz_derive::{Encode, Decode};
 use tree_hash::TreeHashDigest;
 use tree_hash_derive::TreeHash;
 use ssz::view::*;
-#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    ssz_derive::Encode,
+    ssz_derive::Decode
+)]
 #[ssz(struct_behaviour = "container")]
 pub struct ExportEntry {
     pub key: u32,
     pub value: u64,
 }
-impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ExportEntry {
+impl tree_hash::TreeHash for ExportEntry {
     fn tree_hash_type() -> tree_hash::TreeHashType {
         tree_hash::TreeHashType::Container
     }
@@ -22,14 +29,14 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ExportEntry {
     fn tree_hash_packing_factor() -> usize {
         unreachable!("Container should never be packed")
     }
-    fn tree_hash_root(&self) -> H::Output {
+    fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
         use tree_hash::TreeHash;
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
         hasher
-            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.key).as_ref())
+            .write(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.key).as_ref())
             .expect("tree hash derive should not apply too many leaves");
         hasher
-            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.value).as_ref())
+            .write(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.value).as_ref())
             .expect("tree hash derive should not apply too many leaves");
         hasher.finish().expect("tree hash derive should not have a remaining buffer")
     }
@@ -40,7 +47,13 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ExportEntry {
 /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
 /// needed.
 #[allow(dead_code, reason = "generated code using ssz-gen")]
-#[derive(Clone, Debug, PartialEq, Eq, Copy)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    std::marker::Copy
+)]
 pub struct ExportEntryRef<'a> {
     bytes: &'a [u8],
 }
@@ -71,7 +84,7 @@ impl<'a> ExportEntryRef<'a> {
         ssz::view::DecodeView::from_ssz_bytes(bytes)
     }
 }
-impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ExportEntryRef<'a> {
+impl<'a> tree_hash::TreeHash for ExportEntryRef<'a> {
     fn tree_hash_type() -> tree_hash::TreeHashType {
         tree_hash::TreeHashType::StableContainer
     }
@@ -81,7 +94,7 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ExportEntryRef
     fn tree_hash_packing_factor() -> usize {
         unreachable!("Container should never be packed")
     }
-    fn tree_hash_root(&self) -> H::Output {
+    fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
         use tree_hash::TreeHash;
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
         {
@@ -133,14 +146,21 @@ impl<'a> ExportEntryRef<'a> {
         }
     }
 }
-#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    ssz_derive::Encode,
+    ssz_derive::Decode
+)]
 #[ssz(struct_behaviour = "container")]
 pub struct ViewTypeTest {
     pub payload: VariableList<u8, 4096usize>,
     pub entries: VariableList<ExportEntry, 256usize>,
     pub hash: FixedBytes<32usize>,
 }
-impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ViewTypeTest {
+impl tree_hash::TreeHash for ViewTypeTest {
     fn tree_hash_type() -> tree_hash::TreeHashType {
         tree_hash::TreeHashType::Container
     }
@@ -150,17 +170,21 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ViewTypeTest {
     fn tree_hash_packing_factor() -> usize {
         unreachable!("Container should never be packed")
     }
-    fn tree_hash_root(&self) -> H::Output {
+    fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
         use tree_hash::TreeHash;
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
         hasher
-            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.payload).as_ref())
+            .write(
+                <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.payload).as_ref(),
+            )
             .expect("tree hash derive should not apply too many leaves");
         hasher
-            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.entries).as_ref())
+            .write(
+                <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.entries).as_ref(),
+            )
             .expect("tree hash derive should not apply too many leaves");
         hasher
-            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.hash).as_ref())
+            .write(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.hash).as_ref())
             .expect("tree hash derive should not apply too many leaves");
         hasher.finish().expect("tree hash derive should not have a remaining buffer")
     }
@@ -171,7 +195,13 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ViewTypeTest {
 /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
 /// needed.
 #[allow(dead_code, reason = "generated code using ssz-gen")]
-#[derive(Clone, Debug, PartialEq, Eq, Copy)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    std::marker::Copy
+)]
 pub struct ViewTypeTestRef<'a> {
     bytes: &'a [u8],
 }
@@ -230,7 +260,7 @@ impl<'a> ViewTypeTestRef<'a> {
         ssz::view::DecodeView::from_ssz_bytes(bytes)
     }
 }
-impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ViewTypeTestRef<'a> {
+impl<'a> tree_hash::TreeHash for ViewTypeTestRef<'a> {
     fn tree_hash_type() -> tree_hash::TreeHashType {
         tree_hash::TreeHashType::StableContainer
     }
@@ -240,28 +270,28 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ViewTypeTestRe
     fn tree_hash_packing_factor() -> usize {
         unreachable!("Container should never be packed")
     }
-    fn tree_hash_root(&self) -> H::Output {
+    fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
         use tree_hash::TreeHash;
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
         {
             let payload = self.payload().expect("valid view");
-            let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+            let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::tree_hash_root::<
                 H,
-            >::tree_hash_root(&payload);
+            >(&payload);
             hasher.write(root.as_ref()).expect("write field");
         }
         {
             let entries = self.entries().expect("valid view");
-            let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+            let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::tree_hash_root::<
                 H,
-            >::tree_hash_root(&entries);
+            >(&entries);
             hasher.write(root.as_ref()).expect("write field");
         }
         {
             let hash = self.hash().expect("valid view");
-            let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+            let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::tree_hash_root::<
                 H,
-            >::tree_hash_root(&hash);
+            >(&hash);
             hasher.write(root.as_ref()).expect("write field");
         }
         hasher.finish().expect("finish hasher")

@@ -680,7 +680,7 @@ fn test_derives_toml_override() {
 
     // Verify that a generic TreeHash implementation exists for Alpha
     assert!(
-        output.contains("impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Alpha"),
+        output.contains("impl tree_hash::TreeHash for Alpha"),
         "Generic TreeHash implementation not found for Alpha"
     );
 }

@@ -22,7 +22,7 @@ pub mod tests {
             )]
             #[ssz(struct_behaviour = "container")]
             pub struct Foo {}
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for Foo {
+            impl tree_hash::TreeHash for Foo {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -32,7 +32,7 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0usize);
                     hasher
@@ -58,8 +58,7 @@ pub mod tests {
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> FooRef<'a> {}
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for FooRef<'a> {
+            impl<'a> tree_hash::TreeHash for FooRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::StableContainer
                 }
@@ -69,7 +68,7 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0usize);
                     hasher.finish().expect("finish hasher")
@@ -132,7 +131,7 @@ pub mod tests {
                 /// Y coordinate
                 pub y: u32,
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for PointWithBoth {
+            impl tree_hash::TreeHash for PointWithBoth {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -142,18 +141,18 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.x)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.x)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.y)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.y)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -205,8 +204,7 @@ pub mod tests {
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for PointWithBothRef<'a> {
+            impl<'a> tree_hash::TreeHash for PointWithBothRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::StableContainer
                 }
@@ -216,7 +214,7 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     {
@@ -290,7 +288,7 @@ pub mod tests {
             pub struct TestMerge {
                 pub field: u8,
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for TestMerge {
+            impl tree_hash::TreeHash for TestMerge {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -300,12 +298,12 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.field)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.field)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -345,8 +343,7 @@ pub mod tests {
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for TestMergeRef<'a> {
+            impl<'a> tree_hash::TreeHash for TestMergeRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::StableContainer
                 }
@@ -356,7 +353,7 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     {
