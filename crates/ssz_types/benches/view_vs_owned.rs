@@ -228,7 +228,7 @@ fn bench_tree_hash_variable_list_u64(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("owned", size), &list, |b, list| {
             b.iter(|| {
                 let root: tree_hash::Hash256 =
-                    TreeHash::<Sha256Hasher>::tree_hash_root(black_box(list));
+                    TreeHash::tree_hash_root::<Sha256Hasher>(black_box(list));
                 black_box(root);
             });
         });
@@ -238,7 +238,7 @@ fn bench_tree_hash_variable_list_u64(c: &mut Criterion) {
             b.iter(|| {
                 let view = VariableListRef::<u64, 16384>::from_ssz_bytes(black_box(encoded))
                     .expect("decode failed");
-                let root: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&view);
+                let root: tree_hash::Hash256 = TreeHash::tree_hash_root::<Sha256Hasher>(&view);
                 black_box(root);
             });
         });
@@ -278,19 +278,19 @@ fn bench_tree_hash_fixed_vector_u64(c: &mut Criterion) {
                 8 => {
                     let vec = FixedVector::<u64, 8>::from_ssz_bytes(&vec_owned.0).unwrap();
                     let root: tree_hash::Hash256 =
-                        TreeHash::<Sha256Hasher>::tree_hash_root(black_box(&vec));
+                        TreeHash::tree_hash_root::<Sha256Hasher>(black_box(&vec));
                     black_box(root);
                 }
                 64 => {
                     let vec = FixedVector::<u64, 64>::from_ssz_bytes(&vec_owned.0).unwrap();
                     let root: tree_hash::Hash256 =
-                        TreeHash::<Sha256Hasher>::tree_hash_root(black_box(&vec));
+                        TreeHash::tree_hash_root::<Sha256Hasher>(black_box(&vec));
                     black_box(root);
                 }
                 256 => {
                     let vec = FixedVector::<u64, 256>::from_ssz_bytes(&vec_owned.0).unwrap();
                     let root: tree_hash::Hash256 =
-                        TreeHash::<Sha256Hasher>::tree_hash_root(black_box(&vec));
+                        TreeHash::tree_hash_root::<Sha256Hasher>(black_box(&vec));
                     black_box(root);
                 }
                 _ => unreachable!(),
@@ -319,19 +319,19 @@ fn bench_tree_hash_fixed_vector_u64(c: &mut Criterion) {
                 8 => {
                     let view = FixedVectorRef::<u64, 8>::from_ssz_bytes(black_box(&encoded.0))
                         .expect("decode failed");
-                    let root: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&view);
+                    let root: tree_hash::Hash256 = TreeHash::tree_hash_root::<Sha256Hasher>(&view);
                     black_box(root);
                 }
                 64 => {
                     let view = FixedVectorRef::<u64, 64>::from_ssz_bytes(black_box(&encoded.0))
                         .expect("decode failed");
-                    let root: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&view);
+                    let root: tree_hash::Hash256 = TreeHash::tree_hash_root::<Sha256Hasher>(&view);
                     black_box(root);
                 }
                 256 => {
                     let view = FixedVectorRef::<u64, 256>::from_ssz_bytes(black_box(&encoded.0))
                         .expect("decode failed");
-                    let root: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&view);
+                    let root: tree_hash::Hash256 = TreeHash::tree_hash_root::<Sha256Hasher>(&view);
                     black_box(root);
                 }
                 _ => unreachable!(),
@@ -391,7 +391,7 @@ fn bench_decode_and_hash_variable_list(c: &mut Criterion) {
             b.iter(|| {
                 let list = VariableList::<u64, 16384>::from_ssz_bytes(black_box(encoded))
                     .expect("decode failed");
-                let root: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&list);
+                let root: tree_hash::Hash256 = TreeHash::tree_hash_root::<Sha256Hasher>(&list);
                 black_box(root);
             });
         });
@@ -401,7 +401,7 @@ fn bench_decode_and_hash_variable_list(c: &mut Criterion) {
             b.iter(|| {
                 let view = VariableListRef::<u64, 16384>::from_ssz_bytes(black_box(encoded))
                     .expect("decode failed");
-                let root: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&view);
+                let root: tree_hash::Hash256 = TreeHash::tree_hash_root::<Sha256Hasher>(&view);
                 black_box(root);
             });
         });
