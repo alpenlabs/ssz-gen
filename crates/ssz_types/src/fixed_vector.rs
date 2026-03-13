@@ -536,7 +536,10 @@ mod test {
         let fixed: FixedVector<A, 1> = FixedVector::from(vec![a]);
         assert_eq!(
             <FixedVector<A, 1> as TreeHash>::tree_hash_root::<tree_hash::Sha256Hasher>(&fixed),
-            merkle_root_with_hasher::<tree_hash::Sha256Hasher>(a.tree_hash_root::<tree_hash::Sha256Hasher>().as_slice(), 0)
+            merkle_root_with_hasher::<tree_hash::Sha256Hasher>(
+                a.tree_hash_root::<tree_hash::Sha256Hasher>().as_slice(),
+                0
+            )
         );
 
         let fixed: FixedVector<A, 8> = FixedVector::from(vec![a; 8]);

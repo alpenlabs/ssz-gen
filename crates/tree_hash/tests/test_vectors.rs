@@ -518,9 +518,18 @@ fn test_container_tree_hash() {
     let c2 = SimpleContainer { a: 0, b: true };
     let c3 = SimpleContainer { a: 1, b: true };
 
-    assert_ne!(c1.tree_hash_root::<Sha256Hasher>(), c2.tree_hash_root::<Sha256Hasher>());
-    assert_ne!(c1.tree_hash_root::<Sha256Hasher>(), c3.tree_hash_root::<Sha256Hasher>());
-    assert_ne!(c2.tree_hash_root::<Sha256Hasher>(), c3.tree_hash_root::<Sha256Hasher>());
+    assert_ne!(
+        c1.tree_hash_root::<Sha256Hasher>(),
+        c2.tree_hash_root::<Sha256Hasher>()
+    );
+    assert_ne!(
+        c1.tree_hash_root::<Sha256Hasher>(),
+        c3.tree_hash_root::<Sha256Hasher>()
+    );
+    assert_ne!(
+        c2.tree_hash_root::<Sha256Hasher>(),
+        c3.tree_hash_root::<Sha256Hasher>()
+    );
 }
 
 #[test]

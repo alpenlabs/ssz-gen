@@ -47,9 +47,7 @@ impl tree_hash::TreeHash for HashVec {
     }
 
     fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
-        let mut hasher = MerkleHasher::<H>::with_leaves(
-            self.vec.len().div_ceil(BYTES_PER_CHUNK),
-        );
+        let mut hasher = MerkleHasher::<H>::with_leaves(self.vec.len().div_ceil(BYTES_PER_CHUNK));
 
         for item in &self.vec {
             hasher
@@ -106,8 +104,14 @@ enum FixedTrans {
 
 #[test]
 fn fixed_trans() {
-    assert_eq!(FixedTrans::A(2).tree_hash_root::<Sha256Hasher>(), u8_hash(2));
-    assert_eq!(FixedTrans::B(2).tree_hash_root::<Sha256Hasher>(), u8_hash(2));
+    assert_eq!(
+        FixedTrans::A(2).tree_hash_root::<Sha256Hasher>(),
+        u8_hash(2)
+    );
+    assert_eq!(
+        FixedTrans::B(2).tree_hash_root::<Sha256Hasher>(),
+        u8_hash(2)
+    );
 }
 
 #[derive(TreeHash)]
@@ -119,8 +123,14 @@ enum FixedUnion {
 
 #[test]
 fn fixed_union() {
-    assert_eq!(FixedUnion::A(2).tree_hash_root::<Sha256Hasher>(), u8_hash_concat(2, 0));
-    assert_eq!(FixedUnion::B(2).tree_hash_root::<Sha256Hasher>(), u8_hash_concat(2, 1));
+    assert_eq!(
+        FixedUnion::A(2).tree_hash_root::<Sha256Hasher>(),
+        u8_hash_concat(2, 0)
+    );
+    assert_eq!(
+        FixedUnion::B(2).tree_hash_root::<Sha256Hasher>(),
+        u8_hash_concat(2, 1)
+    );
 }
 
 #[derive(TreeHash)]
@@ -165,29 +175,13 @@ fn variable_union() {
 #[test]
 fn packed_encoding_example() {
     let val = 0xfff0eee0ddd0ccc0bbb0aaa099908880_u128;
-    let canonical =
-        <U256 as TreeHash>::tree_hash_packed_encoding(&U256::from(val));
+    let canonical = <U256 as TreeHash>::tree_hash_packed_encoding(&U256::from(val));
     let encodings = [
-        (
-            <u16 as TreeHash>::tree_hash_packed_encoding(&0x8880_u16),
-            0,
-        ),
-        (
-            <u16 as TreeHash>::tree_hash_packed_encoding(&0x9990_u16),
-            2,
-        ),
-        (
-            <u16 as TreeHash>::tree_hash_packed_encoding(&0xaaa0_u16),
-            4,
-        ),
-        (
-            <u16 as TreeHash>::tree_hash_packed_encoding(&0xbbb0_u16),
-            6,
-        ),
-        (
-            <u16 as TreeHash>::tree_hash_packed_encoding(&0xccc0_u16),
-            8,
-        ),
+        (<u16 as TreeHash>::tree_hash_packed_encoding(&0x8880_u16), 0),
+        (<u16 as TreeHash>::tree_hash_packed_encoding(&0x9990_u16), 2),
+        (<u16 as TreeHash>::tree_hash_packed_encoding(&0xaaa0_u16), 4),
+        (<u16 as TreeHash>::tree_hash_packed_encoding(&0xbbb0_u16), 6),
+        (<u16 as TreeHash>::tree_hash_packed_encoding(&0xccc0_u16), 8),
         (
             <u16 as TreeHash>::tree_hash_packed_encoding(&0xddd0_u16),
             10,
@@ -201,9 +195,7 @@ fn packed_encoding_example() {
             14,
         ),
         (
-            <U128 as TreeHash>::tree_hash_packed_encoding(&U128::from(
-                val,
-            )),
+            <U128 as TreeHash>::tree_hash_packed_encoding(&U128::from(val)),
             0,
         ),
         (
@@ -306,7 +298,10 @@ fn shape_1() {
         color: 1,
     };
 
-    assert_eq!(shape_1.tree_hash_root::<Sha256Hasher>(), square.tree_hash_root::<Sha256Hasher>());
+    assert_eq!(
+        shape_1.tree_hash_root::<Sha256Hasher>(),
+        square.tree_hash_root::<Sha256Hasher>()
+    );
     assert_eq!(
         shape_1.tree_hash_root::<Sha256Hasher>(),
         Hash256::from_slice(&[
@@ -327,7 +322,10 @@ fn shape_1() {
         _phantom: 6,
         radius: 0x42,
     };
-    assert_eq!(shape_1.tree_hash_root::<Sha256Hasher>(), circle.tree_hash_root::<Sha256Hasher>());
+    assert_eq!(
+        shape_1.tree_hash_root::<Sha256Hasher>(),
+        circle.tree_hash_root::<Sha256Hasher>()
+    );
 
     assert_eq!(
         shape_1.tree_hash_root::<Sha256Hasher>(),
@@ -493,8 +491,14 @@ fn shape_enum() {
     let enum_square = ShapeEnum::SquareVariant(square.clone());
     let enum_circle = ShapeEnum::CircleVariant(circle.clone());
 
-    assert_eq!(square.tree_hash_root::<Sha256Hasher>(), enum_square.tree_hash_root::<Sha256Hasher>());
-    assert_eq!(circle.tree_hash_root::<Sha256Hasher>(), enum_circle.tree_hash_root::<Sha256Hasher>());
+    assert_eq!(
+        square.tree_hash_root::<Sha256Hasher>(),
+        enum_square.tree_hash_root::<Sha256Hasher>()
+    );
+    assert_eq!(
+        circle.tree_hash_root::<Sha256Hasher>(),
+        enum_circle.tree_hash_root::<Sha256Hasher>()
+    );
 }
 
 /// Container type for union variant data

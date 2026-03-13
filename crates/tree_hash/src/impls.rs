@@ -577,8 +577,8 @@ mod test {
         let small_bitvector =
             BitVector::<32>::from_bytes(small_bitvector_bytes.clone().into()).unwrap();
         assert_eq!(
-            <BitVector<32> as TreeHash>::tree_hash_root::<Sha256Hasher>(&small_bitvector).as_slice()
-                [..4],
+            <BitVector<32> as TreeHash>::tree_hash_root::<Sha256Hasher>(&small_bitvector)
+                .as_slice()[..4],
             small_bitvector_bytes
         );
     }

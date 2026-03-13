@@ -175,16 +175,10 @@ pub fn tree_hash_derive(input: TokenStream) -> TokenStream {
                 panic!("cannot use \"enum_behaviour\" for a struct");
             }
             match struct_opt {
-                Some(StructBehaviour::Container) => {
-                    tree_hash_derive_struct_container(&item, s)
-                }
+                Some(StructBehaviour::Container) => tree_hash_derive_struct_container(&item, s),
                 Some(StructBehaviour::StableContainer) => {
                     if let Some(max_fields_value) = opts.max_fields {
-                        tree_hash_derive_struct_stable_container(
-                            &item,
-                            s,
-                            max_fields_value,
-                        )
+                        tree_hash_derive_struct_stable_container(&item, s, max_fields_value)
                     } else {
                         panic!("stable_container requires \"max_fields\"")
                     }
@@ -222,10 +216,7 @@ pub fn tree_hash_derive(input: TokenStream) -> TokenStream {
     }
 }
 
-fn tree_hash_derive_struct_container(
-    item: &DeriveInput,
-    struct_data: &DataStruct,
-) -> TokenStream {
+fn tree_hash_derive_struct_container(item: &DeriveInput, struct_data: &DataStruct) -> TokenStream {
     let name = &item.ident;
     let (impl_generics, ty_generics, where_clause) = &item.generics.split_for_impl();
 
@@ -510,10 +501,7 @@ fn tree_hash_derive_enum_transparent(
 /// # Limitations
 ///
 /// Only supports enums where each variant has a single field.
-fn tree_hash_derive_enum_union(
-    derive_input: &DeriveInput,
-    enum_data: &DataEnum,
-) -> TokenStream {
+fn tree_hash_derive_enum_union(derive_input: &DeriveInput, enum_data: &DataEnum) -> TokenStream {
     let name = &derive_input.ident;
     let (impl_generics, ty_generics, where_clause) = &derive_input.generics.split_for_impl();
 
