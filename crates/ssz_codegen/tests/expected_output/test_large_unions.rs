@@ -21,7 +21,7 @@ pub mod tests {
                 Selector4(U128),
                 Selector5(U256),
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for BigUnion {
+            impl tree_hash::TreeHash for BigUnion {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -31,47 +31,47 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Union should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     match self {
                         BigUnion::Selector0(inner) => {
-                            let root = <_ as tree_hash::TreeHash<
+                            let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(inner);
+                            >(inner);
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
                                 .expect("valid selector")
                         }
                         BigUnion::Selector1(inner) => {
-                            let root = <_ as tree_hash::TreeHash<
+                            let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(inner);
+                            >(inner);
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
                                 .expect("valid selector")
                         }
                         BigUnion::Selector2(inner) => {
-                            let root = <_ as tree_hash::TreeHash<
+                            let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(inner);
+                            >(inner);
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 2u8)
                                 .expect("valid selector")
                         }
                         BigUnion::Selector3(inner) => {
-                            let root = <_ as tree_hash::TreeHash<
+                            let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(inner);
+                            >(inner);
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 3u8)
                                 .expect("valid selector")
                         }
                         BigUnion::Selector4(inner) => {
-                            let root = <_ as tree_hash::TreeHash<
+                            let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(inner);
+                            >(inner);
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 4u8)
                                 .expect("valid selector")
                         }
                         BigUnion::Selector5(inner) => {
-                            let root = <_ as tree_hash::TreeHash<
+                            let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(inner);
+                            >(inner);
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 5u8)
                                 .expect("valid selector")
                         }
@@ -201,8 +201,7 @@ pub mod tests {
                     <BigUnionRef<'a>>::to_owned(self)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for BigUnionRef<'a> {
+            impl<'a> tree_hash::TreeHash for BigUnionRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Vector
                 }
@@ -212,14 +211,14 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Union should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     match self.selector() {
                         0u8 => {
                             let value = self.as_selector0().expect("valid selector");
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
                             >(
-                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    &<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&value),
                                     0u8,
                                 )
                                 .expect("valid selector")
@@ -229,7 +228,7 @@ pub mod tests {
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
                             >(
-                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    &<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&value),
                                     1u8,
                                 )
                                 .expect("valid selector")
@@ -239,7 +238,7 @@ pub mod tests {
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
                             >(
-                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    &<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&value),
                                     2u8,
                                 )
                                 .expect("valid selector")
@@ -249,7 +248,7 @@ pub mod tests {
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
                             >(
-                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    &<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&value),
                                     3u8,
                                 )
                                 .expect("valid selector")
@@ -259,7 +258,7 @@ pub mod tests {
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
                             >(
-                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    &<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&value),
                                     4u8,
                                 )
                                 .expect("valid selector")
@@ -269,7 +268,7 @@ pub mod tests {
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
                             >(
-                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    &<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&value),
                                     5u8,
                                 )
                                 .expect("valid selector")
@@ -286,7 +285,7 @@ pub mod tests {
                 Selector2(FixedVector<u16, 3usize>),
                 Selector3(BitVector<8usize>),
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for MixedUnion {
+            impl tree_hash::TreeHash for MixedUnion {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -296,33 +295,33 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Union should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     match self {
                         MixedUnion::Selector0(inner) => {
-                            let root = <_ as tree_hash::TreeHash<
+                            let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(inner);
+                            >(inner);
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
                                 .expect("valid selector")
                         }
                         MixedUnion::Selector1(inner) => {
-                            let root = <_ as tree_hash::TreeHash<
+                            let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(inner);
+                            >(inner);
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
                                 .expect("valid selector")
                         }
                         MixedUnion::Selector2(inner) => {
-                            let root = <_ as tree_hash::TreeHash<
+                            let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(inner);
+                            >(inner);
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 2u8)
                                 .expect("valid selector")
                         }
                         MixedUnion::Selector3(inner) => {
-                            let root = <_ as tree_hash::TreeHash<
+                            let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(inner);
+                            >(inner);
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 3u8)
                                 .expect("valid selector")
                         }
@@ -431,8 +430,7 @@ pub mod tests {
                     <MixedUnionRef<'a>>::to_owned(self)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for MixedUnionRef<'a> {
+            impl<'a> tree_hash::TreeHash for MixedUnionRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Vector
                 }
@@ -442,14 +440,14 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Union should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     match self.selector() {
                         0u8 => {
                             let value = self.as_selector0().expect("valid selector");
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
                             >(
-                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    &<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&value),
                                     0u8,
                                 )
                                 .expect("valid selector")
@@ -459,7 +457,7 @@ pub mod tests {
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
                             >(
-                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    &<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&value),
                                     1u8,
                                 )
                                 .expect("valid selector")
@@ -469,7 +467,7 @@ pub mod tests {
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
                             >(
-                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    &<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&value),
                                     2u8,
                                 )
                                 .expect("valid selector")
@@ -479,7 +477,7 @@ pub mod tests {
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
                             >(
-                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    &<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&value),
                                     3u8,
                                 )
                                 .expect("valid selector")
@@ -496,7 +494,7 @@ pub mod tests {
                 Selector2(u8),
                 Selector3(u8),
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for SameTypeUnion {
+            impl tree_hash::TreeHash for SameTypeUnion {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -506,33 +504,33 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Union should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     match self {
                         SameTypeUnion::Selector0(inner) => {
-                            let root = <_ as tree_hash::TreeHash<
+                            let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(inner);
+                            >(inner);
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
                                 .expect("valid selector")
                         }
                         SameTypeUnion::Selector1(inner) => {
-                            let root = <_ as tree_hash::TreeHash<
+                            let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(inner);
+                            >(inner);
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
                                 .expect("valid selector")
                         }
                         SameTypeUnion::Selector2(inner) => {
-                            let root = <_ as tree_hash::TreeHash<
+                            let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(inner);
+                            >(inner);
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 2u8)
                                 .expect("valid selector")
                         }
                         SameTypeUnion::Selector3(inner) => {
-                            let root = <_ as tree_hash::TreeHash<
+                            let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(inner);
+                            >(inner);
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 3u8)
                                 .expect("valid selector")
                         }
@@ -633,8 +631,7 @@ pub mod tests {
                     <SameTypeUnionRef<'a>>::to_owned(self)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for SameTypeUnionRef<'a> {
+            impl<'a> tree_hash::TreeHash for SameTypeUnionRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Vector
                 }
@@ -644,14 +641,14 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Union should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     match self.selector() {
                         0u8 => {
                             let value = self.as_selector0().expect("valid selector");
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
                             >(
-                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    &<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&value),
                                     0u8,
                                 )
                                 .expect("valid selector")
@@ -661,7 +658,7 @@ pub mod tests {
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
                             >(
-                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    &<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&value),
                                     1u8,
                                 )
                                 .expect("valid selector")
@@ -671,7 +668,7 @@ pub mod tests {
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
                             >(
-                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    &<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&value),
                                     2u8,
                                 )
                                 .expect("valid selector")
@@ -681,7 +678,7 @@ pub mod tests {
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
                             >(
-                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    &<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&value),
                                     3u8,
                                 )
                                 .expect("valid selector")
@@ -704,8 +701,7 @@ pub mod tests {
                 pub same: SameTypeUnion,
                 pub mixed: MixedUnion,
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for ContainerWithBigUnions {
+            impl tree_hash::TreeHash for ContainerWithBigUnions {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -715,24 +711,24 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.big)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.big)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.same)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.same)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.mixed)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.mixed)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -817,8 +813,7 @@ pub mod tests {
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for ContainerWithBigUnionsRef<'a> {
+            impl<'a> tree_hash::TreeHash for ContainerWithBigUnionsRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::StableContainer
                 }
@@ -828,28 +823,28 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
                     {
                         let big = self.big().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&big);
+                        >(&big);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let same = self.same().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&same);
+                        >(&same);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let mixed = self.mixed().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&mixed);
+                        >(&mixed);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")

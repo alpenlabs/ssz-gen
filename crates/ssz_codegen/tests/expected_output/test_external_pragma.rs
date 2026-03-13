@@ -12,7 +12,14 @@ pub mod tests {
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
             /// Test external_kind pragma for container vs primitive external types
-            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                ssz_derive::Encode,
+                ssz_derive::Decode
+            )]
             #[ssz(struct_behaviour = "container")]
             pub struct ExternalPragmaTest {
                 /// External container type - needs Ref variant
@@ -26,8 +33,7 @@ pub mod tests {
                 /// External primitive in List - no annotation needed
                 pub account_ids: VariableList<external_ssz::AccountId, 50usize>,
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for ExternalPragmaTest {
+            impl tree_hash::TreeHash for ExternalPragmaTest {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -37,40 +43,44 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(5usize);
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.state)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.state)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.balance)
-                                .as_ref(),
-                        )
-                        .expect("tree hash derive should not apply too many leaves");
-                    hasher
-                        .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.headers)
-                                .as_ref(),
-                        )
-                        .expect("tree hash derive should not apply too many leaves");
-                    hasher
-                        .write(
-                            <_ as tree_hash::TreeHash<
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(&self.transactions)
+                            >(&self.balance)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(&self.account_ids)
+                            >(&self.headers)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<
+                                H,
+                            >(&self.transactions)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<
+                                H,
+                            >(&self.account_ids)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -85,7 +95,13 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                std::marker::Copy
+            )]
             pub struct ExternalPragmaTestRef<'a> {
                 bytes: &'a [u8],
             }
@@ -206,8 +222,7 @@ pub mod tests {
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for ExternalPragmaTestRef<'a> {
+            impl<'a> tree_hash::TreeHash for ExternalPragmaTestRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::StableContainer
                 }
@@ -217,42 +232,42 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(5usize);
                     {
                         let state = self.state().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&state);
+                        >(&state);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let balance = self.balance().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&balance);
+                        >(&balance);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let headers = self.headers().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&headers);
+                        >(&headers);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let transactions = self.transactions().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&transactions);
+                        >(&transactions);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let account_ids = self.account_ids().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&account_ids);
+                        >(&account_ids);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")

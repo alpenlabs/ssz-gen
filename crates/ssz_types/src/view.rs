@@ -328,10 +328,9 @@ where
     }
 }
 
-impl<'a, TRef, const N: usize, H> TreeHash<H> for VariableListRef<'a, TRef, N>
+impl<'a, TRef, const N: usize> TreeHash for VariableListRef<'a, TRef, N>
 where
-    TRef: DecodeView<'a> + TreeHash<H> + SszTypeInfo,
-    H: TreeHashDigest,
+    TRef: DecodeView<'a> + TreeHash + SszTypeInfo,
 {
     fn tree_hash_type() -> TreeHashType {
         TreeHashType::List
@@ -345,7 +344,7 @@ where
         unreachable!("List should never be packed.")
     }
 
-    fn tree_hash_root(&self) -> H::Output {
+    fn tree_hash_root<H: TreeHashDigest>(&self) -> H::Output {
         use tree_hash::{MerkleHasher, mix_in_length_with_hasher};
 
         let item_type = TRef::tree_hash_type();
@@ -375,7 +374,7 @@ where
                 for item_result in self.iter() {
                     let item = item_result.expect("VariableListRef iteration should not fail");
                     hasher
-                        .write(item.tree_hash_root().as_ref())
+                        .write(item.tree_hash_root::<H>().as_ref())
                         .expect("hasher has sufficient leaves");
                 }
 
@@ -387,10 +386,9 @@ where
     }
 }
 
-impl<'a, TRef, const N: usize, H> TreeHash<H> for FixedVectorRef<'a, TRef, N>
+impl<'a, TRef, const N: usize> TreeHash for FixedVectorRef<'a, TRef, N>
 where
-    TRef: DecodeView<'a> + TreeHash<H> + SszTypeInfo,
-    H: TreeHashDigest,
+    TRef: DecodeView<'a> + TreeHash + SszTypeInfo,
 {
     fn tree_hash_type() -> TreeHashType {
         TreeHashType::Vector
@@ -404,8 +402,8 @@ where
         unreachable!("Vector should never be packed.")
     }
 
-    fn tree_hash_root(&self) -> H::Output {
-        self.inner.tree_hash_root()
+    fn tree_hash_root<H: TreeHashDigest>(&self) -> H::Output {
+        self.inner.tree_hash_root::<H>()
     }
 }
 
@@ -577,8 +575,8 @@ mod tests {
 
         let view = VariableListRef::<u64, 10>::from_ssz_bytes(&encoded).unwrap();
 
-        let owned_hash: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&list);
-        let view_hash: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&view);
+        let owned_hash: tree_hash::Hash256 = TreeHash::tree_hash_root::<Sha256Hasher>(&list);
+        let view_hash: tree_hash::Hash256 = TreeHash::tree_hash_root::<Sha256Hasher>(&view);
 
         assert_eq!(owned_hash, view_hash);
     }
@@ -595,8 +593,8 @@ mod tests {
         let bytes = owned.as_ssz_bytes();
         let view = VariableListRef::<u8, 64>::from_ssz_bytes(&bytes).unwrap();
 
-        let owned_hash: Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&owned);
-        let view_hash: Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&view);
+        let owned_hash: Hash256 = TreeHash::tree_hash_root::<Sha256Hasher>(&owned);
+        let view_hash: Hash256 = TreeHash::tree_hash_root::<Sha256Hasher>(&view);
 
         assert_eq!(owned_hash, view_hash);
         assert_eq!(
@@ -620,8 +618,8 @@ mod tests {
 
         let view = FixedVectorRef::<u64, 5>::from_ssz_bytes(&encoded).unwrap();
 
-        let owned_hash: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&vec);
-        let view_hash: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&view);
+        let owned_hash: tree_hash::Hash256 = TreeHash::tree_hash_root::<Sha256Hasher>(&vec);
+        let view_hash: tree_hash::Hash256 = TreeHash::tree_hash_root::<Sha256Hasher>(&view);
 
         assert_eq!(owned_hash, view_hash);
     }
@@ -635,8 +633,8 @@ mod tests {
 
         let view = VariableListRef::<u64, 10>::from_ssz_bytes(&encoded).unwrap();
 
-        let owned_hash: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&list);
-        let view_hash: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&view);
+        let owned_hash: tree_hash::Hash256 = TreeHash::tree_hash_root::<Sha256Hasher>(&list);
+        let view_hash: tree_hash::Hash256 = TreeHash::tree_hash_root::<Sha256Hasher>(&view);
         assert_eq!(owned_hash, view_hash);
     }
 
@@ -702,8 +700,8 @@ mod tests {
 
             let view = VariableListRef::<u32, 32>::from_ssz_bytes(&encoded).unwrap();
 
-            let owned_hash: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&list);
-            let view_hash: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&view);
+            let owned_hash: tree_hash::Hash256 = TreeHash::tree_hash_root::<Sha256Hasher>(&list);
+            let view_hash: tree_hash::Hash256 = TreeHash::tree_hash_root::<Sha256Hasher>(&view);
 
             assert_eq!(
                 owned_hash, view_hash,
@@ -727,8 +725,8 @@ mod tests {
 
             assert_eq!(list, view_owned, "Size {}", size);
 
-            let owned_hash: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&list);
-            let view_hash: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&view);
+            let owned_hash: tree_hash::Hash256 = TreeHash::tree_hash_root::<Sha256Hasher>(&list);
+            let view_hash: tree_hash::Hash256 = TreeHash::tree_hash_root::<Sha256Hasher>(&view);
 
             assert_eq!(owned_hash, view_hash, "Size {}", size);
         }
@@ -746,8 +744,8 @@ mod tests {
 
             let view = FixedVectorRef::<u16, 16>::from_ssz_bytes(&encoded).unwrap();
 
-            let owned_hash: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&vec);
-            let view_hash: tree_hash::Hash256 = TreeHash::<Sha256Hasher>::tree_hash_root(&view);
+            let owned_hash: tree_hash::Hash256 = TreeHash::tree_hash_root::<Sha256Hasher>(&vec);
+            let view_hash: tree_hash::Hash256 = TreeHash::tree_hash_root::<Sha256Hasher>(&view);
 
             assert_eq!(
                 owned_hash, view_hash,
@@ -797,8 +795,8 @@ mod tests {
         let encoded_u8 = list_u8.as_ssz_bytes();
         let view_u8 = VariableListRef::<u8, 10>::from_ssz_bytes(&encoded_u8).unwrap();
         assert_eq!(
-            TreeHash::<Sha256Hasher>::tree_hash_root(&list_u8),
-            TreeHash::<Sha256Hasher>::tree_hash_root(&view_u8)
+            TreeHash::tree_hash_root::<Sha256Hasher>(&list_u8),
+            TreeHash::tree_hash_root::<Sha256Hasher>(&view_u8)
         );
 
         // Test with u16
@@ -806,8 +804,8 @@ mod tests {
         let encoded_u16 = list_u16.as_ssz_bytes();
         let view_u16 = VariableListRef::<u16, 10>::from_ssz_bytes(&encoded_u16).unwrap();
         assert_eq!(
-            TreeHash::<Sha256Hasher>::tree_hash_root(&list_u16),
-            TreeHash::<Sha256Hasher>::tree_hash_root(&view_u16)
+            TreeHash::tree_hash_root::<Sha256Hasher>(&list_u16),
+            TreeHash::tree_hash_root::<Sha256Hasher>(&view_u16)
         );
 
         // Test with u32
@@ -815,8 +813,8 @@ mod tests {
         let encoded_u32 = list_u32.as_ssz_bytes();
         let view_u32 = VariableListRef::<u32, 10>::from_ssz_bytes(&encoded_u32).unwrap();
         assert_eq!(
-            TreeHash::<Sha256Hasher>::tree_hash_root(&list_u32),
-            TreeHash::<Sha256Hasher>::tree_hash_root(&view_u32)
+            TreeHash::tree_hash_root::<Sha256Hasher>(&list_u32),
+            TreeHash::tree_hash_root::<Sha256Hasher>(&view_u32)
         );
 
         // Test with u64
@@ -824,8 +822,8 @@ mod tests {
         let encoded_u64 = list_u64.as_ssz_bytes();
         let view_u64 = VariableListRef::<u64, 10>::from_ssz_bytes(&encoded_u64).unwrap();
         assert_eq!(
-            TreeHash::<Sha256Hasher>::tree_hash_root(&list_u64),
-            TreeHash::<Sha256Hasher>::tree_hash_root(&view_u64)
+            TreeHash::tree_hash_root::<Sha256Hasher>(&list_u64),
+            TreeHash::tree_hash_root::<Sha256Hasher>(&view_u64)
         );
     }
 }

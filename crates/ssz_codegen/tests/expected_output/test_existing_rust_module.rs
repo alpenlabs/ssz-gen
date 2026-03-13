@@ -22,7 +22,14 @@ pub mod tests {
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
             /// Test container that references types from an existing Rust module
-            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                ssz_derive::Encode,
+                ssz_derive::Decode
+            )]
             #[ssz(struct_behaviour = "container")]
             pub struct TestExistingModule {
                 /// Field using type from existing module (no .ssz file)
@@ -30,8 +37,7 @@ pub mod tests {
                 /// Another field
                 pub slot: u64,
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for TestExistingModule {
+            impl tree_hash::TreeHash for TestExistingModule {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -41,20 +47,20 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(&self.existing_field)
+                            >(&self.existing_field)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.slot)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.slot)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -69,7 +75,13 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                std::marker::Copy
+            )]
             pub struct TestExistingModuleRef<'a> {
                 bytes: &'a [u8],
             }
@@ -109,8 +121,7 @@ pub mod tests {
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for TestExistingModuleRef<'a> {
+            impl<'a> tree_hash::TreeHash for TestExistingModuleRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::StableContainer
                 }
@@ -120,14 +131,14 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     {
                         let existing_field = self.existing_field().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&existing_field);
+                        >(&existing_field);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     {

@@ -646,7 +646,7 @@ impl<'a> CircleBufferCodegen<'a> {
                     _ => {
                         quote! {
                             #union_ident::#variant_ident(inner) => {
-                                let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
+                                let root = <_ as tree_hash::TreeHash>::tree_hash_root::<H>(inner);
                                 tree_hash::mix_in_selector_with_hasher::<H>(
                                     &root,
                                     #selector_value
@@ -666,7 +666,7 @@ impl<'a> CircleBufferCodegen<'a> {
                 #(#variants),*
             }
 
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #union_ident {
+            impl tree_hash::TreeHash for #union_ident {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -679,7 +679,7 @@ impl<'a> CircleBufferCodegen<'a> {
                     unreachable!("Union should never be packed")
                 }
 
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     match self {
                         #(#owned_tree_hash_arms),*
                     }

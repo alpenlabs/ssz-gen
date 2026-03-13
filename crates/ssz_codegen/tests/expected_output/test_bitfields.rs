@@ -42,8 +42,7 @@ pub mod tests {
                 pub std_vec: StandardBitvector,
                 pub large_vec: LargeBitvector,
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for BitfieldContainer {
+            impl tree_hash::TreeHash for BitfieldContainer {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -53,48 +52,54 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(6usize);
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(&self.tiny_list)
+                            >(&self.tiny_list)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.std_list)
-                                .as_ref(),
-                        )
-                        .expect("tree hash derive should not apply too many leaves");
-                    hasher
-                        .write(
-                            <_ as tree_hash::TreeHash<
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(&self.large_list)
+                            >(&self.std_list)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.tiny_vec)
-                                .as_ref(),
-                        )
-                        .expect("tree hash derive should not apply too many leaves");
-                    hasher
-                        .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.std_vec)
-                                .as_ref(),
-                        )
-                        .expect("tree hash derive should not apply too many leaves");
-                    hasher
-                        .write(
-                            <_ as tree_hash::TreeHash<
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(&self.large_vec)
+                            >(&self.large_list)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<
+                                H,
+                            >(&self.tiny_vec)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<
+                                H,
+                            >(&self.std_vec)
+                                .as_ref(),
+                        )
+                        .expect("tree hash derive should not apply too many leaves");
+                    hasher
+                        .write(
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<
+                                H,
+                            >(&self.large_vec)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -227,8 +232,7 @@ pub mod tests {
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for BitfieldContainerRef<'a> {
+            impl<'a> tree_hash::TreeHash for BitfieldContainerRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::StableContainer
                 }
@@ -238,49 +242,49 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(6usize);
                     {
                         let tiny_list = self.tiny_list().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&tiny_list);
+                        >(&tiny_list);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let std_list = self.std_list().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&std_list);
+                        >(&std_list);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let large_list = self.large_list().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&large_list);
+                        >(&large_list);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let tiny_vec = self.tiny_vec().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&tiny_vec);
+                        >(&tiny_vec);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let std_vec = self.std_vec().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&std_vec);
+                        >(&std_vec);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let large_vec = self.large_vec().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&large_vec);
+                        >(&large_vec);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
