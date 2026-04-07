@@ -121,7 +121,14 @@ pub mod tests {
                 }
             }
             /// Container using the union
-            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                ssz_derive::Encode,
+                ssz_derive::Decode
+            )]
             #[ssz(struct_behaviour = "container")]
             pub struct TestContainer {
                 /// Pending inputs
@@ -159,7 +166,13 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                std::marker::Copy
+            )]
             pub struct TestContainerRef<'a> {
                 bytes: &'a [u8],
             }
@@ -281,7 +294,7 @@ pub mod tests {
                                 })
                                 .collect();
                             let items = items.expect("valid view");
-                            ssz_types::VariableList::from(items)
+                            ssz_types::VariableList::new(items).expect("valid view")
                         },
                     }
                 }

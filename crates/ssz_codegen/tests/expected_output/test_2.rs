@@ -1120,7 +1120,10 @@ pub mod tests {
                 pub fn to_owned(&self) -> InnerProfile2 {
                     InnerProfile2 {
                         x: self.x().expect("valid view"),
-                        y: self.y().expect("valid view").to_owned().into(),
+                        y: ssz_types::VariableList::new(
+                                self.y().expect("valid view").to_owned(),
+                            )
+                            .expect("valid view"),
                         z: self.z().expect("valid view").to_owned(),
                     }
                 }
@@ -1715,7 +1718,10 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> InnerProfile4 {
                     InnerProfile4 {
-                        y: self.y().expect("valid view").to_owned().into(),
+                        y: ssz_types::VariableList::new(
+                                self.y().expect("valid view").to_owned(),
+                            )
+                            .expect("valid view"),
                         z: self.z().expect("valid view").to_owned(),
                     }
                 }

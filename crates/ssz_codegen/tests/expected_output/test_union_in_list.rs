@@ -410,7 +410,14 @@ pub mod tests {
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const MAX_LIST_SIZE: u64 = 65536u64;
             /// Test Union[Type1, Type2] syntax in a List
-            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                ssz_derive::Encode,
+                ssz_derive::Decode
+            )]
             #[ssz(struct_behaviour = "container")]
             pub struct UnionTypeAliasVariant1 {
                 pub value: u8,
@@ -446,7 +453,13 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                std::marker::Copy
+            )]
             pub struct UnionTypeAliasVariant1Ref<'a> {
                 bytes: &'a [u8],
             }
@@ -529,7 +542,14 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                ssz_derive::Encode,
+                ssz_derive::Decode
+            )]
             #[ssz(struct_behaviour = "container")]
             pub struct UnionTypeAliasVariant2 {
                 pub value: u16,
@@ -565,7 +585,13 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                std::marker::Copy
+            )]
             pub struct UnionTypeAliasVariant2Ref<'a> {
                 bytes: &'a [u8],
             }
@@ -649,7 +675,14 @@ pub mod tests {
                 }
             }
             /// Container using class Name(Union): syntax in a List
-            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                ssz_derive::Encode,
+                ssz_derive::Decode
+            )]
             #[ssz(struct_behaviour = "container")]
             pub struct ContainerWithUnionClass {
                 pub items: VariableList<UnionClass, 65536usize>,
@@ -685,7 +718,13 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                std::marker::Copy
+            )]
             pub struct ContainerWithUnionClassRef<'a> {
                 bytes: &'a [u8],
             }
@@ -807,13 +846,20 @@ pub mod tests {
                                 })
                                 .collect();
                             let items = items.expect("valid view");
-                            ssz_types::VariableList::from(items)
+                            ssz_types::VariableList::new(items).expect("valid view")
                         },
                     }
                 }
             }
             /// Container using class Name(Union): syntax with external in a List
-            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                ssz_derive::Encode,
+                ssz_derive::Decode
+            )]
             #[ssz(struct_behaviour = "container")]
             pub struct ContainerWithUnionClassExternal {
                 pub items: VariableList<UnionClassWithExternal, 65536usize>,
@@ -849,7 +895,13 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                std::marker::Copy
+            )]
             pub struct ContainerWithUnionClassExternalRef<'a> {
                 bytes: &'a [u8],
             }
@@ -972,7 +1024,7 @@ pub mod tests {
                                 })
                                 .collect();
                             let items = items.expect("valid view");
-                            ssz_types::VariableList::from(items)
+                            ssz_types::VariableList::new(items).expect("valid view")
                         },
                     }
                 }
@@ -980,7 +1032,14 @@ pub mod tests {
             pub type TypeAliasVariant1 = UnionTypeAliasVariant1;
             pub type TypeAliasVariant2 = UnionTypeAliasVariant2;
             /// Container using Union[Type1, Type2] syntax in a List
-            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                ssz_derive::Encode,
+                ssz_derive::Decode
+            )]
             #[ssz(struct_behaviour = "container")]
             pub struct ContainerWithUnionTypeAlias {
                 pub items: VariableList<UnionTypeAlias, 65536usize>,
@@ -1016,7 +1075,13 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                std::marker::Copy
+            )]
             pub struct ContainerWithUnionTypeAliasRef<'a> {
                 bytes: &'a [u8],
             }
@@ -1138,7 +1203,7 @@ pub mod tests {
                                 })
                                 .collect();
                             let items = items.expect("valid view");
-                            ssz_types::VariableList::from(items)
+                            ssz_types::VariableList::new(items).expect("valid view")
                         },
                     }
                 }

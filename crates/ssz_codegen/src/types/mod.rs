@@ -2275,7 +2275,10 @@ impl ClassDef {
                             let inner = &**ty;
                             if matches!(inner.resolution, TypeResolutionKind::UInt(8)) {
                                 quote! {
-                                    #field_name: self.#field_name().expect("valid view").to_owned().into()
+                                    #field_name: ssz_types::VariableList::new(
+                                        self.#field_name().expect("valid view").to_owned(),
+                                    )
+                                    .expect("valid view")
                                 }
                             } else {
                                 quote! {
@@ -2288,7 +2291,7 @@ impl ClassDef {
                                             })
                                             .collect();
                                         let items = items.expect("valid view");
-                                        ssz_types::VariableList::from(items)
+                                        ssz_types::VariableList::new(items).expect("valid view")
                                     }
                                 }
                             }

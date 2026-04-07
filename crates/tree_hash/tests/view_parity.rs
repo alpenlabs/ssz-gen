@@ -43,7 +43,7 @@ fn bitlistref_tree_hash_matches_owned_large_capacity() {
 
 #[test]
 fn bytesref_tree_hash_matches_owned_empty() {
-    let owned: VariableList<u8, 64> = vec![].into();
+    let owned = VariableList::<u8, 64>::try_from(vec![]).unwrap();
     let bytes = owned.as_ssz_bytes();
     let view = BytesRef::<64>::from_ssz_bytes(&bytes).unwrap();
 
@@ -55,7 +55,7 @@ fn bytesref_tree_hash_matches_owned_empty() {
 
 #[test]
 fn bytesref_tree_hash_matches_owned_short() {
-    let owned: VariableList<u8, 64> = vec![0x42].into();
+    let owned = VariableList::<u8, 64>::try_from(vec![0x42]).unwrap();
     let bytes = owned.as_ssz_bytes();
     let view = BytesRef::<64>::from_ssz_bytes(&bytes).unwrap();
 
@@ -67,7 +67,7 @@ fn bytesref_tree_hash_matches_owned_short() {
 
 #[test]
 fn listref_tree_hash_matches_owned_empty_basic() {
-    let owned: VariableList<u16, 17> = vec![].into();
+    let owned = VariableList::<u16, 17>::try_from(vec![]).unwrap();
     let bytes = owned.as_ssz_bytes();
     let view = ListRef::<u16, 17>::from_ssz_bytes(&bytes).unwrap();
 
@@ -79,7 +79,7 @@ fn listref_tree_hash_matches_owned_empty_basic() {
 
 #[test]
 fn listref_tree_hash_matches_owned_empty_composite() {
-    let owned: VariableList<VariableList<u8, 4>, 2> = vec![].into();
+    let owned = VariableList::<VariableList<u8, 4>, 2>::try_from(vec![]).unwrap();
     let bytes = owned.as_ssz_bytes();
     let view = ListRef::<BytesRef<'_, 4>, 2>::from_ssz_bytes(&bytes).unwrap();
 

@@ -633,7 +633,7 @@ fn test_variable_list_tree_hash() {
     );
 
     // List with values: List[uint64, 8](1, 2, 3, 4)
-    let with_values: VariableList<u64, 8> = VariableList::from(vec![1u64, 2, 3, 4]);
+    let with_values = VariableList::<u64, 8>::try_from(vec![1u64, 2, 3, 4]).unwrap();
     assert_eq!(
         <VariableList<u64, 8> as TreeHash<Sha256Hasher>>::tree_hash_root(&with_values),
         Hash256::from_slice(&HASH_LIST_U64_1234),
