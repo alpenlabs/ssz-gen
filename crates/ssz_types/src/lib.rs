@@ -29,7 +29,7 @@
 //! let mut example = Example {
 //!     bit_vector: Bitfield::<length::Fixed<8>>::new(),
 //!     bit_list: Bitfield::<length::Variable<8>>::with_capacity(4).unwrap(),
-//!     variable_list: <_>::from(vec![0, 1]),
+//!     variable_list: VariableList::try_from(vec![0, 1]).unwrap(),
 //!     fixed_vector: <_>::from(vec![2, 3]),
 //! };
 //!

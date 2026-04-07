@@ -44,7 +44,7 @@ fn bench_decode_variable_list_u64(c: &mut Criterion) {
 
     for size in [10, 100, 1000, 10000] {
         let data = generate_u64_vec(size);
-        let list: VariableList<u64, 16384> = data.into();
+        let list = VariableList::<u64, 16384>::try_from(data).unwrap();
         let encoded = list.as_ssz_bytes();
 
         group.throughput(Throughput::Elements(size as u64));
@@ -77,7 +77,7 @@ fn bench_decode_variable_list_bytes(c: &mut Criterion) {
 
     for size in [100, 1000, 10000, 100000] {
         let data = generate_byte_vec(size);
-        let list: VariableList<u8, 131072> = data.into();
+        let list = VariableList::<u8, 131072>::try_from(data).unwrap();
         let encoded = list.as_ssz_bytes();
 
         group.throughput(Throughput::Bytes(size as u64));
@@ -219,7 +219,7 @@ fn bench_tree_hash_variable_list_u64(c: &mut Criterion) {
 
     for size in [10, 100, 1000] {
         let data = generate_u64_vec(size);
-        let list: VariableList<u64, 16384> = data.into();
+        let list = VariableList::<u64, 16384>::try_from(data).unwrap();
         let encoded = list.as_ssz_bytes();
 
         group.throughput(Throughput::Elements(size as u64));
@@ -348,7 +348,7 @@ fn bench_iterate_variable_list_u64(c: &mut Criterion) {
 
     for size in [100, 1000, 10000] {
         let data = generate_u64_vec(size);
-        let list: VariableList<u64, 16384> = data.into();
+        let list = VariableList::<u64, 16384>::try_from(data).unwrap();
         let encoded = list.as_ssz_bytes();
 
         group.throughput(Throughput::Elements(size as u64));
@@ -381,7 +381,7 @@ fn bench_decode_and_hash_variable_list(c: &mut Criterion) {
 
     for size in [100, 1000] {
         let data = generate_u64_vec(size);
-        let list: VariableList<u64, 16384> = data.into();
+        let list = VariableList::<u64, 16384>::try_from(data).unwrap();
         let encoded = list.as_ssz_bytes();
 
         group.throughput(Throughput::Elements(size as u64));

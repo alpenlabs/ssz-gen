@@ -65,7 +65,7 @@ impl tree_hash::TreeHash<tree_hash::Sha256Hasher> for HashVec {
 
 #[test]
 fn macro_list_tree_hash_matches_variable_list() {
-    let list: VariableList<u8, 64> = vec![0x42].into();
+    let list = VariableList::<u8, 64>::try_from(vec![0x42]).unwrap();
     let macro_list = MacroList(list.clone());
 
     let list_root = TreeHash::<Sha256Hasher>::tree_hash_root(&list);
@@ -406,7 +406,7 @@ fn shape_2() {
 fn shape_3() {
     let shape_3 = Shape3 {
         side: Optional::Some(0x42),
-        colors: Optional::Some(VariableList::from(vec![1, 2])),
+        colors: Optional::Some(VariableList::try_from(vec![1, 2]).unwrap()),
         radius: Optional::Some(0x42),
     };
 
@@ -436,7 +436,7 @@ fn shape_3() {
 
     let shape_3 = Shape3 {
         side: Optional::None,
-        colors: Optional::Some(VariableList::from(vec![1, 2])),
+        colors: Optional::Some(VariableList::try_from(vec![1, 2]).unwrap()),
         radius: Optional::None,
     };
 
@@ -466,7 +466,7 @@ fn shape_3() {
 
     let shape_3 = Shape3 {
         side: Optional::None,
-        colors: Optional::Some(VariableList::from(vec![1, 2])),
+        colors: Optional::Some(VariableList::try_from(vec![1, 2]).unwrap()),
         radius: Optional::Some(0x42),
     };
 

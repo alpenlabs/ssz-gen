@@ -380,7 +380,7 @@ fn shape_2() {
 fn shape_3() {
     let shape = Shape3 {
         side: Optional::Some(0x42),
-        colors: Optional::Some(VariableList::from(vec![1, 2])),
+        colors: Optional::Some(VariableList::try_from(vec![1, 2]).unwrap()),
         radius: Optional::Some(0x42),
     };
     assert_encode_decode(
@@ -399,7 +399,7 @@ fn shape_3() {
 
     let shape = Shape3 {
         side: Optional::None,
-        colors: Optional::Some(VariableList::from(vec![1, 2])),
+        colors: Optional::Some(VariableList::try_from(vec![1, 2]).unwrap()),
         radius: Optional::None,
     };
     assert_encode_decode(&shape, &[0x02, 0x04, 0x00, 0x00, 0x00, 0x01, 0x02]);
@@ -413,7 +413,7 @@ fn shape_3() {
 
     let shape = Shape3 {
         side: Optional::None,
-        colors: Optional::Some(VariableList::from(vec![1, 2])),
+        colors: Optional::Some(VariableList::try_from(vec![1, 2]).unwrap()),
         radius: Optional::Some(0x42),
     };
     assert_encode_decode(

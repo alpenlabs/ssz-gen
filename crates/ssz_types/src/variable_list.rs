@@ -31,15 +31,14 @@ use crate::{Error, tree_hash::vec_tree_hash_root};
 /// let base: Vec<u64> = vec![1, 2, 3, 4];
 ///
 /// // Create a `VariableList` from a `Vec` that has the expected length.
-/// let exact: VariableList<_, 4> = VariableList::from(base.clone());
+/// let exact = VariableList::<_, 4>::try_from(base.clone()).unwrap();
 /// assert_eq!(&exact[..], &[1, 2, 3, 4]);
 ///
-/// // Create a `VariableList` from a `Vec` that is too long and the `Vec` is truncated.
-/// let short: VariableList<_, 3> = VariableList::from(base.clone());
-/// assert_eq!(&short[..], &[1, 2, 3]);
+/// // Creating a `VariableList` from a `Vec` that is too long returns an error.
+/// assert!(VariableList::<_, 3>::try_from(base.clone()).is_err());
 ///
 /// // Create a `VariableList` from a `Vec` that is shorter than the maximum.
-/// let mut long: VariableList<_, 5> = VariableList::from(base);
+/// let mut long = VariableList::<_, 5>::try_from(base).unwrap();
 /// assert_eq!(&long[..], &[1, 2, 3, 4]);
 ///
 /// // Push a value to if it does not exceed the maximum
@@ -127,11 +126,11 @@ impl<T, const N: usize> VariableList<T, N> {
     }
 }
 
-impl<T, const N: usize> From<Vec<T>> for VariableList<T, N> {
-    fn from(mut vec: Vec<T>) -> Self {
-        vec.truncate(N);
+impl<T, const N: usize> TryFrom<Vec<T>> for VariableList<T, N> {
+    type Error = Error;
 
-        Self { vec }
+    fn try_from(vec: Vec<T>) -> Result<Self, Self::Error> {
+        Self::new(vec)
     }
 }
 
@@ -276,7 +275,7 @@ where
         let max_len = N;
 
         if bytes.is_empty() {
-            Ok(vec![].into())
+            Ok(Self::new(vec![]).expect("empty list fits within max length"))
         } else if T::is_ssz_fixed_len() {
             let num_items = bytes
                 .len()
@@ -295,10 +294,21 @@ where
                     vec.push(T::from_ssz_bytes(chunk)?);
                     Ok(vec)
                 })
-                .map(Into::into)
+                .and_then(|vec| {
+                    Self::new(vec).map_err(|e| {
+                        ssz::DecodeError::BytesInvalid(format!(
+                            "VariableList exceeds maximum length: {e}"
+                        ))
+                    })
+                })
         } else {
-            ssz::decode_list_of_variable_length_items(bytes, Some(max_len))
-                .map(|vec: Vec<_>| vec.into())
+            ssz::decode_list_of_variable_length_items(bytes, Some(max_len)).and_then(|vec| {
+                Self::new(vec).map_err(|e| {
+                    ssz::DecodeError::BytesInvalid(format!(
+                        "VariableList exceeds maximum length: {e}"
+                    ))
+                })
+            })
         }
     }
 }
@@ -370,7 +380,7 @@ mod test {
     fn indexing() {
         let vec = vec![1, 2];
 
-        let mut fixed: VariableList<u64, 8192> = vec.clone().into();
+        let mut fixed = VariableList::<u64, 8192>::try_from(vec.clone()).unwrap();
 
         assert_eq!(fixed[0], 1);
         assert_eq!(&fixed[0..1], &vec[0..1]);
@@ -383,23 +393,29 @@ mod test {
     #[test]
     fn length() {
         let vec = vec![42; 5];
-        let fixed: VariableList<u64, 4> = VariableList::from(vec.clone());
-        assert_eq!(&fixed[..], &vec[0..4]);
+        let fixed = VariableList::<u64, 4>::try_from(vec.clone());
+        assert_eq!(
+            fixed,
+            Err(Error::OutOfBounds {
+                i: vec.len(),
+                len: 4,
+            })
+        );
 
         let vec = vec![42; 3];
-        let fixed: VariableList<u64, 4> = VariableList::from(vec.clone());
+        let fixed = VariableList::<u64, 4>::try_from(vec.clone()).unwrap();
         assert_eq!(&fixed[0..3], &vec[..]);
         assert_eq!(&fixed[..], &vec![42, 42, 42][..]);
 
         let vec = vec![];
-        let fixed: VariableList<u64, 4> = VariableList::from(vec);
+        let fixed = VariableList::<u64, 4>::try_from(vec).unwrap();
         assert_eq!(&fixed[..], &[] as &[u64]);
     }
 
     #[test]
     fn deref() {
         let vec = vec![0, 2, 4, 6];
-        let fixed: VariableList<u64, 4> = VariableList::from(vec);
+        let fixed = VariableList::<u64, 4>::try_from(vec).unwrap();
 
         assert_eq!(fixed.first(), Some(&0));
         assert_eq!(fixed.get(3), Some(&6));
@@ -408,7 +424,7 @@ mod test {
 
     #[test]
     fn encode() {
-        let vec: VariableList<u16, 2> = vec![0; 2].into();
+        let vec = VariableList::<u16, 2>::try_from(vec![0; 2]).unwrap();
         assert_eq!(vec.as_ssz_bytes(), vec![0, 0, 0, 0]);
         assert_eq!(<VariableList<u16, 2> as Encode>::ssz_fixed_len(), 4);
     }
@@ -421,8 +437,8 @@ mod test {
 
     #[test]
     fn u16_len_8() {
-        round_trip::<VariableList<u16, 8>>(vec![42; 8].into());
-        round_trip::<VariableList<u16, 8>>(vec![0; 8].into());
+        round_trip::<VariableList<u16, 8>>(VariableList::try_from(vec![42; 8]).unwrap());
+        round_trip::<VariableList<u16, 8>>(VariableList::try_from(vec![0; 8]).unwrap());
     }
 
     fn root_with_length(bytes: &[u8], len: usize) -> tree_hash::Hash256 {
@@ -432,14 +448,14 @@ mod test {
 
     #[test]
     fn tree_hash_u8() {
-        let fixed: VariableList<u8, 0> = VariableList::from(vec![]);
+        let fixed = VariableList::<u8, 0>::try_from(vec![]).unwrap();
         assert_eq!(
             <VariableList<u8, 0> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
             root_with_length(&[0; 8], 0)
         );
 
         for i in 0..=1 {
-            let fixed: VariableList<u8, 1> = VariableList::from(vec![0; i]);
+            let fixed = VariableList::<u8, 1>::try_from(vec![0; i]).unwrap();
             assert_eq!(
                 <VariableList<u8, 1> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
                 root_with_length(&vec![0; i], i)
@@ -447,7 +463,7 @@ mod test {
         }
 
         for i in 0..=8 {
-            let fixed: VariableList<u8, 8> = VariableList::from(vec![0; i]);
+            let fixed = VariableList::<u8, 8>::try_from(vec![0; i]).unwrap();
             assert_eq!(
                 <VariableList<u8, 8> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
                 root_with_length(&vec![0; i], i)
@@ -455,7 +471,7 @@ mod test {
         }
 
         for i in 0..=13 {
-            let fixed: VariableList<u8, 13> = VariableList::from(vec![0; i]);
+            let fixed = VariableList::<u8, 13>::try_from(vec![0; i]).unwrap();
             assert_eq!(
                 <VariableList<u8, 13> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
                 root_with_length(&vec![0; i], i)
@@ -463,7 +479,7 @@ mod test {
         }
 
         for i in 0..=16 {
-            let fixed: VariableList<u8, 16> = VariableList::from(vec![0; i]);
+            let fixed = VariableList::<u8, 16>::try_from(vec![0; i]).unwrap();
             assert_eq!(
                 <VariableList<u8, 16> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
                 root_with_length(&vec![0; i], i)
@@ -471,7 +487,7 @@ mod test {
         }
 
         let source: Vec<u8> = (0..16).collect();
-        let fixed: VariableList<u8, 16> = VariableList::from(source.clone());
+        let fixed = VariableList::<u8, 16>::try_from(source.clone()).unwrap();
         assert_eq!(
             <VariableList<u8, 16> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
             root_with_length(&source, 16)
@@ -504,14 +520,14 @@ mod test {
     fn tree_hash_composite() {
         let a = A { a: 0, b: 1 };
 
-        let fixed: VariableList<A, 0> = VariableList::from(vec![]);
+        let fixed = VariableList::<A, 0>::try_from(vec![]).unwrap();
         assert_eq!(
             <VariableList<A, 0> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
             padded_root_with_length(&[0; 32], 0, 0),
         );
 
         for i in 0..=1 {
-            let fixed: VariableList<A, 1> = VariableList::from(vec![a; i]);
+            let fixed = VariableList::<A, 1>::try_from(vec![a; i]).unwrap();
             assert_eq!(
                 <VariableList<A, 1> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
                 padded_root_with_length(&repeat(a.tree_hash_root().as_slice(), i), i, 1),
@@ -520,7 +536,7 @@ mod test {
         }
 
         for i in 0..=8 {
-            let fixed: VariableList<A, 8> = VariableList::from(vec![a; i]);
+            let fixed = VariableList::<A, 8>::try_from(vec![a; i]).unwrap();
             assert_eq!(
                 <VariableList<A, 8> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
                 padded_root_with_length(&repeat(a.tree_hash_root().as_slice(), i), i, 8),
@@ -529,7 +545,7 @@ mod test {
         }
 
         for i in 0..=13 {
-            let fixed: VariableList<A, 13> = VariableList::from(vec![a; i]);
+            let fixed = VariableList::<A, 13>::try_from(vec![a; i]).unwrap();
             assert_eq!(
                 <VariableList<A, 13> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
                 padded_root_with_length(&repeat(a.tree_hash_root().as_slice(), i), i, 13),
@@ -538,7 +554,7 @@ mod test {
         }
 
         for i in 0..=16 {
-            let fixed: VariableList<A, 16> = VariableList::from(vec![a; i]);
+            let fixed = VariableList::<A, 16>::try_from(vec![a; i]).unwrap();
             assert_eq!(
                 <VariableList<A, 16> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
                 padded_root_with_length(&repeat(a.tree_hash_root().as_slice(), i), i, 16),
@@ -589,8 +605,8 @@ mod test {
 
     #[test]
     fn std_hash() {
-        let x: VariableList<u32, 16> = VariableList::from(vec![3; 16]);
-        let y: VariableList<u32, 16> = VariableList::from(vec![4; 16]);
+        let x = VariableList::<u32, 16>::try_from(vec![3; 16]).unwrap();
+        let y = VariableList::<u32, 16>::try_from(vec![4; 16]).unwrap();
         let mut hashset = HashSet::new();
 
         for value in [x.clone(), y.clone()] {

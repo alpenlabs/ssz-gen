@@ -13,7 +13,14 @@ pub mod tests {
             use ssz::view::*;
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const MAX_VK_BYTES: u64 = 48u64;
-            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                ssz_derive::Encode,
+                ssz_derive::Decode
+            )]
             #[ssz(struct_behaviour = "container")]
             pub struct State {
                 pub data: FixedBytes<48usize>,
@@ -55,7 +62,13 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                std::marker::Copy
+            )]
             pub struct StateRef<'a> {
                 bytes: &'a [u8],
             }
@@ -173,7 +186,14 @@ pub mod tests {
             use ssz::view::*;
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             pub const MAX_UPDATES: u64 = 10u64;
-            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                ssz_derive::Encode,
+                ssz_derive::Decode
+            )]
             #[ssz(struct_behaviour = "container")]
             pub struct Update {
                 pub state: crate::tests::input::test_cross_entry_state::State,
@@ -224,7 +244,13 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                std::marker::Copy
+            )]
             pub struct UpdateRef<'a> {
                 bytes: &'a [u8],
             }
@@ -385,7 +411,10 @@ pub mod tests {
                             ssz_types::view::ToOwnedSsz::to_owned(&view)
                         },
                         timestamp: self.timestamp().expect("valid view"),
-                        updates: self.updates().expect("valid view").to_owned().into(),
+                        updates: ssz_types::VariableList::new(
+                                self.updates().expect("valid view").to_owned(),
+                            )
+                            .expect("valid view"),
                     }
                 }
             }

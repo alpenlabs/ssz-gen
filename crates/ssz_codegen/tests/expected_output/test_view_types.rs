@@ -6,7 +6,14 @@ use ssz_derive::{Encode, Decode};
 use tree_hash::TreeHashDigest;
 use tree_hash_derive::TreeHash;
 use ssz::view::*;
-#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    ssz_derive::Encode,
+    ssz_derive::Decode
+)]
 #[ssz(struct_behaviour = "container")]
 pub struct ExportEntry {
     pub key: u32,
@@ -40,7 +47,13 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ExportEntry {
 /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
 /// needed.
 #[allow(dead_code, reason = "generated code using ssz-gen")]
-#[derive(Clone, Debug, PartialEq, Eq, Copy)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    std::marker::Copy
+)]
 pub struct ExportEntryRef<'a> {
     bytes: &'a [u8],
 }
@@ -133,7 +146,14 @@ impl<'a> ExportEntryRef<'a> {
         }
     }
 }
-#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    ssz_derive::Encode,
+    ssz_derive::Decode
+)]
 #[ssz(struct_behaviour = "container")]
 pub struct ViewTypeTest {
     pub payload: VariableList<u8, 4096usize>,
@@ -171,7 +191,13 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ViewTypeTest {
 /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
 /// needed.
 #[allow(dead_code, reason = "generated code using ssz-gen")]
-#[derive(Clone, Debug, PartialEq, Eq, Copy)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    std::marker::Copy
+)]
 pub struct ViewTypeTestRef<'a> {
     bytes: &'a [u8],
 }
@@ -312,7 +338,10 @@ impl<'a> ViewTypeTestRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> ViewTypeTest {
         ViewTypeTest {
-            payload: self.payload().expect("valid view").to_owned().into(),
+            payload: ssz_types::VariableList::new(
+                    self.payload().expect("valid view").to_owned(),
+                )
+                .expect("valid view"),
             entries: {
                 let view = self.entries().expect("valid view");
                 let items: Result<Vec<_>, _> = view
@@ -323,7 +352,7 @@ impl<'a> ViewTypeTestRef<'a> {
                     })
                     .collect();
                 let items = items.expect("valid view");
-                ssz_types::VariableList::from(items)
+                ssz_types::VariableList::new(items).expect("valid view")
             },
             hash: ssz_types::FixedBytes(self.hash().expect("valid view").to_owned()),
         }

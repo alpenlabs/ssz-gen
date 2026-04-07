@@ -1488,7 +1488,10 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> Beta {
                     Beta {
-                        d: self.d().expect("valid view").to_owned().into(),
+                        d: ssz_types::VariableList::new(
+                                self.d().expect("valid view").to_owned(),
+                            )
+                            .expect("valid view"),
                         e: self.e().expect("valid view"),
                         f: self.f().expect("valid view"),
                     }
@@ -2689,7 +2692,7 @@ pub mod tests {
                                 })
                                 .collect();
                             let items = items.expect("valid view");
-                            ssz_types::VariableList::from(items)
+                            ssz_types::VariableList::new(items).expect("valid view")
                         },
                         large_int_128: self.large_int_128().expect("valid view"),
                         large_int_256: self.large_int_256().expect("valid view"),

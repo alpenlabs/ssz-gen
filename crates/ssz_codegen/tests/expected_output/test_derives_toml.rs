@@ -1102,7 +1102,7 @@ pub mod tests {
             pub type AliasNested = AliasUintAlias;
             pub type BitAlias = BitList<{ VAL_X as usize }>;
             pub type UnionE = UnionD;
-            #[derive(Eq, Clone, Encode, Decode)]
+            #[derive(Eq, std::clone::Clone, ssz_derive::Encode, ssz_derive::Decode)]
             #[ssz(struct_behaviour = "container")]
             pub struct Alpha {
                 pub a: u8,
@@ -1151,7 +1151,7 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Eq, Copy, Clone)]
+            #[derive(Eq, std::marker::Copy, std::clone::Clone)]
             pub struct AlphaRef<'a> {
                 bytes: &'a [u8],
             }
@@ -1273,7 +1273,7 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Debug, Clone, Encode, Decode)]
+            #[derive(Debug, std::clone::Clone, ssz_derive::Encode, ssz_derive::Decode)]
             #[ssz(struct_behaviour = "container")]
             pub struct Beta {
                 pub d: AliasListAlias,
@@ -1322,7 +1322,7 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Debug, std::marker::Copy, std::clone::Clone)]
             pub struct BetaRef<'a> {
                 bytes: &'a [u8],
             }
@@ -1462,13 +1462,16 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> Beta {
                     Beta {
-                        d: self.d().expect("valid view").to_owned().into(),
+                        d: ssz_types::VariableList::new(
+                                self.d().expect("valid view").to_owned(),
+                            )
+                            .expect("valid view"),
                         e: self.e().expect("valid view"),
                         f: self.f().expect("valid view"),
                     }
                 }
             }
-            #[derive(Debug, Clone, Encode, Decode)]
+            #[derive(Debug, std::clone::Clone, ssz_derive::Encode, ssz_derive::Decode)]
             #[ssz(struct_behaviour = "stable_container", max_fields = 42usize)]
             pub struct Gamma {
                 pub g: Optional<u8>,
@@ -1524,7 +1527,7 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Debug, std::marker::Copy, std::clone::Clone)]
             pub struct GammaRef<'a> {
                 bytes: &'a [u8],
             }
@@ -1682,7 +1685,7 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Debug, Clone, Encode, Decode)]
+            #[derive(Debug, std::clone::Clone, ssz_derive::Encode, ssz_derive::Decode)]
             #[ssz(struct_behaviour = "container")]
             pub struct Delta {
                 pub z: bool,
@@ -1724,7 +1727,7 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Debug, std::marker::Copy, std::clone::Clone)]
             pub struct DeltaRef<'a> {
                 bytes: &'a [u8],
             }
@@ -1824,7 +1827,7 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Debug, Clone, Encode, Decode)]
+            #[derive(Debug, std::clone::Clone, ssz_derive::Encode, ssz_derive::Decode)]
             #[ssz(struct_behaviour = "stable_container", max_fields = 42usize)]
             pub struct Epsilon {
                 pub g: Optional<u8>,
@@ -1900,7 +1903,7 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Debug, std::marker::Copy, std::clone::Clone)]
             pub struct EpsilonRef<'a> {
                 bytes: &'a [u8],
             }
@@ -2122,7 +2125,7 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Debug, Clone, Encode, Decode)]
+            #[derive(Debug, std::clone::Clone, ssz_derive::Encode, ssz_derive::Decode)]
             #[ssz(struct_behaviour = "stable_container", max_fields = 128usize)]
             pub struct Zeta {
                 pub u: Optional<FixedBytes<16usize>>,
@@ -2178,7 +2181,7 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Debug, std::marker::Copy, std::clone::Clone)]
             pub struct ZetaRef<'a> {
                 bytes: &'a [u8],
             }
@@ -2345,7 +2348,7 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Debug, Clone, Encode, Decode)]
+            #[derive(Debug, std::clone::Clone, ssz_derive::Encode, ssz_derive::Decode)]
             #[ssz(struct_behaviour = "container")]
             pub struct TestType {
                 pub ccc: u8,
@@ -2412,7 +2415,7 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Debug, std::marker::Copy, std::clone::Clone)]
             pub struct TestTypeRef<'a> {
                 bytes: &'a [u8],
             }
@@ -2598,14 +2601,14 @@ pub mod tests {
                                 })
                                 .collect();
                             let items = items.expect("valid view");
-                            ssz_types::VariableList::from(items)
+                            ssz_types::VariableList::new(items).expect("valid view")
                         },
                         large_int_128: self.large_int_128().expect("valid view"),
                         large_int_256: self.large_int_256().expect("valid view"),
                     }
                 }
             }
-            #[derive(Debug, Clone, Encode, Decode)]
+            #[derive(Debug, std::clone::Clone, ssz_derive::Encode, ssz_derive::Decode)]
             #[ssz(struct_behaviour = "container")]
             pub struct Eta {
                 pub l: Zeta,
@@ -2654,7 +2657,7 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Debug, std::marker::Copy, std::clone::Clone)]
             pub struct EtaRef<'a> {
                 bytes: &'a [u8],
             }
@@ -2827,7 +2830,7 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Debug, Clone, Encode, Decode)]
+            #[derive(Debug, std::clone::Clone, ssz_derive::Encode, ssz_derive::Decode)]
             #[ssz(struct_behaviour = "container")]
             pub struct Theta {
                 pub o: UnionB,
@@ -2876,7 +2879,7 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Debug, std::marker::Copy, std::clone::Clone)]
             pub struct ThetaRef<'a> {
                 bytes: &'a [u8],
             }
@@ -3041,7 +3044,7 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Debug, Clone, Encode, Decode)]
+            #[derive(Debug, std::clone::Clone, ssz_derive::Encode, ssz_derive::Decode)]
             #[ssz(struct_behaviour = "stable_container", max_fields = 42usize)]
             pub struct Iota {
                 pub g: Optional<u8>,
@@ -3137,7 +3140,7 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Debug, std::marker::Copy, std::clone::Clone)]
             pub struct IotaRef<'a> {
                 bytes: &'a [u8],
             }
@@ -3432,7 +3435,7 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Debug, Clone, Encode, Decode)]
+            #[derive(Debug, std::clone::Clone, ssz_derive::Encode, ssz_derive::Decode)]
             #[ssz(struct_behaviour = "container")]
             pub struct Kappa {
                 pub t: Alpha,
@@ -3481,7 +3484,7 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Debug, std::marker::Copy, std::clone::Clone)]
             pub struct KappaRef<'a> {
                 bytes: &'a [u8],
             }
@@ -3644,7 +3647,7 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Debug, Clone, Encode, Decode)]
+            #[derive(Debug, std::clone::Clone, ssz_derive::Encode, ssz_derive::Decode)]
             #[ssz(struct_behaviour = "stable_container", max_fields = 4usize)]
             pub struct Lambda {
                 pub w: Optional<u16>,
@@ -3700,7 +3703,7 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Debug, std::marker::Copy, std::clone::Clone)]
             pub struct LambdaRef<'a> {
                 bytes: &'a [u8],
             }
@@ -3849,7 +3852,7 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Debug, Clone, Encode, Decode)]
+            #[derive(Debug, std::clone::Clone, ssz_derive::Encode, ssz_derive::Decode)]
             #[ssz(struct_behaviour = "container")]
             pub struct Mu {
                 pub y: Lambda,
@@ -3891,7 +3894,7 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Debug, std::marker::Copy, std::clone::Clone)]
             pub struct MuRef<'a> {
                 bytes: &'a [u8],
             }
@@ -4034,7 +4037,7 @@ pub mod tests {
                 }
             }
             pub type AliasMu = Mu;
-            #[derive(Debug, Clone, Encode, Decode)]
+            #[derive(Debug, std::clone::Clone, ssz_derive::Encode, ssz_derive::Decode)]
             #[ssz(struct_behaviour = "container")]
             pub struct Nu {
                 pub zz: AliasMu,
@@ -4090,7 +4093,7 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Debug, Copy, Clone)]
+            #[derive(Debug, std::marker::Copy, std::clone::Clone)]
             pub struct NuRef<'a> {
                 bytes: &'a [u8],
             }

@@ -11,7 +11,14 @@ pub mod tests {
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
-            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                ssz_derive::Encode,
+                ssz_derive::Decode
+            )]
             #[ssz(struct_behaviour = "stable_container", max_fields = 9usize)]
             pub struct BitvectorLenTest {
                 pub a: Optional<u8>,
@@ -48,22 +55,11 @@ pub mod tests {
                     if let ssz_types::Optional::Some(ref inner) = self.a {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = self.b {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
-                    field_roots.push(H::get_zero_hash(0));
                     let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,
                     >(&field_roots);
@@ -79,7 +75,13 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                std::marker::Copy
+            )]
             pub struct BitvectorLenTestRef<'a> {
                 bytes: &'a [u8],
             }
@@ -161,17 +163,10 @@ pub mod tests {
                     if let ssz_types::Optional::Some(ref inner) = a {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     if let ssz_types::Optional::Some(ref inner) = b {
                         field_roots
                             .push(<_ as tree_hash::TreeHash<H>>::tree_hash_root(inner));
-                    } else {
-                        field_roots.push(H::get_zero_hash(0));
-                    }
-                    for _ in 2usize..9usize {
-                        field_roots.push(H::get_zero_hash(0));
                     }
                     let hash = tree_hash::merkleize_progressive_with_hasher::<
                         H,

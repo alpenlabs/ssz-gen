@@ -1032,7 +1032,7 @@ fn test_view_types_imports_and_to_owned() {
 
     // Verify that list to_owned conversion builds VariableList from items
     assert!(
-        generated.contains("VariableList::from(items)"),
+        generated.contains("VariableList::new(items).expect(\"valid view\")"),
         "ListRef to_owned conversion should build VariableList"
     );
 

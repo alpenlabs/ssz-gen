@@ -6,7 +6,14 @@ use ssz_derive::{Encode, Decode};
 use tree_hash::TreeHashDigest;
 use tree_hash_derive::TreeHash;
 use ssz::view::*;
-#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    ssz_derive::Encode,
+    ssz_derive::Decode
+)]
 #[ssz(struct_behaviour = "container")]
 pub struct ExportEntry {
     pub value: u64,
@@ -40,7 +47,13 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ExportEntry {
 /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
 /// needed.
 #[allow(dead_code, reason = "generated code using ssz-gen")]
-#[derive(Clone, Debug, PartialEq, Eq, Copy)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    std::marker::Copy
+)]
 pub struct ExportEntryRef<'a> {
     bytes: &'a [u8],
 }
@@ -133,7 +146,14 @@ impl<'a> ExportEntryRef<'a> {
         }
     }
 }
-#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    ssz_derive::Encode,
+    ssz_derive::Decode
+)]
 #[ssz(struct_behaviour = "container")]
 pub struct ExportContainer {
     pub entries: VariableList<ExportEntry, 4096usize>,
@@ -167,7 +187,13 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ExportContainer {
 /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
 /// needed.
 #[allow(dead_code, reason = "generated code using ssz-gen")]
-#[derive(Clone, Debug, PartialEq, Eq, Copy)]
+#[derive(
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    std::cmp::Eq,
+    std::marker::Copy
+)]
 pub struct ExportContainerRef<'a> {
     bytes: &'a [u8],
 }
@@ -291,7 +317,7 @@ impl<'a> ExportContainerRef<'a> {
                     })
                     .collect();
                 let items = items.expect("valid view");
-                ssz_types::VariableList::from(items)
+                ssz_types::VariableList::new(items).expect("valid view")
             },
             name: self.name().expect("valid view"),
         }

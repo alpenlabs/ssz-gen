@@ -292,13 +292,19 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> NestedAliasContainer {
                     NestedAliasContainer {
-                        field1: self.field1().expect("valid view").to_owned().into(),
+                        field1: ssz_types::VariableList::new(
+                                self.field1().expect("valid view").to_owned(),
+                            )
+                            .expect("valid view"),
                         field2: self
                             .field2()
                             .expect("valid view")
                             .to_owned()
                             .expect("valid view"),
-                        field3: self.field3().expect("valid view").to_owned().into(),
+                        field3: ssz_types::VariableList::new(
+                                self.field3().expect("valid view").to_owned(),
+                            )
+                            .expect("valid view"),
                         field4: self
                             .field4()
                             .expect("valid view")
