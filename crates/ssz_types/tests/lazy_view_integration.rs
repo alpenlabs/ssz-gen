@@ -16,7 +16,7 @@ use tree_hash::{Sha256Hasher, TreeHash};
 fn test_variable_list_lazy_decode() {
     // Create and encode a variable list
     let values = vec![1u64, 2, 3, 4, 5];
-    let owned: VariableList<u64, 10> = values.clone().into();
+    let owned = VariableList::<u64, 10>::try_from(values.clone()).unwrap();
     let encoded = owned.as_ssz_bytes();
 
     // Decode as view (lazy)
@@ -64,7 +64,7 @@ fn test_fixed_vector_lazy_decode() {
 fn test_no_allocations_on_decode() {
     // This test demonstrates that view decoding doesn't allocate
     let values = vec![1u64, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-    let owned: VariableList<u64, 20> = values.into();
+    let owned = VariableList::<u64, 20>::try_from(values).unwrap();
     let encoded = owned.as_ssz_bytes();
 
     // Decode as view - this should not allocate
@@ -83,7 +83,7 @@ fn test_no_allocations_on_decode() {
 fn test_nested_views_share_lifetime() {
     // Test that nested views all borrow from the same original buffer
     let inner_values = vec![100u16, 200, 300];
-    let inner: VariableList<u16, 10> = inner_values.into();
+    let inner = VariableList::<u16, 10>::try_from(inner_values).unwrap();
     let inner_encoded = inner.as_ssz_bytes();
 
     // Create a view over the inner list
@@ -100,7 +100,7 @@ fn test_nested_views_share_lifetime() {
 fn test_lazy_access_on_large_list() {
     // For large lists, lazy access means we don't decode everything
     let values: Vec<u64> = (0..1000).collect();
-    let owned: VariableList<u64, 1024> = values.into();
+    let owned = VariableList::<u64, 1024>::try_from(values).unwrap();
     let encoded = owned.as_ssz_bytes();
 
     // Decode as view

@@ -46,7 +46,7 @@ use crate::{Error, FixedVector, VariableList};
 /// use ssz_types::{VariableList, view::VariableListRef};
 ///
 /// // Encode a variable list
-/// let list: VariableList<u64, 10> = vec![1, 2, 3].into();
+/// let list = VariableList::<u64, 10>::try_from(vec![1, 2, 3]).unwrap();
 /// let encoded = list.as_ssz_bytes();
 ///
 /// // Create a zero-copy view
@@ -191,7 +191,7 @@ impl<'a, const N: usize> ToOwnedSsz<FixedBytes<N>> for ssz::view::FixedBytesRef<
 
 impl<'a, const N: usize> ToOwnedSsz<VariableList<u8, N>> for ssz::view::BytesRef<'a, N> {
     fn to_owned(&self) -> VariableList<u8, N> {
-        VariableList::from(self.to_owned())
+        VariableList::new(self.to_owned()).expect("valid view")
     }
 }
 
@@ -207,7 +207,7 @@ where
                 ToOwnedSsz::to_owned(&item)
             })
             .collect();
-        VariableList::from(items)
+        VariableList::new(items).expect("valid view")
     }
 }
 
@@ -460,7 +460,7 @@ mod tests {
     #[test]
     fn variable_list_ref_to_owned() {
         let values = vec![1u64, 2, 3];
-        let list: VariableList<u64, 10> = values.clone().into();
+        let list = VariableList::<u64, 10>::try_from(values.clone()).unwrap();
         let encoded = list.as_ssz_bytes();
 
         let view = VariableListRef::<u64, 10>::from_ssz_bytes(&encoded).unwrap();
@@ -521,7 +521,7 @@ mod tests {
     #[test]
     fn round_trip_variable_list() {
         // Test that view decoding matches owned decoding
-        let original: VariableList<u64, 10> = vec![1, 2, 3, 4, 5].into();
+        let original = VariableList::<u64, 10>::try_from(vec![1, 2, 3, 4, 5]).unwrap();
         let encoded = original.as_ssz_bytes();
 
         let view = VariableListRef::<u64, 10>::from_ssz_bytes(&encoded).unwrap();
@@ -546,7 +546,7 @@ mod tests {
     fn variable_list_ref_u8() {
         // Test with u8 (byte list)
         let values = vec![0x01u8, 0x02, 0x03, 0x04];
-        let list: VariableList<u8, 10> = values.clone().into();
+        let list = VariableList::<u8, 10>::try_from(values.clone()).unwrap();
         let encoded = list.as_ssz_bytes();
 
         let view = VariableListRef::<u8, 10>::from_ssz_bytes(&encoded).unwrap();
@@ -572,7 +572,7 @@ mod tests {
 
         // Test that tree hash of view matches tree hash of owned
         let values = vec![1u64, 2, 3, 4, 5];
-        let list: VariableList<u64, 10> = values.into();
+        let list = VariableList::<u64, 10>::try_from(values).unwrap();
         let encoded = list.as_ssz_bytes();
 
         let view = VariableListRef::<u64, 10>::from_ssz_bytes(&encoded).unwrap();
@@ -591,7 +591,7 @@ mod tests {
         // An empty `VariableList<u8, 64>` must merkleize with `limit = ceil(64 / 32) = 2` chunks,
         // then mix in length (0). Historically some view hashing paths behaved like `limit = 0`,
         // producing a different root.
-        let owned: VariableList<u8, 64> = vec![].into();
+        let owned = VariableList::<u8, 64>::try_from(vec![]).unwrap();
         let bytes = owned.as_ssz_bytes();
         let view = VariableListRef::<u8, 64>::from_ssz_bytes(&bytes).unwrap();
 
@@ -630,7 +630,7 @@ mod tests {
     fn tree_hash_empty_variable_list() {
         use tree_hash::{Sha256Hasher, TreeHash};
 
-        let list: VariableList<u64, 10> = vec![].into();
+        let list = VariableList::<u64, 10>::try_from(vec![]).unwrap();
         let encoded = list.as_ssz_bytes();
 
         let view = VariableListRef::<u64, 10>::from_ssz_bytes(&encoded).unwrap();
@@ -647,7 +647,7 @@ mod tests {
         // Test various list sizes and verify view produces same results as owned
         for size in [0, 1, 2, 5, 10, 15, 20] {
             let values: Vec<u64> = (0..size).collect();
-            let list: VariableList<u64, 32> = values.clone().into();
+            let list = VariableList::<u64, 32>::try_from(values.clone()).unwrap();
             let encoded = list.as_ssz_bytes();
 
             // Decode as owned
@@ -697,7 +697,7 @@ mod tests {
         // Property: tree hash of view must equal tree hash of owned for all inputs
         for size in [0, 1, 5, 10, 20] {
             let values: Vec<u32> = (0..size).map(|i| i * 7).collect();
-            let list: VariableList<u32, 32> = values.into();
+            let list = VariableList::<u32, 32>::try_from(values).unwrap();
             let encoded = list.as_ssz_bytes();
 
             let view = VariableListRef::<u32, 32>::from_ssz_bytes(&encoded).unwrap();
@@ -719,7 +719,7 @@ mod tests {
 
         for size in [0, 1, 2, 31, 32, 33, 63, 64] {
             let values: Vec<u8> = (0..size).map(|i| i as u8).collect();
-            let list: VariableList<u8, 64> = values.clone().into();
+            let list = VariableList::<u8, 64>::try_from(values.clone()).unwrap();
             let encoded = list.as_ssz_bytes();
 
             let view = VariableListRef::<u8, 64>::from_ssz_bytes(&encoded).unwrap();
@@ -761,7 +761,7 @@ mod tests {
     fn property_variable_list_length_validation() {
         // Property: decoding should fail when list exceeds maximum length
         let values: Vec<u64> = (0..10).collect();
-        let list: VariableList<u64, 20> = values.into();
+        let list = VariableList::<u64, 20>::try_from(values).unwrap();
         let encoded = list.as_ssz_bytes();
 
         // Should succeed with sufficient max
@@ -793,7 +793,7 @@ mod tests {
         use tree_hash::{Sha256Hasher, TreeHash};
 
         // Test with u8
-        let list_u8: VariableList<u8, 10> = vec![1u8, 2, 3].into();
+        let list_u8 = VariableList::<u8, 10>::try_from(vec![1u8, 2, 3]).unwrap();
         let encoded_u8 = list_u8.as_ssz_bytes();
         let view_u8 = VariableListRef::<u8, 10>::from_ssz_bytes(&encoded_u8).unwrap();
         assert_eq!(
@@ -802,7 +802,7 @@ mod tests {
         );
 
         // Test with u16
-        let list_u16: VariableList<u16, 10> = vec![100u16, 200, 300].into();
+        let list_u16 = VariableList::<u16, 10>::try_from(vec![100u16, 200, 300]).unwrap();
         let encoded_u16 = list_u16.as_ssz_bytes();
         let view_u16 = VariableListRef::<u16, 10>::from_ssz_bytes(&encoded_u16).unwrap();
         assert_eq!(
@@ -811,7 +811,7 @@ mod tests {
         );
 
         // Test with u32
-        let list_u32: VariableList<u32, 10> = vec![1000u32, 2000, 3000].into();
+        let list_u32 = VariableList::<u32, 10>::try_from(vec![1000u32, 2000, 3000]).unwrap();
         let encoded_u32 = list_u32.as_ssz_bytes();
         let view_u32 = VariableListRef::<u32, 10>::from_ssz_bytes(&encoded_u32).unwrap();
         assert_eq!(
@@ -820,7 +820,7 @@ mod tests {
         );
 
         // Test with u64
-        let list_u64: VariableList<u64, 10> = vec![10000u64, 20000, 30000].into();
+        let list_u64 = VariableList::<u64, 10>::try_from(vec![10000u64, 20000, 30000]).unwrap();
         let encoded_u64 = list_u64.as_ssz_bytes();
         let view_u64 = VariableListRef::<u64, 10>::from_ssz_bytes(&encoded_u64).unwrap();
         assert_eq!(
