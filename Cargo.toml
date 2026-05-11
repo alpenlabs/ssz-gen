@@ -73,4 +73,4 @@ sha2 = "0.10"
 smallvec = { version = "1.6.1", features = ["const_generics"] }
 syn = "2.0.69"
 thiserror = "2.0.18"
-toml = "0.8.19"
+toml = "1.1.2"
