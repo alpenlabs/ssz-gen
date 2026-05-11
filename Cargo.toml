@@ -55,7 +55,7 @@ tree_hash = { path = "crates/tree_hash" }
 tree_hash_derive = { path = "crates/tree_hash_derive" }
 
 arbitrary = { version = "1.4", features = ["derive"] }
-criterion = "0.7"
+criterion = "0.8"
 darling = "0.23.0"
 digest = "0.10"
 ethereum_hashing = "0.7.0"
