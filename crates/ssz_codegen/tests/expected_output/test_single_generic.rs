@@ -29,7 +29,7 @@ impl<
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
         hasher
             .write(
-                <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.cohashes).as_ref(),
+                <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.cohashes).as_ref(),
             )
             .expect("tree hash derive should not apply too many leaves");
         hasher.finish().expect("tree hash derive should not have a remaining buffer")
@@ -98,9 +98,9 @@ impl<
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
         {
             let cohashes = self.cohashes().expect("valid view");
-            let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+            let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
                 H,
-            >::tree_hash_root(&cohashes);
+            >(&cohashes);
             hasher.write(root.as_ref()).expect("write field");
         }
         hasher.finish().expect("finish hasher")

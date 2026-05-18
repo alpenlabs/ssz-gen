@@ -85,10 +85,9 @@ impl<T: Clone> From<Optional<T>> for Option<T> {
     }
 }
 
-impl<H, T> tree_hash::TreeHash<H> for Optional<T>
+impl<T> tree_hash::TreeHash for Optional<T>
 where
-    H: tree_hash::TreeHashDigest,
-    T: tree_hash::TreeHash<H>,
+    T: tree_hash::TreeHash,
 {
     fn tree_hash_type() -> tree_hash::TreeHashType {
         T::tree_hash_type()
@@ -105,10 +104,10 @@ where
         T::tree_hash_packing_factor()
     }
 
-    fn tree_hash_root(&self) -> H::Output {
+    fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
         match self {
-            Optional::Some(inner) => inner.tree_hash_root(),
-            Optional::None => unreachable!(),
+            Optional::Some(inner) => inner.tree_hash_root::<H>(),
+            Optional::None => H::get_zero_hash(0),
         }
     }
 }
@@ -254,11 +253,12 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
     fn tree_hash_none() {
-        use tree_hash::Sha256Hasher;
+        use tree_hash::{Sha256Hasher, TreeHashDigest};
         let optional: Optional<u64> = Optional::None;
-        <Optional<u64> as tree_hash::TreeHash<Sha256Hasher>>::tree_hash_root(&optional);
+        let root =
+            <Optional<u64> as tree_hash::TreeHash>::tree_hash_root::<Sha256Hasher>(&optional);
+        assert_eq!(root, Sha256Hasher::get_zero_hash(0));
     }
 
     #[test]

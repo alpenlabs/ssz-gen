@@ -29,7 +29,7 @@ impl<
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
         hasher
             .write(
-                <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.cohashes).as_ref(),
+                <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.cohashes).as_ref(),
             )
             .expect("tree hash derive should not apply too many leaves");
         hasher.finish().expect("tree hash derive should not have a remaining buffer")
@@ -98,9 +98,9 @@ impl<
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
         {
             let cohashes = self.cohashes().expect("valid view");
-            let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+            let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
                 H,
-            >::tree_hash_root(&cohashes);
+            >(&cohashes);
             hasher.write(root.as_ref()).expect("write field");
         }
         hasher.finish().expect("finish hasher")
@@ -209,10 +209,10 @@ impl<
         use tree_hash::TreeHash;
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
         hasher
-            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.inner).as_ref())
+            .write(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.inner).as_ref())
             .expect("tree hash derive should not apply too many leaves");
         hasher
-            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.index).as_ref())
+            .write(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.index).as_ref())
             .expect("tree hash derive should not apply too many leaves");
         hasher.finish().expect("tree hash derive should not have a remaining buffer")
     }
@@ -290,9 +290,9 @@ impl<
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
         {
             let inner = self.inner().expect("valid view");
-            let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+            let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
                 H,
-            >::tree_hash_root(&inner);
+            >(&inner);
             hasher.write(root.as_ref()).expect("write field");
         }
         {
@@ -400,15 +400,15 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for CompactMmr64 {
         use tree_hash::TreeHash;
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
         hasher
-            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.entries).as_ref())
+            .write(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.entries).as_ref())
             .expect("tree hash derive should not apply too many leaves");
         hasher
             .write(
-                <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.cap_log2).as_ref(),
+                <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.cap_log2).as_ref(),
             )
             .expect("tree hash derive should not apply too many leaves");
         hasher
-            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.roots).as_ref())
+            .write(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.roots).as_ref())
             .expect("tree hash derive should not apply too many leaves");
         hasher.finish().expect("tree hash derive should not have a remaining buffer")
     }
@@ -499,9 +499,9 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for CompactMmr64Re
         }
         {
             let roots = self.roots().expect("valid view");
-            let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+            let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
                 H,
-            >::tree_hash_root(&roots);
+            >(&roots);
             hasher.write(root.as_ref()).expect("write field");
         }
         hasher.finish().expect("finish hasher")

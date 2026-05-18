@@ -28,10 +28,10 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ContainerA {
         use tree_hash::TreeHash;
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
         hasher
-            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.value).as_ref())
+            .write(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.value).as_ref())
             .expect("tree hash derive should not apply too many leaves");
         hasher
-            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.b_ref).as_ref())
+            .write(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.b_ref).as_ref())
             .expect("tree hash derive should not apply too many leaves");
         hasher.finish().expect("tree hash derive should not have a remaining buffer")
     }
@@ -105,9 +105,9 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ContainerARef<
         }
         {
             let b_ref = self.b_ref().expect("valid view");
-            let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+            let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
                 H,
-            >::tree_hash_root(&b_ref);
+            >(&b_ref);
             hasher.write(root.as_ref()).expect("write field");
         }
         hasher.finish().expect("finish hasher")
@@ -188,10 +188,10 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ContainerB {
         use tree_hash::TreeHash;
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
         hasher
-            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.value).as_ref())
+            .write(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.value).as_ref())
             .expect("tree hash derive should not apply too many leaves");
         hasher
-            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.c_ref).as_ref())
+            .write(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.c_ref).as_ref())
             .expect("tree hash derive should not apply too many leaves");
         hasher.finish().expect("tree hash derive should not have a remaining buffer")
     }
@@ -265,9 +265,9 @@ impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ContainerBRef<
         }
         {
             let c_ref = self.c_ref().expect("valid view");
-            let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+            let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
                 H,
-            >::tree_hash_root(&c_ref);
+            >(&c_ref);
             hasher.write(root.as_ref()).expect("write field");
         }
         hasher.finish().expect("finish hasher")
@@ -347,7 +347,7 @@ impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ContainerC {
         use tree_hash::TreeHash;
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
         hasher
-            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.value).as_ref())
+            .write(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.value).as_ref())
             .expect("tree hash derive should not apply too many leaves");
         hasher.finish().expect("tree hash derive should not have a remaining buffer")
     }

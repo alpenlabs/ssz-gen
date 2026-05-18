@@ -7,7 +7,7 @@ use tree_hash::{MerkleHasher, TreeHash, TreeHashDigest, TreeHashType};
 /// `FixedVector` and `VariableList`.
 pub(crate) fn vec_tree_hash_root<T, const N: usize, H: TreeHashDigest>(vec: &[T]) -> H::Output
 where
-    T: TreeHash<H>,
+    T: TreeHash,
 {
     match T::tree_hash_type() {
         TreeHashType::Basic => {
@@ -32,7 +32,7 @@ where
 
             for item in vec {
                 hasher
-                    .write(item.tree_hash_root().as_ref())
+                    .write(item.tree_hash_root::<H>().as_ref())
                     .expect("ssz_types vec should not contain more elements than max");
             }
 

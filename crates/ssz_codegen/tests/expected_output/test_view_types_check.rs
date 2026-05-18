@@ -24,7 +24,7 @@ pub mod tests {
                 pub key: u32,
                 pub value: u64,
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ExportEntry {
+            impl tree_hash::TreeHash for ExportEntry {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -34,18 +34,18 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.key)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.key)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.value)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.value)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -97,8 +97,7 @@ pub mod tests {
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for ExportEntryRef<'a> {
+            impl<'a> tree_hash::TreeHash for ExportEntryRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::StableContainer
                 }
@@ -108,7 +107,7 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     {
@@ -180,7 +179,7 @@ pub mod tests {
                 pub entries: VariableList<ExportEntry, 256usize>,
                 pub hash: FixedBytes<32usize>,
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ViewTypeTest {
+            impl tree_hash::TreeHash for ViewTypeTest {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -190,24 +189,28 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.payload)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<
+                                H,
+                            >(&self.payload)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.entries)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<
+                                H,
+                            >(&self.entries)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.hash)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.hash)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -294,8 +297,7 @@ pub mod tests {
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for ViewTypeTestRef<'a> {
+            impl<'a> tree_hash::TreeHash for ViewTypeTestRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::StableContainer
                 }
@@ -305,28 +307,28 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(3usize);
                     {
                         let payload = self.payload().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&payload);
+                        >(&payload);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let entries = self.entries().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&entries);
+                        >(&entries);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let hash = self.hash().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&hash);
+                        >(&hash);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")

@@ -18,8 +18,7 @@ pub mod tests {
             pub enum PendingInputEntry {
                 Deposit(external_ssz::SubjectDepositData),
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for PendingInputEntry {
+            impl tree_hash::TreeHash for PendingInputEntry {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -29,13 +28,13 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Union should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<__H: tree_hash::TreeHashDigest>(&self) -> __H::Output {
                     match self {
                         PendingInputEntry::Deposit(inner) => {
-                            let root = <_ as tree_hash::TreeHash<
-                                H,
-                            >>::tree_hash_root(inner);
-                            tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
+                            let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
+                                __H,
+                            >(inner);
+                            tree_hash::mix_in_selector_with_hasher::<__H>(&root, 0u8)
                                 .expect("valid selector")
                         }
                     }
@@ -93,8 +92,7 @@ pub mod tests {
                     <PendingInputEntryRef<'a>>::to_owned(self)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for PendingInputEntryRef<'a> {
+            impl<'a> tree_hash::TreeHash for PendingInputEntryRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Vector
                 }
@@ -104,14 +102,14 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Union should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     match self.selector() {
                         0u8 => {
                             let value = self.as_selector0().expect("valid selector");
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
                             >(
-                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    &<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&value),
                                     0u8,
                                 )
                                 .expect("valid selector")
@@ -134,7 +132,7 @@ pub mod tests {
                 /// Pending inputs
                 pub pending_inputs: VariableList<PendingInputEntry, 10usize>,
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for TestContainer {
+            impl tree_hash::TreeHash for TestContainer {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -144,14 +142,14 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(&self.pending_inputs)
+                            >(&self.pending_inputs)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -203,8 +201,7 @@ pub mod tests {
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for TestContainerRef<'a> {
+            impl<'a> tree_hash::TreeHash for TestContainerRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::StableContainer
                 }
@@ -214,14 +211,14 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     {
                         let pending_inputs = self.pending_inputs().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&pending_inputs);
+                        >(&pending_inputs);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")

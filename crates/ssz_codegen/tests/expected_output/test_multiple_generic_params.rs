@@ -29,10 +29,10 @@ impl<
         use tree_hash::TreeHash;
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
         hasher
-            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.first).as_ref())
+            .write(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.first).as_ref())
             .expect("tree hash derive should not apply too many leaves");
         hasher
-            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.second).as_ref())
+            .write(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.second).as_ref())
             .expect("tree hash derive should not apply too many leaves");
         hasher.finish().expect("tree hash derive should not have a remaining buffer")
     }
@@ -123,16 +123,16 @@ impl<
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
         {
             let first = self.first().expect("valid view");
-            let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+            let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
                 H,
-            >::tree_hash_root(&first);
+            >(&first);
             hasher.write(root.as_ref()).expect("write field");
         }
         {
             let second = self.second().expect("valid view");
-            let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+            let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
                 H,
-            >::tree_hash_root(&second);
+            >(&second);
             hasher.write(root.as_ref()).expect("write field");
         }
         hasher.finish().expect("finish hasher")
@@ -254,16 +254,16 @@ impl<
         use tree_hash::TreeHash;
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(4usize);
         hasher
-            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.first).as_ref())
+            .write(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.first).as_ref())
             .expect("tree hash derive should not apply too many leaves");
         hasher
-            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.second).as_ref())
+            .write(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.second).as_ref())
             .expect("tree hash derive should not apply too many leaves");
         hasher
-            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.third).as_ref())
+            .write(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.third).as_ref())
             .expect("tree hash derive should not apply too many leaves");
         hasher
-            .write(<_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.count).as_ref())
+            .write(<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.count).as_ref())
             .expect("tree hash derive should not apply too many leaves");
         hasher.finish().expect("tree hash derive should not have a remaining buffer")
     }
@@ -391,23 +391,23 @@ impl<
         let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
         {
             let first = self.first().expect("valid view");
-            let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+            let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
                 H,
-            >::tree_hash_root(&first);
+            >(&first);
             hasher.write(root.as_ref()).expect("write field");
         }
         {
             let second = self.second().expect("valid view");
-            let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+            let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
                 H,
-            >::tree_hash_root(&second);
+            >(&second);
             hasher.write(root.as_ref()).expect("write field");
         }
         {
             let third = self.third().expect("valid view");
-            let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+            let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
                 H,
-            >::tree_hash_root(&third);
+            >(&third);
             hasher.write(root.as_ref()).expect("write field");
         }
         {

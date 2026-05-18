@@ -32,13 +32,13 @@ pub mod tests {
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.value)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.value)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.hash)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.hash)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -107,9 +107,9 @@ pub mod tests {
                     }
                     {
                         let hash = self.hash().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&hash);
+                        >(&hash);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
@@ -181,13 +181,13 @@ pub mod tests {
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.inner)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.inner)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.items)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.items)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -268,16 +268,16 @@ pub mod tests {
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
                     {
                         let inner = self.inner().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&inner);
+                        >(&inner);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let items = self.items().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&items);
+                        >(&items);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")

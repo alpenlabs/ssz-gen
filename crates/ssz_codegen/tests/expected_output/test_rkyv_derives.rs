@@ -2,7 +2,7 @@ pub mod tests {
     #![allow(unused_imports, reason = "generated code using ssz-gen")]
     pub mod input {
         #![allow(unused_imports, reason = "generated code using ssz-gen")]
-        pub mod test_external_inner {
+        pub mod test_rkyv_derives {
             #![allow(unused_imports, reason = "generated code using ssz-gen")]
             use ssz_types::*;
             use ssz_types::view::{FixedVectorRef, VariableListRef};
@@ -11,18 +11,28 @@ pub mod tests {
             use tree_hash::TreeHashDigest;
             use tree_hash_derive::TreeHash;
             use ssz::view::*;
+            pub type Slot = u64;
+            /// Test that rkyv derives use fully qualified paths (mirrors identifiers use
+            /// case)
             #[derive(
                 std::clone::Clone,
                 std::fmt::Debug,
                 std::cmp::PartialEq,
                 std::cmp::Eq,
+                std::marker::Copy,
+                std::hash::Hash,
+                rkyv::Archive,
+                rkyv::Serialize,
+                rkyv::Deserialize,
                 ssz_derive::Encode,
                 ssz_derive::Decode
             )]
             #[ssz(struct_behaviour = "container")]
             pub struct BlockCommitment {
-                pub height: u32,
-                pub block_hash: FixedBytes<32usize>,
+                /// Slot number
+                pub slot: Slot,
+                /// Block ID
+                pub blkid: U256,
             }
             impl tree_hash::TreeHash for BlockCommitment {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -39,15 +49,13 @@ pub mod tests {
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.height)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.slot)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash>::tree_hash_root::<
-                                H,
-                            >(&self.block_hash)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.blkid)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -67,16 +75,20 @@ pub mod tests {
                 std::fmt::Debug,
                 std::cmp::PartialEq,
                 std::cmp::Eq,
-                std::marker::Copy
+                std::marker::Copy,
+                std::hash::Hash,
+                rkyv::Archive,
+                rkyv::Serialize,
+                rkyv::Deserialize
             )]
             pub struct BlockCommitmentRef<'a> {
                 bytes: &'a [u8],
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BlockCommitmentRef<'a> {
-                pub fn height(&self) -> Result<u32, ssz::DecodeError> {
+                pub fn slot(&self) -> Result<u64, ssz::DecodeError> {
                     let offset = 0usize;
-                    let end = offset + 4usize;
+                    let end = offset + 8usize;
                     if end > self.bytes.len() {
                         return Err(ssz::DecodeError::InvalidByteLength {
                             len: self.bytes.len(),
@@ -86,10 +98,8 @@ pub mod tests {
                     let bytes = &self.bytes[offset..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
-                pub fn block_hash(
-                    &self,
-                ) -> Result<FixedBytesRef<'a, 32usize>, ssz::DecodeError> {
-                    let offset = 4usize;
+                pub fn blkid(&self) -> Result<U256, ssz::DecodeError> {
+                    let offset = 8usize;
                     let end = offset + 32usize;
                     if end > self.bytes.len() {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -116,25 +126,23 @@ pub mod tests {
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     {
                         let offset = 0usize;
-                        let field_bytes = &self.bytes[offset..offset + 4usize];
+                        let field_bytes = &self.bytes[offset..offset + 8usize];
                         hasher.write(field_bytes).expect("write field");
                     }
                     {
-                        let block_hash = self.block_hash().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
-                            H,
-                        >(&block_hash);
-                        hasher.write(root.as_ref()).expect("write field");
+                        let offset = 8usize;
+                        let field_bytes = &self.bytes[offset..offset + 32usize];
+                        hasher.write(field_bytes).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }
             }
             impl<'a> ssz::view::DecodeView<'a> for BlockCommitmentRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    if bytes.len() != 36usize {
+                    if bytes.len() != 40usize {
                         return Err(ssz::DecodeError::InvalidByteLength {
                             len: bytes.len(),
-                            expected: 36usize,
+                            expected: 40usize,
                         });
                     }
                     Ok(Self { bytes })
@@ -145,7 +153,7 @@ pub mod tests {
                     true
                 }
                 fn ssz_fixed_len() -> usize {
-                    36usize
+                    40usize
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
@@ -167,23 +175,11 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> BlockCommitment {
                     BlockCommitment {
-                        height: self.height().expect("valid view"),
-                        block_hash: ssz_types::FixedBytes(
-                            self.block_hash().expect("valid view").to_owned(),
-                        ),
+                        slot: self.slot().expect("valid view"),
+                        blkid: self.blkid().expect("valid view"),
                     }
                 }
             }
-        }
-        pub mod test_external_outer {
-            #![allow(unused_imports, reason = "generated code using ssz-gen")]
-            use ssz_types::*;
-            use ssz_types::view::{FixedVectorRef, VariableListRef};
-            use ssz_primitives::{U128, U256};
-            use ssz_derive::{Encode, Decode};
-            use tree_hash::TreeHashDigest;
-            use tree_hash_derive::TreeHash;
-            use ssz::view::*;
             #[derive(
                 std::clone::Clone,
                 std::fmt::Debug,
@@ -193,11 +189,10 @@ pub mod tests {
                 ssz_derive::Decode
             )]
             #[ssz(struct_behaviour = "container")]
-            pub struct BlockRange {
-                pub start: crate::tests::input::test_external_inner::BlockCommitment,
-                pub end: crate::tests::input::test_external_inner::BlockCommitment,
+            pub struct OtherType {
+                pub value: u64,
             }
-            impl tree_hash::TreeHash for BlockRange {
+            impl tree_hash::TreeHash for OtherType {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -209,16 +204,10 @@ pub mod tests {
                 }
                 fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.start)
-                                .as_ref(),
-                        )
-                        .expect("tree hash derive should not apply too many leaves");
-                    hasher
-                        .write(
-                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.end)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.value)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -227,7 +216,7 @@ pub mod tests {
                         .expect("tree hash derive should not have a remaining buffer")
                 }
             }
-            /// Zero-copy view over [`BlockRange`].
+            /// Zero-copy view over [`OtherType`].
             ///
             /// This type wraps SSZ-encoded bytes without allocating. Fields are accessed
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
@@ -240,61 +229,25 @@ pub mod tests {
                 std::cmp::Eq,
                 std::marker::Copy
             )]
-            pub struct BlockRangeRef<'a> {
+            pub struct OtherTypeRef<'a> {
                 bytes: &'a [u8],
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> BlockRangeRef<'a> {
-                pub fn start(
-                    &self,
-                ) -> Result<
-                    crate::tests::input::test_external_inner::BlockCommitmentRef<'a>,
-                    ssz::DecodeError,
-                > {
-                    let start = ssz::layout::read_variable_offset(
-                        self.bytes,
-                        8usize,
-                        2usize,
-                        0usize,
-                    )?;
-                    let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
-                        8usize,
-                        2usize,
-                        1usize,
-                    )?;
-                    if start > end || end > self.bytes.len() {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
+            impl<'a> OtherTypeRef<'a> {
+                pub fn value(&self) -> Result<u64, ssz::DecodeError> {
+                    let offset = 0usize;
+                    let end = offset + 8usize;
+                    if end > self.bytes.len() {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: self.bytes.len(),
+                            expected: end,
+                        });
                     }
-                    let bytes = &self.bytes[start..end];
-                    ssz::view::DecodeView::from_ssz_bytes(bytes)
-                }
-                pub fn end(
-                    &self,
-                ) -> Result<
-                    crate::tests::input::test_external_inner::BlockCommitmentRef<'a>,
-                    ssz::DecodeError,
-                > {
-                    let start = ssz::layout::read_variable_offset(
-                        self.bytes,
-                        8usize,
-                        2usize,
-                        1usize,
-                    )?;
-                    let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
-                        8usize,
-                        2usize,
-                        2usize,
-                    )?;
-                    if start > end || end > self.bytes.len() {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                    }
-                    let bytes = &self.bytes[start..end];
+                    let bytes = &self.bytes[offset..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
-            impl<'a> tree_hash::TreeHash for BlockRangeRef<'a> {
+            impl<'a> tree_hash::TreeHash for OtherTypeRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::StableContainer
                 }
@@ -306,88 +259,53 @@ pub mod tests {
                 }
                 fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     {
-                        let start = self.start().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
-                            H,
-                        >(&start);
-                        hasher.write(root.as_ref()).expect("write field");
-                    }
-                    {
-                        let end = self.end().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
-                            H,
-                        >(&end);
-                        hasher.write(root.as_ref()).expect("write field");
+                        let offset = 0usize;
+                        let field_bytes = &self.bytes[offset..offset + 8usize];
+                        hasher.write(field_bytes).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }
             }
-            impl<'a> ssz::view::DecodeView<'a> for BlockRangeRef<'a> {
+            impl<'a> ssz::view::DecodeView<'a> for OtherTypeRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    if bytes.len() < 8usize {
+                    if bytes.len() != 8usize {
                         return Err(ssz::DecodeError::InvalidByteLength {
                             len: bytes.len(),
                             expected: 8usize,
                         });
                     }
-                    let mut prev_offset: Option<usize> = None;
-                    for i in 0..2usize {
-                        let offset = ssz::layout::read_variable_offset(
-                            bytes,
-                            8usize,
-                            2usize,
-                            i,
-                        )?;
-                        if i == 0 && offset != 8usize {
-                            return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
-                        }
-                        if let Some(prev) = prev_offset && offset < prev {
-                            return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                        }
-                        if offset > bytes.len() {
-                            return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
-                        }
-                        prev_offset = Some(offset);
-                    }
                     Ok(Self { bytes })
                 }
             }
-            impl<'a> ssz::view::SszTypeInfo for BlockRangeRef<'a> {
+            impl<'a> ssz::view::SszTypeInfo for OtherTypeRef<'a> {
                 fn is_ssz_fixed_len() -> bool {
-                    false
+                    true
                 }
                 fn ssz_fixed_len() -> usize {
-                    0
+                    8usize
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> ssz_types::view::ToOwnedSsz<BlockRange> for BlockRangeRef<'a> {
+            impl<'a> ssz_types::view::ToOwnedSsz<OtherType> for OtherTypeRef<'a> {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
-                fn to_owned(&self) -> BlockRange {
-                    <BlockRangeRef<'a>>::to_owned(self)
+                fn to_owned(&self) -> OtherType {
+                    <OtherTypeRef<'a>>::to_owned(self)
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            impl<'a> BlockRangeRef<'a> {
+            impl<'a> OtherTypeRef<'a> {
                 #[allow(
                     clippy::wrong_self_convention,
                     reason = "API convention for view types"
                 )]
-                pub fn to_owned(&self) -> BlockRange {
-                    BlockRange {
-                        start: {
-                            let view = self.start().expect("valid view");
-                            ssz_types::view::ToOwnedSsz::to_owned(&view)
-                        },
-                        end: {
-                            let view = self.end().expect("valid view");
-                            ssz_types::view::ToOwnedSsz::to_owned(&view)
-                        },
+                pub fn to_owned(&self) -> OtherType {
+                    OtherType {
+                        value: self.value().expect("valid view"),
                     }
                 }
             }

@@ -30,16 +30,16 @@ pub mod tests {
                 fn tree_hash_root(&self) -> H::Output {
                     match self {
                         ExternalUnion::Type1(inner) => {
-                            let root = <_ as tree_hash::TreeHash<
+                            let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(inner);
+                            >(inner);
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
                                 .expect("valid selector")
                         }
                         ExternalUnion::Type2(inner) => {
-                            let root = <_ as tree_hash::TreeHash<
+                            let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(inner);
+                            >(inner);
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
                                 .expect("valid selector")
                         }
@@ -132,7 +132,7 @@ pub mod tests {
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
                             >(
-                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    &<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&value),
                                     0u8,
                                 )
                                 .expect("valid selector")
@@ -142,7 +142,7 @@ pub mod tests {
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
                             >(
-                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    &<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&value),
                                     1u8,
                                 )
                                 .expect("valid selector")
@@ -171,9 +171,9 @@ pub mod tests {
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(&self.union_field)
+                            >(&self.union_field)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -232,9 +232,9 @@ pub mod tests {
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
                     {
                         let union_field = self.union_field().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&union_field);
+                        >(&union_field);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
