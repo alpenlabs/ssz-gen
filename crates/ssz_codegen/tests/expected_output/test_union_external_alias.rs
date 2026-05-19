@@ -17,7 +17,7 @@ pub mod tests {
                 Type1(external_ssz::Type1),
                 Type2(external_ssz::Type2),
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for ExternalUnion {
+            impl tree_hash::TreeHash for ExternalUnion {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -27,7 +27,7 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Union should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     match self {
                         ExternalUnion::Type1(inner) => {
                             let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
@@ -56,7 +56,7 @@ pub mod tests {
                 }
                 pub fn as_selector0(
                     &self,
-                ) -> Result<external_ssz::Type1Ref<'a>, ssz::DecodeError> {
+                ) -> Result<external_ssz::Type1, ssz::DecodeError> {
                     if self.selector() != 0u8 {
                         return Err(
                             ssz::DecodeError::BytesInvalid(
@@ -68,7 +68,7 @@ pub mod tests {
                 }
                 pub fn as_selector1(
                     &self,
-                ) -> Result<external_ssz::Type2Ref<'a>, ssz::DecodeError> {
+                ) -> Result<external_ssz::Type2, ssz::DecodeError> {
                     if self.selector() != 1u8 {
                         return Err(
                             ssz::DecodeError::BytesInvalid(
@@ -81,14 +81,16 @@ pub mod tests {
                 pub fn to_owned(&self) -> ExternalUnion {
                     match self.selector() {
                         0u8 => {
-                            ExternalUnion::Type1(
-                                self.as_selector0().expect("valid selector").to_owned(),
-                            )
+                            ExternalUnion::Type1({
+                                let view = self.as_selector0().expect("valid selector");
+                                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
                         }
                         1u8 => {
-                            ExternalUnion::Type2(
-                                self.as_selector1().expect("valid selector").to_owned(),
-                            )
+                            ExternalUnion::Type2({
+                                let view = self.as_selector1().expect("valid selector");
+                                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
                         }
                         _ => panic!("Invalid union selector: {}", self.selector()),
                     }
@@ -114,8 +116,7 @@ pub mod tests {
                     <ExternalUnionRef<'a>>::to_owned(self)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for ExternalUnionRef<'a> {
+            impl<'a> tree_hash::TreeHash for ExternalUnionRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Vector
                 }
@@ -125,7 +126,7 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Union should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     match self.selector() {
                         0u8 => {
                             let value = self.as_selector0().expect("valid selector");
@@ -151,12 +152,19 @@ pub mod tests {
                     }
                 }
             }
-            #[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                ssz_derive::Encode,
+                ssz_derive::Decode
+            )]
             #[ssz(struct_behaviour = "container")]
             pub struct TestContainer {
                 pub union_field: ExternalUnion,
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for TestContainer {
+            impl tree_hash::TreeHash for TestContainer {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -166,7 +174,7 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     hasher
@@ -188,7 +196,13 @@ pub mod tests {
             /// via lazy getter methods. Use `.to_owned()` to convert to the owned type when
             /// needed.
             #[allow(dead_code, reason = "generated code using ssz-gen")]
-            #[derive(Clone, Debug, PartialEq, Eq, Copy)]
+            #[derive(
+                std::clone::Clone,
+                std::fmt::Debug,
+                std::cmp::PartialEq,
+                std::cmp::Eq,
+                std::marker::Copy
+            )]
             pub struct TestContainerRef<'a> {
                 bytes: &'a [u8],
             }
@@ -216,10 +230,9 @@ pub mod tests {
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for TestContainerRef<'a> {
+            impl<'a> tree_hash::TreeHash for TestContainerRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -227,9 +240,9 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
-                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(0);
+                    let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     {
                         let union_field = self.union_field().expect("valid view");
                         let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
@@ -297,7 +310,10 @@ pub mod tests {
                 )]
                 pub fn to_owned(&self) -> TestContainer {
                     TestContainer {
-                        union_field: self.union_field().expect("valid view").to_owned(),
+                        union_field: {
+                            let view = self.union_field().expect("valid view");
+                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                        },
                     }
                 }
             }

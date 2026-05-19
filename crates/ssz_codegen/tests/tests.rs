@@ -1517,6 +1517,46 @@ fn test_three_way_dependency() {
         "ContainerC should only be defined once, found {} times",
         container_c_count
     );
+
+    let expected_output = fs::read_to_string("tests/expected_output/test_three_way.rs")
+        .expect("Failed to read expected output");
+    assert_eq!(expected_output, generated);
+}
+
+#[test]
+fn test_custom_to_owned() {
+    build_ssz_files(
+        &["test_custom_to_owned.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_custom_to_owned.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types for test_custom_to_owned");
+
+    let expected_output = fs::read_to_string("tests/expected_output/test_custom_to_owned.rs")
+        .expect("Failed to read expected output");
+    let actual_output = fs::read_to_string("tests/output/test_custom_to_owned.rs")
+        .expect("Failed to read actual output");
+    assert_eq!(expected_output, actual_output);
+}
+
+#[test]
+fn test_union_external_alias() {
+    build_ssz_files(
+        &["test_union_external_alias.ssz"],
+        "tests/input",
+        &["external_ssz"],
+        "tests/output/test_union_external_alias.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types for test_union_external_alias");
+
+    let expected_output = fs::read_to_string("tests/expected_output/test_union_external_alias.rs")
+        .expect("Failed to read expected output");
+    let actual_output = fs::read_to_string("tests/output/test_union_external_alias.rs")
+        .expect("Failed to read actual output");
+    assert_eq!(expected_output, actual_output);
 }
 
 /// Test diamond-like dependency where two entry points (A and B) both import a base entry point.
