@@ -519,7 +519,7 @@ impl<'a> TypeResolver<'a> {
                                 _ => {
                                     quote! {
                                         #ident::#variant_ident(inner) => {
-                                            let root = <_ as tree_hash::TreeHash<H>>::tree_hash_root(inner);
+                                            let root = <_ as tree_hash::TreeHash>::tree_hash_root::<H>(inner);
                                             tree_hash::mix_in_selector_with_hasher::<H>(
                                                 &root,
                                                 #selector_value
@@ -541,7 +541,7 @@ impl<'a> TypeResolver<'a> {
                             #(#variants),*
                             }
 
-                            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ident {
+                            impl tree_hash::TreeHash for #ident {
                                 fn tree_hash_type() -> tree_hash::TreeHashType {
                                     tree_hash::TreeHashType::Container
                                 }
@@ -554,7 +554,7 @@ impl<'a> TypeResolver<'a> {
                                     unreachable!("Union should never be packed")
                                 }
 
-                                fn tree_hash_root(&self) -> H::Output {
+                                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                                     match self {
                                         #(#owned_tree_hash_arms,)*
                                     }
@@ -1357,7 +1357,7 @@ impl<'a> TypeResolver<'a> {
                 }
             }
 
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for #ref_ident<'a> {
+            impl<'a> tree_hash::TreeHash for #ref_ident<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Vector
                 }
@@ -1370,7 +1370,7 @@ impl<'a> TypeResolver<'a> {
                     unreachable!("Union should never be packed")
                 }
 
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     match self.selector() {
                         #(#tree_hash_arms,)*
                         _ => panic!("Invalid union selector: {}", self.selector()),
@@ -1469,7 +1469,7 @@ impl<'a> TypeResolver<'a> {
                             #selector_value => {
                                 let value = self.#method_name().expect("valid selector");
                                 tree_hash::mix_in_selector_with_hasher::<H>(
-                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    &<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&value),
                                     #selector_value
                                 ).expect("valid selector")
                             }

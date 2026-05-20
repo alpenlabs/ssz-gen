@@ -1,0 +1,8 @@
+import external_ssz
+
+class ExternalUnion(Union):
+    Type1: external_ssz.Type1
+    Type2: external_ssz.Type2
+
+class TestContainer(Container):
+    union_field: ExternalUnion

@@ -323,7 +323,7 @@ pub enum TreeHashType {
 }
 
 /// Trait for types that can be hashed into a merkle tree.
-pub trait TreeHash<H: TreeHashDigest = Sha256Hasher> {
+pub trait TreeHash {
     /// Returns the type of the tree hash.
     fn tree_hash_type() -> TreeHashType;
 
@@ -333,14 +333,14 @@ pub trait TreeHash<H: TreeHashDigest = Sha256Hasher> {
     /// Returns the packing factor of the tree hash.
     fn tree_hash_packing_factor() -> usize;
 
-    /// Returns the root of the tree hash.
-    fn tree_hash_root(&self) -> H::Output;
+    /// Returns the root of the tree hash for the given digest.
+    fn tree_hash_root<H: TreeHashDigest>(&self) -> H::Output;
 }
 
 /// Punch through references.
-impl<T, H: TreeHashDigest> TreeHash<H> for &T
+impl<T> TreeHash for &T
 where
-    T: TreeHash<H>,
+    T: TreeHash,
 {
     fn tree_hash_type() -> TreeHashType {
         T::tree_hash_type()
@@ -354,8 +354,8 @@ where
         T::tree_hash_packing_factor()
     }
 
-    fn tree_hash_root(&self) -> H::Output {
-        T::tree_hash_root(*self)
+    fn tree_hash_root<H: TreeHashDigest>(&self) -> H::Output {
+        T::tree_hash_root::<H>(*self)
     }
 }
 
@@ -363,7 +363,7 @@ where
 #[macro_export]
 macro_rules! tree_hash_ssz_encoding_as_vector {
     ($type: ident) => {
-        impl<H: TreeHashDigest> tree_hash::TreeHash<H> for $type {
+        impl tree_hash::TreeHash for $type {
             fn tree_hash_type() -> tree_hash::TreeHashType {
                 tree_hash::TreeHashType::Vector
             }
@@ -376,7 +376,7 @@ macro_rules! tree_hash_ssz_encoding_as_vector {
                 unreachable!("Vector should never be packed.")
             }
 
-            fn tree_hash_root(&self) -> H::Output {
+            fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                 tree_hash::merkle_root_with_hasher::<H>(&ssz::ssz_encode(self), 0)
             }
         }
@@ -389,7 +389,7 @@ macro_rules! tree_hash_ssz_encoding_as_vector {
 #[macro_export]
 macro_rules! tree_hash_ssz_encoding_as_list {
     ($type: ident, $limit: expr) => {
-        impl<H: TreeHashDigest> tree_hash::TreeHash<H> for $type {
+        impl tree_hash::TreeHash for $type {
             fn tree_hash_type() -> tree_hash::TreeHashType {
                 tree_hash::TreeHashType::List
             }
@@ -402,7 +402,7 @@ macro_rules! tree_hash_ssz_encoding_as_list {
                 unreachable!("List should never be packed.")
             }
 
-            fn tree_hash_root(&self) -> H::Output {
+            fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                 let bytes = ssz::ssz_encode(self);
                 let limit: usize = $limit;
                 let minimum_leaf_count = limit.div_ceil(tree_hash::BYTES_PER_CHUNK);

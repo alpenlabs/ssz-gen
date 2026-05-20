@@ -20,7 +20,7 @@ pub mod tests {
                 /// Second variant
                 Variant2(UnionTypeAliasVariant2),
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for UnionClass {
+            impl tree_hash::TreeHash for UnionClass {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -30,20 +30,20 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Union should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<__H: tree_hash::TreeHashDigest>(&self) -> __H::Output {
                     match self {
                         UnionClass::Variant1(inner) => {
-                            let root = <_ as tree_hash::TreeHash<
-                                H,
-                            >>::tree_hash_root(inner);
-                            tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
+                            let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
+                                __H,
+                            >(inner);
+                            tree_hash::mix_in_selector_with_hasher::<__H>(&root, 0u8)
                                 .expect("valid selector")
                         }
                         UnionClass::Variant2(inner) => {
-                            let root = <_ as tree_hash::TreeHash<
-                                H,
-                            >>::tree_hash_root(inner);
-                            tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
+                            let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
+                                __H,
+                            >(inner);
+                            tree_hash::mix_in_selector_with_hasher::<__H>(&root, 1u8)
                                 .expect("valid selector")
                         }
                     }
@@ -116,8 +116,7 @@ pub mod tests {
                     <UnionClassRef<'a>>::to_owned(self)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for UnionClassRef<'a> {
+            impl<'a> tree_hash::TreeHash for UnionClassRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Vector
                 }
@@ -127,14 +126,14 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Union should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     match self.selector() {
                         0u8 => {
                             let value = self.as_selector0().expect("valid selector");
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
                             >(
-                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    &<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&value),
                                     0u8,
                                 )
                                 .expect("valid selector")
@@ -144,7 +143,7 @@ pub mod tests {
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
                             >(
-                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    &<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&value),
                                     1u8,
                                 )
                                 .expect("valid selector")
@@ -160,8 +159,7 @@ pub mod tests {
                 /// External container variant
                 Deposit(external_ssz::SubjectDepositData),
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for UnionClassWithExternal {
+            impl tree_hash::TreeHash for UnionClassWithExternal {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -171,13 +169,13 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Union should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<__H: tree_hash::TreeHashDigest>(&self) -> __H::Output {
                     match self {
                         UnionClassWithExternal::Deposit(inner) => {
-                            let root = <_ as tree_hash::TreeHash<
-                                H,
-                            >>::tree_hash_root(inner);
-                            tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
+                            let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
+                                __H,
+                            >(inner);
+                            tree_hash::mix_in_selector_with_hasher::<__H>(&root, 0u8)
                                 .expect("valid selector")
                         }
                     }
@@ -235,8 +233,7 @@ pub mod tests {
                     <UnionClassWithExternalRef<'a>>::to_owned(self)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for UnionClassWithExternalRef<'a> {
+            impl<'a> tree_hash::TreeHash for UnionClassWithExternalRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Vector
                 }
@@ -246,14 +243,14 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Union should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     match self.selector() {
                         0u8 => {
                             let value = self.as_selector0().expect("valid selector");
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
                             >(
-                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    &<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&value),
                                     0u8,
                                 )
                                 .expect("valid selector")
@@ -268,8 +265,7 @@ pub mod tests {
                 TypeAliasVariant1(TypeAliasVariant1),
                 TypeAliasVariant2(TypeAliasVariant2),
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for UnionTypeAlias {
+            impl tree_hash::TreeHash for UnionTypeAlias {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -279,19 +275,19 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Union should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     match self {
                         UnionTypeAlias::TypeAliasVariant1(inner) => {
-                            let root = <_ as tree_hash::TreeHash<
+                            let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(inner);
+                            >(inner);
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
                                 .expect("valid selector")
                         }
                         UnionTypeAlias::TypeAliasVariant2(inner) => {
-                            let root = <_ as tree_hash::TreeHash<
+                            let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
                                 H,
-                            >>::tree_hash_root(inner);
+                            >(inner);
                             tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
                                 .expect("valid selector")
                         }
@@ -370,8 +366,7 @@ pub mod tests {
                     <UnionTypeAliasRef<'a>>::to_owned(self)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for UnionTypeAliasRef<'a> {
+            impl<'a> tree_hash::TreeHash for UnionTypeAliasRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Vector
                 }
@@ -381,14 +376,14 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Union should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     match self.selector() {
                         0u8 => {
                             let value = self.as_selector0().expect("valid selector");
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
                             >(
-                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    &<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&value),
                                     0u8,
                                 )
                                 .expect("valid selector")
@@ -398,7 +393,7 @@ pub mod tests {
                             tree_hash::mix_in_selector_with_hasher::<
                                 H,
                             >(
-                                    &<_ as tree_hash::TreeHash<H>>::tree_hash_root(&value),
+                                    &<_ as tree_hash::TreeHash>::tree_hash_root::<H>(&value),
                                     1u8,
                                 )
                                 .expect("valid selector")
@@ -422,8 +417,7 @@ pub mod tests {
             pub struct UnionTypeAliasVariant1 {
                 pub value: u8,
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for UnionTypeAliasVariant1 {
+            impl tree_hash::TreeHash for UnionTypeAliasVariant1 {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -433,12 +427,12 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.value)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.value)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -478,8 +472,7 @@ pub mod tests {
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for UnionTypeAliasVariant1Ref<'a> {
+            impl<'a> tree_hash::TreeHash for UnionTypeAliasVariant1Ref<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::StableContainer
                 }
@@ -489,7 +482,7 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     {
@@ -554,8 +547,7 @@ pub mod tests {
             pub struct UnionTypeAliasVariant2 {
                 pub value: u16,
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for UnionTypeAliasVariant2 {
+            impl tree_hash::TreeHash for UnionTypeAliasVariant2 {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -565,12 +557,12 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.value)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.value)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -610,8 +602,7 @@ pub mod tests {
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for UnionTypeAliasVariant2Ref<'a> {
+            impl<'a> tree_hash::TreeHash for UnionTypeAliasVariant2Ref<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::StableContainer
                 }
@@ -621,7 +612,7 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     {
@@ -687,8 +678,7 @@ pub mod tests {
             pub struct ContainerWithUnionClass {
                 pub items: VariableList<UnionClass, 65536usize>,
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for ContainerWithUnionClass {
+            impl tree_hash::TreeHash for ContainerWithUnionClass {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -698,12 +688,12 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.items)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.items)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -755,8 +745,7 @@ pub mod tests {
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for ContainerWithUnionClassRef<'a> {
+            impl<'a> tree_hash::TreeHash for ContainerWithUnionClassRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::StableContainer
                 }
@@ -766,14 +755,14 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     {
                         let items = self.items().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&items);
+                        >(&items);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
@@ -864,8 +853,7 @@ pub mod tests {
             pub struct ContainerWithUnionClassExternal {
                 pub items: VariableList<UnionClassWithExternal, 65536usize>,
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for ContainerWithUnionClassExternal {
+            impl tree_hash::TreeHash for ContainerWithUnionClassExternal {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -875,12 +863,12 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.items)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.items)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -932,8 +920,7 @@ pub mod tests {
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for ContainerWithUnionClassExternalRef<'a> {
+            impl<'a> tree_hash::TreeHash for ContainerWithUnionClassExternalRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::StableContainer
                 }
@@ -943,14 +930,14 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     {
                         let items = self.items().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&items);
+                        >(&items);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
@@ -1044,8 +1031,7 @@ pub mod tests {
             pub struct ContainerWithUnionTypeAlias {
                 pub items: VariableList<UnionTypeAlias, 65536usize>,
             }
-            impl<H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for ContainerWithUnionTypeAlias {
+            impl tree_hash::TreeHash for ContainerWithUnionTypeAlias {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Container
                 }
@@ -1055,12 +1041,12 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     hasher
                         .write(
-                            <_ as tree_hash::TreeHash<H>>::tree_hash_root(&self.items)
+                            <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&self.items)
                                 .as_ref(),
                         )
                         .expect("tree hash derive should not apply too many leaves");
@@ -1112,8 +1098,7 @@ pub mod tests {
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
-            impl<'a, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H>
-            for ContainerWithUnionTypeAliasRef<'a> {
+            impl<'a> tree_hash::TreeHash for ContainerWithUnionTypeAliasRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::StableContainer
                 }
@@ -1123,14 +1108,14 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Container should never be packed")
                 }
-                fn tree_hash_root(&self) -> H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     {
                         let items = self.items().expect("valid view");
-                        let root: <H as tree_hash::TreeHashDigest>::Output = tree_hash::TreeHash::<
+                        let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
                             H,
-                        >::tree_hash_root(&items);
+                        >(&items);
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")

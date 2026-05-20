@@ -196,9 +196,9 @@ impl<T, const N: usize> IntoIterator for VariableList<T, N> {
     }
 }
 
-impl<T, const N: usize, H: tree_hash::TreeHashDigest> tree_hash::TreeHash<H> for VariableList<T, N>
+impl<T, const N: usize> tree_hash::TreeHash for VariableList<T, N>
 where
-    T: tree_hash::TreeHash<H>,
+    T: tree_hash::TreeHash,
 {
     fn tree_hash_type() -> tree_hash::TreeHashType {
         tree_hash::TreeHashType::List
@@ -212,7 +212,7 @@ where
         unreachable!("List should never be packed.")
     }
 
-    fn tree_hash_root(&self) -> H::Output {
+    fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
         let root = vec_tree_hash_root::<T, N, H>(&self.vec);
 
         tree_hash::mix_in_length_with_hasher::<H>(&root, self.len())
@@ -450,14 +450,16 @@ mod test {
     fn tree_hash_u8() {
         let fixed = VariableList::<u8, 0>::try_from(vec![]).unwrap();
         assert_eq!(
-            <VariableList<u8, 0> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
+            <VariableList<u8, 0> as TreeHash>::tree_hash_root::<tree_hash::Sha256Hasher>(&fixed),
             root_with_length(&[0; 8], 0)
         );
 
         for i in 0..=1 {
             let fixed = VariableList::<u8, 1>::try_from(vec![0; i]).unwrap();
             assert_eq!(
-                <VariableList<u8, 1> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
+                <VariableList<u8, 1> as TreeHash>::tree_hash_root::<tree_hash::Sha256Hasher>(
+                    &fixed
+                ),
                 root_with_length(&vec![0; i], i)
             );
         }
@@ -465,7 +467,9 @@ mod test {
         for i in 0..=8 {
             let fixed = VariableList::<u8, 8>::try_from(vec![0; i]).unwrap();
             assert_eq!(
-                <VariableList<u8, 8> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
+                <VariableList<u8, 8> as TreeHash>::tree_hash_root::<tree_hash::Sha256Hasher>(
+                    &fixed
+                ),
                 root_with_length(&vec![0; i], i)
             );
         }
@@ -473,7 +477,9 @@ mod test {
         for i in 0..=13 {
             let fixed = VariableList::<u8, 13>::try_from(vec![0; i]).unwrap();
             assert_eq!(
-                <VariableList<u8, 13> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
+                <VariableList<u8, 13> as TreeHash>::tree_hash_root::<tree_hash::Sha256Hasher>(
+                    &fixed
+                ),
                 root_with_length(&vec![0; i], i)
             );
         }
@@ -481,7 +487,9 @@ mod test {
         for i in 0..=16 {
             let fixed = VariableList::<u8, 16>::try_from(vec![0; i]).unwrap();
             assert_eq!(
-                <VariableList<u8, 16> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
+                <VariableList<u8, 16> as TreeHash>::tree_hash_root::<tree_hash::Sha256Hasher>(
+                    &fixed
+                ),
                 root_with_length(&vec![0; i], i)
             );
         }
@@ -489,7 +497,7 @@ mod test {
         let source: Vec<u8> = (0..16).collect();
         let fixed = VariableList::<u8, 16>::try_from(source.clone()).unwrap();
         assert_eq!(
-            <VariableList<u8, 16> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
+            <VariableList<u8, 16> as TreeHash>::tree_hash_root::<tree_hash::Sha256Hasher>(&fixed),
             root_with_length(&source, 16)
         );
     }
@@ -522,15 +530,19 @@ mod test {
 
         let fixed = VariableList::<A, 0>::try_from(vec![]).unwrap();
         assert_eq!(
-            <VariableList<A, 0> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
+            <VariableList<A, 0> as TreeHash>::tree_hash_root::<tree_hash::Sha256Hasher>(&fixed),
             padded_root_with_length(&[0; 32], 0, 0),
         );
 
         for i in 0..=1 {
             let fixed = VariableList::<A, 1>::try_from(vec![a; i]).unwrap();
             assert_eq!(
-                <VariableList<A, 1> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
-                padded_root_with_length(&repeat(a.tree_hash_root().as_slice(), i), i, 1),
+                <VariableList<A, 1> as TreeHash>::tree_hash_root::<tree_hash::Sha256Hasher>(&fixed),
+                padded_root_with_length(
+                    &repeat(a.tree_hash_root::<tree_hash::Sha256Hasher>().as_slice(), i),
+                    i,
+                    1
+                ),
                 "U1 {i}"
             );
         }
@@ -538,8 +550,12 @@ mod test {
         for i in 0..=8 {
             let fixed = VariableList::<A, 8>::try_from(vec![a; i]).unwrap();
             assert_eq!(
-                <VariableList<A, 8> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
-                padded_root_with_length(&repeat(a.tree_hash_root().as_slice(), i), i, 8),
+                <VariableList<A, 8> as TreeHash>::tree_hash_root::<tree_hash::Sha256Hasher>(&fixed),
+                padded_root_with_length(
+                    &repeat(a.tree_hash_root::<tree_hash::Sha256Hasher>().as_slice(), i),
+                    i,
+                    8
+                ),
                 "U8 {i}"
             );
         }
@@ -547,8 +563,14 @@ mod test {
         for i in 0..=13 {
             let fixed = VariableList::<A, 13>::try_from(vec![a; i]).unwrap();
             assert_eq!(
-                <VariableList<A, 13> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
-                padded_root_with_length(&repeat(a.tree_hash_root().as_slice(), i), i, 13),
+                <VariableList<A, 13> as TreeHash>::tree_hash_root::<tree_hash::Sha256Hasher>(
+                    &fixed
+                ),
+                padded_root_with_length(
+                    &repeat(a.tree_hash_root::<tree_hash::Sha256Hasher>().as_slice(), i),
+                    i,
+                    13
+                ),
                 "U13 {i}"
             );
         }
@@ -556,8 +578,14 @@ mod test {
         for i in 0..=16 {
             let fixed = VariableList::<A, 16>::try_from(vec![a; i]).unwrap();
             assert_eq!(
-                <VariableList<A, 16> as TreeHash<tree_hash::Sha256Hasher>>::tree_hash_root(&fixed),
-                padded_root_with_length(&repeat(a.tree_hash_root().as_slice(), i), i, 16),
+                <VariableList<A, 16> as TreeHash>::tree_hash_root::<tree_hash::Sha256Hasher>(
+                    &fixed
+                ),
+                padded_root_with_length(
+                    &repeat(a.tree_hash_root::<tree_hash::Sha256Hasher>().as_slice(), i),
+                    i,
+                    16
+                ),
                 "U16 {i}"
             );
         }
