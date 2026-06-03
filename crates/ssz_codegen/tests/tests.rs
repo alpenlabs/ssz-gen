@@ -1617,14 +1617,14 @@ fn test_union_type_alias_view_types() {
     // Print first 500 chars for debugging
     eprintln!(
         "Generated output (first 500 chars):\n{}",
-        &generated.chars().take(500).collect::<String>()
+        generated.chars().take(500).collect::<String>()
     );
 
     // Verify that the view type alias is generated for the type alias used in union
     assert!(
         generated.contains("pub type TypeAliasRef<'a> = UnderlyingTypeRef<'a>;"),
         "View type alias TypeAliasRef should be generated. Generated output:\n{}",
-        &generated.chars().take(1000).collect::<String>()
+        generated.chars().take(1000).collect::<String>()
     );
 
     // Verify that the union view type uses the alias
@@ -1661,7 +1661,7 @@ fn test_external_container_union() {
         generated.contains("pub type DepositRef<'a> = external_ssz::SubjectDepositDataRef<'a>;")
             || generated.contains("pub type DepositRef<'a> = external_ssz::SubjectDepositDataRef<"),
         "View type alias DepositRef should reference SubjectDepositDataRef, not SubjectDepositData. Generated output:\n{}",
-        &generated.chars().take(2000).collect::<String>()
+        generated.chars().take(2000).collect::<String>()
     );
 
     // Verify that the union view type uses the Ref variant
@@ -1690,12 +1690,12 @@ fn test_external_container_union() {
         generated.contains("Deposit(external_ssz::SubjectDepositData)")
             || generated.contains("Deposit(SubjectDepositData)"),
         "Enum variant should use underlying external type SubjectDepositData, not alias Deposit. Generated output:\n{}",
-        &generated.chars().take(2000).collect::<String>()
+        generated.chars().take(2000).collect::<String>()
     );
     assert!(
         !generated.contains("Deposit(Deposit)"),
         "Enum variant should NOT use alias name Deposit as the type. Generated output:\n{}",
-        &generated.chars().take(2000).collect::<String>()
+        generated.chars().take(2000).collect::<String>()
     );
 }
 
@@ -2002,13 +2002,13 @@ fn test_union_type_alias_in_list() {
     assert!(
         generated.contains("impl<'a> ssz::view::SszTypeInfo for UnionTypeAliasRef<'a>"),
         "Union[Type1, Type2] syntax should implement SszTypeInfo. Generated output:\n{}",
-        &generated.chars().take(3000).collect::<String>()
+        generated.chars().take(3000).collect::<String>()
     );
     assert!(
         generated.contains("impl<'a> ssz_types::view::ToOwnedSsz<UnionTypeAlias>")
             && generated.contains("for UnionTypeAliasRef<'a>"),
         "Union[Type1, Type2] syntax should implement ToOwnedSsz. Generated output:\n{}",
-        &generated.chars().take(3000).collect::<String>()
+        generated.chars().take(3000).collect::<String>()
     );
 
     // Verify that Lists use ListRef with the union Ref types
@@ -2036,26 +2036,26 @@ fn test_union_class_in_list() {
     assert!(
         generated.contains("impl<'a> ssz::view::SszTypeInfo for UnionClassRef<'a>"),
         "class Name(Union): syntax should implement SszTypeInfo. Generated output:\n{}",
-        &generated.chars().take(3000).collect::<String>()
+        generated.chars().take(3000).collect::<String>()
     );
     assert!(
         generated.contains("impl<'a> ssz_types::view::ToOwnedSsz<UnionClass>")
             && generated.contains("for UnionClassRef<'a>"),
         "class Name(Union): syntax should implement ToOwnedSsz. Generated output:\n{}",
-        &generated.chars().take(3000).collect::<String>()
+        generated.chars().take(3000).collect::<String>()
     );
 
     // Verify class Name(Union): syntax with external container generates SszTypeInfo and ToOwnedSsz
     assert!(
         generated.contains("impl<'a> ssz::view::SszTypeInfo for UnionClassWithExternalRef<'a>"),
         "class Name(Union): syntax with external should implement SszTypeInfo. Generated output:\n{}",
-        &generated.chars().take(3000).collect::<String>()
+        generated.chars().take(3000).collect::<String>()
     );
     assert!(
         generated.contains("impl<'a> ssz_types::view::ToOwnedSsz<UnionClassWithExternal>")
             && generated.contains("for UnionClassWithExternalRef<'a>"),
         "class Name(Union): syntax with external should implement ToOwnedSsz. Generated output:\n{}",
-        &generated.chars().take(3000).collect::<String>()
+        generated.chars().take(3000).collect::<String>()
     );
 
     // Verify that Lists use ListRef with the union Ref types
@@ -2094,7 +2094,7 @@ fn test_external_container_to_owned_ssz() {
     assert!(
         generated.contains("ssz_types::view::ToOwnedSsz::to_owned(&view)"),
         "Generated to_owned() should use ToOwnedSsz trait method for complex types. Generated:\n{}",
-        &generated
+        generated
     );
 
     // Verify that the generated code has the trait implementation for BlockCommitment
