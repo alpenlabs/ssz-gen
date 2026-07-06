@@ -926,79 +926,143 @@ pub mod tests {
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> UnionEdgeCasesRef<'a> {
                 pub fn simple(&self) -> Result<SimpleUnionRef<'a>, ssz::DecodeError> {
-                    let start = ssz::layout::read_variable_offset(
+                    let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        24usize,
-                        6usize,
+                        <SimpleUnion as ssz::Encode>::is_ssz_fixed_len(),
+                        0usize,
+                        <SimpleUnion as ssz::Encode>::ssz_fixed_len(),
+                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
+                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
+                            + <ComplexUnion as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalSimple as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalComplex as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalUnion as ssz::Encode>::ssz_fixed_len(),
+                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
+                            + usize::from(
+                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<OptionalUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            ),
                         0usize,
                     )?;
-                    let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
-                        24usize,
-                        6usize,
-                        1usize,
-                    )?;
-                    if start > end || end > self.bytes.len() {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                    }
-                    let bytes = &self.bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn nested(&self) -> Result<NestedUnionRef<'a>, ssz::DecodeError> {
-                    let start = ssz::layout::read_variable_offset(
+                    let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        24usize,
-                        6usize,
-                        1usize,
+                        <NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                        <SimpleUnion as ssz::Encode>::ssz_fixed_len(),
+                        <NestedUnion as ssz::Encode>::ssz_fixed_len(),
+                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
+                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
+                            + <ComplexUnion as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalSimple as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalComplex as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalUnion as ssz::Encode>::ssz_fixed_len(),
+                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
+                            + usize::from(
+                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<OptionalUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            ),
+                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len()),
                     )?;
-                    let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
-                        24usize,
-                        6usize,
-                        2usize,
-                    )?;
-                    if start > end || end > self.bytes.len() {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                    }
-                    let bytes = &self.bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn complex(&self) -> Result<ComplexUnionRef<'a>, ssz::DecodeError> {
-                    let start = ssz::layout::read_variable_offset(
+                    let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        24usize,
-                        6usize,
-                        2usize,
+                        <ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
+                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
+                            + <NestedUnion as ssz::Encode>::ssz_fixed_len(),
+                        <ComplexUnion as ssz::Encode>::ssz_fixed_len(),
+                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
+                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
+                            + <ComplexUnion as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalSimple as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalComplex as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalUnion as ssz::Encode>::ssz_fixed_len(),
+                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
+                            + usize::from(
+                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<OptionalUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            ),
+                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
+                            + usize::from(
+                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            ),
                     )?;
-                    let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
-                        24usize,
-                        6usize,
-                        3usize,
-                    )?;
-                    if start > end || end > self.bytes.len() {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                    }
-                    let bytes = &self.bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn opt_simple(&self) -> Result<Option<u8>, ssz::DecodeError> {
-                    let start = ssz::layout::read_variable_offset(
+                    let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        24usize,
-                        6usize,
-                        3usize,
+                        <OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
+                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
+                            + <ComplexUnion as ssz::Encode>::ssz_fixed_len(),
+                        <OptionalSimple as ssz::Encode>::ssz_fixed_len(),
+                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
+                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
+                            + <ComplexUnion as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalSimple as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalComplex as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalUnion as ssz::Encode>::ssz_fixed_len(),
+                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
+                            + usize::from(
+                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<OptionalUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            ),
+                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
+                            + usize::from(
+                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            ),
                     )?;
-                    let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
-                        24usize,
-                        6usize,
-                        4usize,
-                    )?;
-                    if start > end || end > self.bytes.len() {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                    }
-                    let bytes = &self.bytes[start..end];
                     if bytes.is_empty() {
                         return Err(ssz::DecodeError::InvalidByteLength {
                             len: 0,
@@ -1026,22 +1090,47 @@ pub mod tests {
                 pub fn opt_complex(
                     &self,
                 ) -> Result<Option<ListRef<'a, u16, 8usize>>, ssz::DecodeError> {
-                    let start = ssz::layout::read_variable_offset(
+                    let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        24usize,
-                        6usize,
-                        4usize,
+                        <OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
+                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
+                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
+                            + <ComplexUnion as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalSimple as ssz::Encode>::ssz_fixed_len(),
+                        <OptionalComplex as ssz::Encode>::ssz_fixed_len(),
+                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
+                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
+                            + <ComplexUnion as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalSimple as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalComplex as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalUnion as ssz::Encode>::ssz_fixed_len(),
+                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
+                            + usize::from(
+                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<OptionalUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            ),
+                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
+                            + usize::from(
+                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                            ),
                     )?;
-                    let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
-                        24usize,
-                        6usize,
-                        5usize,
-                    )?;
-                    if start > end || end > self.bytes.len() {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                    }
-                    let bytes = &self.bytes[start..end];
                     if bytes.is_empty() {
                         return Err(ssz::DecodeError::InvalidByteLength {
                             len: 0,
@@ -1071,22 +1160,51 @@ pub mod tests {
                 pub fn opt_union(
                     &self,
                 ) -> Result<Option<SimpleUnionRef<'a>>, ssz::DecodeError> {
-                    let start = ssz::layout::read_variable_offset(
+                    let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        24usize,
-                        6usize,
-                        5usize,
+                        <OptionalUnion as ssz::Encode>::is_ssz_fixed_len(),
+                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
+                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
+                            + <ComplexUnion as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalSimple as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalComplex as ssz::Encode>::ssz_fixed_len(),
+                        <OptionalUnion as ssz::Encode>::ssz_fixed_len(),
+                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
+                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
+                            + <ComplexUnion as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalSimple as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalComplex as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalUnion as ssz::Encode>::ssz_fixed_len(),
+                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
+                            + usize::from(
+                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<OptionalUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            ),
+                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
+                            + usize::from(
+                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
+                            ),
                     )?;
-                    let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
-                        24usize,
-                        6usize,
-                        6usize,
-                    )?;
-                    if start > end || end > self.bytes.len() {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                    }
-                    let bytes = &self.bytes[start..end];
                     if bytes.is_empty() {
                         return Err(ssz::DecodeError::InvalidByteLength {
                             len: 0,
@@ -1172,40 +1290,90 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for UnionEdgeCasesRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    if bytes.len() < 24usize {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: bytes.len(),
-                            expected: 24usize,
-                        });
-                    }
-                    let mut prev_offset: Option<usize> = None;
-                    for i in 0..6usize {
-                        let offset = ssz::layout::read_variable_offset(
-                            bytes,
-                            24usize,
-                            6usize,
-                            i,
-                        )?;
-                        if i == 0 && offset != 24usize {
-                            return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
+                    let fixed_portion_size = <SimpleUnion as ssz::Encode>::ssz_fixed_len()
+                        + <NestedUnion as ssz::Encode>::ssz_fixed_len()
+                        + <ComplexUnion as ssz::Encode>::ssz_fixed_len()
+                        + <OptionalSimple as ssz::Encode>::ssz_fixed_len()
+                        + <OptionalComplex as ssz::Encode>::ssz_fixed_len()
+                        + <OptionalUnion as ssz::Encode>::ssz_fixed_len();
+                    let num_variable_fields = usize::from(
+                        !<SimpleUnion as ssz::Encode>::is_ssz_fixed_len(),
+                    ) + usize::from(!<NestedUnion as ssz::Encode>::is_ssz_fixed_len())
+                        + usize::from(!<ComplexUnion as ssz::Encode>::is_ssz_fixed_len())
+                        + usize::from(
+                            !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                        )
+                        + usize::from(
+                            !<OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
+                        )
+                        + usize::from(
+                            !<OptionalUnion as ssz::Encode>::is_ssz_fixed_len(),
+                        );
+                    if num_variable_fields == 0 {
+                        if bytes.len() != fixed_portion_size {
+                            return Err(ssz::DecodeError::InvalidByteLength {
+                                len: bytes.len(),
+                                expected: fixed_portion_size,
+                            });
                         }
-                        if let Some(prev) = prev_offset && offset < prev {
-                            return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                    } else {
+                        if bytes.len() < fixed_portion_size {
+                            return Err(ssz::DecodeError::InvalidByteLength {
+                                len: bytes.len(),
+                                expected: fixed_portion_size,
+                            });
                         }
-                        if offset > bytes.len() {
-                            return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                        let mut prev_offset: Option<usize> = None;
+                        for i in 0..num_variable_fields {
+                            let offset = ssz::layout::read_variable_offset(
+                                bytes,
+                                fixed_portion_size,
+                                num_variable_fields,
+                                i,
+                            )?;
+                            if i == 0 && offset != fixed_portion_size {
+                                return Err(
+                                    ssz::DecodeError::OffsetIntoFixedPortion(offset),
+                                );
+                            }
+                            if let Some(prev) = prev_offset && offset < prev {
+                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                            }
+                            if offset > bytes.len() {
+                                return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                            }
+                            prev_offset = Some(offset);
                         }
-                        prev_offset = Some(offset);
                     }
                     Ok(Self { bytes })
                 }
             }
             impl<'a> ssz::view::SszTypeInfo for UnionEdgeCasesRef<'a> {
                 fn is_ssz_fixed_len() -> bool {
-                    false
+                    usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
+                        + usize::from(!<NestedUnion as ssz::Encode>::is_ssz_fixed_len())
+                        + usize::from(!<ComplexUnion as ssz::Encode>::is_ssz_fixed_len())
+                        + usize::from(
+                            !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                        )
+                        + usize::from(
+                            !<OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
+                        )
+                        + usize::from(
+                            !<OptionalUnion as ssz::Encode>::is_ssz_fixed_len(),
+                        ) == 0
                 }
                 fn ssz_fixed_len() -> usize {
-                    0
+                    if <Self as ssz::view::SszTypeInfo>::is_ssz_fixed_len() {
+                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
+                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
+                            + <ComplexUnion as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalSimple as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalComplex as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalUnion as ssz::Encode>::ssz_fixed_len()
+                    } else {
+                        0
+                    }
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
@@ -1323,60 +1491,67 @@ pub mod tests {
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> AllUnionsRef<'a> {
                 pub fn union1(&self) -> Result<SimpleUnionRef<'a>, ssz::DecodeError> {
-                    let start = ssz::layout::read_variable_offset(
+                    let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        12usize,
-                        3usize,
+                        <SimpleUnion as ssz::Encode>::is_ssz_fixed_len(),
+                        0usize,
+                        <SimpleUnion as ssz::Encode>::ssz_fixed_len(),
+                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
+                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalSimple as ssz::Encode>::ssz_fixed_len(),
+                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
+                            + usize::from(
+                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                            ),
                         0usize,
                     )?;
-                    let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
-                        12usize,
-                        3usize,
-                        1usize,
-                    )?;
-                    if start > end || end > self.bytes.len() {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                    }
-                    let bytes = &self.bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn union2(&self) -> Result<NestedUnionRef<'a>, ssz::DecodeError> {
-                    let start = ssz::layout::read_variable_offset(
+                    let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        12usize,
-                        3usize,
-                        1usize,
+                        <NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                        <SimpleUnion as ssz::Encode>::ssz_fixed_len(),
+                        <NestedUnion as ssz::Encode>::ssz_fixed_len(),
+                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
+                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalSimple as ssz::Encode>::ssz_fixed_len(),
+                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
+                            + usize::from(
+                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                            ),
+                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len()),
                     )?;
-                    let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
-                        12usize,
-                        3usize,
-                        2usize,
-                    )?;
-                    if start > end || end > self.bytes.len() {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                    }
-                    let bytes = &self.bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn union3(&self) -> Result<Option<u8>, ssz::DecodeError> {
-                    let start = ssz::layout::read_variable_offset(
+                    let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        12usize,
-                        3usize,
-                        2usize,
+                        <OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
+                            + <NestedUnion as ssz::Encode>::ssz_fixed_len(),
+                        <OptionalSimple as ssz::Encode>::ssz_fixed_len(),
+                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
+                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalSimple as ssz::Encode>::ssz_fixed_len(),
+                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
+                            + usize::from(
+                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                            ),
+                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
+                            + usize::from(
+                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            ),
                     )?;
-                    let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
-                        12usize,
-                        3usize,
-                        3usize,
-                    )?;
-                    if start > end || end > self.bytes.len() {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                    }
-                    let bytes = &self.bytes[start..end];
                     if bytes.is_empty() {
                         return Err(ssz::DecodeError::InvalidByteLength {
                             len: 0,
@@ -1441,40 +1616,70 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for AllUnionsRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    if bytes.len() < 12usize {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: bytes.len(),
-                            expected: 12usize,
-                        });
-                    }
-                    let mut prev_offset: Option<usize> = None;
-                    for i in 0..3usize {
-                        let offset = ssz::layout::read_variable_offset(
-                            bytes,
-                            12usize,
-                            3usize,
-                            i,
-                        )?;
-                        if i == 0 && offset != 12usize {
-                            return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
+                    let fixed_portion_size = <SimpleUnion as ssz::Encode>::ssz_fixed_len()
+                        + <NestedUnion as ssz::Encode>::ssz_fixed_len()
+                        + <OptionalSimple as ssz::Encode>::ssz_fixed_len();
+                    let num_variable_fields = usize::from(
+                        !<SimpleUnion as ssz::Encode>::is_ssz_fixed_len(),
+                    ) + usize::from(!<NestedUnion as ssz::Encode>::is_ssz_fixed_len())
+                        + usize::from(
+                            !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                        );
+                    if num_variable_fields == 0 {
+                        if bytes.len() != fixed_portion_size {
+                            return Err(ssz::DecodeError::InvalidByteLength {
+                                len: bytes.len(),
+                                expected: fixed_portion_size,
+                            });
                         }
-                        if let Some(prev) = prev_offset && offset < prev {
-                            return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                    } else {
+                        if bytes.len() < fixed_portion_size {
+                            return Err(ssz::DecodeError::InvalidByteLength {
+                                len: bytes.len(),
+                                expected: fixed_portion_size,
+                            });
                         }
-                        if offset > bytes.len() {
-                            return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                        let mut prev_offset: Option<usize> = None;
+                        for i in 0..num_variable_fields {
+                            let offset = ssz::layout::read_variable_offset(
+                                bytes,
+                                fixed_portion_size,
+                                num_variable_fields,
+                                i,
+                            )?;
+                            if i == 0 && offset != fixed_portion_size {
+                                return Err(
+                                    ssz::DecodeError::OffsetIntoFixedPortion(offset),
+                                );
+                            }
+                            if let Some(prev) = prev_offset && offset < prev {
+                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                            }
+                            if offset > bytes.len() {
+                                return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                            }
+                            prev_offset = Some(offset);
                         }
-                        prev_offset = Some(offset);
                     }
                     Ok(Self { bytes })
                 }
             }
             impl<'a> ssz::view::SszTypeInfo for AllUnionsRef<'a> {
                 fn is_ssz_fixed_len() -> bool {
-                    false
+                    usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
+                        + usize::from(!<NestedUnion as ssz::Encode>::is_ssz_fixed_len())
+                        + usize::from(
+                            !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                        ) == 0
                 }
                 fn ssz_fixed_len() -> usize {
-                    0
+                    if <Self as ssz::view::SszTypeInfo>::is_ssz_fixed_len() {
+                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
+                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
+                            + <OptionalSimple as ssz::Encode>::ssz_fixed_len()
+                    } else {
+                        0
+                    }
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]

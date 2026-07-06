@@ -30,20 +30,20 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Union should never be packed")
                 }
-                fn tree_hash_root<__H: tree_hash::TreeHashDigest>(&self) -> __H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     match self {
                         UnionClass::Variant1(inner) => {
                             let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
-                                __H,
+                                H,
                             >(inner);
-                            tree_hash::mix_in_selector_with_hasher::<__H>(&root, 0u8)
+                            tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
                                 .expect("valid selector")
                         }
                         UnionClass::Variant2(inner) => {
                             let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
-                                __H,
+                                H,
                             >(inner);
-                            tree_hash::mix_in_selector_with_hasher::<__H>(&root, 1u8)
+                            tree_hash::mix_in_selector_with_hasher::<H>(&root, 1u8)
                                 .expect("valid selector")
                         }
                     }
@@ -169,13 +169,13 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Union should never be packed")
                 }
-                fn tree_hash_root<__H: tree_hash::TreeHashDigest>(&self) -> __H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     match self {
                         UnionClassWithExternal::Deposit(inner) => {
                             let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
-                                __H,
+                                H,
                             >(inner);
-                            tree_hash::mix_in_selector_with_hasher::<__H>(&root, 0u8)
+                            tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
                                 .expect("valid selector")
                         }
                     }
@@ -460,15 +460,15 @@ pub mod tests {
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> UnionTypeAliasVariant1Ref<'a> {
                 pub fn value(&self) -> Result<u8, ssz::DecodeError> {
-                    let offset = 0usize;
-                    let end = offset + 1usize;
-                    if end > self.bytes.len() {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: self.bytes.len(),
-                            expected: end,
-                        });
-                    }
-                    let bytes = &self.bytes[offset..end];
+                    let bytes = ssz::layout::read_field_bytes(
+                        self.bytes,
+                        <u8 as ssz::Encode>::is_ssz_fixed_len(),
+                        0usize,
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
+                        usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len()),
+                        0usize,
+                    )?;
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
@@ -486,30 +486,70 @@ pub mod tests {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     {
-                        let offset = 0usize;
-                        let field_bytes = &self.bytes[offset..offset + 1usize];
-                        hasher.write(field_bytes).expect("write field");
+                        let value = self.value().expect("valid view");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
+                            H,
+                        >(&value);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }
             }
             impl<'a> ssz::view::DecodeView<'a> for UnionTypeAliasVariant1Ref<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    if bytes.len() != 1usize {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: bytes.len(),
-                            expected: 1usize,
-                        });
+                    let fixed_portion_size = <u8 as ssz::Encode>::ssz_fixed_len();
+                    let num_variable_fields = usize::from(
+                        !<u8 as ssz::Encode>::is_ssz_fixed_len(),
+                    );
+                    if num_variable_fields == 0 {
+                        if bytes.len() != fixed_portion_size {
+                            return Err(ssz::DecodeError::InvalidByteLength {
+                                len: bytes.len(),
+                                expected: fixed_portion_size,
+                            });
+                        }
+                    } else {
+                        if bytes.len() < fixed_portion_size {
+                            return Err(ssz::DecodeError::InvalidByteLength {
+                                len: bytes.len(),
+                                expected: fixed_portion_size,
+                            });
+                        }
+                        let mut prev_offset: Option<usize> = None;
+                        for i in 0..num_variable_fields {
+                            let offset = ssz::layout::read_variable_offset(
+                                bytes,
+                                fixed_portion_size,
+                                num_variable_fields,
+                                i,
+                            )?;
+                            if i == 0 && offset != fixed_portion_size {
+                                return Err(
+                                    ssz::DecodeError::OffsetIntoFixedPortion(offset),
+                                );
+                            }
+                            if let Some(prev) = prev_offset && offset < prev {
+                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                            }
+                            if offset > bytes.len() {
+                                return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                            }
+                            prev_offset = Some(offset);
+                        }
                     }
                     Ok(Self { bytes })
                 }
             }
             impl<'a> ssz::view::SszTypeInfo for UnionTypeAliasVariant1Ref<'a> {
                 fn is_ssz_fixed_len() -> bool {
-                    true
+                    usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len()) == 0
                 }
                 fn ssz_fixed_len() -> usize {
-                    1usize
+                    if <Self as ssz::view::SszTypeInfo>::is_ssz_fixed_len() {
+                        <u8 as ssz::Encode>::ssz_fixed_len()
+                    } else {
+                        0
+                    }
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
@@ -590,15 +630,15 @@ pub mod tests {
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> UnionTypeAliasVariant2Ref<'a> {
                 pub fn value(&self) -> Result<u16, ssz::DecodeError> {
-                    let offset = 0usize;
-                    let end = offset + 2usize;
-                    if end > self.bytes.len() {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: self.bytes.len(),
-                            expected: end,
-                        });
-                    }
-                    let bytes = &self.bytes[offset..end];
+                    let bytes = ssz::layout::read_field_bytes(
+                        self.bytes,
+                        <u16 as ssz::Encode>::is_ssz_fixed_len(),
+                        0usize,
+                        <u16 as ssz::Encode>::ssz_fixed_len(),
+                        <u16 as ssz::Encode>::ssz_fixed_len(),
+                        usize::from(!<u16 as ssz::Encode>::is_ssz_fixed_len()),
+                        0usize,
+                    )?;
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
@@ -616,30 +656,70 @@ pub mod tests {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(1usize);
                     {
-                        let offset = 0usize;
-                        let field_bytes = &self.bytes[offset..offset + 2usize];
-                        hasher.write(field_bytes).expect("write field");
+                        let value = self.value().expect("valid view");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
+                            H,
+                        >(&value);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }
             }
             impl<'a> ssz::view::DecodeView<'a> for UnionTypeAliasVariant2Ref<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    if bytes.len() != 2usize {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: bytes.len(),
-                            expected: 2usize,
-                        });
+                    let fixed_portion_size = <u16 as ssz::Encode>::ssz_fixed_len();
+                    let num_variable_fields = usize::from(
+                        !<u16 as ssz::Encode>::is_ssz_fixed_len(),
+                    );
+                    if num_variable_fields == 0 {
+                        if bytes.len() != fixed_portion_size {
+                            return Err(ssz::DecodeError::InvalidByteLength {
+                                len: bytes.len(),
+                                expected: fixed_portion_size,
+                            });
+                        }
+                    } else {
+                        if bytes.len() < fixed_portion_size {
+                            return Err(ssz::DecodeError::InvalidByteLength {
+                                len: bytes.len(),
+                                expected: fixed_portion_size,
+                            });
+                        }
+                        let mut prev_offset: Option<usize> = None;
+                        for i in 0..num_variable_fields {
+                            let offset = ssz::layout::read_variable_offset(
+                                bytes,
+                                fixed_portion_size,
+                                num_variable_fields,
+                                i,
+                            )?;
+                            if i == 0 && offset != fixed_portion_size {
+                                return Err(
+                                    ssz::DecodeError::OffsetIntoFixedPortion(offset),
+                                );
+                            }
+                            if let Some(prev) = prev_offset && offset < prev {
+                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                            }
+                            if offset > bytes.len() {
+                                return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                            }
+                            prev_offset = Some(offset);
+                        }
                     }
                     Ok(Self { bytes })
                 }
             }
             impl<'a> ssz::view::SszTypeInfo for UnionTypeAliasVariant2Ref<'a> {
                 fn is_ssz_fixed_len() -> bool {
-                    true
+                    usize::from(!<u16 as ssz::Encode>::is_ssz_fixed_len()) == 0
                 }
                 fn ssz_fixed_len() -> usize {
-                    2usize
+                    if <Self as ssz::view::SszTypeInfo>::is_ssz_fixed_len() {
+                        <u16 as ssz::Encode>::ssz_fixed_len()
+                    } else {
+                        0
+                    }
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
@@ -726,22 +806,29 @@ pub mod tests {
                     ListRef<'a, UnionClassRef<'a>, 65536usize>,
                     ssz::DecodeError,
                 > {
-                    let start = ssz::layout::read_variable_offset(
+                    let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        4usize,
-                        1usize,
+                        <VariableList<
+                            UnionClass,
+                            65536usize,
+                        > as ssz::Encode>::is_ssz_fixed_len(),
+                        0usize,
+                        <VariableList<
+                            UnionClass,
+                            65536usize,
+                        > as ssz::Encode>::ssz_fixed_len(),
+                        <VariableList<
+                            UnionClass,
+                            65536usize,
+                        > as ssz::Encode>::ssz_fixed_len(),
+                        usize::from(
+                            !<VariableList<
+                                UnionClass,
+                                65536usize,
+                            > as ssz::Encode>::is_ssz_fixed_len(),
+                        ),
                         0usize,
                     )?;
-                    let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
-                        4usize,
-                        1usize,
-                        1usize,
-                    )?;
-                    if start > end || end > self.bytes.len() {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                    }
-                    let bytes = &self.bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
@@ -770,40 +857,73 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for ContainerWithUnionClassRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    if bytes.len() < 4usize {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: bytes.len(),
-                            expected: 4usize,
-                        });
-                    }
-                    let mut prev_offset: Option<usize> = None;
-                    for i in 0..1usize {
-                        let offset = ssz::layout::read_variable_offset(
-                            bytes,
-                            4usize,
-                            1usize,
-                            i,
-                        )?;
-                        if i == 0 && offset != 4usize {
-                            return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
+                    let fixed_portion_size = <VariableList<
+                        UnionClass,
+                        65536usize,
+                    > as ssz::Encode>::ssz_fixed_len();
+                    let num_variable_fields = usize::from(
+                        !<VariableList<
+                            UnionClass,
+                            65536usize,
+                        > as ssz::Encode>::is_ssz_fixed_len(),
+                    );
+                    if num_variable_fields == 0 {
+                        if bytes.len() != fixed_portion_size {
+                            return Err(ssz::DecodeError::InvalidByteLength {
+                                len: bytes.len(),
+                                expected: fixed_portion_size,
+                            });
                         }
-                        if let Some(prev) = prev_offset && offset < prev {
-                            return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                    } else {
+                        if bytes.len() < fixed_portion_size {
+                            return Err(ssz::DecodeError::InvalidByteLength {
+                                len: bytes.len(),
+                                expected: fixed_portion_size,
+                            });
                         }
-                        if offset > bytes.len() {
-                            return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                        let mut prev_offset: Option<usize> = None;
+                        for i in 0..num_variable_fields {
+                            let offset = ssz::layout::read_variable_offset(
+                                bytes,
+                                fixed_portion_size,
+                                num_variable_fields,
+                                i,
+                            )?;
+                            if i == 0 && offset != fixed_portion_size {
+                                return Err(
+                                    ssz::DecodeError::OffsetIntoFixedPortion(offset),
+                                );
+                            }
+                            if let Some(prev) = prev_offset && offset < prev {
+                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                            }
+                            if offset > bytes.len() {
+                                return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                            }
+                            prev_offset = Some(offset);
                         }
-                        prev_offset = Some(offset);
                     }
                     Ok(Self { bytes })
                 }
             }
             impl<'a> ssz::view::SszTypeInfo for ContainerWithUnionClassRef<'a> {
                 fn is_ssz_fixed_len() -> bool {
-                    false
+                    usize::from(
+                        !<VariableList<
+                            UnionClass,
+                            65536usize,
+                        > as ssz::Encode>::is_ssz_fixed_len(),
+                    ) == 0
                 }
                 fn ssz_fixed_len() -> usize {
-                    0
+                    if <Self as ssz::view::SszTypeInfo>::is_ssz_fixed_len() {
+                        <VariableList<
+                            UnionClass,
+                            65536usize,
+                        > as ssz::Encode>::ssz_fixed_len()
+                    } else {
+                        0
+                    }
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
@@ -901,22 +1021,29 @@ pub mod tests {
                     ListRef<'a, UnionClassWithExternalRef<'a>, 65536usize>,
                     ssz::DecodeError,
                 > {
-                    let start = ssz::layout::read_variable_offset(
+                    let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        4usize,
-                        1usize,
+                        <VariableList<
+                            UnionClassWithExternal,
+                            65536usize,
+                        > as ssz::Encode>::is_ssz_fixed_len(),
+                        0usize,
+                        <VariableList<
+                            UnionClassWithExternal,
+                            65536usize,
+                        > as ssz::Encode>::ssz_fixed_len(),
+                        <VariableList<
+                            UnionClassWithExternal,
+                            65536usize,
+                        > as ssz::Encode>::ssz_fixed_len(),
+                        usize::from(
+                            !<VariableList<
+                                UnionClassWithExternal,
+                                65536usize,
+                            > as ssz::Encode>::is_ssz_fixed_len(),
+                        ),
                         0usize,
                     )?;
-                    let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
-                        4usize,
-                        1usize,
-                        1usize,
-                    )?;
-                    if start > end || end > self.bytes.len() {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                    }
-                    let bytes = &self.bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
@@ -946,40 +1073,73 @@ pub mod tests {
             impl<'a> ssz::view::DecodeView<'a>
             for ContainerWithUnionClassExternalRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    if bytes.len() < 4usize {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: bytes.len(),
-                            expected: 4usize,
-                        });
-                    }
-                    let mut prev_offset: Option<usize> = None;
-                    for i in 0..1usize {
-                        let offset = ssz::layout::read_variable_offset(
-                            bytes,
-                            4usize,
-                            1usize,
-                            i,
-                        )?;
-                        if i == 0 && offset != 4usize {
-                            return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
+                    let fixed_portion_size = <VariableList<
+                        UnionClassWithExternal,
+                        65536usize,
+                    > as ssz::Encode>::ssz_fixed_len();
+                    let num_variable_fields = usize::from(
+                        !<VariableList<
+                            UnionClassWithExternal,
+                            65536usize,
+                        > as ssz::Encode>::is_ssz_fixed_len(),
+                    );
+                    if num_variable_fields == 0 {
+                        if bytes.len() != fixed_portion_size {
+                            return Err(ssz::DecodeError::InvalidByteLength {
+                                len: bytes.len(),
+                                expected: fixed_portion_size,
+                            });
                         }
-                        if let Some(prev) = prev_offset && offset < prev {
-                            return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                    } else {
+                        if bytes.len() < fixed_portion_size {
+                            return Err(ssz::DecodeError::InvalidByteLength {
+                                len: bytes.len(),
+                                expected: fixed_portion_size,
+                            });
                         }
-                        if offset > bytes.len() {
-                            return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                        let mut prev_offset: Option<usize> = None;
+                        for i in 0..num_variable_fields {
+                            let offset = ssz::layout::read_variable_offset(
+                                bytes,
+                                fixed_portion_size,
+                                num_variable_fields,
+                                i,
+                            )?;
+                            if i == 0 && offset != fixed_portion_size {
+                                return Err(
+                                    ssz::DecodeError::OffsetIntoFixedPortion(offset),
+                                );
+                            }
+                            if let Some(prev) = prev_offset && offset < prev {
+                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                            }
+                            if offset > bytes.len() {
+                                return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                            }
+                            prev_offset = Some(offset);
                         }
-                        prev_offset = Some(offset);
                     }
                     Ok(Self { bytes })
                 }
             }
             impl<'a> ssz::view::SszTypeInfo for ContainerWithUnionClassExternalRef<'a> {
                 fn is_ssz_fixed_len() -> bool {
-                    false
+                    usize::from(
+                        !<VariableList<
+                            UnionClassWithExternal,
+                            65536usize,
+                        > as ssz::Encode>::is_ssz_fixed_len(),
+                    ) == 0
                 }
                 fn ssz_fixed_len() -> usize {
-                    0
+                    if <Self as ssz::view::SszTypeInfo>::is_ssz_fixed_len() {
+                        <VariableList<
+                            UnionClassWithExternal,
+                            65536usize,
+                        > as ssz::Encode>::ssz_fixed_len()
+                    } else {
+                        0
+                    }
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
@@ -1079,22 +1239,29 @@ pub mod tests {
                     ListRef<'a, UnionTypeAliasRef<'a>, 65536usize>,
                     ssz::DecodeError,
                 > {
-                    let start = ssz::layout::read_variable_offset(
+                    let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        4usize,
-                        1usize,
+                        <VariableList<
+                            UnionTypeAlias,
+                            65536usize,
+                        > as ssz::Encode>::is_ssz_fixed_len(),
+                        0usize,
+                        <VariableList<
+                            UnionTypeAlias,
+                            65536usize,
+                        > as ssz::Encode>::ssz_fixed_len(),
+                        <VariableList<
+                            UnionTypeAlias,
+                            65536usize,
+                        > as ssz::Encode>::ssz_fixed_len(),
+                        usize::from(
+                            !<VariableList<
+                                UnionTypeAlias,
+                                65536usize,
+                            > as ssz::Encode>::is_ssz_fixed_len(),
+                        ),
                         0usize,
                     )?;
-                    let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
-                        4usize,
-                        1usize,
-                        1usize,
-                    )?;
-                    if start > end || end > self.bytes.len() {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                    }
-                    let bytes = &self.bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
@@ -1123,40 +1290,73 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for ContainerWithUnionTypeAliasRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    if bytes.len() < 4usize {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: bytes.len(),
-                            expected: 4usize,
-                        });
-                    }
-                    let mut prev_offset: Option<usize> = None;
-                    for i in 0..1usize {
-                        let offset = ssz::layout::read_variable_offset(
-                            bytes,
-                            4usize,
-                            1usize,
-                            i,
-                        )?;
-                        if i == 0 && offset != 4usize {
-                            return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
+                    let fixed_portion_size = <VariableList<
+                        UnionTypeAlias,
+                        65536usize,
+                    > as ssz::Encode>::ssz_fixed_len();
+                    let num_variable_fields = usize::from(
+                        !<VariableList<
+                            UnionTypeAlias,
+                            65536usize,
+                        > as ssz::Encode>::is_ssz_fixed_len(),
+                    );
+                    if num_variable_fields == 0 {
+                        if bytes.len() != fixed_portion_size {
+                            return Err(ssz::DecodeError::InvalidByteLength {
+                                len: bytes.len(),
+                                expected: fixed_portion_size,
+                            });
                         }
-                        if let Some(prev) = prev_offset && offset < prev {
-                            return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                    } else {
+                        if bytes.len() < fixed_portion_size {
+                            return Err(ssz::DecodeError::InvalidByteLength {
+                                len: bytes.len(),
+                                expected: fixed_portion_size,
+                            });
                         }
-                        if offset > bytes.len() {
-                            return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                        let mut prev_offset: Option<usize> = None;
+                        for i in 0..num_variable_fields {
+                            let offset = ssz::layout::read_variable_offset(
+                                bytes,
+                                fixed_portion_size,
+                                num_variable_fields,
+                                i,
+                            )?;
+                            if i == 0 && offset != fixed_portion_size {
+                                return Err(
+                                    ssz::DecodeError::OffsetIntoFixedPortion(offset),
+                                );
+                            }
+                            if let Some(prev) = prev_offset && offset < prev {
+                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                            }
+                            if offset > bytes.len() {
+                                return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                            }
+                            prev_offset = Some(offset);
                         }
-                        prev_offset = Some(offset);
                     }
                     Ok(Self { bytes })
                 }
             }
             impl<'a> ssz::view::SszTypeInfo for ContainerWithUnionTypeAliasRef<'a> {
                 fn is_ssz_fixed_len() -> bool {
-                    false
+                    usize::from(
+                        !<VariableList<
+                            UnionTypeAlias,
+                            65536usize,
+                        > as ssz::Encode>::is_ssz_fixed_len(),
+                    ) == 0
                 }
                 fn ssz_fixed_len() -> usize {
-                    0
+                    if <Self as ssz::view::SszTypeInfo>::is_ssz_fixed_len() {
+                        <VariableList<
+                            UnionTypeAlias,
+                            65536usize,
+                        > as ssz::Encode>::ssz_fixed_len()
+                    } else {
+                        0
+                    }
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]

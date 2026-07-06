@@ -28,13 +28,13 @@ pub mod tests {
                 fn tree_hash_packing_factor() -> usize {
                     unreachable!("Union should never be packed")
                 }
-                fn tree_hash_root<__H: tree_hash::TreeHashDigest>(&self) -> __H::Output {
+                fn tree_hash_root<H: tree_hash::TreeHashDigest>(&self) -> H::Output {
                     match self {
                         PendingInputEntry::Deposit(inner) => {
                             let root = <_ as tree_hash::TreeHash>::tree_hash_root::<
-                                __H,
+                                H,
                             >(inner);
-                            tree_hash::mix_in_selector_with_hasher::<__H>(&root, 0u8)
+                            tree_hash::mix_in_selector_with_hasher::<H>(&root, 0u8)
                                 .expect("valid selector")
                         }
                     }
@@ -182,22 +182,29 @@ pub mod tests {
                     ListRef<'a, PendingInputEntryRef<'a>, 10usize>,
                     ssz::DecodeError,
                 > {
-                    let start = ssz::layout::read_variable_offset(
+                    let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        4usize,
-                        1usize,
+                        <VariableList<
+                            PendingInputEntry,
+                            10usize,
+                        > as ssz::Encode>::is_ssz_fixed_len(),
+                        0usize,
+                        <VariableList<
+                            PendingInputEntry,
+                            10usize,
+                        > as ssz::Encode>::ssz_fixed_len(),
+                        <VariableList<
+                            PendingInputEntry,
+                            10usize,
+                        > as ssz::Encode>::ssz_fixed_len(),
+                        usize::from(
+                            !<VariableList<
+                                PendingInputEntry,
+                                10usize,
+                            > as ssz::Encode>::is_ssz_fixed_len(),
+                        ),
                         0usize,
                     )?;
-                    let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
-                        4usize,
-                        1usize,
-                        1usize,
-                    )?;
-                    if start > end || end > self.bytes.len() {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                    }
-                    let bytes = &self.bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
@@ -226,40 +233,73 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for TestContainerRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    if bytes.len() < 4usize {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: bytes.len(),
-                            expected: 4usize,
-                        });
-                    }
-                    let mut prev_offset: Option<usize> = None;
-                    for i in 0..1usize {
-                        let offset = ssz::layout::read_variable_offset(
-                            bytes,
-                            4usize,
-                            1usize,
-                            i,
-                        )?;
-                        if i == 0 && offset != 4usize {
-                            return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
+                    let fixed_portion_size = <VariableList<
+                        PendingInputEntry,
+                        10usize,
+                    > as ssz::Encode>::ssz_fixed_len();
+                    let num_variable_fields = usize::from(
+                        !<VariableList<
+                            PendingInputEntry,
+                            10usize,
+                        > as ssz::Encode>::is_ssz_fixed_len(),
+                    );
+                    if num_variable_fields == 0 {
+                        if bytes.len() != fixed_portion_size {
+                            return Err(ssz::DecodeError::InvalidByteLength {
+                                len: bytes.len(),
+                                expected: fixed_portion_size,
+                            });
                         }
-                        if let Some(prev) = prev_offset && offset < prev {
-                            return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                    } else {
+                        if bytes.len() < fixed_portion_size {
+                            return Err(ssz::DecodeError::InvalidByteLength {
+                                len: bytes.len(),
+                                expected: fixed_portion_size,
+                            });
                         }
-                        if offset > bytes.len() {
-                            return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                        let mut prev_offset: Option<usize> = None;
+                        for i in 0..num_variable_fields {
+                            let offset = ssz::layout::read_variable_offset(
+                                bytes,
+                                fixed_portion_size,
+                                num_variable_fields,
+                                i,
+                            )?;
+                            if i == 0 && offset != fixed_portion_size {
+                                return Err(
+                                    ssz::DecodeError::OffsetIntoFixedPortion(offset),
+                                );
+                            }
+                            if let Some(prev) = prev_offset && offset < prev {
+                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                            }
+                            if offset > bytes.len() {
+                                return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                            }
+                            prev_offset = Some(offset);
                         }
-                        prev_offset = Some(offset);
                     }
                     Ok(Self { bytes })
                 }
             }
             impl<'a> ssz::view::SszTypeInfo for TestContainerRef<'a> {
                 fn is_ssz_fixed_len() -> bool {
-                    false
+                    usize::from(
+                        !<VariableList<
+                            PendingInputEntry,
+                            10usize,
+                        > as ssz::Encode>::is_ssz_fixed_len(),
+                    ) == 0
                 }
                 fn ssz_fixed_len() -> usize {
-                    0
+                    if <Self as ssz::view::SszTypeInfo>::is_ssz_fixed_len() {
+                        <VariableList<
+                            PendingInputEntry,
+                            10usize,
+                        > as ssz::Encode>::ssz_fixed_len()
+                    } else {
+                        0
+                    }
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]

@@ -88,43 +88,63 @@ pub mod tests {
                 pub fn payload(
                     &self,
                 ) -> Result<external_ssz::MsgPayloadRef<'a>, ssz::DecodeError> {
-                    let start = ssz::layout::read_variable_offset(
+                    let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        12usize,
-                        3usize,
+                        <external_ssz::MsgPayload as ssz::Encode>::is_ssz_fixed_len(),
+                        0usize,
+                        <external_ssz::MsgPayload as ssz::Encode>::ssz_fixed_len(),
+                        <external_ssz::MsgPayload as ssz::Encode>::ssz_fixed_len()
+                            + <external_ssz::AccountId as ssz::Encode>::ssz_fixed_len()
+                            + <VariableList<
+                                external_ssz::MessagePayload,
+                                10usize,
+                            > as ssz::Encode>::ssz_fixed_len(),
+                        usize::from(
+                            !<external_ssz::MsgPayload as ssz::Encode>::is_ssz_fixed_len(),
+                        )
+                            + usize::from(
+                                !<external_ssz::AccountId as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<VariableList<
+                                    external_ssz::MessagePayload,
+                                    10usize,
+                                > as ssz::Encode>::is_ssz_fixed_len(),
+                            ),
                         0usize,
                     )?;
-                    let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
-                        12usize,
-                        3usize,
-                        1usize,
-                    )?;
-                    if start > end || end > self.bytes.len() {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                    }
-                    let bytes = &self.bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn account_id(
                     &self,
                 ) -> Result<external_ssz::AccountId, ssz::DecodeError> {
-                    let start = ssz::layout::read_variable_offset(
+                    let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        12usize,
-                        3usize,
-                        1usize,
+                        <external_ssz::AccountId as ssz::Encode>::is_ssz_fixed_len(),
+                        <external_ssz::MsgPayload as ssz::Encode>::ssz_fixed_len(),
+                        <external_ssz::AccountId as ssz::Encode>::ssz_fixed_len(),
+                        <external_ssz::MsgPayload as ssz::Encode>::ssz_fixed_len()
+                            + <external_ssz::AccountId as ssz::Encode>::ssz_fixed_len()
+                            + <VariableList<
+                                external_ssz::MessagePayload,
+                                10usize,
+                            > as ssz::Encode>::ssz_fixed_len(),
+                        usize::from(
+                            !<external_ssz::MsgPayload as ssz::Encode>::is_ssz_fixed_len(),
+                        )
+                            + usize::from(
+                                !<external_ssz::AccountId as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<VariableList<
+                                    external_ssz::MessagePayload,
+                                    10usize,
+                                > as ssz::Encode>::is_ssz_fixed_len(),
+                            ),
+                        usize::from(
+                            !<external_ssz::MsgPayload as ssz::Encode>::is_ssz_fixed_len(),
+                        ),
                     )?;
-                    let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
-                        12usize,
-                        3usize,
-                        2usize,
-                    )?;
-                    if start > end || end > self.bytes.len() {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                    }
-                    let bytes = &self.bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn messages(
@@ -133,22 +153,43 @@ pub mod tests {
                     ListRef<'a, external_ssz::MessagePayloadRef<'a>, 10usize>,
                     ssz::DecodeError,
                 > {
-                    let start = ssz::layout::read_variable_offset(
+                    let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        12usize,
-                        3usize,
-                        2usize,
+                        <VariableList<
+                            external_ssz::MessagePayload,
+                            10usize,
+                        > as ssz::Encode>::is_ssz_fixed_len(),
+                        <external_ssz::MsgPayload as ssz::Encode>::ssz_fixed_len()
+                            + <external_ssz::AccountId as ssz::Encode>::ssz_fixed_len(),
+                        <VariableList<
+                            external_ssz::MessagePayload,
+                            10usize,
+                        > as ssz::Encode>::ssz_fixed_len(),
+                        <external_ssz::MsgPayload as ssz::Encode>::ssz_fixed_len()
+                            + <external_ssz::AccountId as ssz::Encode>::ssz_fixed_len()
+                            + <VariableList<
+                                external_ssz::MessagePayload,
+                                10usize,
+                            > as ssz::Encode>::ssz_fixed_len(),
+                        usize::from(
+                            !<external_ssz::MsgPayload as ssz::Encode>::is_ssz_fixed_len(),
+                        )
+                            + usize::from(
+                                !<external_ssz::AccountId as ssz::Encode>::is_ssz_fixed_len(),
+                            )
+                            + usize::from(
+                                !<VariableList<
+                                    external_ssz::MessagePayload,
+                                    10usize,
+                                > as ssz::Encode>::is_ssz_fixed_len(),
+                            ),
+                        usize::from(
+                            !<external_ssz::MsgPayload as ssz::Encode>::is_ssz_fixed_len(),
+                        )
+                            + usize::from(
+                                !<external_ssz::AccountId as ssz::Encode>::is_ssz_fixed_len(),
+                            ),
                     )?;
-                    let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
-                        12usize,
-                        3usize,
-                        3usize,
-                    )?;
-                    if start > end || end > self.bytes.len() {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                    }
-                    let bytes = &self.bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
@@ -191,40 +232,89 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for ContainerWithExternalRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    if bytes.len() < 12usize {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: bytes.len(),
-                            expected: 12usize,
-                        });
-                    }
-                    let mut prev_offset: Option<usize> = None;
-                    for i in 0..3usize {
-                        let offset = ssz::layout::read_variable_offset(
-                            bytes,
-                            12usize,
-                            3usize,
-                            i,
-                        )?;
-                        if i == 0 && offset != 12usize {
-                            return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
+                    let fixed_portion_size = <external_ssz::MsgPayload as ssz::Encode>::ssz_fixed_len()
+                        + <external_ssz::AccountId as ssz::Encode>::ssz_fixed_len()
+                        + <VariableList<
+                            external_ssz::MessagePayload,
+                            10usize,
+                        > as ssz::Encode>::ssz_fixed_len();
+                    let num_variable_fields = usize::from(
+                        !<external_ssz::MsgPayload as ssz::Encode>::is_ssz_fixed_len(),
+                    )
+                        + usize::from(
+                            !<external_ssz::AccountId as ssz::Encode>::is_ssz_fixed_len(),
+                        )
+                        + usize::from(
+                            !<VariableList<
+                                external_ssz::MessagePayload,
+                                10usize,
+                            > as ssz::Encode>::is_ssz_fixed_len(),
+                        );
+                    if num_variable_fields == 0 {
+                        if bytes.len() != fixed_portion_size {
+                            return Err(ssz::DecodeError::InvalidByteLength {
+                                len: bytes.len(),
+                                expected: fixed_portion_size,
+                            });
                         }
-                        if let Some(prev) = prev_offset && offset < prev {
-                            return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                    } else {
+                        if bytes.len() < fixed_portion_size {
+                            return Err(ssz::DecodeError::InvalidByteLength {
+                                len: bytes.len(),
+                                expected: fixed_portion_size,
+                            });
                         }
-                        if offset > bytes.len() {
-                            return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                        let mut prev_offset: Option<usize> = None;
+                        for i in 0..num_variable_fields {
+                            let offset = ssz::layout::read_variable_offset(
+                                bytes,
+                                fixed_portion_size,
+                                num_variable_fields,
+                                i,
+                            )?;
+                            if i == 0 && offset != fixed_portion_size {
+                                return Err(
+                                    ssz::DecodeError::OffsetIntoFixedPortion(offset),
+                                );
+                            }
+                            if let Some(prev) = prev_offset && offset < prev {
+                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                            }
+                            if offset > bytes.len() {
+                                return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                            }
+                            prev_offset = Some(offset);
                         }
-                        prev_offset = Some(offset);
                     }
                     Ok(Self { bytes })
                 }
             }
             impl<'a> ssz::view::SszTypeInfo for ContainerWithExternalRef<'a> {
                 fn is_ssz_fixed_len() -> bool {
-                    false
+                    usize::from(
+                        !<external_ssz::MsgPayload as ssz::Encode>::is_ssz_fixed_len(),
+                    )
+                        + usize::from(
+                            !<external_ssz::AccountId as ssz::Encode>::is_ssz_fixed_len(),
+                        )
+                        + usize::from(
+                            !<VariableList<
+                                external_ssz::MessagePayload,
+                                10usize,
+                            > as ssz::Encode>::is_ssz_fixed_len(),
+                        ) == 0
                 }
                 fn ssz_fixed_len() -> usize {
-                    0
+                    if <Self as ssz::view::SszTypeInfo>::is_ssz_fixed_len() {
+                        <external_ssz::MsgPayload as ssz::Encode>::ssz_fixed_len()
+                            + <external_ssz::AccountId as ssz::Encode>::ssz_fixed_len()
+                            + <VariableList<
+                                external_ssz::MessagePayload,
+                                10usize,
+                            > as ssz::Encode>::ssz_fixed_len()
+                    } else {
+                        0
+                    }
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]

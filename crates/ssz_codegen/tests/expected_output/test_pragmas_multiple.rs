@@ -79,27 +79,31 @@ pub mod tests {
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> MultiPragmaContainerRef<'a> {
                 pub fn x(&self) -> Result<u32, ssz::DecodeError> {
-                    let offset = 0usize;
-                    let end = offset + 4usize;
-                    if end > self.bytes.len() {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: self.bytes.len(),
-                            expected: end,
-                        });
-                    }
-                    let bytes = &self.bytes[offset..end];
+                    let bytes = ssz::layout::read_field_bytes(
+                        self.bytes,
+                        <u32 as ssz::Encode>::is_ssz_fixed_len(),
+                        0usize,
+                        <u32 as ssz::Encode>::ssz_fixed_len(),
+                        <u32 as ssz::Encode>::ssz_fixed_len()
+                            + <u32 as ssz::Encode>::ssz_fixed_len(),
+                        usize::from(!<u32 as ssz::Encode>::is_ssz_fixed_len())
+                            + usize::from(!<u32 as ssz::Encode>::is_ssz_fixed_len()),
+                        0usize,
+                    )?;
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn y(&self) -> Result<u32, ssz::DecodeError> {
-                    let offset = 4usize;
-                    let end = offset + 4usize;
-                    if end > self.bytes.len() {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: self.bytes.len(),
-                            expected: end,
-                        });
-                    }
-                    let bytes = &self.bytes[offset..end];
+                    let bytes = ssz::layout::read_field_bytes(
+                        self.bytes,
+                        <u32 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u32 as ssz::Encode>::ssz_fixed_len(),
+                        <u32 as ssz::Encode>::ssz_fixed_len(),
+                        <u32 as ssz::Encode>::ssz_fixed_len()
+                            + <u32 as ssz::Encode>::ssz_fixed_len(),
+                        usize::from(!<u32 as ssz::Encode>::is_ssz_fixed_len())
+                            + usize::from(!<u32 as ssz::Encode>::is_ssz_fixed_len()),
+                        usize::from(!<u32 as ssz::Encode>::is_ssz_fixed_len()),
+                    )?;
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
@@ -117,35 +121,80 @@ pub mod tests {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     {
-                        let offset = 0usize;
-                        let field_bytes = &self.bytes[offset..offset + 4usize];
-                        hasher.write(field_bytes).expect("write field");
+                        let x = self.x().expect("valid view");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
+                            H,
+                        >(&x);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
-                        let offset = 4usize;
-                        let field_bytes = &self.bytes[offset..offset + 4usize];
-                        hasher.write(field_bytes).expect("write field");
+                        let y = self.y().expect("valid view");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
+                            H,
+                        >(&y);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }
             }
             impl<'a> ssz::view::DecodeView<'a> for MultiPragmaContainerRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    if bytes.len() != 8usize {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: bytes.len(),
-                            expected: 8usize,
-                        });
+                    let fixed_portion_size = <u32 as ssz::Encode>::ssz_fixed_len()
+                        + <u32 as ssz::Encode>::ssz_fixed_len();
+                    let num_variable_fields = usize::from(
+                        !<u32 as ssz::Encode>::is_ssz_fixed_len(),
+                    ) + usize::from(!<u32 as ssz::Encode>::is_ssz_fixed_len());
+                    if num_variable_fields == 0 {
+                        if bytes.len() != fixed_portion_size {
+                            return Err(ssz::DecodeError::InvalidByteLength {
+                                len: bytes.len(),
+                                expected: fixed_portion_size,
+                            });
+                        }
+                    } else {
+                        if bytes.len() < fixed_portion_size {
+                            return Err(ssz::DecodeError::InvalidByteLength {
+                                len: bytes.len(),
+                                expected: fixed_portion_size,
+                            });
+                        }
+                        let mut prev_offset: Option<usize> = None;
+                        for i in 0..num_variable_fields {
+                            let offset = ssz::layout::read_variable_offset(
+                                bytes,
+                                fixed_portion_size,
+                                num_variable_fields,
+                                i,
+                            )?;
+                            if i == 0 && offset != fixed_portion_size {
+                                return Err(
+                                    ssz::DecodeError::OffsetIntoFixedPortion(offset),
+                                );
+                            }
+                            if let Some(prev) = prev_offset && offset < prev {
+                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
+                            }
+                            if offset > bytes.len() {
+                                return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
+                            }
+                            prev_offset = Some(offset);
+                        }
                     }
                     Ok(Self { bytes })
                 }
             }
             impl<'a> ssz::view::SszTypeInfo for MultiPragmaContainerRef<'a> {
                 fn is_ssz_fixed_len() -> bool {
-                    true
+                    usize::from(!<u32 as ssz::Encode>::is_ssz_fixed_len())
+                        + usize::from(!<u32 as ssz::Encode>::is_ssz_fixed_len()) == 0
                 }
                 fn ssz_fixed_len() -> usize {
-                    8usize
+                    if <Self as ssz::view::SszTypeInfo>::is_ssz_fixed_len() {
+                        <u32 as ssz::Encode>::ssz_fixed_len()
+                            + <u32 as ssz::Encode>::ssz_fixed_len()
+                    } else {
+                        0
+                    }
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
