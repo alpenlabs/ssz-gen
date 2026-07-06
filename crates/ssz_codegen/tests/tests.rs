@@ -2276,3 +2276,22 @@ fn test_container_filter_removes_qualified_ordering_derives() {
 fn test_unqualified_pragma_derive_panics() {
     ssz_codegen::pragma::ParsedPragma::parse(&["derive: Copy".to_string()]);
 }
+
+#[test]
+fn test_nested_fixed_container_views() {
+    build_ssz_files(
+        &["test_nested_fixed_container.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_nested_fixed_container.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types");
+
+    let expected_output =
+        fs::read_to_string("tests/expected_output/test_nested_fixed_container.rs")
+            .expect("Failed to read expected output");
+    let actual_output = fs::read_to_string("tests/output/test_nested_fixed_container.rs")
+        .expect("Failed to read actual output");
+    assert_eq!(expected_output, actual_output);
+}
