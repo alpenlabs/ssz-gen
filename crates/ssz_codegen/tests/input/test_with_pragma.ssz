@@ -1,0 +1,6 @@
+### Test that field-level ssz(with) overrides flow into the view layout
+class WithCodecContainer(Container):
+    lead: uint8
+    #~# field_attr: #[ssz(with = "custom_codec")]
+    wrapped: uint64
+    tail: List[uint8, 32]
