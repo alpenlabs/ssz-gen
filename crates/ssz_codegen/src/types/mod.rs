@@ -1724,10 +1724,24 @@ impl ClassDef {
     /// overridden), so the accessor agrees with the owned `ssz_derive`
     /// encoding by construction.
     ///
+    /// `#[ssz(with = ...)]` fields have a module-defined encoding with no
+    /// view-side counterpart, so their getter decodes the slice to the owned
+    /// field type through `module::decode`, mirroring the `ssz_derive`
+    /// `Decode` impl.
     fn container_view_getter(&self, idx: usize, field: &ClassFieldDef) -> TokenStream {
         let field_name = Ident::new(&field.name, Span::call_site());
         let view_ty = field.ty.to_view_type_with_pragmas(&field.pragmas);
         let field_bytes = self.field_bytes_expr(idx);
+
+        if let Some(module) = field.ssz_with_module() {
+            let owned_ty = field.ty.unwrap_type();
+            return quote! {
+                pub fn #field_name(&self) -> Result<#owned_ty, ssz::DecodeError> {
+                    let bytes = #field_bytes;
+                    #module::decode::from_ssz_bytes(bytes)
+                }
+            };
+        }
 
         // Special handling for Option types (from Union[null, T]): encoded as
         // a union with a selector byte.
@@ -2378,6 +2392,14 @@ impl ClassDef {
             .map(|field| {
                 let field_name = Ident::new(&field.name, Span::call_site());
                 let is_optional = matches!(field.ty.resolution, TypeResolutionKind::Optional(_));
+
+                // Plain-container `#[ssz(with = ...)]` getters already decode
+                // to the owned field type, so no view conversion is needed.
+                if !is_stable_container && field.ssz_with_module().is_some() {
+                    return quote! {
+                        #field_name: self.#field_name().expect("valid view")
+                    };
+                }
 
                 // For StableContainer, fields are wrapped in ssz_types::Optional<T>
                 // Getter returns Result<Optional<TRef>, Error>

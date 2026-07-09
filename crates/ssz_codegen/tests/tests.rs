@@ -860,6 +860,17 @@ fn test_view_layout_honors_field_ssz_with() {
         !generated.contains("<u64 as ssz::Encode>::is_ssz_fixed_len()"),
         "view layout must not bypass the with-module via the bare field type"
     );
+
+    // The getter decodes the slice through the with-module to the owned
+    // field type, mirroring ssz_derive's Decode impl.
+    assert!(
+        generated.contains("custom_codec::decode::from_ssz_bytes(bytes)"),
+        "view getter should decode the overridden field via the with-module"
+    );
+    assert!(
+        generated.contains("pub fn wrapped(&self) -> Result<u64, ssz::DecodeError>"),
+        "with-field getter should return the owned field type"
+    );
 }
 
 /// Test edge case: empty pragmas don't break codegen.
