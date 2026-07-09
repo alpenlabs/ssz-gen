@@ -1152,55 +1152,44 @@ impl ClassDef {
         Self::sum_expr(&terms)
     }
 
-    /// Expression computing the fixed-portion byte offset of field
-    /// `field_index` (meaningful for fixed-size fields).
-    fn field_fixed_offset_expr(&self, field_index: usize) -> TokenStream {
-        let terms: Vec<TokenStream> = self.fields[..field_index]
-            .iter()
-            .map(ClassFieldDef::ssz_fixed_len_expr)
-            .collect();
-        Self::sum_expr(&terms)
-    }
-
-    /// Expression computing the offset-table index of field `field_index`
-    /// (meaningful for variable-size fields).
-    fn field_variable_index_expr(&self, field_index: usize) -> TokenStream {
-        let terms: Vec<TokenStream> = self.fields[..field_index]
+    /// Expression building the container's per-field layout table
+    /// (`&[(is_fixed, ssz_fixed_len)]`, see [`ssz::layout::FieldInfo`]) from
+    /// the fields' owned encoding.
+    fn field_layout_table_expr(&self) -> TokenStream {
+        let entries: Vec<TokenStream> = self
+            .fields
             .iter()
             .map(|f| {
                 let is_fixed = f.is_ssz_fixed_len_expr();
-                quote! { usize::from(!#is_fixed) }
+                let fixed_len = f.ssz_fixed_len_expr();
+                quote! { (#is_fixed, #fixed_len) }
             })
             .collect();
-        Self::sum_expr(&terms)
+        quote! { &[ #(#entries),* ] }
     }
 
     /// Expression slicing field `field_index`'s bytes out of `self.bytes`,
-    /// deciding fixed-vs-variable from the field's owned encoding at runtime
-    /// (const-foldable) rather than at codegen time.
+    /// deciding fixed-vs-variable and offset-slot positions from the fields'
+    /// owned encoding at runtime rather than at codegen time.
     fn field_bytes_expr(&self, field_index: usize) -> TokenStream {
-        let field = &self.fields[field_index];
-        let is_fixed_expr = field.is_ssz_fixed_len_expr();
-        let fixed_len_expr = field.ssz_fixed_len_expr();
-        let offset_expr = self.field_fixed_offset_expr(field_index);
-        let variable_index_expr = self.field_variable_index_expr(field_index);
-        let fixed_portion_expr = self.fixed_portion_size_expr();
-        let num_variable_expr = self.num_variable_fields_expr();
-
+        let table = self.field_layout_table_expr();
         quote! {
-            ssz::layout::read_field_bytes(
-                self.bytes,
-                #is_fixed_expr,
-                #offset_expr,
-                #fixed_len_expr,
-                #fixed_portion_expr,
-                #num_variable_expr,
-                #variable_index_expr,
-            )?
+            ssz::layout::read_field_bytes(self.bytes, #table, #field_index)?
         }
     }
 
     /// Generates field layout information for a given field index.
+    ///
+    /// Only used for StableContainer/Profile views; plain containers use
+    /// [`Self::field_bytes_expr`].
+    ///
+    /// FIXME: this path still computes the layout at codegen time and reads
+    /// variable offsets via the end-packed [`ssz::layout::read_variable_offset`],
+    /// which is correct for all-`Optional` StableContainers (every field is
+    /// variable) but wrong for Profiles mixing required fixed-size fields
+    /// after variable-size ones; it also ignores `#[ssz(with = ...)]`
+    /// overrides. Migrating it to the per-field layout table used by plain
+    /// containers would fix both.
     ///
     /// Returns (offset_expr, is_fixed, size_expr) where:
     /// - offset_expr: TokenStream to compute the field's byte offset
@@ -1735,11 +1724,6 @@ impl ClassDef {
     /// overridden), so the accessor agrees with the owned `ssz_derive`
     /// encoding by construction.
     ///
-    /// TODO: for `#[ssz(with = ...)]` fields only the slicing honors the
-    /// override; the getter still interprets the slice through the bare field
-    /// type's `DecodeView` impl. Decoding such fields faithfully needs a
-    /// view-side counterpart of the `with` module (ssz_derive only supports
-    /// owned `encode`/`decode` fns).
     fn container_view_getter(&self, idx: usize, field: &ClassFieldDef) -> TokenStream {
         let field_name = Ident::new(&field.name, Span::call_site());
         let view_ty = field.ty.to_view_type_with_pragmas(&field.pragmas);
@@ -2135,63 +2119,15 @@ impl ClassDef {
 
         match self.base {
             BaseClass::Container => {
-                // Layout is computed from the field types' `Encode` impls at
-                // runtime (const-foldable), so validation agrees with the
-                // owned encoding even for class or external field types.
-                let fixed_portion_expr = self.fixed_portion_size_expr();
-                let num_variable_expr = self.num_variable_fields_expr();
+                // Layout is computed from the fields' owned encoding at
+                // runtime, so validation agrees with the owned `ssz_derive`
+                // encoding even for class or external field types.
+                let table = self.field_layout_table_expr();
 
                 quote! {
                     impl<'a> ssz::view::DecodeView<'a> for #ref_ident<'a> {
                         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                            let fixed_portion_size = #fixed_portion_expr;
-                            let num_variable_fields = #num_variable_expr;
-
-                            if num_variable_fields == 0 {
-                                // Fixed-size container: just check length
-                                if bytes.len() != fixed_portion_size {
-                                    return Err(ssz::DecodeError::InvalidByteLength {
-                                        len: bytes.len(),
-                                        expected: fixed_portion_size,
-                                    });
-                                }
-                            } else {
-                                if bytes.len() < fixed_portion_size {
-                                    return Err(ssz::DecodeError::InvalidByteLength {
-                                        len: bytes.len(),
-                                        expected: fixed_portion_size,
-                                    });
-                                }
-
-                                // Validate offset table
-                                let mut prev_offset: Option<usize> = None;
-                                for i in 0..num_variable_fields {
-                                    let offset = ssz::layout::read_variable_offset(
-                                        bytes,
-                                        fixed_portion_size,
-                                        num_variable_fields,
-                                        i
-                                    )?;
-
-                                    // First offset should point to start of variable portion
-                                    if i == 0 && offset != fixed_portion_size {
-                                        return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
-                                    }
-
-                                    // Offsets must not decrease
-                                    if let Some(prev) = prev_offset && offset < prev {
-                                        return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                                    }
-
-                                    // Offset must not exceed container length
-                                    if offset > bytes.len() {
-                                        return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
-                                    }
-
-                                    prev_offset = Some(offset);
-                                }
-                            }
-
+                            ssz::layout::validate_container(bytes, #table)?;
                             Ok(Self { bytes })
                         }
                     }

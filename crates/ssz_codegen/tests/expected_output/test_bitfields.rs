@@ -131,31 +131,32 @@ pub mod tests {
                 ) -> Result<BitListRef<'a, 1usize>, ssz::DecodeError> {
                     let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        <TinyBitlist as ssz::Encode>::is_ssz_fixed_len(),
-                        0usize,
-                        <TinyBitlist as ssz::Encode>::ssz_fixed_len(),
-                        <TinyBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <StandardBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <LargeBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <TinyBitvector as ssz::Encode>::ssz_fixed_len()
-                            + <StandardBitvector as ssz::Encode>::ssz_fixed_len()
-                            + <LargeBitvector as ssz::Encode>::ssz_fixed_len(),
-                        usize::from(!<TinyBitlist as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<StandardBitlist as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<LargeBitlist as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<TinyBitvector as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<StandardBitvector as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<LargeBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                        &[
+                            (
+                                <TinyBitlist as ssz::Encode>::is_ssz_fixed_len(),
+                                <TinyBitlist as ssz::Encode>::ssz_fixed_len(),
                             ),
+                            (
+                                <StandardBitlist as ssz::Encode>::is_ssz_fixed_len(),
+                                <StandardBitlist as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <LargeBitlist as ssz::Encode>::is_ssz_fixed_len(),
+                                <LargeBitlist as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <TinyBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                                <TinyBitvector as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <StandardBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                                <StandardBitvector as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <LargeBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                                <LargeBitvector as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
                         0usize,
                     )?;
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
@@ -165,32 +166,33 @@ pub mod tests {
                 ) -> Result<BitListRef<'a, 64usize>, ssz::DecodeError> {
                     let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        <StandardBitlist as ssz::Encode>::is_ssz_fixed_len(),
-                        <TinyBitlist as ssz::Encode>::ssz_fixed_len(),
-                        <StandardBitlist as ssz::Encode>::ssz_fixed_len(),
-                        <TinyBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <StandardBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <LargeBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <TinyBitvector as ssz::Encode>::ssz_fixed_len()
-                            + <StandardBitvector as ssz::Encode>::ssz_fixed_len()
-                            + <LargeBitvector as ssz::Encode>::ssz_fixed_len(),
-                        usize::from(!<TinyBitlist as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<StandardBitlist as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<LargeBitlist as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<TinyBitvector as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<StandardBitvector as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<LargeBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                        &[
+                            (
+                                <TinyBitlist as ssz::Encode>::is_ssz_fixed_len(),
+                                <TinyBitlist as ssz::Encode>::ssz_fixed_len(),
                             ),
-                        usize::from(!<TinyBitlist as ssz::Encode>::is_ssz_fixed_len()),
+                            (
+                                <StandardBitlist as ssz::Encode>::is_ssz_fixed_len(),
+                                <StandardBitlist as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <LargeBitlist as ssz::Encode>::is_ssz_fixed_len(),
+                                <LargeBitlist as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <TinyBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                                <TinyBitvector as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <StandardBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                                <StandardBitvector as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <LargeBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                                <LargeBitvector as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
+                        1usize,
                     )?;
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
@@ -199,36 +201,33 @@ pub mod tests {
                 ) -> Result<BitListRef<'a, 256usize>, ssz::DecodeError> {
                     let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        <LargeBitlist as ssz::Encode>::is_ssz_fixed_len(),
-                        <TinyBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <StandardBitlist as ssz::Encode>::ssz_fixed_len(),
-                        <LargeBitlist as ssz::Encode>::ssz_fixed_len(),
-                        <TinyBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <StandardBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <LargeBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <TinyBitvector as ssz::Encode>::ssz_fixed_len()
-                            + <StandardBitvector as ssz::Encode>::ssz_fixed_len()
-                            + <LargeBitvector as ssz::Encode>::ssz_fixed_len(),
-                        usize::from(!<TinyBitlist as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<StandardBitlist as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<LargeBitlist as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<TinyBitvector as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<StandardBitvector as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<LargeBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                        &[
+                            (
+                                <TinyBitlist as ssz::Encode>::is_ssz_fixed_len(),
+                                <TinyBitlist as ssz::Encode>::ssz_fixed_len(),
                             ),
-                        usize::from(!<TinyBitlist as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<StandardBitlist as ssz::Encode>::is_ssz_fixed_len(),
+                            (
+                                <StandardBitlist as ssz::Encode>::is_ssz_fixed_len(),
+                                <StandardBitlist as ssz::Encode>::ssz_fixed_len(),
                             ),
+                            (
+                                <LargeBitlist as ssz::Encode>::is_ssz_fixed_len(),
+                                <LargeBitlist as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <TinyBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                                <TinyBitvector as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <StandardBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                                <StandardBitvector as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <LargeBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                                <LargeBitvector as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
+                        2usize,
                     )?;
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
@@ -237,40 +236,33 @@ pub mod tests {
                 ) -> Result<BitVectorRef<'a, 1usize>, ssz::DecodeError> {
                     let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        <TinyBitvector as ssz::Encode>::is_ssz_fixed_len(),
-                        <TinyBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <StandardBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <LargeBitlist as ssz::Encode>::ssz_fixed_len(),
-                        <TinyBitvector as ssz::Encode>::ssz_fixed_len(),
-                        <TinyBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <StandardBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <LargeBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <TinyBitvector as ssz::Encode>::ssz_fixed_len()
-                            + <StandardBitvector as ssz::Encode>::ssz_fixed_len()
-                            + <LargeBitvector as ssz::Encode>::ssz_fixed_len(),
-                        usize::from(!<TinyBitlist as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<StandardBitlist as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<LargeBitlist as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<TinyBitvector as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<StandardBitvector as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<LargeBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                        &[
+                            (
+                                <TinyBitlist as ssz::Encode>::is_ssz_fixed_len(),
+                                <TinyBitlist as ssz::Encode>::ssz_fixed_len(),
                             ),
-                        usize::from(!<TinyBitlist as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<StandardBitlist as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<LargeBitlist as ssz::Encode>::is_ssz_fixed_len(),
+                            (
+                                <StandardBitlist as ssz::Encode>::is_ssz_fixed_len(),
+                                <StandardBitlist as ssz::Encode>::ssz_fixed_len(),
                             ),
+                            (
+                                <LargeBitlist as ssz::Encode>::is_ssz_fixed_len(),
+                                <LargeBitlist as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <TinyBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                                <TinyBitvector as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <StandardBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                                <StandardBitvector as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <LargeBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                                <LargeBitvector as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
+                        3usize,
                     )?;
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
@@ -279,44 +271,33 @@ pub mod tests {
                 ) -> Result<BitVectorRef<'a, 64usize>, ssz::DecodeError> {
                     let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        <StandardBitvector as ssz::Encode>::is_ssz_fixed_len(),
-                        <TinyBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <StandardBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <LargeBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <TinyBitvector as ssz::Encode>::ssz_fixed_len(),
-                        <StandardBitvector as ssz::Encode>::ssz_fixed_len(),
-                        <TinyBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <StandardBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <LargeBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <TinyBitvector as ssz::Encode>::ssz_fixed_len()
-                            + <StandardBitvector as ssz::Encode>::ssz_fixed_len()
-                            + <LargeBitvector as ssz::Encode>::ssz_fixed_len(),
-                        usize::from(!<TinyBitlist as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<StandardBitlist as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<LargeBitlist as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<TinyBitvector as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<StandardBitvector as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<LargeBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                        &[
+                            (
+                                <TinyBitlist as ssz::Encode>::is_ssz_fixed_len(),
+                                <TinyBitlist as ssz::Encode>::ssz_fixed_len(),
                             ),
-                        usize::from(!<TinyBitlist as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<StandardBitlist as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<LargeBitlist as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<TinyBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                            (
+                                <StandardBitlist as ssz::Encode>::is_ssz_fixed_len(),
+                                <StandardBitlist as ssz::Encode>::ssz_fixed_len(),
                             ),
+                            (
+                                <LargeBitlist as ssz::Encode>::is_ssz_fixed_len(),
+                                <LargeBitlist as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <TinyBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                                <TinyBitvector as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <StandardBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                                <StandardBitvector as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <LargeBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                                <LargeBitvector as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
+                        4usize,
                     )?;
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
@@ -325,48 +306,33 @@ pub mod tests {
                 ) -> Result<BitVectorRef<'a, 128usize>, ssz::DecodeError> {
                     let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        <LargeBitvector as ssz::Encode>::is_ssz_fixed_len(),
-                        <TinyBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <StandardBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <LargeBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <TinyBitvector as ssz::Encode>::ssz_fixed_len()
-                            + <StandardBitvector as ssz::Encode>::ssz_fixed_len(),
-                        <LargeBitvector as ssz::Encode>::ssz_fixed_len(),
-                        <TinyBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <StandardBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <LargeBitlist as ssz::Encode>::ssz_fixed_len()
-                            + <TinyBitvector as ssz::Encode>::ssz_fixed_len()
-                            + <StandardBitvector as ssz::Encode>::ssz_fixed_len()
-                            + <LargeBitvector as ssz::Encode>::ssz_fixed_len(),
-                        usize::from(!<TinyBitlist as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<StandardBitlist as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<LargeBitlist as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<TinyBitvector as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<StandardBitvector as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<LargeBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                        &[
+                            (
+                                <TinyBitlist as ssz::Encode>::is_ssz_fixed_len(),
+                                <TinyBitlist as ssz::Encode>::ssz_fixed_len(),
                             ),
-                        usize::from(!<TinyBitlist as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<StandardBitlist as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<LargeBitlist as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<TinyBitvector as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<StandardBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                            (
+                                <StandardBitlist as ssz::Encode>::is_ssz_fixed_len(),
+                                <StandardBitlist as ssz::Encode>::ssz_fixed_len(),
                             ),
+                            (
+                                <LargeBitlist as ssz::Encode>::is_ssz_fixed_len(),
+                                <LargeBitlist as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <TinyBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                                <TinyBitvector as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <StandardBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                                <StandardBitvector as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <LargeBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                                <LargeBitvector as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
+                        5usize,
                     )?;
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
@@ -431,64 +397,35 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for BitfieldContainerRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    let fixed_portion_size = <TinyBitlist as ssz::Encode>::ssz_fixed_len()
-                        + <StandardBitlist as ssz::Encode>::ssz_fixed_len()
-                        + <LargeBitlist as ssz::Encode>::ssz_fixed_len()
-                        + <TinyBitvector as ssz::Encode>::ssz_fixed_len()
-                        + <StandardBitvector as ssz::Encode>::ssz_fixed_len()
-                        + <LargeBitvector as ssz::Encode>::ssz_fixed_len();
-                    let num_variable_fields = usize::from(
-                        !<TinyBitlist as ssz::Encode>::is_ssz_fixed_len(),
-                    )
-                        + usize::from(
-                            !<StandardBitlist as ssz::Encode>::is_ssz_fixed_len(),
-                        )
-                        + usize::from(!<LargeBitlist as ssz::Encode>::is_ssz_fixed_len())
-                        + usize::from(
-                            !<TinyBitvector as ssz::Encode>::is_ssz_fixed_len(),
-                        )
-                        + usize::from(
-                            !<StandardBitvector as ssz::Encode>::is_ssz_fixed_len(),
-                        )
-                        + usize::from(
-                            !<LargeBitvector as ssz::Encode>::is_ssz_fixed_len(),
-                        );
-                    if num_variable_fields == 0 {
-                        if bytes.len() != fixed_portion_size {
-                            return Err(ssz::DecodeError::InvalidByteLength {
-                                len: bytes.len(),
-                                expected: fixed_portion_size,
-                            });
-                        }
-                    } else {
-                        if bytes.len() < fixed_portion_size {
-                            return Err(ssz::DecodeError::InvalidByteLength {
-                                len: bytes.len(),
-                                expected: fixed_portion_size,
-                            });
-                        }
-                        let mut prev_offset: Option<usize> = None;
-                        for i in 0..num_variable_fields {
-                            let offset = ssz::layout::read_variable_offset(
-                                bytes,
-                                fixed_portion_size,
-                                num_variable_fields,
-                                i,
-                            )?;
-                            if i == 0 && offset != fixed_portion_size {
-                                return Err(
-                                    ssz::DecodeError::OffsetIntoFixedPortion(offset),
-                                );
-                            }
-                            if let Some(prev) = prev_offset && offset < prev {
-                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                            }
-                            if offset > bytes.len() {
-                                return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
-                            }
-                            prev_offset = Some(offset);
-                        }
-                    }
+                    ssz::layout::validate_container(
+                        bytes,
+                        &[
+                            (
+                                <TinyBitlist as ssz::Encode>::is_ssz_fixed_len(),
+                                <TinyBitlist as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <StandardBitlist as ssz::Encode>::is_ssz_fixed_len(),
+                                <StandardBitlist as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <LargeBitlist as ssz::Encode>::is_ssz_fixed_len(),
+                                <LargeBitlist as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <TinyBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                                <TinyBitvector as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <StandardBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                                <StandardBitvector as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <LargeBitvector as ssz::Encode>::is_ssz_fixed_len(),
+                                <LargeBitvector as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
+                    )?;
                     Ok(Self { bytes })
                 }
             }

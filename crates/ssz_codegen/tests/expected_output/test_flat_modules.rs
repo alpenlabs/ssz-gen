@@ -1020,15 +1020,20 @@ pub mod test_1 {
         pub fn a(&self) -> Result<u8, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <u8 as ssz::Encode>::is_ssz_fixed_len(),
-                0usize,
-                <u8 as ssz::Encode>::ssz_fixed_len(),
-                <u8 as ssz::Encode>::ssz_fixed_len()
-                    + <u16 as ssz::Encode>::ssz_fixed_len()
-                    + <AliasVecB as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<u16 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<AliasVecB as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <u8 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <u16 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u16 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <AliasVecB as ssz::Encode>::is_ssz_fixed_len(),
+                        <AliasVecB as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
                 0usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
@@ -1036,34 +1041,42 @@ pub mod test_1 {
         pub fn b(&self) -> Result<u16, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <u16 as ssz::Encode>::is_ssz_fixed_len(),
-                <u8 as ssz::Encode>::ssz_fixed_len(),
-                <u16 as ssz::Encode>::ssz_fixed_len(),
-                <u8 as ssz::Encode>::ssz_fixed_len()
-                    + <u16 as ssz::Encode>::ssz_fixed_len()
-                    + <AliasVecB as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<u16 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<AliasVecB as ssz::Encode>::is_ssz_fixed_len()),
-                usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <u8 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <u16 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u16 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <AliasVecB as ssz::Encode>::is_ssz_fixed_len(),
+                        <AliasVecB as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+                1usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
         pub fn c(&self) -> Result<FixedBytesRef<'a, 10usize>, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <AliasVecB as ssz::Encode>::is_ssz_fixed_len(),
-                <u8 as ssz::Encode>::ssz_fixed_len()
-                    + <u16 as ssz::Encode>::ssz_fixed_len(),
-                <AliasVecB as ssz::Encode>::ssz_fixed_len(),
-                <u8 as ssz::Encode>::ssz_fixed_len()
-                    + <u16 as ssz::Encode>::ssz_fixed_len()
-                    + <AliasVecB as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<u16 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<AliasVecB as ssz::Encode>::is_ssz_fixed_len()),
-                usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<u16 as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <u8 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <u16 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u16 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <AliasVecB as ssz::Encode>::is_ssz_fixed_len(),
+                        <AliasVecB as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+                2usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
@@ -1107,47 +1120,23 @@ pub mod test_1 {
     }
     impl<'a> ssz::view::DecodeView<'a> for AlphaRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let fixed_portion_size = <u8 as ssz::Encode>::ssz_fixed_len()
-                + <u16 as ssz::Encode>::ssz_fixed_len()
-                + <AliasVecB as ssz::Encode>::ssz_fixed_len();
-            let num_variable_fields = usize::from(
-                !<u8 as ssz::Encode>::is_ssz_fixed_len(),
-            ) + usize::from(!<u16 as ssz::Encode>::is_ssz_fixed_len())
-                + usize::from(!<AliasVecB as ssz::Encode>::is_ssz_fixed_len());
-            if num_variable_fields == 0 {
-                if bytes.len() != fixed_portion_size {
-                    return Err(ssz::DecodeError::InvalidByteLength {
-                        len: bytes.len(),
-                        expected: fixed_portion_size,
-                    });
-                }
-            } else {
-                if bytes.len() < fixed_portion_size {
-                    return Err(ssz::DecodeError::InvalidByteLength {
-                        len: bytes.len(),
-                        expected: fixed_portion_size,
-                    });
-                }
-                let mut prev_offset: Option<usize> = None;
-                for i in 0..num_variable_fields {
-                    let offset = ssz::layout::read_variable_offset(
-                        bytes,
-                        fixed_portion_size,
-                        num_variable_fields,
-                        i,
-                    )?;
-                    if i == 0 && offset != fixed_portion_size {
-                        return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
-                    }
-                    if let Some(prev) = prev_offset && offset < prev {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                    }
-                    if offset > bytes.len() {
-                        return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
-                    }
-                    prev_offset = Some(offset);
-                }
-            }
+            ssz::layout::validate_container(
+                bytes,
+                &[
+                    (
+                        <u8 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <u16 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u16 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <AliasVecB as ssz::Encode>::is_ssz_fixed_len(),
+                        <AliasVecB as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+            )?;
             Ok(Self { bytes })
         }
     }
@@ -1245,15 +1234,20 @@ pub mod test_1 {
         pub fn d(&self) -> Result<BytesRef<'a, 5usize>, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <AliasListAlias as ssz::Encode>::is_ssz_fixed_len(),
-                0usize,
-                <AliasListAlias as ssz::Encode>::ssz_fixed_len(),
-                <AliasListAlias as ssz::Encode>::ssz_fixed_len()
-                    + <u8 as ssz::Encode>::ssz_fixed_len()
-                    + <AliasUintAlias as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<AliasListAlias as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<AliasUintAlias as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <AliasListAlias as ssz::Encode>::is_ssz_fixed_len(),
+                        <AliasListAlias as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <u8 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <AliasUintAlias as ssz::Encode>::is_ssz_fixed_len(),
+                        <AliasUintAlias as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
                 0usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
@@ -1261,34 +1255,42 @@ pub mod test_1 {
         pub fn e(&self) -> Result<u8, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <u8 as ssz::Encode>::is_ssz_fixed_len(),
-                <AliasListAlias as ssz::Encode>::ssz_fixed_len(),
-                <u8 as ssz::Encode>::ssz_fixed_len(),
-                <AliasListAlias as ssz::Encode>::ssz_fixed_len()
-                    + <u8 as ssz::Encode>::ssz_fixed_len()
-                    + <AliasUintAlias as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<AliasListAlias as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<AliasUintAlias as ssz::Encode>::is_ssz_fixed_len()),
-                usize::from(!<AliasListAlias as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <AliasListAlias as ssz::Encode>::is_ssz_fixed_len(),
+                        <AliasListAlias as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <u8 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <AliasUintAlias as ssz::Encode>::is_ssz_fixed_len(),
+                        <AliasUintAlias as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+                1usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
         pub fn f(&self) -> Result<u16, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <AliasUintAlias as ssz::Encode>::is_ssz_fixed_len(),
-                <AliasListAlias as ssz::Encode>::ssz_fixed_len()
-                    + <u8 as ssz::Encode>::ssz_fixed_len(),
-                <AliasUintAlias as ssz::Encode>::ssz_fixed_len(),
-                <AliasListAlias as ssz::Encode>::ssz_fixed_len()
-                    + <u8 as ssz::Encode>::ssz_fixed_len()
-                    + <AliasUintAlias as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<AliasListAlias as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<AliasUintAlias as ssz::Encode>::is_ssz_fixed_len()),
-                usize::from(!<AliasListAlias as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <AliasListAlias as ssz::Encode>::is_ssz_fixed_len(),
+                        <AliasListAlias as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <u8 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <AliasUintAlias as ssz::Encode>::is_ssz_fixed_len(),
+                        <AliasUintAlias as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+                2usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
@@ -1332,47 +1334,23 @@ pub mod test_1 {
     }
     impl<'a> ssz::view::DecodeView<'a> for BetaRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let fixed_portion_size = <AliasListAlias as ssz::Encode>::ssz_fixed_len()
-                + <u8 as ssz::Encode>::ssz_fixed_len()
-                + <AliasUintAlias as ssz::Encode>::ssz_fixed_len();
-            let num_variable_fields = usize::from(
-                !<AliasListAlias as ssz::Encode>::is_ssz_fixed_len(),
-            ) + usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len())
-                + usize::from(!<AliasUintAlias as ssz::Encode>::is_ssz_fixed_len());
-            if num_variable_fields == 0 {
-                if bytes.len() != fixed_portion_size {
-                    return Err(ssz::DecodeError::InvalidByteLength {
-                        len: bytes.len(),
-                        expected: fixed_portion_size,
-                    });
-                }
-            } else {
-                if bytes.len() < fixed_portion_size {
-                    return Err(ssz::DecodeError::InvalidByteLength {
-                        len: bytes.len(),
-                        expected: fixed_portion_size,
-                    });
-                }
-                let mut prev_offset: Option<usize> = None;
-                for i in 0..num_variable_fields {
-                    let offset = ssz::layout::read_variable_offset(
-                        bytes,
-                        fixed_portion_size,
-                        num_variable_fields,
-                        i,
-                    )?;
-                    if i == 0 && offset != fixed_portion_size {
-                        return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
-                    }
-                    if let Some(prev) = prev_offset && offset < prev {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                    }
-                    if offset > bytes.len() {
-                        return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
-                    }
-                    prev_offset = Some(offset);
-                }
-            }
+            ssz::layout::validate_container(
+                bytes,
+                &[
+                    (
+                        <AliasListAlias as ssz::Encode>::is_ssz_fixed_len(),
+                        <AliasListAlias as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <u8 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <AliasUintAlias as ssz::Encode>::is_ssz_fixed_len(),
+                        <AliasUintAlias as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+            )?;
             Ok(Self { bytes })
         }
     }
@@ -1669,13 +1647,16 @@ pub mod test_1 {
         pub fn z(&self) -> Result<bool, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <bool as ssz::Encode>::is_ssz_fixed_len(),
-                0usize,
-                <bool as ssz::Encode>::ssz_fixed_len(),
-                <bool as ssz::Encode>::ssz_fixed_len()
-                    + <u8 as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<bool as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <bool as ssz::Encode>::is_ssz_fixed_len(),
+                        <bool as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <u8 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
                 0usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
@@ -1683,14 +1664,17 @@ pub mod test_1 {
         pub fn w(&self) -> Result<u8, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <u8 as ssz::Encode>::is_ssz_fixed_len(),
-                <bool as ssz::Encode>::ssz_fixed_len(),
-                <u8 as ssz::Encode>::ssz_fixed_len(),
-                <bool as ssz::Encode>::ssz_fixed_len()
-                    + <u8 as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<bool as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len()),
-                usize::from(!<bool as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <bool as ssz::Encode>::is_ssz_fixed_len(),
+                        <bool as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <u8 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+                1usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
@@ -1727,45 +1711,19 @@ pub mod test_1 {
     }
     impl<'a> ssz::view::DecodeView<'a> for DeltaRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let fixed_portion_size = <bool as ssz::Encode>::ssz_fixed_len()
-                + <u8 as ssz::Encode>::ssz_fixed_len();
-            let num_variable_fields = usize::from(
-                !<bool as ssz::Encode>::is_ssz_fixed_len(),
-            ) + usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len());
-            if num_variable_fields == 0 {
-                if bytes.len() != fixed_portion_size {
-                    return Err(ssz::DecodeError::InvalidByteLength {
-                        len: bytes.len(),
-                        expected: fixed_portion_size,
-                    });
-                }
-            } else {
-                if bytes.len() < fixed_portion_size {
-                    return Err(ssz::DecodeError::InvalidByteLength {
-                        len: bytes.len(),
-                        expected: fixed_portion_size,
-                    });
-                }
-                let mut prev_offset: Option<usize> = None;
-                for i in 0..num_variable_fields {
-                    let offset = ssz::layout::read_variable_offset(
-                        bytes,
-                        fixed_portion_size,
-                        num_variable_fields,
-                        i,
-                    )?;
-                    if i == 0 && offset != fixed_portion_size {
-                        return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
-                    }
-                    if let Some(prev) = prev_offset && offset < prev {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                    }
-                    if offset > bytes.len() {
-                        return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
-                    }
-                    prev_offset = Some(offset);
-                }
-            }
+            ssz::layout::validate_container(
+                bytes,
+                &[
+                    (
+                        <bool as ssz::Encode>::is_ssz_fixed_len(),
+                        <bool as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <u8 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+            )?;
             Ok(Self { bytes })
         }
     }
@@ -2365,20 +2323,28 @@ pub mod test_1 {
         pub fn ccc(&self) -> Result<u8, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <u8 as ssz::Encode>::is_ssz_fixed_len(),
-                0usize,
-                <u8 as ssz::Encode>::ssz_fixed_len(),
-                <u8 as ssz::Encode>::ssz_fixed_len()
-                    + <u8 as ssz::Encode>::ssz_fixed_len()
-                    + <VariableList<u16, 3usize> as ssz::Encode>::ssz_fixed_len()
-                    + <U128 as ssz::Encode>::ssz_fixed_len()
-                    + <U256 as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(
-                        !<VariableList<u16, 3usize> as ssz::Encode>::is_ssz_fixed_len(),
-                    ) + usize::from(!<U128 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<U256 as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <u8 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <u8 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <VariableList<u16, 3usize> as ssz::Encode>::is_ssz_fixed_len(),
+                        <VariableList<u16, 3usize> as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <U128 as ssz::Encode>::is_ssz_fixed_len(),
+                        <U128 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <U256 as ssz::Encode>::is_ssz_fixed_len(),
+                        <U256 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
                 0usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
@@ -2386,99 +2352,116 @@ pub mod test_1 {
         pub fn ddd(&self) -> Result<u8, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <u8 as ssz::Encode>::is_ssz_fixed_len(),
-                <u8 as ssz::Encode>::ssz_fixed_len(),
-                <u8 as ssz::Encode>::ssz_fixed_len(),
-                <u8 as ssz::Encode>::ssz_fixed_len()
-                    + <u8 as ssz::Encode>::ssz_fixed_len()
-                    + <VariableList<u16, 3usize> as ssz::Encode>::ssz_fixed_len()
-                    + <U128 as ssz::Encode>::ssz_fixed_len()
-                    + <U256 as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(
-                        !<VariableList<u16, 3usize> as ssz::Encode>::is_ssz_fixed_len(),
-                    ) + usize::from(!<U128 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<U256 as ssz::Encode>::is_ssz_fixed_len()),
-                usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <u8 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <u8 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <VariableList<u16, 3usize> as ssz::Encode>::is_ssz_fixed_len(),
+                        <VariableList<u16, 3usize> as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <U128 as ssz::Encode>::is_ssz_fixed_len(),
+                        <U128 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <U256 as ssz::Encode>::is_ssz_fixed_len(),
+                        <U256 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+                1usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
         pub fn eee(&self) -> Result<ListRef<'a, u16, 3usize>, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <VariableList<u16, 3usize> as ssz::Encode>::is_ssz_fixed_len(),
-                <u8 as ssz::Encode>::ssz_fixed_len()
-                    + <u8 as ssz::Encode>::ssz_fixed_len(),
-                <VariableList<u16, 3usize> as ssz::Encode>::ssz_fixed_len(),
-                <u8 as ssz::Encode>::ssz_fixed_len()
-                    + <u8 as ssz::Encode>::ssz_fixed_len()
-                    + <VariableList<u16, 3usize> as ssz::Encode>::ssz_fixed_len()
-                    + <U128 as ssz::Encode>::ssz_fixed_len()
-                    + <U256 as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(
-                        !<VariableList<u16, 3usize> as ssz::Encode>::is_ssz_fixed_len(),
-                    ) + usize::from(!<U128 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<U256 as ssz::Encode>::is_ssz_fixed_len()),
-                usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <u8 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <u8 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <VariableList<u16, 3usize> as ssz::Encode>::is_ssz_fixed_len(),
+                        <VariableList<u16, 3usize> as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <U128 as ssz::Encode>::is_ssz_fixed_len(),
+                        <U128 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <U256 as ssz::Encode>::is_ssz_fixed_len(),
+                        <U256 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+                2usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
         pub fn large_int_128(&self) -> Result<U128, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <U128 as ssz::Encode>::is_ssz_fixed_len(),
-                <u8 as ssz::Encode>::ssz_fixed_len()
-                    + <u8 as ssz::Encode>::ssz_fixed_len()
-                    + <VariableList<u16, 3usize> as ssz::Encode>::ssz_fixed_len(),
-                <U128 as ssz::Encode>::ssz_fixed_len(),
-                <u8 as ssz::Encode>::ssz_fixed_len()
-                    + <u8 as ssz::Encode>::ssz_fixed_len()
-                    + <VariableList<u16, 3usize> as ssz::Encode>::ssz_fixed_len()
-                    + <U128 as ssz::Encode>::ssz_fixed_len()
-                    + <U256 as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(
-                        !<VariableList<u16, 3usize> as ssz::Encode>::is_ssz_fixed_len(),
-                    ) + usize::from(!<U128 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<U256 as ssz::Encode>::is_ssz_fixed_len()),
-                usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(
-                        !<VariableList<u16, 3usize> as ssz::Encode>::is_ssz_fixed_len(),
+                &[
+                    (
+                        <u8 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
                     ),
+                    (
+                        <u8 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <VariableList<u16, 3usize> as ssz::Encode>::is_ssz_fixed_len(),
+                        <VariableList<u16, 3usize> as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <U128 as ssz::Encode>::is_ssz_fixed_len(),
+                        <U128 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <U256 as ssz::Encode>::is_ssz_fixed_len(),
+                        <U256 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+                3usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
         pub fn large_int_256(&self) -> Result<U256, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <U256 as ssz::Encode>::is_ssz_fixed_len(),
-                <u8 as ssz::Encode>::ssz_fixed_len()
-                    + <u8 as ssz::Encode>::ssz_fixed_len()
-                    + <VariableList<u16, 3usize> as ssz::Encode>::ssz_fixed_len()
-                    + <U128 as ssz::Encode>::ssz_fixed_len(),
-                <U256 as ssz::Encode>::ssz_fixed_len(),
-                <u8 as ssz::Encode>::ssz_fixed_len()
-                    + <u8 as ssz::Encode>::ssz_fixed_len()
-                    + <VariableList<u16, 3usize> as ssz::Encode>::ssz_fixed_len()
-                    + <U128 as ssz::Encode>::ssz_fixed_len()
-                    + <U256 as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(
-                        !<VariableList<u16, 3usize> as ssz::Encode>::is_ssz_fixed_len(),
-                    ) + usize::from(!<U128 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<U256 as ssz::Encode>::is_ssz_fixed_len()),
-                usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(
-                        !<VariableList<u16, 3usize> as ssz::Encode>::is_ssz_fixed_len(),
-                    ) + usize::from(!<U128 as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <u8 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <u8 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <VariableList<u16, 3usize> as ssz::Encode>::is_ssz_fixed_len(),
+                        <VariableList<u16, 3usize> as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <U128 as ssz::Encode>::is_ssz_fixed_len(),
+                        <U128 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <U256 as ssz::Encode>::is_ssz_fixed_len(),
+                        <U256 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+                4usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
@@ -2536,52 +2519,31 @@ pub mod test_1 {
     }
     impl<'a> ssz::view::DecodeView<'a> for TestTypeRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let fixed_portion_size = <u8 as ssz::Encode>::ssz_fixed_len()
-                + <u8 as ssz::Encode>::ssz_fixed_len()
-                + <VariableList<u16, 3usize> as ssz::Encode>::ssz_fixed_len()
-                + <U128 as ssz::Encode>::ssz_fixed_len()
-                + <U256 as ssz::Encode>::ssz_fixed_len();
-            let num_variable_fields = usize::from(
-                !<u8 as ssz::Encode>::is_ssz_fixed_len(),
-            ) + usize::from(!<u8 as ssz::Encode>::is_ssz_fixed_len())
-                + usize::from(
-                    !<VariableList<u16, 3usize> as ssz::Encode>::is_ssz_fixed_len(),
-                ) + usize::from(!<U128 as ssz::Encode>::is_ssz_fixed_len())
-                + usize::from(!<U256 as ssz::Encode>::is_ssz_fixed_len());
-            if num_variable_fields == 0 {
-                if bytes.len() != fixed_portion_size {
-                    return Err(ssz::DecodeError::InvalidByteLength {
-                        len: bytes.len(),
-                        expected: fixed_portion_size,
-                    });
-                }
-            } else {
-                if bytes.len() < fixed_portion_size {
-                    return Err(ssz::DecodeError::InvalidByteLength {
-                        len: bytes.len(),
-                        expected: fixed_portion_size,
-                    });
-                }
-                let mut prev_offset: Option<usize> = None;
-                for i in 0..num_variable_fields {
-                    let offset = ssz::layout::read_variable_offset(
-                        bytes,
-                        fixed_portion_size,
-                        num_variable_fields,
-                        i,
-                    )?;
-                    if i == 0 && offset != fixed_portion_size {
-                        return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
-                    }
-                    if let Some(prev) = prev_offset && offset < prev {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                    }
-                    if offset > bytes.len() {
-                        return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
-                    }
-                    prev_offset = Some(offset);
-                }
-            }
+            ssz::layout::validate_container(
+                bytes,
+                &[
+                    (
+                        <u8 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <u8 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u8 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <VariableList<u16, 3usize> as ssz::Encode>::is_ssz_fixed_len(),
+                        <VariableList<u16, 3usize> as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <U128 as ssz::Encode>::is_ssz_fixed_len(),
+                        <U128 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <U256 as ssz::Encode>::is_ssz_fixed_len(),
+                        <U256 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+            )?;
             Ok(Self { bytes })
         }
     }
@@ -2697,15 +2659,20 @@ pub mod test_1 {
         pub fn l(&self) -> Result<ZetaRef<'a>, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <Zeta as ssz::Encode>::is_ssz_fixed_len(),
-                0usize,
-                <Zeta as ssz::Encode>::ssz_fixed_len(),
-                <Zeta as ssz::Encode>::ssz_fixed_len()
-                    + <TestType as ssz::Encode>::ssz_fixed_len()
-                    + <FirstUnion as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<Zeta as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<TestType as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<FirstUnion as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <Zeta as ssz::Encode>::is_ssz_fixed_len(),
+                        <Zeta as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <TestType as ssz::Encode>::is_ssz_fixed_len(),
+                        <TestType as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <FirstUnion as ssz::Encode>::is_ssz_fixed_len(),
+                        <FirstUnion as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
                 0usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
@@ -2713,34 +2680,42 @@ pub mod test_1 {
         pub fn m(&self) -> Result<TestTypeRef<'a>, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <TestType as ssz::Encode>::is_ssz_fixed_len(),
-                <Zeta as ssz::Encode>::ssz_fixed_len(),
-                <TestType as ssz::Encode>::ssz_fixed_len(),
-                <Zeta as ssz::Encode>::ssz_fixed_len()
-                    + <TestType as ssz::Encode>::ssz_fixed_len()
-                    + <FirstUnion as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<Zeta as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<TestType as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<FirstUnion as ssz::Encode>::is_ssz_fixed_len()),
-                usize::from(!<Zeta as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <Zeta as ssz::Encode>::is_ssz_fixed_len(),
+                        <Zeta as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <TestType as ssz::Encode>::is_ssz_fixed_len(),
+                        <TestType as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <FirstUnion as ssz::Encode>::is_ssz_fixed_len(),
+                        <FirstUnion as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+                1usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
         pub fn n(&self) -> Result<FirstUnionRef<'a>, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <FirstUnion as ssz::Encode>::is_ssz_fixed_len(),
-                <Zeta as ssz::Encode>::ssz_fixed_len()
-                    + <TestType as ssz::Encode>::ssz_fixed_len(),
-                <FirstUnion as ssz::Encode>::ssz_fixed_len(),
-                <Zeta as ssz::Encode>::ssz_fixed_len()
-                    + <TestType as ssz::Encode>::ssz_fixed_len()
-                    + <FirstUnion as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<Zeta as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<TestType as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<FirstUnion as ssz::Encode>::is_ssz_fixed_len()),
-                usize::from(!<Zeta as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<TestType as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <Zeta as ssz::Encode>::is_ssz_fixed_len(),
+                        <Zeta as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <TestType as ssz::Encode>::is_ssz_fixed_len(),
+                        <TestType as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <FirstUnion as ssz::Encode>::is_ssz_fixed_len(),
+                        <FirstUnion as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+                2usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
@@ -2784,47 +2759,23 @@ pub mod test_1 {
     }
     impl<'a> ssz::view::DecodeView<'a> for EtaRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let fixed_portion_size = <Zeta as ssz::Encode>::ssz_fixed_len()
-                + <TestType as ssz::Encode>::ssz_fixed_len()
-                + <FirstUnion as ssz::Encode>::ssz_fixed_len();
-            let num_variable_fields = usize::from(
-                !<Zeta as ssz::Encode>::is_ssz_fixed_len(),
-            ) + usize::from(!<TestType as ssz::Encode>::is_ssz_fixed_len())
-                + usize::from(!<FirstUnion as ssz::Encode>::is_ssz_fixed_len());
-            if num_variable_fields == 0 {
-                if bytes.len() != fixed_portion_size {
-                    return Err(ssz::DecodeError::InvalidByteLength {
-                        len: bytes.len(),
-                        expected: fixed_portion_size,
-                    });
-                }
-            } else {
-                if bytes.len() < fixed_portion_size {
-                    return Err(ssz::DecodeError::InvalidByteLength {
-                        len: bytes.len(),
-                        expected: fixed_portion_size,
-                    });
-                }
-                let mut prev_offset: Option<usize> = None;
-                for i in 0..num_variable_fields {
-                    let offset = ssz::layout::read_variable_offset(
-                        bytes,
-                        fixed_portion_size,
-                        num_variable_fields,
-                        i,
-                    )?;
-                    if i == 0 && offset != fixed_portion_size {
-                        return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
-                    }
-                    if let Some(prev) = prev_offset && offset < prev {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                    }
-                    if offset > bytes.len() {
-                        return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
-                    }
-                    prev_offset = Some(offset);
-                }
-            }
+            ssz::layout::validate_container(
+                bytes,
+                &[
+                    (
+                        <Zeta as ssz::Encode>::is_ssz_fixed_len(),
+                        <Zeta as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <TestType as ssz::Encode>::is_ssz_fixed_len(),
+                        <TestType as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <FirstUnion as ssz::Encode>::is_ssz_fixed_len(),
+                        <FirstUnion as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+            )?;
             Ok(Self { bytes })
         }
     }
@@ -2931,15 +2882,20 @@ pub mod test_1 {
         pub fn o(&self) -> Result<UnionBRef<'a>, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <UnionB as ssz::Encode>::is_ssz_fixed_len(),
-                0usize,
-                <UnionB as ssz::Encode>::ssz_fixed_len(),
-                <UnionB as ssz::Encode>::ssz_fixed_len()
-                    + <UnionC as ssz::Encode>::ssz_fixed_len()
-                    + <AliasVecA as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<UnionB as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<UnionC as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<AliasVecA as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <UnionB as ssz::Encode>::is_ssz_fixed_len(),
+                        <UnionB as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <UnionC as ssz::Encode>::is_ssz_fixed_len(),
+                        <UnionC as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <AliasVecA as ssz::Encode>::is_ssz_fixed_len(),
+                        <AliasVecA as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
                 0usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
@@ -2947,34 +2903,42 @@ pub mod test_1 {
         pub fn p(&self) -> Result<UnionCRef<'a>, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <UnionC as ssz::Encode>::is_ssz_fixed_len(),
-                <UnionB as ssz::Encode>::ssz_fixed_len(),
-                <UnionC as ssz::Encode>::ssz_fixed_len(),
-                <UnionB as ssz::Encode>::ssz_fixed_len()
-                    + <UnionC as ssz::Encode>::ssz_fixed_len()
-                    + <AliasVecA as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<UnionB as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<UnionC as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<AliasVecA as ssz::Encode>::is_ssz_fixed_len()),
-                usize::from(!<UnionB as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <UnionB as ssz::Encode>::is_ssz_fixed_len(),
+                        <UnionB as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <UnionC as ssz::Encode>::is_ssz_fixed_len(),
+                        <UnionC as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <AliasVecA as ssz::Encode>::is_ssz_fixed_len(),
+                        <AliasVecA as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+                1usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
         pub fn q(&self) -> Result<FixedBytesRef<'a, 10usize>, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <AliasVecA as ssz::Encode>::is_ssz_fixed_len(),
-                <UnionB as ssz::Encode>::ssz_fixed_len()
-                    + <UnionC as ssz::Encode>::ssz_fixed_len(),
-                <AliasVecA as ssz::Encode>::ssz_fixed_len(),
-                <UnionB as ssz::Encode>::ssz_fixed_len()
-                    + <UnionC as ssz::Encode>::ssz_fixed_len()
-                    + <AliasVecA as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<UnionB as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<UnionC as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<AliasVecA as ssz::Encode>::is_ssz_fixed_len()),
-                usize::from(!<UnionB as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<UnionC as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <UnionB as ssz::Encode>::is_ssz_fixed_len(),
+                        <UnionB as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <UnionC as ssz::Encode>::is_ssz_fixed_len(),
+                        <UnionC as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <AliasVecA as ssz::Encode>::is_ssz_fixed_len(),
+                        <AliasVecA as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+                2usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
@@ -3018,47 +2982,23 @@ pub mod test_1 {
     }
     impl<'a> ssz::view::DecodeView<'a> for ThetaRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let fixed_portion_size = <UnionB as ssz::Encode>::ssz_fixed_len()
-                + <UnionC as ssz::Encode>::ssz_fixed_len()
-                + <AliasVecA as ssz::Encode>::ssz_fixed_len();
-            let num_variable_fields = usize::from(
-                !<UnionB as ssz::Encode>::is_ssz_fixed_len(),
-            ) + usize::from(!<UnionC as ssz::Encode>::is_ssz_fixed_len())
-                + usize::from(!<AliasVecA as ssz::Encode>::is_ssz_fixed_len());
-            if num_variable_fields == 0 {
-                if bytes.len() != fixed_portion_size {
-                    return Err(ssz::DecodeError::InvalidByteLength {
-                        len: bytes.len(),
-                        expected: fixed_portion_size,
-                    });
-                }
-            } else {
-                if bytes.len() < fixed_portion_size {
-                    return Err(ssz::DecodeError::InvalidByteLength {
-                        len: bytes.len(),
-                        expected: fixed_portion_size,
-                    });
-                }
-                let mut prev_offset: Option<usize> = None;
-                for i in 0..num_variable_fields {
-                    let offset = ssz::layout::read_variable_offset(
-                        bytes,
-                        fixed_portion_size,
-                        num_variable_fields,
-                        i,
-                    )?;
-                    if i == 0 && offset != fixed_portion_size {
-                        return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
-                    }
-                    if let Some(prev) = prev_offset && offset < prev {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                    }
-                    if offset > bytes.len() {
-                        return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
-                    }
-                    prev_offset = Some(offset);
-                }
-            }
+            ssz::layout::validate_container(
+                bytes,
+                &[
+                    (
+                        <UnionB as ssz::Encode>::is_ssz_fixed_len(),
+                        <UnionB as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <UnionC as ssz::Encode>::is_ssz_fixed_len(),
+                        <UnionC as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <AliasVecA as ssz::Encode>::is_ssz_fixed_len(),
+                        <AliasVecA as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+            )?;
             Ok(Self { bytes })
         }
     }
@@ -3515,17 +3455,20 @@ pub mod test_1 {
         pub fn t(&self) -> Result<AlphaRef<'a>, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <Alpha as ssz::Encode>::is_ssz_fixed_len(),
-                0usize,
-                <Alpha as ssz::Encode>::ssz_fixed_len(),
-                <Alpha as ssz::Encode>::ssz_fixed_len()
-                    + <Beta as ssz::Encode>::ssz_fixed_len()
-                    + <BitVector<64usize> as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<Alpha as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<Beta as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(
-                        !<BitVector<64usize> as ssz::Encode>::is_ssz_fixed_len(),
+                &[
+                    (
+                        <Alpha as ssz::Encode>::is_ssz_fixed_len(),
+                        <Alpha as ssz::Encode>::ssz_fixed_len(),
                     ),
+                    (
+                        <Beta as ssz::Encode>::is_ssz_fixed_len(),
+                        <Beta as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <BitVector<64usize> as ssz::Encode>::is_ssz_fixed_len(),
+                        <BitVector<64usize> as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
                 0usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
@@ -3533,38 +3476,42 @@ pub mod test_1 {
         pub fn u(&self) -> Result<BetaRef<'a>, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <Beta as ssz::Encode>::is_ssz_fixed_len(),
-                <Alpha as ssz::Encode>::ssz_fixed_len(),
-                <Beta as ssz::Encode>::ssz_fixed_len(),
-                <Alpha as ssz::Encode>::ssz_fixed_len()
-                    + <Beta as ssz::Encode>::ssz_fixed_len()
-                    + <BitVector<64usize> as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<Alpha as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<Beta as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(
-                        !<BitVector<64usize> as ssz::Encode>::is_ssz_fixed_len(),
+                &[
+                    (
+                        <Alpha as ssz::Encode>::is_ssz_fixed_len(),
+                        <Alpha as ssz::Encode>::ssz_fixed_len(),
                     ),
-                usize::from(!<Alpha as ssz::Encode>::is_ssz_fixed_len()),
+                    (
+                        <Beta as ssz::Encode>::is_ssz_fixed_len(),
+                        <Beta as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <BitVector<64usize> as ssz::Encode>::is_ssz_fixed_len(),
+                        <BitVector<64usize> as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+                1usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
         pub fn v(&self) -> Result<BitVectorRef<'a, 64usize>, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <BitVector<64usize> as ssz::Encode>::is_ssz_fixed_len(),
-                <Alpha as ssz::Encode>::ssz_fixed_len()
-                    + <Beta as ssz::Encode>::ssz_fixed_len(),
-                <BitVector<64usize> as ssz::Encode>::ssz_fixed_len(),
-                <Alpha as ssz::Encode>::ssz_fixed_len()
-                    + <Beta as ssz::Encode>::ssz_fixed_len()
-                    + <BitVector<64usize> as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<Alpha as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<Beta as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(
-                        !<BitVector<64usize> as ssz::Encode>::is_ssz_fixed_len(),
+                &[
+                    (
+                        <Alpha as ssz::Encode>::is_ssz_fixed_len(),
+                        <Alpha as ssz::Encode>::ssz_fixed_len(),
                     ),
-                usize::from(!<Alpha as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<Beta as ssz::Encode>::is_ssz_fixed_len()),
+                    (
+                        <Beta as ssz::Encode>::is_ssz_fixed_len(),
+                        <Beta as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <BitVector<64usize> as ssz::Encode>::is_ssz_fixed_len(),
+                        <BitVector<64usize> as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+                2usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
@@ -3608,47 +3555,23 @@ pub mod test_1 {
     }
     impl<'a> ssz::view::DecodeView<'a> for KappaRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let fixed_portion_size = <Alpha as ssz::Encode>::ssz_fixed_len()
-                + <Beta as ssz::Encode>::ssz_fixed_len()
-                + <BitVector<64usize> as ssz::Encode>::ssz_fixed_len();
-            let num_variable_fields = usize::from(
-                !<Alpha as ssz::Encode>::is_ssz_fixed_len(),
-            ) + usize::from(!<Beta as ssz::Encode>::is_ssz_fixed_len())
-                + usize::from(!<BitVector<64usize> as ssz::Encode>::is_ssz_fixed_len());
-            if num_variable_fields == 0 {
-                if bytes.len() != fixed_portion_size {
-                    return Err(ssz::DecodeError::InvalidByteLength {
-                        len: bytes.len(),
-                        expected: fixed_portion_size,
-                    });
-                }
-            } else {
-                if bytes.len() < fixed_portion_size {
-                    return Err(ssz::DecodeError::InvalidByteLength {
-                        len: bytes.len(),
-                        expected: fixed_portion_size,
-                    });
-                }
-                let mut prev_offset: Option<usize> = None;
-                for i in 0..num_variable_fields {
-                    let offset = ssz::layout::read_variable_offset(
-                        bytes,
-                        fixed_portion_size,
-                        num_variable_fields,
-                        i,
-                    )?;
-                    if i == 0 && offset != fixed_portion_size {
-                        return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
-                    }
-                    if let Some(prev) = prev_offset && offset < prev {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                    }
-                    if offset > bytes.len() {
-                        return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
-                    }
-                    prev_offset = Some(offset);
-                }
-            }
+            ssz::layout::validate_container(
+                bytes,
+                &[
+                    (
+                        <Alpha as ssz::Encode>::is_ssz_fixed_len(),
+                        <Alpha as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <Beta as ssz::Encode>::is_ssz_fixed_len(),
+                        <Beta as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <BitVector<64usize> as ssz::Encode>::is_ssz_fixed_len(),
+                        <BitVector<64usize> as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+            )?;
             Ok(Self { bytes })
         }
     }
@@ -3944,13 +3867,16 @@ pub mod test_1 {
         pub fn y(&self) -> Result<LambdaRef<'a>, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <Lambda as ssz::Encode>::is_ssz_fixed_len(),
-                0usize,
-                <Lambda as ssz::Encode>::ssz_fixed_len(),
-                <Lambda as ssz::Encode>::ssz_fixed_len()
-                    + <UnionA as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<Lambda as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<UnionA as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <Lambda as ssz::Encode>::is_ssz_fixed_len(),
+                        <Lambda as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <UnionA as ssz::Encode>::is_ssz_fixed_len(),
+                        <UnionA as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
                 0usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
@@ -3958,14 +3884,17 @@ pub mod test_1 {
         pub fn z(&self) -> Result<UnionARef<'a>, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <UnionA as ssz::Encode>::is_ssz_fixed_len(),
-                <Lambda as ssz::Encode>::ssz_fixed_len(),
-                <UnionA as ssz::Encode>::ssz_fixed_len(),
-                <Lambda as ssz::Encode>::ssz_fixed_len()
-                    + <UnionA as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<Lambda as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<UnionA as ssz::Encode>::is_ssz_fixed_len()),
-                usize::from(!<Lambda as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <Lambda as ssz::Encode>::is_ssz_fixed_len(),
+                        <Lambda as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <UnionA as ssz::Encode>::is_ssz_fixed_len(),
+                        <UnionA as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+                1usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
@@ -4002,45 +3931,19 @@ pub mod test_1 {
     }
     impl<'a> ssz::view::DecodeView<'a> for MuRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let fixed_portion_size = <Lambda as ssz::Encode>::ssz_fixed_len()
-                + <UnionA as ssz::Encode>::ssz_fixed_len();
-            let num_variable_fields = usize::from(
-                !<Lambda as ssz::Encode>::is_ssz_fixed_len(),
-            ) + usize::from(!<UnionA as ssz::Encode>::is_ssz_fixed_len());
-            if num_variable_fields == 0 {
-                if bytes.len() != fixed_portion_size {
-                    return Err(ssz::DecodeError::InvalidByteLength {
-                        len: bytes.len(),
-                        expected: fixed_portion_size,
-                    });
-                }
-            } else {
-                if bytes.len() < fixed_portion_size {
-                    return Err(ssz::DecodeError::InvalidByteLength {
-                        len: bytes.len(),
-                        expected: fixed_portion_size,
-                    });
-                }
-                let mut prev_offset: Option<usize> = None;
-                for i in 0..num_variable_fields {
-                    let offset = ssz::layout::read_variable_offset(
-                        bytes,
-                        fixed_portion_size,
-                        num_variable_fields,
-                        i,
-                    )?;
-                    if i == 0 && offset != fixed_portion_size {
-                        return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
-                    }
-                    if let Some(prev) = prev_offset && offset < prev {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                    }
-                    if offset > bytes.len() {
-                        return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
-                    }
-                    prev_offset = Some(offset);
-                }
-            }
+            ssz::layout::validate_container(
+                bytes,
+                &[
+                    (
+                        <Lambda as ssz::Encode>::is_ssz_fixed_len(),
+                        <Lambda as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <UnionA as ssz::Encode>::is_ssz_fixed_len(),
+                        <UnionA as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+            )?;
             Ok(Self { bytes })
         }
     }
@@ -4154,18 +4057,24 @@ pub mod test_1 {
         pub fn zz(&self) -> Result<AliasMuRef<'a>, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <AliasMu as ssz::Encode>::is_ssz_fixed_len(),
-                0usize,
-                <AliasMu as ssz::Encode>::ssz_fixed_len(),
-                <AliasMu as ssz::Encode>::ssz_fixed_len()
-                    + <FixedVector<bool, 4usize> as ssz::Encode>::ssz_fixed_len()
-                    + <BitAlias as ssz::Encode>::ssz_fixed_len()
-                    + <Option<AliasMu> as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<AliasMu as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(
-                        !<FixedVector<bool, 4usize> as ssz::Encode>::is_ssz_fixed_len(),
-                    ) + usize::from(!<BitAlias as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<Option<AliasMu> as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <AliasMu as ssz::Encode>::is_ssz_fixed_len(),
+                        <AliasMu as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <FixedVector<bool, 4usize> as ssz::Encode>::is_ssz_fixed_len(),
+                        <FixedVector<bool, 4usize> as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <BitAlias as ssz::Encode>::is_ssz_fixed_len(),
+                        <BitAlias as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <Option<AliasMu> as ssz::Encode>::is_ssz_fixed_len(),
+                        <Option<AliasMu> as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
                 0usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
@@ -4173,66 +4082,75 @@ pub mod test_1 {
         pub fn aaa(&self) -> Result<FixedVectorRef<'a, bool, 4usize>, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <FixedVector<bool, 4usize> as ssz::Encode>::is_ssz_fixed_len(),
-                <AliasMu as ssz::Encode>::ssz_fixed_len(),
-                <FixedVector<bool, 4usize> as ssz::Encode>::ssz_fixed_len(),
-                <AliasMu as ssz::Encode>::ssz_fixed_len()
-                    + <FixedVector<bool, 4usize> as ssz::Encode>::ssz_fixed_len()
-                    + <BitAlias as ssz::Encode>::ssz_fixed_len()
-                    + <Option<AliasMu> as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<AliasMu as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(
-                        !<FixedVector<bool, 4usize> as ssz::Encode>::is_ssz_fixed_len(),
-                    ) + usize::from(!<BitAlias as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<Option<AliasMu> as ssz::Encode>::is_ssz_fixed_len()),
-                usize::from(!<AliasMu as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <AliasMu as ssz::Encode>::is_ssz_fixed_len(),
+                        <AliasMu as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <FixedVector<bool, 4usize> as ssz::Encode>::is_ssz_fixed_len(),
+                        <FixedVector<bool, 4usize> as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <BitAlias as ssz::Encode>::is_ssz_fixed_len(),
+                        <BitAlias as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <Option<AliasMu> as ssz::Encode>::is_ssz_fixed_len(),
+                        <Option<AliasMu> as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+                1usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
         pub fn bbb(&self) -> Result<BitListRef<'a, 42usize>, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <BitAlias as ssz::Encode>::is_ssz_fixed_len(),
-                <AliasMu as ssz::Encode>::ssz_fixed_len()
-                    + <FixedVector<bool, 4usize> as ssz::Encode>::ssz_fixed_len(),
-                <BitAlias as ssz::Encode>::ssz_fixed_len(),
-                <AliasMu as ssz::Encode>::ssz_fixed_len()
-                    + <FixedVector<bool, 4usize> as ssz::Encode>::ssz_fixed_len()
-                    + <BitAlias as ssz::Encode>::ssz_fixed_len()
-                    + <Option<AliasMu> as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<AliasMu as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(
-                        !<FixedVector<bool, 4usize> as ssz::Encode>::is_ssz_fixed_len(),
-                    ) + usize::from(!<BitAlias as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<Option<AliasMu> as ssz::Encode>::is_ssz_fixed_len()),
-                usize::from(!<AliasMu as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(
-                        !<FixedVector<bool, 4usize> as ssz::Encode>::is_ssz_fixed_len(),
+                &[
+                    (
+                        <AliasMu as ssz::Encode>::is_ssz_fixed_len(),
+                        <AliasMu as ssz::Encode>::ssz_fixed_len(),
                     ),
+                    (
+                        <FixedVector<bool, 4usize> as ssz::Encode>::is_ssz_fixed_len(),
+                        <FixedVector<bool, 4usize> as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <BitAlias as ssz::Encode>::is_ssz_fixed_len(),
+                        <BitAlias as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <Option<AliasMu> as ssz::Encode>::is_ssz_fixed_len(),
+                        <Option<AliasMu> as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+                2usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
         pub fn test(&self) -> Result<Option<AliasMuRef<'a>>, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <Option<AliasMu> as ssz::Encode>::is_ssz_fixed_len(),
-                <AliasMu as ssz::Encode>::ssz_fixed_len()
-                    + <FixedVector<bool, 4usize> as ssz::Encode>::ssz_fixed_len()
-                    + <BitAlias as ssz::Encode>::ssz_fixed_len(),
-                <Option<AliasMu> as ssz::Encode>::ssz_fixed_len(),
-                <AliasMu as ssz::Encode>::ssz_fixed_len()
-                    + <FixedVector<bool, 4usize> as ssz::Encode>::ssz_fixed_len()
-                    + <BitAlias as ssz::Encode>::ssz_fixed_len()
-                    + <Option<AliasMu> as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<AliasMu as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(
-                        !<FixedVector<bool, 4usize> as ssz::Encode>::is_ssz_fixed_len(),
-                    ) + usize::from(!<BitAlias as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<Option<AliasMu> as ssz::Encode>::is_ssz_fixed_len()),
-                usize::from(!<AliasMu as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(
-                        !<FixedVector<bool, 4usize> as ssz::Encode>::is_ssz_fixed_len(),
-                    ) + usize::from(!<BitAlias as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <AliasMu as ssz::Encode>::is_ssz_fixed_len(),
+                        <AliasMu as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <FixedVector<bool, 4usize> as ssz::Encode>::is_ssz_fixed_len(),
+                        <FixedVector<bool, 4usize> as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <BitAlias as ssz::Encode>::is_ssz_fixed_len(),
+                        <BitAlias as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <Option<AliasMu> as ssz::Encode>::is_ssz_fixed_len(),
+                        <Option<AliasMu> as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+                3usize,
             )?;
             if bytes.is_empty() {
                 return Err(ssz::DecodeError::InvalidByteLength {
@@ -4305,51 +4223,27 @@ pub mod test_1 {
     }
     impl<'a> ssz::view::DecodeView<'a> for NuRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let fixed_portion_size = <AliasMu as ssz::Encode>::ssz_fixed_len()
-                + <FixedVector<bool, 4usize> as ssz::Encode>::ssz_fixed_len()
-                + <BitAlias as ssz::Encode>::ssz_fixed_len()
-                + <Option<AliasMu> as ssz::Encode>::ssz_fixed_len();
-            let num_variable_fields = usize::from(
-                !<AliasMu as ssz::Encode>::is_ssz_fixed_len(),
-            )
-                + usize::from(
-                    !<FixedVector<bool, 4usize> as ssz::Encode>::is_ssz_fixed_len(),
-                ) + usize::from(!<BitAlias as ssz::Encode>::is_ssz_fixed_len())
-                + usize::from(!<Option<AliasMu> as ssz::Encode>::is_ssz_fixed_len());
-            if num_variable_fields == 0 {
-                if bytes.len() != fixed_portion_size {
-                    return Err(ssz::DecodeError::InvalidByteLength {
-                        len: bytes.len(),
-                        expected: fixed_portion_size,
-                    });
-                }
-            } else {
-                if bytes.len() < fixed_portion_size {
-                    return Err(ssz::DecodeError::InvalidByteLength {
-                        len: bytes.len(),
-                        expected: fixed_portion_size,
-                    });
-                }
-                let mut prev_offset: Option<usize> = None;
-                for i in 0..num_variable_fields {
-                    let offset = ssz::layout::read_variable_offset(
-                        bytes,
-                        fixed_portion_size,
-                        num_variable_fields,
-                        i,
-                    )?;
-                    if i == 0 && offset != fixed_portion_size {
-                        return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
-                    }
-                    if let Some(prev) = prev_offset && offset < prev {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                    }
-                    if offset > bytes.len() {
-                        return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
-                    }
-                    prev_offset = Some(offset);
-                }
-            }
+            ssz::layout::validate_container(
+                bytes,
+                &[
+                    (
+                        <AliasMu as ssz::Encode>::is_ssz_fixed_len(),
+                        <AliasMu as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <FixedVector<bool, 4usize> as ssz::Encode>::is_ssz_fixed_len(),
+                        <FixedVector<bool, 4usize> as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <BitAlias as ssz::Encode>::is_ssz_fixed_len(),
+                        <BitAlias as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <Option<AliasMu> as ssz::Encode>::is_ssz_fixed_len(),
+                        <Option<AliasMu> as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+            )?;
             Ok(Self { bytes })
         }
     }

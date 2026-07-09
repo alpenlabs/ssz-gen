@@ -62,13 +62,16 @@ impl<'a> ExportEntryRef<'a> {
     pub fn value(&self) -> Result<u64, ssz::DecodeError> {
         let bytes = ssz::layout::read_field_bytes(
             self.bytes,
-            <u64 as ssz::Encode>::is_ssz_fixed_len(),
-            0usize,
-            <u64 as ssz::Encode>::ssz_fixed_len(),
-            <u64 as ssz::Encode>::ssz_fixed_len()
-                + <u32 as ssz::Encode>::ssz_fixed_len(),
-            usize::from(!<u64 as ssz::Encode>::is_ssz_fixed_len())
-                + usize::from(!<u32 as ssz::Encode>::is_ssz_fixed_len()),
+            &[
+                (
+                    <u64 as ssz::Encode>::is_ssz_fixed_len(),
+                    <u64 as ssz::Encode>::ssz_fixed_len(),
+                ),
+                (
+                    <u32 as ssz::Encode>::is_ssz_fixed_len(),
+                    <u32 as ssz::Encode>::ssz_fixed_len(),
+                ),
+            ],
             0usize,
         )?;
         ssz::view::DecodeView::from_ssz_bytes(bytes)
@@ -76,14 +79,17 @@ impl<'a> ExportEntryRef<'a> {
     pub fn data(&self) -> Result<u32, ssz::DecodeError> {
         let bytes = ssz::layout::read_field_bytes(
             self.bytes,
-            <u32 as ssz::Encode>::is_ssz_fixed_len(),
-            <u64 as ssz::Encode>::ssz_fixed_len(),
-            <u32 as ssz::Encode>::ssz_fixed_len(),
-            <u64 as ssz::Encode>::ssz_fixed_len()
-                + <u32 as ssz::Encode>::ssz_fixed_len(),
-            usize::from(!<u64 as ssz::Encode>::is_ssz_fixed_len())
-                + usize::from(!<u32 as ssz::Encode>::is_ssz_fixed_len()),
-            usize::from(!<u64 as ssz::Encode>::is_ssz_fixed_len()),
+            &[
+                (
+                    <u64 as ssz::Encode>::is_ssz_fixed_len(),
+                    <u64 as ssz::Encode>::ssz_fixed_len(),
+                ),
+                (
+                    <u32 as ssz::Encode>::is_ssz_fixed_len(),
+                    <u32 as ssz::Encode>::ssz_fixed_len(),
+                ),
+            ],
+            1usize,
         )?;
         ssz::view::DecodeView::from_ssz_bytes(bytes)
     }
@@ -120,44 +126,19 @@ impl<'a> tree_hash::TreeHash for ExportEntryRef<'a> {
 }
 impl<'a> ssz::view::DecodeView<'a> for ExportEntryRef<'a> {
     fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-        let fixed_portion_size = <u64 as ssz::Encode>::ssz_fixed_len()
-            + <u32 as ssz::Encode>::ssz_fixed_len();
-        let num_variable_fields = usize::from(!<u64 as ssz::Encode>::is_ssz_fixed_len())
-            + usize::from(!<u32 as ssz::Encode>::is_ssz_fixed_len());
-        if num_variable_fields == 0 {
-            if bytes.len() != fixed_portion_size {
-                return Err(ssz::DecodeError::InvalidByteLength {
-                    len: bytes.len(),
-                    expected: fixed_portion_size,
-                });
-            }
-        } else {
-            if bytes.len() < fixed_portion_size {
-                return Err(ssz::DecodeError::InvalidByteLength {
-                    len: bytes.len(),
-                    expected: fixed_portion_size,
-                });
-            }
-            let mut prev_offset: Option<usize> = None;
-            for i in 0..num_variable_fields {
-                let offset = ssz::layout::read_variable_offset(
-                    bytes,
-                    fixed_portion_size,
-                    num_variable_fields,
-                    i,
-                )?;
-                if i == 0 && offset != fixed_portion_size {
-                    return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
-                }
-                if let Some(prev) = prev_offset && offset < prev {
-                    return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                }
-                if offset > bytes.len() {
-                    return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
-                }
-                prev_offset = Some(offset);
-            }
-        }
+        ssz::layout::validate_container(
+            bytes,
+            &[
+                (
+                    <u64 as ssz::Encode>::is_ssz_fixed_len(),
+                    <u64 as ssz::Encode>::ssz_fixed_len(),
+                ),
+                (
+                    <u32 as ssz::Encode>::is_ssz_fixed_len(),
+                    <u32 as ssz::Encode>::ssz_fixed_len(),
+                ),
+            ],
+        )?;
         Ok(Self { bytes })
     }
 }
@@ -251,17 +232,22 @@ impl<'a> ExportContainerRef<'a> {
     ) -> Result<ListRef<'a, ExportEntryRef<'a>, 4096usize>, ssz::DecodeError> {
         let bytes = ssz::layout::read_field_bytes(
             self.bytes,
-            <VariableList<ExportEntry, 4096usize> as ssz::Encode>::is_ssz_fixed_len(),
-            0usize,
-            <VariableList<ExportEntry, 4096usize> as ssz::Encode>::ssz_fixed_len(),
-            <VariableList<ExportEntry, 4096usize> as ssz::Encode>::ssz_fixed_len()
-                + <u32 as ssz::Encode>::ssz_fixed_len(),
-            usize::from(
-                !<VariableList<
-                    ExportEntry,
-                    4096usize,
-                > as ssz::Encode>::is_ssz_fixed_len(),
-            ) + usize::from(!<u32 as ssz::Encode>::is_ssz_fixed_len()),
+            &[
+                (
+                    <VariableList<
+                        ExportEntry,
+                        4096usize,
+                    > as ssz::Encode>::is_ssz_fixed_len(),
+                    <VariableList<
+                        ExportEntry,
+                        4096usize,
+                    > as ssz::Encode>::ssz_fixed_len(),
+                ),
+                (
+                    <u32 as ssz::Encode>::is_ssz_fixed_len(),
+                    <u32 as ssz::Encode>::ssz_fixed_len(),
+                ),
+            ],
             0usize,
         )?;
         ssz::view::DecodeView::from_ssz_bytes(bytes)
@@ -269,23 +255,23 @@ impl<'a> ExportContainerRef<'a> {
     pub fn name(&self) -> Result<u32, ssz::DecodeError> {
         let bytes = ssz::layout::read_field_bytes(
             self.bytes,
-            <u32 as ssz::Encode>::is_ssz_fixed_len(),
-            <VariableList<ExportEntry, 4096usize> as ssz::Encode>::ssz_fixed_len(),
-            <u32 as ssz::Encode>::ssz_fixed_len(),
-            <VariableList<ExportEntry, 4096usize> as ssz::Encode>::ssz_fixed_len()
-                + <u32 as ssz::Encode>::ssz_fixed_len(),
-            usize::from(
-                !<VariableList<
-                    ExportEntry,
-                    4096usize,
-                > as ssz::Encode>::is_ssz_fixed_len(),
-            ) + usize::from(!<u32 as ssz::Encode>::is_ssz_fixed_len()),
-            usize::from(
-                !<VariableList<
-                    ExportEntry,
-                    4096usize,
-                > as ssz::Encode>::is_ssz_fixed_len(),
-            ),
+            &[
+                (
+                    <VariableList<
+                        ExportEntry,
+                        4096usize,
+                    > as ssz::Encode>::is_ssz_fixed_len(),
+                    <VariableList<
+                        ExportEntry,
+                        4096usize,
+                    > as ssz::Encode>::ssz_fixed_len(),
+                ),
+                (
+                    <u32 as ssz::Encode>::is_ssz_fixed_len(),
+                    <u32 as ssz::Encode>::ssz_fixed_len(),
+                ),
+            ],
+            1usize,
         )?;
         ssz::view::DecodeView::from_ssz_bytes(bytes)
     }
@@ -322,47 +308,25 @@ impl<'a> tree_hash::TreeHash for ExportContainerRef<'a> {
 }
 impl<'a> ssz::view::DecodeView<'a> for ExportContainerRef<'a> {
     fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-        let fixed_portion_size = <VariableList<
-            ExportEntry,
-            4096usize,
-        > as ssz::Encode>::ssz_fixed_len() + <u32 as ssz::Encode>::ssz_fixed_len();
-        let num_variable_fields = usize::from(
-            !<VariableList<ExportEntry, 4096usize> as ssz::Encode>::is_ssz_fixed_len(),
-        ) + usize::from(!<u32 as ssz::Encode>::is_ssz_fixed_len());
-        if num_variable_fields == 0 {
-            if bytes.len() != fixed_portion_size {
-                return Err(ssz::DecodeError::InvalidByteLength {
-                    len: bytes.len(),
-                    expected: fixed_portion_size,
-                });
-            }
-        } else {
-            if bytes.len() < fixed_portion_size {
-                return Err(ssz::DecodeError::InvalidByteLength {
-                    len: bytes.len(),
-                    expected: fixed_portion_size,
-                });
-            }
-            let mut prev_offset: Option<usize> = None;
-            for i in 0..num_variable_fields {
-                let offset = ssz::layout::read_variable_offset(
-                    bytes,
-                    fixed_portion_size,
-                    num_variable_fields,
-                    i,
-                )?;
-                if i == 0 && offset != fixed_portion_size {
-                    return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
-                }
-                if let Some(prev) = prev_offset && offset < prev {
-                    return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                }
-                if offset > bytes.len() {
-                    return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
-                }
-                prev_offset = Some(offset);
-            }
-        }
+        ssz::layout::validate_container(
+            bytes,
+            &[
+                (
+                    <VariableList<
+                        ExportEntry,
+                        4096usize,
+                    > as ssz::Encode>::is_ssz_fixed_len(),
+                    <VariableList<
+                        ExportEntry,
+                        4096usize,
+                    > as ssz::Encode>::ssz_fixed_len(),
+                ),
+                (
+                    <u32 as ssz::Encode>::is_ssz_fixed_len(),
+                    <u32 as ssz::Encode>::ssz_fixed_len(),
+                ),
+            ],
+        )?;
         Ok(Self { bytes })
     }
 }

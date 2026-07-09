@@ -128,6 +128,10 @@ impl ContainerLayout {
 
 /// Validates the offset table for a variable-length container.
 ///
+/// Like [`read_variable_offset`], this assumes the offset entries are packed
+/// at the end of the fixed portion; see [`validate_container`] for the
+/// canonical interleaved layout.
+///
 /// # Arguments
 ///
 /// * `bytes` - The complete container bytes
@@ -199,6 +203,16 @@ fn validate_offset_table(
 
 /// Helper to read an offset from the offset table.
 ///
+/// Assumes the offset entries form a contiguous table at the end of the
+/// fixed portion, which holds only when no fixed-size field follows a
+/// variable-size one (e.g. all-`Optional` StableContainers). In canonical
+/// SSZ each offset entry sits at its field's own position in the fixed
+/// portion; use [`read_field_bytes`] with a field table for such layouts.
+///
+/// FIXME: the StableContainer/Profile codegen path still relies on this
+/// end-packed assumption, which is wrong for Profiles that mix required
+/// fixed-size fields after variable-size ones (pre-existing).
+///
 /// # Arguments
 ///
 /// * `bytes` - The complete container bytes
@@ -260,69 +274,163 @@ pub fn read_variable_offset_or_end(
     }
 }
 
-/// Slices a single container field out of `bytes`.
+/// Owned-encoding layout facts for one container field: `(is_fixed, fixed_len)`.
 ///
-/// For a fixed-size field the slice sits inline in the fixed portion at
-/// `fixed_offset` with length `fixed_len`; for a variable-size field the
-/// bounds come from the offset table entry at `variable_index`.
+/// `fixed_len` is the field's `ssz_fixed_len()`; for variable-size fields the
+/// [`Encode`](crate::Encode) contract makes this `BYTES_PER_LENGTH_OFFSET` —
+/// the size of the offset slot the field occupies in the fixed portion — so
+/// summing `fixed_len` over a prefix of fields yields the next field's
+/// position in the fixed portion.
+pub type FieldInfo = (bool, usize);
+
+/// Reads a 4-byte little-endian offset at `pos`.
+fn read_offset_at(bytes: &[u8], pos: usize) -> Result<usize, DecodeError> {
+    let end = pos
+        .checked_add(BYTES_PER_LENGTH_OFFSET)
+        .ok_or(DecodeError::OutOfBoundsByte { i: pos })?;
+    if end > bytes.len() {
+        return Err(DecodeError::InvalidByteLength {
+            len: bytes.len(),
+            expected: end,
+        });
+    }
+    let offset_bytes = &bytes[pos..end];
+    Ok(u32::from_le_bytes([
+        offset_bytes[0],
+        offset_bytes[1],
+        offset_bytes[2],
+        offset_bytes[3],
+    ]) as usize)
+}
+
+/// Slices the field at `index` out of `bytes` given the container's per-field
+/// layout facts.
 ///
-/// All layout parameters are expected to be derived from the field types'
-/// [`Encode`](crate::Encode) impls (`ssz_fixed_len()` is
-/// `BYTES_PER_LENGTH_OFFSET` for variable-size types, i.e. exactly the offset
-/// slot the field occupies in the fixed portion), which keeps view layouts in
-/// agreement with the owned encoding by construction.
+/// A fixed-size field sits inline in the fixed portion; a variable-size field
+/// occupies a `BYTES_PER_LENGTH_OFFSET`-sized offset slot **at its own
+/// position** in the fixed portion (offset entries are interleaved with fixed
+/// fields in field order, not packed at the end). The field's end is the
+/// offset of the next variable-size field, or the container end if there is
+/// none.
+///
+/// `fields` entries are expected to be derived from the field types' owned
+/// encoding ([`Encode`](crate::Encode) impls, or the `#[ssz(with = ...)]`
+/// module when overridden), which keeps view layouts in agreement with the
+/// owned encoding by construction.
 ///
 /// # Arguments
 ///
 /// * `bytes` - The complete container bytes
-/// * `is_fixed` - Whether the field is fixed-size
-/// * `fixed_offset` - Byte offset of the field within the fixed portion
-/// * `fixed_len` - Byte length of the field (fixed-size fields only)
-/// * `fixed_portion_size` - The size of the fixed portion
-/// * `num_variable_fields` - Total number of variable-size fields
-/// * `variable_index` - Index of the field's offset-table entry (variable-size fields only)
+/// * `fields` - Per-field layout facts, in field order
+/// * `index` - The index of the field to slice
 ///
 /// # Returns
 ///
 /// The field's byte slice, or an error if out of bounds.
-pub fn read_field_bytes(
-    bytes: &[u8],
-    is_fixed: bool,
-    fixed_offset: usize,
-    fixed_len: usize,
-    fixed_portion_size: usize,
-    num_variable_fields: usize,
-    variable_index: usize,
-) -> Result<&[u8], DecodeError> {
+pub fn read_field_bytes<'a>(
+    bytes: &'a [u8],
+    fields: &[FieldInfo],
+    index: usize,
+) -> Result<&'a [u8], DecodeError> {
+    let &(is_fixed, fixed_len) = fields
+        .get(index)
+        .ok_or(DecodeError::OutOfBoundsByte { i: index })?;
+    let pos: usize = fields[..index].iter().map(|&(_, len)| len).sum();
+
     if is_fixed {
-        let end = fixed_offset
+        let end = pos
             .checked_add(fixed_len)
-            .ok_or(DecodeError::OutOfBoundsByte { i: fixed_offset })?;
+            .ok_or(DecodeError::OutOfBoundsByte { i: pos })?;
         if end > bytes.len() {
             return Err(DecodeError::InvalidByteLength {
                 len: bytes.len(),
                 expected: end,
             });
         }
-        Ok(&bytes[fixed_offset..end])
+        Ok(&bytes[pos..end])
     } else {
-        let start = read_variable_offset(
-            bytes,
-            fixed_portion_size,
-            num_variable_fields,
-            variable_index,
-        )?;
-        let end = read_variable_offset_or_end(
-            bytes,
-            fixed_portion_size,
-            num_variable_fields,
-            variable_index + 1,
-        )?;
+        let start = read_offset_at(bytes, pos)?;
+
+        // The field ends where the next variable-size field begins, whose
+        // offset entry sits after the intervening fixed-size fields.
+        let mut next_pos = pos + BYTES_PER_LENGTH_OFFSET;
+        let mut end = bytes.len();
+        for &(next_is_fixed, next_len) in &fields[index + 1..] {
+            if next_is_fixed {
+                next_pos += next_len;
+            } else {
+                end = read_offset_at(bytes, next_pos)?;
+                break;
+            }
+        }
+
         if start > end || end > bytes.len() {
             return Err(DecodeError::OffsetsAreDecreasing(end));
         }
         Ok(&bytes[start..end])
     }
+}
+
+/// Validates container `bytes` against the per-field layout facts.
+///
+/// For an all-fixed container this checks the exact byte length; otherwise it
+/// walks the fixed portion reading each variable-size field's offset entry at
+/// its interleaved position, checking that the first offset points to the end
+/// of the fixed portion, offsets do not decrease, and none exceeds the
+/// container length.
+///
+/// # Arguments
+///
+/// * `bytes` - The complete container bytes
+/// * `fields` - Per-field layout facts, in field order
+pub fn validate_container(bytes: &[u8], fields: &[FieldInfo]) -> Result<(), DecodeError> {
+    let fixed_portion_size: usize = fields.iter().map(|&(_, len)| len).sum();
+    let num_variable_fields = fields.iter().filter(|&&(is_fixed, _)| !is_fixed).count();
+
+    if num_variable_fields == 0 {
+        if bytes.len() != fixed_portion_size {
+            return Err(DecodeError::InvalidByteLength {
+                len: bytes.len(),
+                expected: fixed_portion_size,
+            });
+        }
+        return Ok(());
+    }
+
+    if bytes.len() < fixed_portion_size {
+        return Err(DecodeError::InvalidByteLength {
+            len: bytes.len(),
+            expected: fixed_portion_size,
+        });
+    }
+
+    let mut pos = 0usize;
+    let mut prev_offset: Option<usize> = None;
+    for &(is_fixed, fixed_len) in fields {
+        if !is_fixed {
+            let offset = read_offset_at(bytes, pos)?;
+
+            match prev_offset {
+                // First offset must point to the start of the variable portion
+                None if offset != fixed_portion_size => {
+                    return Err(DecodeError::OffsetIntoFixedPortion(offset));
+                }
+                Some(prev) if offset < prev => {
+                    return Err(DecodeError::OffsetsAreDecreasing(offset));
+                }
+                _ => {}
+            }
+
+            if offset > bytes.len() {
+                return Err(DecodeError::OffsetOutOfBounds(offset));
+            }
+
+            prev_offset = Some(offset);
+        }
+        pos += fixed_len;
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -470,32 +578,113 @@ mod tests {
     #[test]
     fn read_field_bytes_fixed() {
         // Container: [u8][u16] -> 3 fixed bytes, no variable fields
+        let fields: &[FieldInfo] = &[(true, 1), (true, 2)];
         let bytes = vec![0xAA, 0xBB, 0xCC];
 
-        assert_eq!(
-            read_field_bytes(&bytes, true, 0, 1, 3, 0, 0).unwrap(),
-            &[0xAA]
-        );
-        assert_eq!(
-            read_field_bytes(&bytes, true, 1, 2, 3, 0, 0).unwrap(),
-            &[0xBB, 0xCC]
-        );
+        assert_eq!(read_field_bytes(&bytes, fields, 0).unwrap(), &[0xAA]);
+        assert_eq!(read_field_bytes(&bytes, fields, 1).unwrap(), &[0xBB, 0xCC]);
         // Fixed slice past the end of the container
-        assert!(read_field_bytes(&bytes, true, 2, 2, 3, 0, 0).is_err());
+        assert!(read_field_bytes(&bytes[..2], fields, 1).is_err());
     }
 
     #[test]
     fn read_field_bytes_variable() {
         // Container: [u8][list] -> fixed portion = 1 + 4 (offset), list at 5..7
+        let fields: &[FieldInfo] = &[(true, 1), (false, BYTES_PER_LENGTH_OFFSET)];
         let bytes = vec![
             0xAA, // u8 field
             0x05, 0x00, 0x00, 0x00, // offset 0 = 5
             0xBB, 0xCC, // list contents
         ];
 
+        assert_eq!(read_field_bytes(&bytes, fields, 0).unwrap(), &[0xAA]);
+        assert_eq!(read_field_bytes(&bytes, fields, 1).unwrap(), &[0xBB, 0xCC]);
+    }
+
+    #[test]
+    fn read_field_bytes_variable_before_fixed() {
+        // Container: [list][u32] -> the offset entry sits at position 0 (the
+        // list field's own slot), NOT at the end of the fixed portion.
+        let fields: &[FieldInfo] = &[(false, BYTES_PER_LENGTH_OFFSET), (true, 4)];
+        let bytes = vec![
+            0x08, 0x00, 0x00, 0x00, // offset 0 = 8 (list field's slot)
+            0xDE, 0xAD, 0xBE, 0xEF, // u32 field
+            0xBB, 0xCC, // list contents
+        ];
+
+        assert_eq!(read_field_bytes(&bytes, fields, 0).unwrap(), &[0xBB, 0xCC]);
         assert_eq!(
-            read_field_bytes(&bytes, false, 0, 0, 5, 1, 0).unwrap(),
-            &[0xBB, 0xCC]
+            read_field_bytes(&bytes, fields, 1).unwrap(),
+            &[0xDE, 0xAD, 0xBE, 0xEF]
         );
+    }
+
+    #[test]
+    fn read_field_bytes_interleaved() {
+        // Container: [list][u8][list] -> slots at 0 and 5, u8 at 4.
+        let fields: &[FieldInfo] = &[
+            (false, BYTES_PER_LENGTH_OFFSET),
+            (true, 1),
+            (false, BYTES_PER_LENGTH_OFFSET),
+        ];
+        let bytes = vec![
+            0x09, 0x00, 0x00, 0x00, // offset for field 0 = 9
+            0xAA, // u8 field
+            0x0B, 0x00, 0x00, 0x00, // offset for field 2 = 11
+            0xBB, 0xCC, // field 0 contents
+            0xDD, // field 2 contents
+        ];
+
+        assert_eq!(read_field_bytes(&bytes, fields, 0).unwrap(), &[0xBB, 0xCC]);
+        assert_eq!(read_field_bytes(&bytes, fields, 1).unwrap(), &[0xAA]);
+        assert_eq!(read_field_bytes(&bytes, fields, 2).unwrap(), &[0xDD]);
+    }
+
+    #[test]
+    fn validate_container_fixed() {
+        let fields: &[FieldInfo] = &[(true, 1), (true, 2)];
+
+        assert!(validate_container(&[0x01, 0x02, 0x03], fields).is_ok());
+        assert!(validate_container(&[0x01, 0x02], fields).is_err());
+        assert!(validate_container(&[0x01, 0x02, 0x03, 0x04], fields).is_err());
+    }
+
+    #[test]
+    fn validate_container_variable_before_fixed() {
+        let fields: &[FieldInfo] = &[(false, BYTES_PER_LENGTH_OFFSET), (true, 4)];
+
+        // Valid: offset entry at position 0 points to the end of the fixed
+        // portion (8), u32 field at 4..8.
+        let valid = vec![
+            0x08, 0x00, 0x00, 0x00, // offset = 8
+            0xDE, 0xAD, 0xBE, 0xEF, // u32 field
+            0xBB, 0xCC, // list contents
+        ];
+        assert!(validate_container(&valid, fields).is_ok());
+
+        // Invalid: the offset entry does not point to the variable portion.
+        // An end-packed reading would instead interpret the u32 field's bytes
+        // as the offset and reject valid encodings like the one above.
+        let invalid = vec![
+            0x04, 0x00, 0x00, 0x00, // offset = 4 (into fixed portion)
+            0xDE, 0xAD, 0xBE, 0xEF, //
+            0xBB, 0xCC,
+        ];
+        assert!(validate_container(&invalid, fields).is_err());
+    }
+
+    #[test]
+    fn validate_container_offsets_decreasing() {
+        let fields: &[FieldInfo] = &[
+            (false, BYTES_PER_LENGTH_OFFSET),
+            (false, BYTES_PER_LENGTH_OFFSET),
+        ];
+
+        let invalid = vec![
+            0x08, 0x00, 0x00, 0x00, // offset 0 = 8
+            0x07, 0x00, 0x00, 0x00, // offset 1 = 7 (< 8)
+            0xAA,
+        ];
+        assert!(validate_container(&invalid, fields).is_err());
     }
 }

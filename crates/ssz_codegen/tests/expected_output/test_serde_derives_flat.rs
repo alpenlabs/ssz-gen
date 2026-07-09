@@ -79,13 +79,16 @@ pub mod test_serde_derives {
         pub fn slot(&self) -> Result<u64, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <Slot as ssz::Encode>::is_ssz_fixed_len(),
-                0usize,
-                <Slot as ssz::Encode>::ssz_fixed_len(),
-                <Slot as ssz::Encode>::ssz_fixed_len()
-                    + <U256 as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<Slot as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<U256 as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <Slot as ssz::Encode>::is_ssz_fixed_len(),
+                        <Slot as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <U256 as ssz::Encode>::is_ssz_fixed_len(),
+                        <U256 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
                 0usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
@@ -93,14 +96,17 @@ pub mod test_serde_derives {
         pub fn blkid(&self) -> Result<U256, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <U256 as ssz::Encode>::is_ssz_fixed_len(),
-                <Slot as ssz::Encode>::ssz_fixed_len(),
-                <U256 as ssz::Encode>::ssz_fixed_len(),
-                <Slot as ssz::Encode>::ssz_fixed_len()
-                    + <U256 as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<Slot as ssz::Encode>::is_ssz_fixed_len())
-                    + usize::from(!<U256 as ssz::Encode>::is_ssz_fixed_len()),
-                usize::from(!<Slot as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <Slot as ssz::Encode>::is_ssz_fixed_len(),
+                        <Slot as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <U256 as ssz::Encode>::is_ssz_fixed_len(),
+                        <U256 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+                1usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
         }
@@ -137,45 +143,19 @@ pub mod test_serde_derives {
     }
     impl<'a> ssz::view::DecodeView<'a> for BlockCommitmentRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let fixed_portion_size = <Slot as ssz::Encode>::ssz_fixed_len()
-                + <U256 as ssz::Encode>::ssz_fixed_len();
-            let num_variable_fields = usize::from(
-                !<Slot as ssz::Encode>::is_ssz_fixed_len(),
-            ) + usize::from(!<U256 as ssz::Encode>::is_ssz_fixed_len());
-            if num_variable_fields == 0 {
-                if bytes.len() != fixed_portion_size {
-                    return Err(ssz::DecodeError::InvalidByteLength {
-                        len: bytes.len(),
-                        expected: fixed_portion_size,
-                    });
-                }
-            } else {
-                if bytes.len() < fixed_portion_size {
-                    return Err(ssz::DecodeError::InvalidByteLength {
-                        len: bytes.len(),
-                        expected: fixed_portion_size,
-                    });
-                }
-                let mut prev_offset: Option<usize> = None;
-                for i in 0..num_variable_fields {
-                    let offset = ssz::layout::read_variable_offset(
-                        bytes,
-                        fixed_portion_size,
-                        num_variable_fields,
-                        i,
-                    )?;
-                    if i == 0 && offset != fixed_portion_size {
-                        return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
-                    }
-                    if let Some(prev) = prev_offset && offset < prev {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                    }
-                    if offset > bytes.len() {
-                        return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
-                    }
-                    prev_offset = Some(offset);
-                }
-            }
+            ssz::layout::validate_container(
+                bytes,
+                &[
+                    (
+                        <Slot as ssz::Encode>::is_ssz_fixed_len(),
+                        <Slot as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                    (
+                        <U256 as ssz::Encode>::is_ssz_fixed_len(),
+                        <U256 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+            )?;
             Ok(Self { bytes })
         }
     }
@@ -264,11 +244,12 @@ pub mod test_serde_derives {
         pub fn value(&self) -> Result<u64, ssz::DecodeError> {
             let bytes = ssz::layout::read_field_bytes(
                 self.bytes,
-                <u64 as ssz::Encode>::is_ssz_fixed_len(),
-                0usize,
-                <u64 as ssz::Encode>::ssz_fixed_len(),
-                <u64 as ssz::Encode>::ssz_fixed_len(),
-                usize::from(!<u64 as ssz::Encode>::is_ssz_fixed_len()),
+                &[
+                    (
+                        <u64 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u64 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
                 0usize,
             )?;
             ssz::view::DecodeView::from_ssz_bytes(bytes)
@@ -299,44 +280,15 @@ pub mod test_serde_derives {
     }
     impl<'a> ssz::view::DecodeView<'a> for OtherTypeRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-            let fixed_portion_size = <u64 as ssz::Encode>::ssz_fixed_len();
-            let num_variable_fields = usize::from(
-                !<u64 as ssz::Encode>::is_ssz_fixed_len(),
-            );
-            if num_variable_fields == 0 {
-                if bytes.len() != fixed_portion_size {
-                    return Err(ssz::DecodeError::InvalidByteLength {
-                        len: bytes.len(),
-                        expected: fixed_portion_size,
-                    });
-                }
-            } else {
-                if bytes.len() < fixed_portion_size {
-                    return Err(ssz::DecodeError::InvalidByteLength {
-                        len: bytes.len(),
-                        expected: fixed_portion_size,
-                    });
-                }
-                let mut prev_offset: Option<usize> = None;
-                for i in 0..num_variable_fields {
-                    let offset = ssz::layout::read_variable_offset(
-                        bytes,
-                        fixed_portion_size,
-                        num_variable_fields,
-                        i,
-                    )?;
-                    if i == 0 && offset != fixed_portion_size {
-                        return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
-                    }
-                    if let Some(prev) = prev_offset && offset < prev {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                    }
-                    if offset > bytes.len() {
-                        return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
-                    }
-                    prev_offset = Some(offset);
-                }
-            }
+            ssz::layout::validate_container(
+                bytes,
+                &[
+                    (
+                        <u64 as ssz::Encode>::is_ssz_fixed_len(),
+                        <u64 as ssz::Encode>::ssz_fixed_len(),
+                    ),
+                ],
+            )?;
             Ok(Self { bytes })
         }
     }

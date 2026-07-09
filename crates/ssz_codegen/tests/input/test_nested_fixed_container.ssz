@@ -31,3 +31,15 @@ class FixedOuter(Container):
 class BasicPair(Container):
     tag: uint8
     b: uint32
+
+### Variable-size field before a fixed-size one: the offset entry sits at
+### the variable field's own position in the fixed portion, not at the end.
+class VarThenFixed(Container):
+    entries: List[uint8, MAX_TAIL]
+    name: uint32
+
+### Variable fields interleaved with fixed fields.
+class Interleaved(Container):
+    head: List[uint8, MAX_TAIL]
+    mid: uint8
+    tail: List[uint8, MAX_TAIL]

@@ -928,31 +928,32 @@ pub mod tests {
                 pub fn simple(&self) -> Result<SimpleUnionRef<'a>, ssz::DecodeError> {
                     let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        <SimpleUnion as ssz::Encode>::is_ssz_fixed_len(),
-                        0usize,
-                        <SimpleUnion as ssz::Encode>::ssz_fixed_len(),
-                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
-                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
-                            + <ComplexUnion as ssz::Encode>::ssz_fixed_len()
-                            + <OptionalSimple as ssz::Encode>::ssz_fixed_len()
-                            + <OptionalComplex as ssz::Encode>::ssz_fixed_len()
-                            + <OptionalUnion as ssz::Encode>::ssz_fixed_len(),
-                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<OptionalUnion as ssz::Encode>::is_ssz_fixed_len(),
+                        &[
+                            (
+                                <SimpleUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <SimpleUnion as ssz::Encode>::ssz_fixed_len(),
                             ),
+                            (
+                                <NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <NestedUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <ComplexUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalSimple as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalComplex as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <OptionalUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
                         0usize,
                     )?;
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
@@ -960,108 +961,99 @@ pub mod tests {
                 pub fn nested(&self) -> Result<NestedUnionRef<'a>, ssz::DecodeError> {
                     let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        <NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
-                        <SimpleUnion as ssz::Encode>::ssz_fixed_len(),
-                        <NestedUnion as ssz::Encode>::ssz_fixed_len(),
-                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
-                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
-                            + <ComplexUnion as ssz::Encode>::ssz_fixed_len()
-                            + <OptionalSimple as ssz::Encode>::ssz_fixed_len()
-                            + <OptionalComplex as ssz::Encode>::ssz_fixed_len()
-                            + <OptionalUnion as ssz::Encode>::ssz_fixed_len(),
-                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<OptionalUnion as ssz::Encode>::is_ssz_fixed_len(),
+                        &[
+                            (
+                                <SimpleUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <SimpleUnion as ssz::Encode>::ssz_fixed_len(),
                             ),
-                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len()),
+                            (
+                                <NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <NestedUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <ComplexUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalSimple as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalComplex as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <OptionalUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
+                        1usize,
                     )?;
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn complex(&self) -> Result<ComplexUnionRef<'a>, ssz::DecodeError> {
                     let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        <ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
-                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
-                            + <NestedUnion as ssz::Encode>::ssz_fixed_len(),
-                        <ComplexUnion as ssz::Encode>::ssz_fixed_len(),
-                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
-                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
-                            + <ComplexUnion as ssz::Encode>::ssz_fixed_len()
-                            + <OptionalSimple as ssz::Encode>::ssz_fixed_len()
-                            + <OptionalComplex as ssz::Encode>::ssz_fixed_len()
-                            + <OptionalUnion as ssz::Encode>::ssz_fixed_len(),
-                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<OptionalUnion as ssz::Encode>::is_ssz_fixed_len(),
+                        &[
+                            (
+                                <SimpleUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <SimpleUnion as ssz::Encode>::ssz_fixed_len(),
                             ),
-                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            (
+                                <NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <NestedUnion as ssz::Encode>::ssz_fixed_len(),
                             ),
+                            (
+                                <ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <ComplexUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalSimple as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalComplex as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <OptionalUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
+                        2usize,
                     )?;
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn opt_simple(&self) -> Result<Option<u8>, ssz::DecodeError> {
                     let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        <OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
-                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
-                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
-                            + <ComplexUnion as ssz::Encode>::ssz_fixed_len(),
-                        <OptionalSimple as ssz::Encode>::ssz_fixed_len(),
-                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
-                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
-                            + <ComplexUnion as ssz::Encode>::ssz_fixed_len()
-                            + <OptionalSimple as ssz::Encode>::ssz_fixed_len()
-                            + <OptionalComplex as ssz::Encode>::ssz_fixed_len()
-                            + <OptionalUnion as ssz::Encode>::ssz_fixed_len(),
-                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<OptionalUnion as ssz::Encode>::is_ssz_fixed_len(),
+                        &[
+                            (
+                                <SimpleUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <SimpleUnion as ssz::Encode>::ssz_fixed_len(),
                             ),
-                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            (
+                                <NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <NestedUnion as ssz::Encode>::ssz_fixed_len(),
                             ),
+                            (
+                                <ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <ComplexUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalSimple as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalComplex as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <OptionalUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
+                        3usize,
                     )?;
                     if bytes.is_empty() {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -1092,44 +1084,33 @@ pub mod tests {
                 ) -> Result<Option<ListRef<'a, u16, 8usize>>, ssz::DecodeError> {
                     let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        <OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
-                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
-                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
-                            + <ComplexUnion as ssz::Encode>::ssz_fixed_len()
-                            + <OptionalSimple as ssz::Encode>::ssz_fixed_len(),
-                        <OptionalComplex as ssz::Encode>::ssz_fixed_len(),
-                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
-                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
-                            + <ComplexUnion as ssz::Encode>::ssz_fixed_len()
-                            + <OptionalSimple as ssz::Encode>::ssz_fixed_len()
-                            + <OptionalComplex as ssz::Encode>::ssz_fixed_len()
-                            + <OptionalUnion as ssz::Encode>::ssz_fixed_len(),
-                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<OptionalUnion as ssz::Encode>::is_ssz_fixed_len(),
+                        &[
+                            (
+                                <SimpleUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <SimpleUnion as ssz::Encode>::ssz_fixed_len(),
                             ),
-                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                            (
+                                <NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <NestedUnion as ssz::Encode>::ssz_fixed_len(),
                             ),
+                            (
+                                <ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <ComplexUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalSimple as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalComplex as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <OptionalUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
+                        4usize,
                     )?;
                     if bytes.is_empty() {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -1162,48 +1143,33 @@ pub mod tests {
                 ) -> Result<Option<SimpleUnionRef<'a>>, ssz::DecodeError> {
                     let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        <OptionalUnion as ssz::Encode>::is_ssz_fixed_len(),
-                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
-                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
-                            + <ComplexUnion as ssz::Encode>::ssz_fixed_len()
-                            + <OptionalSimple as ssz::Encode>::ssz_fixed_len()
-                            + <OptionalComplex as ssz::Encode>::ssz_fixed_len(),
-                        <OptionalUnion as ssz::Encode>::ssz_fixed_len(),
-                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
-                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
-                            + <ComplexUnion as ssz::Encode>::ssz_fixed_len()
-                            + <OptionalSimple as ssz::Encode>::ssz_fixed_len()
-                            + <OptionalComplex as ssz::Encode>::ssz_fixed_len()
-                            + <OptionalUnion as ssz::Encode>::ssz_fixed_len(),
-                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<OptionalUnion as ssz::Encode>::is_ssz_fixed_len(),
+                        &[
+                            (
+                                <SimpleUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <SimpleUnion as ssz::Encode>::ssz_fixed_len(),
                             ),
-                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
+                            (
+                                <NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <NestedUnion as ssz::Encode>::ssz_fixed_len(),
                             ),
+                            (
+                                <ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <ComplexUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalSimple as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalComplex as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <OptionalUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
+                        5usize,
                     )?;
                     if bytes.is_empty() {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -1290,61 +1256,35 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for UnionEdgeCasesRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    let fixed_portion_size = <SimpleUnion as ssz::Encode>::ssz_fixed_len()
-                        + <NestedUnion as ssz::Encode>::ssz_fixed_len()
-                        + <ComplexUnion as ssz::Encode>::ssz_fixed_len()
-                        + <OptionalSimple as ssz::Encode>::ssz_fixed_len()
-                        + <OptionalComplex as ssz::Encode>::ssz_fixed_len()
-                        + <OptionalUnion as ssz::Encode>::ssz_fixed_len();
-                    let num_variable_fields = usize::from(
-                        !<SimpleUnion as ssz::Encode>::is_ssz_fixed_len(),
-                    ) + usize::from(!<NestedUnion as ssz::Encode>::is_ssz_fixed_len())
-                        + usize::from(!<ComplexUnion as ssz::Encode>::is_ssz_fixed_len())
-                        + usize::from(
-                            !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
-                        )
-                        + usize::from(
-                            !<OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
-                        )
-                        + usize::from(
-                            !<OptionalUnion as ssz::Encode>::is_ssz_fixed_len(),
-                        );
-                    if num_variable_fields == 0 {
-                        if bytes.len() != fixed_portion_size {
-                            return Err(ssz::DecodeError::InvalidByteLength {
-                                len: bytes.len(),
-                                expected: fixed_portion_size,
-                            });
-                        }
-                    } else {
-                        if bytes.len() < fixed_portion_size {
-                            return Err(ssz::DecodeError::InvalidByteLength {
-                                len: bytes.len(),
-                                expected: fixed_portion_size,
-                            });
-                        }
-                        let mut prev_offset: Option<usize> = None;
-                        for i in 0..num_variable_fields {
-                            let offset = ssz::layout::read_variable_offset(
-                                bytes,
-                                fixed_portion_size,
-                                num_variable_fields,
-                                i,
-                            )?;
-                            if i == 0 && offset != fixed_portion_size {
-                                return Err(
-                                    ssz::DecodeError::OffsetIntoFixedPortion(offset),
-                                );
-                            }
-                            if let Some(prev) = prev_offset && offset < prev {
-                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                            }
-                            if offset > bytes.len() {
-                                return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
-                            }
-                            prev_offset = Some(offset);
-                        }
-                    }
+                    ssz::layout::validate_container(
+                        bytes,
+                        &[
+                            (
+                                <SimpleUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <SimpleUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <NestedUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <ComplexUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <ComplexUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalSimple as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <OptionalComplex as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalComplex as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <OptionalUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
+                    )?;
                     Ok(Self { bytes })
                 }
             }
@@ -1493,19 +1433,20 @@ pub mod tests {
                 pub fn union1(&self) -> Result<SimpleUnionRef<'a>, ssz::DecodeError> {
                     let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        <SimpleUnion as ssz::Encode>::is_ssz_fixed_len(),
-                        0usize,
-                        <SimpleUnion as ssz::Encode>::ssz_fixed_len(),
-                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
-                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
-                            + <OptionalSimple as ssz::Encode>::ssz_fixed_len(),
-                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                        &[
+                            (
+                                <SimpleUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <SimpleUnion as ssz::Encode>::ssz_fixed_len(),
                             ),
+                            (
+                                <NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <NestedUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalSimple as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
                         0usize,
                     )?;
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
@@ -1513,44 +1454,42 @@ pub mod tests {
                 pub fn union2(&self) -> Result<NestedUnionRef<'a>, ssz::DecodeError> {
                     let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        <NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
-                        <SimpleUnion as ssz::Encode>::ssz_fixed_len(),
-                        <NestedUnion as ssz::Encode>::ssz_fixed_len(),
-                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
-                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
-                            + <OptionalSimple as ssz::Encode>::ssz_fixed_len(),
-                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                        &[
+                            (
+                                <SimpleUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <SimpleUnion as ssz::Encode>::ssz_fixed_len(),
                             ),
-                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len()),
+                            (
+                                <NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <NestedUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalSimple as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
+                        1usize,
                     )?;
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn union3(&self) -> Result<Option<u8>, ssz::DecodeError> {
                     let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        <OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
-                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
-                            + <NestedUnion as ssz::Encode>::ssz_fixed_len(),
-                        <OptionalSimple as ssz::Encode>::ssz_fixed_len(),
-                        <SimpleUnion as ssz::Encode>::ssz_fixed_len()
-                            + <NestedUnion as ssz::Encode>::ssz_fixed_len()
-                            + <OptionalSimple as ssz::Encode>::ssz_fixed_len(),
-                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                        &[
+                            (
+                                <SimpleUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <SimpleUnion as ssz::Encode>::ssz_fixed_len(),
                             ),
-                        usize::from(!<SimpleUnion as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            (
+                                <NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <NestedUnion as ssz::Encode>::ssz_fixed_len(),
                             ),
+                            (
+                                <OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalSimple as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
+                        2usize,
                     )?;
                     if bytes.is_empty() {
                         return Err(ssz::DecodeError::InvalidByteLength {
@@ -1616,51 +1555,23 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for AllUnionsRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    let fixed_portion_size = <SimpleUnion as ssz::Encode>::ssz_fixed_len()
-                        + <NestedUnion as ssz::Encode>::ssz_fixed_len()
-                        + <OptionalSimple as ssz::Encode>::ssz_fixed_len();
-                    let num_variable_fields = usize::from(
-                        !<SimpleUnion as ssz::Encode>::is_ssz_fixed_len(),
-                    ) + usize::from(!<NestedUnion as ssz::Encode>::is_ssz_fixed_len())
-                        + usize::from(
-                            !<OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
-                        );
-                    if num_variable_fields == 0 {
-                        if bytes.len() != fixed_portion_size {
-                            return Err(ssz::DecodeError::InvalidByteLength {
-                                len: bytes.len(),
-                                expected: fixed_portion_size,
-                            });
-                        }
-                    } else {
-                        if bytes.len() < fixed_portion_size {
-                            return Err(ssz::DecodeError::InvalidByteLength {
-                                len: bytes.len(),
-                                expected: fixed_portion_size,
-                            });
-                        }
-                        let mut prev_offset: Option<usize> = None;
-                        for i in 0..num_variable_fields {
-                            let offset = ssz::layout::read_variable_offset(
-                                bytes,
-                                fixed_portion_size,
-                                num_variable_fields,
-                                i,
-                            )?;
-                            if i == 0 && offset != fixed_portion_size {
-                                return Err(
-                                    ssz::DecodeError::OffsetIntoFixedPortion(offset),
-                                );
-                            }
-                            if let Some(prev) = prev_offset && offset < prev {
-                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                            }
-                            if offset > bytes.len() {
-                                return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
-                            }
-                            prev_offset = Some(offset);
-                        }
-                    }
+                    ssz::layout::validate_container(
+                        bytes,
+                        &[
+                            (
+                                <SimpleUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <SimpleUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <NestedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <NestedUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <OptionalSimple as ssz::Encode>::is_ssz_fixed_len(),
+                                <OptionalSimple as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
+                    )?;
                     Ok(Self { bytes })
                 }
             }

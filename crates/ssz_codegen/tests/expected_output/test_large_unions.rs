@@ -758,19 +758,20 @@ pub mod tests {
                 pub fn big(&self) -> Result<BigUnionRef<'a>, ssz::DecodeError> {
                     let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        <BigUnion as ssz::Encode>::is_ssz_fixed_len(),
-                        0usize,
-                        <BigUnion as ssz::Encode>::ssz_fixed_len(),
-                        <BigUnion as ssz::Encode>::ssz_fixed_len()
-                            + <SameTypeUnion as ssz::Encode>::ssz_fixed_len()
-                            + <MixedUnion as ssz::Encode>::ssz_fixed_len(),
-                        usize::from(!<BigUnion as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<SameTypeUnion as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<MixedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                        &[
+                            (
+                                <BigUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <BigUnion as ssz::Encode>::ssz_fixed_len(),
                             ),
+                            (
+                                <SameTypeUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <SameTypeUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <MixedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <MixedUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
                         0usize,
                     )?;
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
@@ -778,44 +779,42 @@ pub mod tests {
                 pub fn same(&self) -> Result<SameTypeUnionRef<'a>, ssz::DecodeError> {
                     let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        <SameTypeUnion as ssz::Encode>::is_ssz_fixed_len(),
-                        <BigUnion as ssz::Encode>::ssz_fixed_len(),
-                        <SameTypeUnion as ssz::Encode>::ssz_fixed_len(),
-                        <BigUnion as ssz::Encode>::ssz_fixed_len()
-                            + <SameTypeUnion as ssz::Encode>::ssz_fixed_len()
-                            + <MixedUnion as ssz::Encode>::ssz_fixed_len(),
-                        usize::from(!<BigUnion as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<SameTypeUnion as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<MixedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                        &[
+                            (
+                                <BigUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <BigUnion as ssz::Encode>::ssz_fixed_len(),
                             ),
-                        usize::from(!<BigUnion as ssz::Encode>::is_ssz_fixed_len()),
+                            (
+                                <SameTypeUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <SameTypeUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <MixedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <MixedUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
+                        1usize,
                     )?;
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn mixed(&self) -> Result<MixedUnionRef<'a>, ssz::DecodeError> {
                     let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        <MixedUnion as ssz::Encode>::is_ssz_fixed_len(),
-                        <BigUnion as ssz::Encode>::ssz_fixed_len()
-                            + <SameTypeUnion as ssz::Encode>::ssz_fixed_len(),
-                        <MixedUnion as ssz::Encode>::ssz_fixed_len(),
-                        <BigUnion as ssz::Encode>::ssz_fixed_len()
-                            + <SameTypeUnion as ssz::Encode>::ssz_fixed_len()
-                            + <MixedUnion as ssz::Encode>::ssz_fixed_len(),
-                        usize::from(!<BigUnion as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<SameTypeUnion as ssz::Encode>::is_ssz_fixed_len(),
-                            )
-                            + usize::from(
-                                !<MixedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                        &[
+                            (
+                                <BigUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <BigUnion as ssz::Encode>::ssz_fixed_len(),
                             ),
-                        usize::from(!<BigUnion as ssz::Encode>::is_ssz_fixed_len())
-                            + usize::from(
-                                !<SameTypeUnion as ssz::Encode>::is_ssz_fixed_len(),
+                            (
+                                <SameTypeUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <SameTypeUnion as ssz::Encode>::ssz_fixed_len(),
                             ),
+                            (
+                                <MixedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <MixedUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
+                        2usize,
                     )?;
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
@@ -859,49 +858,23 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for ContainerWithBigUnionsRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    let fixed_portion_size = <BigUnion as ssz::Encode>::ssz_fixed_len()
-                        + <SameTypeUnion as ssz::Encode>::ssz_fixed_len()
-                        + <MixedUnion as ssz::Encode>::ssz_fixed_len();
-                    let num_variable_fields = usize::from(
-                        !<BigUnion as ssz::Encode>::is_ssz_fixed_len(),
-                    ) + usize::from(!<SameTypeUnion as ssz::Encode>::is_ssz_fixed_len())
-                        + usize::from(!<MixedUnion as ssz::Encode>::is_ssz_fixed_len());
-                    if num_variable_fields == 0 {
-                        if bytes.len() != fixed_portion_size {
-                            return Err(ssz::DecodeError::InvalidByteLength {
-                                len: bytes.len(),
-                                expected: fixed_portion_size,
-                            });
-                        }
-                    } else {
-                        if bytes.len() < fixed_portion_size {
-                            return Err(ssz::DecodeError::InvalidByteLength {
-                                len: bytes.len(),
-                                expected: fixed_portion_size,
-                            });
-                        }
-                        let mut prev_offset: Option<usize> = None;
-                        for i in 0..num_variable_fields {
-                            let offset = ssz::layout::read_variable_offset(
-                                bytes,
-                                fixed_portion_size,
-                                num_variable_fields,
-                                i,
-                            )?;
-                            if i == 0 && offset != fixed_portion_size {
-                                return Err(
-                                    ssz::DecodeError::OffsetIntoFixedPortion(offset),
-                                );
-                            }
-                            if let Some(prev) = prev_offset && offset < prev {
-                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                            }
-                            if offset > bytes.len() {
-                                return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
-                            }
-                            prev_offset = Some(offset);
-                        }
-                    }
+                    ssz::layout::validate_container(
+                        bytes,
+                        &[
+                            (
+                                <BigUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <BigUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <SameTypeUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <SameTypeUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <MixedUnion as ssz::Encode>::is_ssz_fixed_len(),
+                                <MixedUnion as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
+                    )?;
                     Ok(Self { bytes })
                 }
             }
