@@ -90,34 +90,37 @@ pub mod tests {
                 pub fn existing_field(
                     &self,
                 ) -> Result<crate::existing_module::ExistingType, ssz::DecodeError> {
-                    let start = ssz::layout::read_variable_offset(
+                    let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        12usize,
-                        1usize,
+                        &[
+                            (
+                                <crate::existing_module::ExistingType as ssz::Encode>::is_ssz_fixed_len(),
+                                <crate::existing_module::ExistingType as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <u64 as ssz::Encode>::is_ssz_fixed_len(),
+                                <u64 as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
                         0usize,
                     )?;
-                    let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
-                        12usize,
-                        1usize,
-                        1usize,
-                    )?;
-                    if start > end || end > self.bytes.len() {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                    }
-                    let bytes = &self.bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn slot(&self) -> Result<u64, ssz::DecodeError> {
-                    let offset = 4usize;
-                    let end = offset + 8usize;
-                    if end > self.bytes.len() {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: self.bytes.len(),
-                            expected: end,
-                        });
-                    }
-                    let bytes = &self.bytes[offset..end];
+                    let bytes = ssz::layout::read_field_bytes(
+                        self.bytes,
+                        &[
+                            (
+                                <crate::existing_module::ExistingType as ssz::Encode>::is_ssz_fixed_len(),
+                                <crate::existing_module::ExistingType as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <u64 as ssz::Encode>::is_ssz_fixed_len(),
+                                <u64 as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
+                        1usize,
+                    )?;
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
@@ -142,49 +145,46 @@ pub mod tests {
                         hasher.write(root.as_ref()).expect("write field");
                     }
                     {
-                        let offset = 4usize;
-                        let field_bytes = &self.bytes[offset..offset + 8usize];
-                        hasher.write(field_bytes).expect("write field");
+                        let slot = self.slot().expect("valid view");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
+                            H,
+                        >(&slot);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     hasher.finish().expect("finish hasher")
                 }
             }
             impl<'a> ssz::view::DecodeView<'a> for TestExistingModuleRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    if bytes.len() < 12usize {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: bytes.len(),
-                            expected: 12usize,
-                        });
-                    }
-                    let mut prev_offset: Option<usize> = None;
-                    for i in 0..1usize {
-                        let offset = ssz::layout::read_variable_offset(
-                            bytes,
-                            12usize,
-                            1usize,
-                            i,
-                        )?;
-                        if i == 0 && offset != 12usize {
-                            return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
-                        }
-                        if let Some(prev) = prev_offset && offset < prev {
-                            return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                        }
-                        if offset > bytes.len() {
-                            return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
-                        }
-                        prev_offset = Some(offset);
-                    }
+                    ssz::layout::validate_container(
+                        bytes,
+                        &[
+                            (
+                                <crate::existing_module::ExistingType as ssz::Encode>::is_ssz_fixed_len(),
+                                <crate::existing_module::ExistingType as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <u64 as ssz::Encode>::is_ssz_fixed_len(),
+                                <u64 as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
+                    )?;
                     Ok(Self { bytes })
                 }
             }
             impl<'a> ssz::view::SszTypeInfo for TestExistingModuleRef<'a> {
                 fn is_ssz_fixed_len() -> bool {
-                    false
+                    usize::from(
+                        !<crate::existing_module::ExistingType as ssz::Encode>::is_ssz_fixed_len(),
+                    ) + usize::from(!<u64 as ssz::Encode>::is_ssz_fixed_len()) == 0
                 }
                 fn ssz_fixed_len() -> usize {
-                    0
+                    if <Self as ssz::view::SszTypeInfo>::is_ssz_fixed_len() {
+                        <crate::existing_module::ExistingType as ssz::Encode>::ssz_fixed_len()
+                            + <u64 as ssz::Encode>::ssz_fixed_len()
+                    } else {
+                        0
+                    }
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]

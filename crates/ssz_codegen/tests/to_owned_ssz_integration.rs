@@ -15,9 +15,12 @@ use tree_hash_derive as _;
 // Include generated code
 include!("expected_output/test_external_container.rs");
 
-use ssz::view::DecodeView;
+use ssz::{Encode, view::DecodeView};
 use ssz_types::view::ToOwnedSsz;
-use tests::input::{test_external_inner::BlockCommitmentRef, test_external_outer::BlockRangeRef};
+use tests::input::{
+    test_external_inner::{BlockCommitment, BlockCommitmentRef},
+    test_external_outer::{BlockRange, BlockRangeRef},
+};
 
 /// External BlockCommitment - simulates bitcoin feature where height is absolute::Height
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -54,27 +57,21 @@ impl<'a> ToOwnedSsz<ExternalBlockRange> for BlockRangeRef<'a> {
     }
 }
 
-/// Manually construct SSZ bytes for BlockRange with variable-length layout.
-/// Layout: [offset_start:4][offset_end:4][start_data:36][end_data:36]
+/// Constructs SSZ bytes for BlockRange via the owned `Encode` impl, so the
+/// fixture always matches the canonical encoding (both BlockCommitment fields
+/// are fixed-size, hence inlined - no offset table).
 fn create_block_range_bytes(start_height: u32, end_height: u32) -> Vec<u8> {
-    let mut bytes = Vec::new();
-
-    // Fixed portion: 2 offsets (4 bytes each)
-    let offset_start: u32 = 8; // Start data begins after fixed portion
-    let offset_end: u32 = 8 + 36; // End data begins after start data
-
-    bytes.extend_from_slice(&offset_start.to_le_bytes());
-    bytes.extend_from_slice(&offset_end.to_le_bytes());
-
-    // Start BlockCommitment: height (4 bytes) + block_hash (32 bytes)
-    bytes.extend_from_slice(&start_height.to_le_bytes());
-    bytes.extend_from_slice(&[0xAA; 32]); // start block_hash
-
-    // End BlockCommitment: height (4 bytes) + block_hash (32 bytes)
-    bytes.extend_from_slice(&end_height.to_le_bytes());
-    bytes.extend_from_slice(&[0xBB; 32]); // end block_hash
-
-    bytes
+    let range = BlockRange {
+        start: BlockCommitment {
+            height: start_height,
+            block_hash: [0xAA; 32].into(),
+        },
+        end: BlockCommitment {
+            height: end_height,
+            block_hash: [0xBB; 32].into(),
+        },
+    };
+    range.as_ssz_bytes()
 }
 
 #[test]

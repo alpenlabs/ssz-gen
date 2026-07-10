@@ -1,0 +1,45 @@
+# Regression test: containers whose fields are themselves fixed-size
+# containers. The owned ssz_derive encoding inlines fixed-size container
+# fields, so generated views must not assume container-typed fields are
+# variable-size (offset table entries).
+
+MAX_TAIL = 16
+
+### A fixed-size inner container (1 byte).
+class FixedInner(Container):
+    tag: uint8
+
+### A larger fixed-size inner container (8 bytes).
+class FixedPair(Container):
+    x: uint32
+    y: uint32
+
+### Mixed container: fixed containers inline, one variable tail.
+class MixedOuter(Container):
+    inner: FixedInner
+    count: uint32
+    pair: FixedPair
+    tail: List[uint8, MAX_TAIL]
+
+### Fully fixed container nesting fixed containers.
+class FixedOuter(Container):
+    inner: FixedInner
+    pair: FixedPair
+
+### Basic-fields-only container: decodes fine either way, but exercises the
+### view TreeHash leaf packing.
+class BasicPair(Container):
+    tag: uint8
+    b: uint32
+
+### Variable-size field before a fixed-size one: the offset entry sits at
+### the variable field's own position in the fixed portion, not at the end.
+class VarThenFixed(Container):
+    entries: List[uint8, MAX_TAIL]
+    name: uint32
+
+### Variable fields interleaved with fixed fields.
+class Interleaved(Container):
+    head: List[uint8, MAX_TAIL]
+    mid: uint8
+    tail: List[uint8, MAX_TAIL]

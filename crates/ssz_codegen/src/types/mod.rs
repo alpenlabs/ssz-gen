@@ -4,9 +4,9 @@ use std::collections::HashMap;
 
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use syn::{Ident, Path, Type, TypePath, parse_quote};
+use syn::{Attribute, Ident, LitStr, Path, Type, TypePath, parse::Parser, parse_quote};
 
-use crate::{derive_config::DeriveConfig, types::resolver::TypeResolver};
+use crate::{derive_config::DeriveConfig, pragma::ParsedPragma, types::resolver::TypeResolver};
 pub mod resolver;
 
 /// Represents a size expression for type parameters
@@ -831,6 +831,66 @@ pub struct ClassFieldDef {
     pub doc_comment: Option<String>,
 }
 
+impl ClassFieldDef {
+    /// Module named by a `#[ssz(with = "module")]` field-attribute pragma, if
+    /// any.
+    ///
+    /// `ssz_derive` encodes such fields through `module::encode::*` instead of
+    /// the field type's `Encode` impl, so view layout expressions must call
+    /// the same functions to agree with the owned encoding.
+    fn ssz_with_module(&self) -> Option<Ident> {
+        let field_attrs = ParsedPragma::parse(&self.pragmas).field_attrs;
+        field_attrs.iter().find_map(|tokens| {
+            let attrs = Attribute::parse_outer.parse2(tokens.clone()).ok()?;
+            attrs
+                .into_iter()
+                .filter(|attr| attr.path().is_ident("ssz"))
+                .find_map(|attr| {
+                    let mut module = None;
+                    // A meta the closure can't handle aborts the walk, but a
+                    // `with` seen before that point is kept.
+                    let _ = attr.parse_nested_meta(|meta| {
+                        if meta.path.is_ident("with") {
+                            let value = meta.value()?;
+                            // ssz_derive documents `with = "module"`; also
+                            // accept a bare `with = module`.
+                            module = Some(match value.parse::<LitStr>() {
+                                Ok(lit) => lit.parse::<Ident>()?,
+                                Err(_) => value.parse::<Ident>()?,
+                            });
+                        }
+                        Ok(())
+                    });
+                    module
+                })
+        })
+    }
+
+    /// Expression for whether this field's owned encoding is fixed-size,
+    /// honoring `#[ssz(with = ...)]` overrides.
+    fn is_ssz_fixed_len_expr(&self) -> TokenStream {
+        match self.ssz_with_module() {
+            Some(module) => quote! { #module::encode::is_ssz_fixed_len() },
+            None => {
+                let ty = self.ty.unwrap_type();
+                quote! { <#ty as ssz::Encode>::is_ssz_fixed_len() }
+            }
+        }
+    }
+
+    /// Expression for this field's owned `ssz_fixed_len`, honoring
+    /// `#[ssz(with = ...)]` overrides.
+    fn ssz_fixed_len_expr(&self) -> TokenStream {
+        match self.ssz_with_module() {
+            Some(module) => quote! { #module::encode::ssz_fixed_len() },
+            None => {
+                let ty = self.ty.unwrap_type();
+                quote! { <#ty as ssz::Encode>::ssz_fixed_len() }
+            }
+        }
+    }
+}
+
 /// Definition of a class with its base type and fields
 #[derive(Clone, Debug)]
 pub struct ClassDef {
@@ -1053,7 +1113,83 @@ impl ClassDef {
         (fixed_offset, fixed_size, num_variable_fields)
     }
 
+    /// Sums a list of `usize` expressions, or `0usize` when empty.
+    fn sum_expr(terms: &[TokenStream]) -> TokenStream {
+        if terms.is_empty() {
+            quote! { 0usize }
+        } else {
+            quote! { #(#terms)+* }
+        }
+    }
+
+    /// Expression computing the container's fixed-portion size from the
+    /// fields' owned encoding (their `ssz::Encode` impls, or the
+    /// `#[ssz(with = ...)]` module when overridden).
+    ///
+    /// `ssz_fixed_len()` returns `BYTES_PER_LENGTH_OFFSET` for variable-size
+    /// types — exactly the offset slot such a field occupies in the fixed
+    /// portion — so a plain sum over all fields yields the fixed-portion size.
+    fn fixed_portion_size_expr(&self) -> TokenStream {
+        let terms: Vec<TokenStream> = self
+            .fields
+            .iter()
+            .map(ClassFieldDef::ssz_fixed_len_expr)
+            .collect();
+        Self::sum_expr(&terms)
+    }
+
+    /// Expression computing the number of variable-size fields from the
+    /// fields' owned encoding.
+    fn num_variable_fields_expr(&self) -> TokenStream {
+        let terms: Vec<TokenStream> = self
+            .fields
+            .iter()
+            .map(|f| {
+                let is_fixed = f.is_ssz_fixed_len_expr();
+                quote! { usize::from(!#is_fixed) }
+            })
+            .collect();
+        Self::sum_expr(&terms)
+    }
+
+    /// Expression building the container's per-field layout table
+    /// (`&[(is_fixed, ssz_fixed_len)]`, see [`ssz::layout::FieldInfo`]) from
+    /// the fields' owned encoding.
+    fn field_layout_table_expr(&self) -> TokenStream {
+        let entries: Vec<TokenStream> = self
+            .fields
+            .iter()
+            .map(|f| {
+                let is_fixed = f.is_ssz_fixed_len_expr();
+                let fixed_len = f.ssz_fixed_len_expr();
+                quote! { (#is_fixed, #fixed_len) }
+            })
+            .collect();
+        quote! { &[ #(#entries),* ] }
+    }
+
+    /// Expression slicing field `field_index`'s bytes out of `self.bytes`,
+    /// deciding fixed-vs-variable and offset-slot positions from the fields'
+    /// owned encoding at runtime rather than at codegen time.
+    fn field_bytes_expr(&self, field_index: usize) -> TokenStream {
+        let table = self.field_layout_table_expr();
+        quote! {
+            ssz::layout::read_field_bytes(self.bytes, #table, #field_index)?
+        }
+    }
+
     /// Generates field layout information for a given field index.
+    ///
+    /// Only used for StableContainer/Profile views; plain containers use
+    /// [`Self::field_bytes_expr`].
+    ///
+    /// FIXME: this path still computes the layout at codegen time and reads
+    /// variable offsets via the end-packed [`ssz::layout::read_variable_offset`],
+    /// which is correct for all-`Optional` StableContainers (every field is
+    /// variable) but wrong for Profiles mixing required fixed-size fields
+    /// after variable-size ones; it also ignores `#[ssz(with = ...)]`
+    /// overrides. Migrating it to the per-field layout table used by plain
+    /// containers would fix both.
     ///
     /// Returns (offset_expr, is_fixed, size_expr) where:
     /// - offset_expr: TokenStream to compute the field's byte offset
@@ -1238,39 +1374,22 @@ impl ClassDef {
 
         match self.base {
             BaseClass::Container => {
-                // Generate optimized tree hashing that uses bytes directly for basic types
+                // Each field contributes exactly one (padded) leaf, matching
+                // the owned TreeHash impl which writes every field's
+                // `tree_hash_root`. Writing raw basic-field bytes instead
+                // would misalign the `MerkleHasher` leaf stream (it only
+                // forms a leaf per HASH_SIZE bytes), so all fields go through
+                // their getters.
                 let hash_operations: Vec<TokenStream> = self
                     .fields
                     .iter()
-                    .enumerate()
-                    .map(|(idx, field)| {
+                    .map(|field| {
                         let field_name = Ident::new(&field.name, Span::call_site());
-                        let (offset_expr, is_fixed, size_expr) = self.generate_field_layout(idx);
-
-                        // Check if this is a basic packable type
-                        let is_basic = matches!(
-                            field.ty.resolution,
-                            TypeResolutionKind::Boolean | TypeResolutionKind::UInt(_)
-                        );
-
-                        if is_basic && is_fixed {
-                            // Optimize: hash bytes directly for basic types
-                            let size = size_expr.unwrap();
-                            quote! {
-                                {
-                                    let offset = #offset_expr;
-                                    let field_bytes = &self.bytes[offset..offset + #size];
-                                    hasher.write(field_bytes).expect("write field");
-                                }
-                            }
-                        } else {
-                            // For composite types, use getter and hash the result
-                            quote! {
-                                {
-                                    let #field_name = self.#field_name().expect("valid view");
-                                    let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&#field_name);
-                                    hasher.write(root.as_ref()).expect("write field");
-                                }
+                        quote! {
+                            {
+                                let #field_name = self.#field_name().expect("valid view");
+                                let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<H>(&#field_name);
+                                hasher.write(root.as_ref()).expect("write field");
                             }
                         }
                     })
@@ -1597,6 +1716,69 @@ impl ClassDef {
         }
     }
 
+    /// Generates a single view getter for a plain-container field.
+    ///
+    /// The field slice is obtained via [`ssz::layout::read_field_bytes`] with
+    /// the layout derived from the fields' owned encoding (their
+    /// `ssz::Encode` impls, or the `#[ssz(with = ...)]` module when
+    /// overridden), so the accessor agrees with the owned `ssz_derive`
+    /// encoding by construction.
+    ///
+    /// `#[ssz(with = ...)]` fields have a module-defined encoding with no
+    /// view-side counterpart, so their getter decodes the slice to the owned
+    /// field type through `module::decode`, mirroring the `ssz_derive`
+    /// `Decode` impl.
+    fn container_view_getter(&self, idx: usize, field: &ClassFieldDef) -> TokenStream {
+        let field_name = Ident::new(&field.name, Span::call_site());
+        let view_ty = field.ty.to_view_type_with_pragmas(&field.pragmas);
+        let field_bytes = self.field_bytes_expr(idx);
+
+        if let Some(module) = field.ssz_with_module() {
+            let owned_ty = field.ty.unwrap_type();
+            return quote! {
+                pub fn #field_name(&self) -> Result<#owned_ty, ssz::DecodeError> {
+                    let bytes = #field_bytes;
+                    #module::decode::from_ssz_bytes(bytes)
+                }
+            };
+        }
+
+        // Special handling for Option types (from Union[null, T]): encoded as
+        // a union with a selector byte.
+        if let TypeResolutionKind::Option(inner_ty) = &field.ty.resolution {
+            let inner_view_ty = inner_ty.to_view_type_with_pragmas(&field.pragmas);
+            return quote! {
+                pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
+                    let bytes = #field_bytes;
+                    if bytes.is_empty() {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: 0,
+                            expected: 1,
+                        });
+                    }
+                    let selector = bytes[0];
+                    match selector {
+                        0 => Ok(None),
+                        1 => {
+                            let inner = <#inner_view_ty as ssz::view::DecodeView>::from_ssz_bytes(&bytes[1..])?;
+                            Ok(Some(inner))
+                        }
+                        _ => Err(ssz::DecodeError::BytesInvalid(
+                            format!("Invalid union selector for Option: {}", selector)
+                        ))
+                    }
+                }
+            };
+        }
+
+        quote! {
+            pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
+                let bytes = #field_bytes;
+                ssz::view::DecodeView::from_ssz_bytes(bytes)
+            }
+        }
+    }
+
     /// Generates getter methods for view struct fields.
     ///
     /// Each field gets a method that computes its position and decodes on-demand.
@@ -1611,6 +1793,26 @@ impl ClassDef {
     /// A [`TokenStream`] containing the impl block with getter methods.
     pub fn to_view_getters(&self, ident: &Ident) -> TokenStream {
         let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
+
+        // Plain containers derive their layout from the field types' `Encode`
+        // impls at runtime (const-foldable), so views stay in agreement with
+        // the owned encoding even for class or external field types.
+        if matches!(self.base, BaseClass::Container) {
+            let getters: Vec<TokenStream> = self
+                .fields
+                .iter()
+                .enumerate()
+                .map(|(idx, field)| self.container_view_getter(idx, field))
+                .collect();
+
+            return quote! {
+                #[allow(dead_code, reason = "generated code using ssz-gen")]
+                impl<'a> #ref_ident<'a> {
+                    #(#getters)*
+                }
+            };
+        }
+
         let (fixed_portion_size, _, num_variable_fields) = self.compute_layout();
 
         // Check if we need to account for bitvector (StableContainer/Profile with Optional fields)
@@ -1928,65 +2130,18 @@ impl ClassDef {
     /// A [`TokenStream`] containing the [`DecodeView`](ssz::view::DecodeView) implementation
     pub fn to_view_decode_impl(&self, ident: &Ident) -> TokenStream {
         let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
-        let (fixed_portion_size, fixed_size, num_variable_fields) = self.compute_layout();
 
         match self.base {
             BaseClass::Container => {
-                // Generate validation code based on whether container is fixed or variable size
-                let validation = if let Some(expected_size) = fixed_size {
-                    // Fixed-size container: just check length
-                    quote! {
-                        if bytes.len() != #expected_size {
-                            return Err(ssz::DecodeError::InvalidByteLength {
-                                len: bytes.len(),
-                                expected: #expected_size,
-                            });
-                        }
-                    }
-                } else {
-                    // Variable-size container: validate offset table
-                    quote! {
-                        if bytes.len() < #fixed_portion_size {
-                            return Err(ssz::DecodeError::InvalidByteLength {
-                                len: bytes.len(),
-                                expected: #fixed_portion_size,
-                            });
-                        }
-
-                        // Validate offset table
-                        let mut prev_offset: Option<usize> = None;
-                        for i in 0..#num_variable_fields {
-                            let offset = ssz::layout::read_variable_offset(
-                                bytes,
-                                #fixed_portion_size,
-                                #num_variable_fields,
-                                i
-                            )?;
-
-                            // First offset should point to start of variable portion
-                            if i == 0 && offset != #fixed_portion_size {
-                                return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
-                            }
-
-                            // Offsets must not decrease
-                            if let Some(prev) = prev_offset && offset < prev {
-                                return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                            }
-
-                            // Offset must not exceed container length
-                            if offset > bytes.len() {
-                                return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
-                            }
-
-                            prev_offset = Some(offset);
-                        }
-                    }
-                };
+                // Layout is computed from the fields' owned encoding at
+                // runtime, so validation agrees with the owned `ssz_derive`
+                // encoding even for class or external field types.
+                let table = self.field_layout_table_expr();
 
                 quote! {
                     impl<'a> ssz::view::DecodeView<'a> for #ref_ident<'a> {
                         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                            #validation
+                            ssz::layout::validate_container(bytes, #table)?;
                             Ok(Self { bytes })
                         }
                     }
@@ -2123,6 +2278,31 @@ impl ClassDef {
     /// A [`TokenStream`] containing the [`SszTypeInfo`](ssz::view::SszTypeInfo) implementation.
     pub fn to_view_ssz_type_info_impl(&self, ident: &Ident) -> TokenStream {
         let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
+
+        // Plain containers derive fixedness from the field types' `Encode`
+        // impls at runtime (const-foldable), so views stay in agreement with
+        // the owned encoding even for class or external field types.
+        if matches!(self.base, BaseClass::Container) {
+            let fixed_portion_expr = self.fixed_portion_size_expr();
+            let num_variable_expr = self.num_variable_fields_expr();
+
+            return quote! {
+                impl<'a> ssz::view::SszTypeInfo for #ref_ident<'a> {
+                    fn is_ssz_fixed_len() -> bool {
+                        #num_variable_expr == 0
+                    }
+
+                    fn ssz_fixed_len() -> usize {
+                        if <Self as ssz::view::SszTypeInfo>::is_ssz_fixed_len() {
+                            #fixed_portion_expr
+                        } else {
+                            0
+                        }
+                    }
+                }
+            };
+        }
+
         let (_, fixed_size, _) = self.compute_layout();
 
         match fixed_size {
@@ -2212,6 +2392,14 @@ impl ClassDef {
             .map(|field| {
                 let field_name = Ident::new(&field.name, Span::call_site());
                 let is_optional = matches!(field.ty.resolution, TypeResolutionKind::Optional(_));
+
+                // Plain-container `#[ssz(with = ...)]` getters already decode
+                // to the owned field type, so no view conversion is needed.
+                if !is_stable_container && field.ssz_with_module().is_some() {
+                    return quote! {
+                        #field_name: self.#field_name().expect("valid view")
+                    };
+                }
 
                 // For StableContainer, fields are wrapped in ssz_types::Optional<T>
                 // Getter returns Result<Optional<TRef>, Error>

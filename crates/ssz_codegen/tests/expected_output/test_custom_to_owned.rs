@@ -73,29 +73,39 @@ pub mod tests {
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> InnerDataRef<'a> {
                 pub fn value(&self) -> Result<u64, ssz::DecodeError> {
-                    let offset = 0usize;
-                    let end = offset + 8usize;
-                    if end > self.bytes.len() {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: self.bytes.len(),
-                            expected: end,
-                        });
-                    }
-                    let bytes = &self.bytes[offset..end];
+                    let bytes = ssz::layout::read_field_bytes(
+                        self.bytes,
+                        &[
+                            (
+                                <u64 as ssz::Encode>::is_ssz_fixed_len(),
+                                <u64 as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <FixedBytes<32usize> as ssz::Encode>::is_ssz_fixed_len(),
+                                <FixedBytes<32usize> as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
+                        0usize,
+                    )?;
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn hash(
                     &self,
                 ) -> Result<FixedBytesRef<'a, 32usize>, ssz::DecodeError> {
-                    let offset = 8usize;
-                    let end = offset + 32usize;
-                    if end > self.bytes.len() {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: self.bytes.len(),
-                            expected: end,
-                        });
-                    }
-                    let bytes = &self.bytes[offset..end];
+                    let bytes = ssz::layout::read_field_bytes(
+                        self.bytes,
+                        &[
+                            (
+                                <u64 as ssz::Encode>::is_ssz_fixed_len(),
+                                <u64 as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <FixedBytes<32usize> as ssz::Encode>::is_ssz_fixed_len(),
+                                <FixedBytes<32usize> as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
+                        1usize,
+                    )?;
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
@@ -113,9 +123,11 @@ pub mod tests {
                     use tree_hash::TreeHash;
                     let mut hasher = tree_hash::MerkleHasher::<H>::with_leaves(2usize);
                     {
-                        let offset = 0usize;
-                        let field_bytes = &self.bytes[offset..offset + 8usize];
-                        hasher.write(field_bytes).expect("write field");
+                        let value = self.value().expect("valid view");
+                        let root: <H as tree_hash::TreeHashDigest>::Output = <_ as tree_hash::TreeHash>::tree_hash_root::<
+                            H,
+                        >(&value);
+                        hasher.write(root.as_ref()).expect("write field");
                     }
                     {
                         let hash = self.hash().expect("valid view");
@@ -129,21 +141,36 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for InnerDataRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    if bytes.len() != 40usize {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: bytes.len(),
-                            expected: 40usize,
-                        });
-                    }
+                    ssz::layout::validate_container(
+                        bytes,
+                        &[
+                            (
+                                <u64 as ssz::Encode>::is_ssz_fixed_len(),
+                                <u64 as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <FixedBytes<32usize> as ssz::Encode>::is_ssz_fixed_len(),
+                                <FixedBytes<32usize> as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
+                    )?;
                     Ok(Self { bytes })
                 }
             }
             impl<'a> ssz::view::SszTypeInfo for InnerDataRef<'a> {
                 fn is_ssz_fixed_len() -> bool {
-                    true
+                    usize::from(!<u64 as ssz::Encode>::is_ssz_fixed_len())
+                        + usize::from(
+                            !<FixedBytes<32usize> as ssz::Encode>::is_ssz_fixed_len(),
+                        ) == 0
                 }
                 fn ssz_fixed_len() -> usize {
-                    40usize
+                    if <Self as ssz::view::SszTypeInfo>::is_ssz_fixed_len() {
+                        <u64 as ssz::Encode>::ssz_fixed_len()
+                            + <FixedBytes<32usize> as ssz::Encode>::ssz_fixed_len()
+                    } else {
+                        0
+                    }
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
@@ -233,43 +260,51 @@ pub mod tests {
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> OuterContainerRef<'a> {
                 pub fn inner(&self) -> Result<InnerDataRef<'a>, ssz::DecodeError> {
-                    let start = ssz::layout::read_variable_offset(
+                    let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        8usize,
-                        2usize,
+                        &[
+                            (
+                                <InnerData as ssz::Encode>::is_ssz_fixed_len(),
+                                <InnerData as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <VariableList<
+                                    InnerData,
+                                    10usize,
+                                > as ssz::Encode>::is_ssz_fixed_len(),
+                                <VariableList<
+                                    InnerData,
+                                    10usize,
+                                > as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
                         0usize,
                     )?;
-                    let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
-                        8usize,
-                        2usize,
-                        1usize,
-                    )?;
-                    if start > end || end > self.bytes.len() {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                    }
-                    let bytes = &self.bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
                 pub fn items(
                     &self,
                 ) -> Result<ListRef<'a, InnerDataRef<'a>, 10usize>, ssz::DecodeError> {
-                    let start = ssz::layout::read_variable_offset(
+                    let bytes = ssz::layout::read_field_bytes(
                         self.bytes,
-                        8usize,
-                        2usize,
+                        &[
+                            (
+                                <InnerData as ssz::Encode>::is_ssz_fixed_len(),
+                                <InnerData as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <VariableList<
+                                    InnerData,
+                                    10usize,
+                                > as ssz::Encode>::is_ssz_fixed_len(),
+                                <VariableList<
+                                    InnerData,
+                                    10usize,
+                                > as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
                         1usize,
                     )?;
-                    let end = ssz::layout::read_variable_offset_or_end(
-                        self.bytes,
-                        8usize,
-                        2usize,
-                        2usize,
-                    )?;
-                    if start > end || end > self.bytes.len() {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                    }
-                    let bytes = &self.bytes[start..end];
                     ssz::view::DecodeView::from_ssz_bytes(bytes)
                 }
             }
@@ -305,40 +340,48 @@ pub mod tests {
             }
             impl<'a> ssz::view::DecodeView<'a> for OuterContainerRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                    if bytes.len() < 8usize {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: bytes.len(),
-                            expected: 8usize,
-                        });
-                    }
-                    let mut prev_offset: Option<usize> = None;
-                    for i in 0..2usize {
-                        let offset = ssz::layout::read_variable_offset(
-                            bytes,
-                            8usize,
-                            2usize,
-                            i,
-                        )?;
-                        if i == 0 && offset != 8usize {
-                            return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
-                        }
-                        if let Some(prev) = prev_offset && offset < prev {
-                            return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                        }
-                        if offset > bytes.len() {
-                            return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
-                        }
-                        prev_offset = Some(offset);
-                    }
+                    ssz::layout::validate_container(
+                        bytes,
+                        &[
+                            (
+                                <InnerData as ssz::Encode>::is_ssz_fixed_len(),
+                                <InnerData as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                            (
+                                <VariableList<
+                                    InnerData,
+                                    10usize,
+                                > as ssz::Encode>::is_ssz_fixed_len(),
+                                <VariableList<
+                                    InnerData,
+                                    10usize,
+                                > as ssz::Encode>::ssz_fixed_len(),
+                            ),
+                        ],
+                    )?;
                     Ok(Self { bytes })
                 }
             }
             impl<'a> ssz::view::SszTypeInfo for OuterContainerRef<'a> {
                 fn is_ssz_fixed_len() -> bool {
-                    false
+                    usize::from(!<InnerData as ssz::Encode>::is_ssz_fixed_len())
+                        + usize::from(
+                            !<VariableList<
+                                InnerData,
+                                10usize,
+                            > as ssz::Encode>::is_ssz_fixed_len(),
+                        ) == 0
                 }
                 fn ssz_fixed_len() -> usize {
-                    0
+                    if <Self as ssz::view::SszTypeInfo>::is_ssz_fixed_len() {
+                        <InnerData as ssz::Encode>::ssz_fixed_len()
+                            + <VariableList<
+                                InnerData,
+                                10usize,
+                            > as ssz::Encode>::ssz_fixed_len()
+                    } else {
+                        0
+                    }
                 }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]

@@ -815,6 +815,64 @@ fn test_pragmas_inheritance() {
     assert_eq!(expected_output, actual_output);
 }
 
+/// Test that a field-level `#[ssz(with = ...)]` pragma flows into the view
+/// layout: `ssz_derive` encodes such fields through `module::encode::*`
+/// instead of the field type's `Encode` impl, so the generated view layout
+/// expressions must call the same functions to agree with the owned encoding.
+#[test]
+fn test_view_layout_honors_field_ssz_with() {
+    build_ssz_files(
+        &["test_with_pragma.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_with_pragma.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types with ssz(with) field pragma");
+
+    let generated = fs::read_to_string("tests/output/test_with_pragma.rs")
+        .expect("Failed to read generated output");
+
+    // The owned struct forwards the attribute to ssz_derive.
+    assert!(
+        generated.contains(r#"#[ssz(with = "custom_codec")]"#),
+        "owned struct should carry the ssz(with) field attribute"
+    );
+
+    // View layout expressions must size the overridden field via the
+    // with-module's encode fns.
+    assert!(
+        generated.contains("custom_codec::encode::ssz_fixed_len()"),
+        "view layout should size the overridden field via the with-module"
+    );
+    assert!(
+        generated.contains("custom_codec::encode::is_ssz_fixed_len()"),
+        "view layout should derive the overridden field's fixedness via the with-module"
+    );
+
+    // The overridden field is the only u64; its bare `Encode` impl must not
+    // appear anywhere in the layout expressions.
+    assert!(
+        !generated.contains("<u64 as ssz::Encode>::ssz_fixed_len()"),
+        "view layout must not bypass the with-module via the bare field type"
+    );
+    assert!(
+        !generated.contains("<u64 as ssz::Encode>::is_ssz_fixed_len()"),
+        "view layout must not bypass the with-module via the bare field type"
+    );
+
+    // The getter decodes the slice through the with-module to the owned
+    // field type, mirroring ssz_derive's Decode impl.
+    assert!(
+        generated.contains("custom_codec::decode::from_ssz_bytes(bytes)"),
+        "view getter should decode the overridden field via the with-module"
+    );
+    assert!(
+        generated.contains("pub fn wrapped(&self) -> Result<u64, ssz::DecodeError>"),
+        "with-field getter should return the owned field type"
+    );
+}
+
 /// Test edge case: empty pragmas don't break codegen.
 #[test]
 fn test_pragmas_empty() {
@@ -2275,4 +2333,23 @@ fn test_container_filter_removes_qualified_ordering_derives() {
 #[should_panic(expected = "must specify a crate")]
 fn test_unqualified_pragma_derive_panics() {
     ssz_codegen::pragma::ParsedPragma::parse(&["derive: Copy".to_string()]);
+}
+
+#[test]
+fn test_nested_fixed_container_views() {
+    build_ssz_files(
+        &["test_nested_fixed_container.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_nested_fixed_container.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types");
+
+    let expected_output =
+        fs::read_to_string("tests/expected_output/test_nested_fixed_container.rs")
+            .expect("Failed to read expected output");
+    let actual_output = fs::read_to_string("tests/output/test_nested_fixed_container.rs")
+        .expect("Failed to read actual output");
+    assert_eq!(expected_output, actual_output);
 }
