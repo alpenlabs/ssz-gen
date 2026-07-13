@@ -1694,17 +1694,22 @@ fn ssz_decode_derive_profile_container(
 
             if is_optional {
                 // An inactive optional field is not serialized at all, so its
-                // type must not be registered with the decoder.
+                // type must not be registered with the decoder. An active one
+                // is serialized as its inner type, so decode that and wrap it
+                // (like StableContainer): decoding `Optional<T>` directly
+                // would turn a zero-length inner encoding, e.g. `Some` of an
+                // empty list, back into `None`.
+                let inner_ty = inner_ty.expect("optional Profile fields use Optional<T>");
                 register_types.push(quote! {
                     if bitvector.get(#working_optional_index).unwrap_or(false) {
-                        builder.register_type::<#ty>()?;
+                        builder.register_type::<#inner_ty>()?;
                     }
                 });
                 decodes.push(quote! {
                     let #ident = if bitvector.get(#working_optional_index).unwrap_or(false) {
-                        decoder.decode_next()?
+                        Optional::Some(decoder.decode_next()?)
                     } else {
-                        <_>::default()
+                        Optional::None
                     };
                 });
             } else {

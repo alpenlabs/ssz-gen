@@ -219,3 +219,44 @@ fn profile_view_all_some() {
     let view = InnerProfile1Ref::from_ssz_bytes(&bytes).expect("view decode");
     assert_eq!(view.to_owned(), owned);
 }
+
+/// An active optional whose inner encoding is zero-length (`Some` of an
+/// empty list) must stay `Some`: the presence bit, not the slice length,
+/// decides activeness.
+#[test]
+fn profile_active_optional_with_empty_inner() {
+    let owned = InnerProfile1 {
+        x: 3,
+        y: Optional::Some(VariableList::new(vec![]).expect("within bound")),
+        z: Optional::None,
+        w: Optional::None,
+    };
+    assert_agreement!(InnerProfile1, InnerProfile1Ref, &owned);
+
+    let bytes = owned.as_ssz_bytes();
+    let view = InnerProfile1Ref::from_ssz_bytes(&bytes).expect("view decode");
+    match view.y().expect("y") {
+        Optional::Some(v) => assert_eq!(v.to_owned(), Vec::<u8>::new()),
+        Optional::None => panic!("active empty list decoded as None"),
+    }
+    assert_eq!(view.to_owned(), owned);
+}
+
+#[test]
+fn stable_container_active_optional_with_empty_inner() {
+    let owned = InnerBase {
+        x: Optional::None,
+        y: Optional::Some(VariableList::new(vec![]).expect("within bound")),
+        z: Optional::None,
+        w: Optional::None,
+    };
+    assert_agreement!(InnerBase, InnerBaseRef, &owned);
+
+    let bytes = owned.as_ssz_bytes();
+    let view = InnerBaseRef::from_ssz_bytes(&bytes).expect("view decode");
+    match view.y().expect("y") {
+        Optional::Some(v) => assert_eq!(v.to_owned(), Vec::<u8>::new()),
+        Optional::None => panic!("active empty list decoded as None"),
+    }
+    assert_eq!(view.to_owned(), owned);
+}
