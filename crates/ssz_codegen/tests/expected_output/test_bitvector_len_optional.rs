@@ -91,46 +91,86 @@ pub mod tests {
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BitvectorLenTestRef<'a> {
                 pub fn a(&self) -> Result<Optional<u8>, ssz::DecodeError> {
-                    let bitvector_offset = 2usize;
-                    let container_bytes = &self.bytes[bitvector_offset..];
-                    let start = ssz::layout::read_variable_offset(
-                        container_bytes,
-                        8usize,
-                        2usize,
+                    use ssz::Decode;
+                    let bitvector_bytes = self
+                        .bytes
+                        .get(..2usize)
+                        .ok_or(ssz::DecodeError::InvalidByteLength {
+                            len: self.bytes.len(),
+                            expected: 2usize,
+                        })?;
+                    let bitvector = ssz_types::BitVector::<
+                        9usize,
+                    >::from_ssz_bytes(bitvector_bytes)?;
+                    let body = &self.bytes[2usize..];
+                    let field_active: &[bool] = &[
+                        bitvector.get(0usize).unwrap_or(false),
+                        bitvector.get(1usize).unwrap_or(false),
+                    ];
+                    let field_layout: &[ssz::layout::FieldInfo] = &[
+                        (
+                            <Optional<u8> as ssz::Encode>::is_ssz_fixed_len(),
+                            <Optional<u8> as ssz::Encode>::ssz_fixed_len(),
+                        ),
+                        (
+                            <Optional<u16> as ssz::Encode>::is_ssz_fixed_len(),
+                            <Optional<u16> as ssz::Encode>::ssz_fixed_len(),
+                        ),
+                    ];
+                    let field_bytes = match ssz::layout::read_active_field_bytes(
+                        body,
+                        field_layout,
+                        |i| field_active[i],
                         0usize,
+                    )? {
+                        Some(bytes) => bytes,
+                        None => return Ok(ssz_types::Optional::None),
+                    };
+                    let inner = <u8 as ssz::view::DecodeView>::from_ssz_bytes(
+                        field_bytes,
                     )?;
-                    let end = ssz::layout::read_variable_offset_or_end(
-                        container_bytes,
-                        8usize,
-                        2usize,
-                        1usize,
-                    )?;
-                    if start > end || end > container_bytes.len() {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                    }
-                    let bytes = &container_bytes[start..end];
-                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                    Ok(ssz_types::Optional::Some(inner))
                 }
                 pub fn b(&self) -> Result<Optional<u16>, ssz::DecodeError> {
-                    let bitvector_offset = 2usize;
-                    let container_bytes = &self.bytes[bitvector_offset..];
-                    let start = ssz::layout::read_variable_offset(
-                        container_bytes,
-                        8usize,
-                        2usize,
+                    use ssz::Decode;
+                    let bitvector_bytes = self
+                        .bytes
+                        .get(..2usize)
+                        .ok_or(ssz::DecodeError::InvalidByteLength {
+                            len: self.bytes.len(),
+                            expected: 2usize,
+                        })?;
+                    let bitvector = ssz_types::BitVector::<
+                        9usize,
+                    >::from_ssz_bytes(bitvector_bytes)?;
+                    let body = &self.bytes[2usize..];
+                    let field_active: &[bool] = &[
+                        bitvector.get(0usize).unwrap_or(false),
+                        bitvector.get(1usize).unwrap_or(false),
+                    ];
+                    let field_layout: &[ssz::layout::FieldInfo] = &[
+                        (
+                            <Optional<u8> as ssz::Encode>::is_ssz_fixed_len(),
+                            <Optional<u8> as ssz::Encode>::ssz_fixed_len(),
+                        ),
+                        (
+                            <Optional<u16> as ssz::Encode>::is_ssz_fixed_len(),
+                            <Optional<u16> as ssz::Encode>::ssz_fixed_len(),
+                        ),
+                    ];
+                    let field_bytes = match ssz::layout::read_active_field_bytes(
+                        body,
+                        field_layout,
+                        |i| field_active[i],
                         1usize,
+                    )? {
+                        Some(bytes) => bytes,
+                        None => return Ok(ssz_types::Optional::None),
+                    };
+                    let inner = <u16 as ssz::view::DecodeView>::from_ssz_bytes(
+                        field_bytes,
                     )?;
-                    let end = ssz::layout::read_variable_offset_or_end(
-                        container_bytes,
-                        8usize,
-                        2usize,
-                        2usize,
-                    )?;
-                    if start > end || end > container_bytes.len() {
-                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                    }
-                    let bytes = &container_bytes[start..end];
-                    ssz::view::DecodeView::from_ssz_bytes(bytes)
+                    Ok(ssz_types::Optional::Some(inner))
                 }
             }
             impl<'a> tree_hash::TreeHash for BitvectorLenTestRef<'a> {
@@ -186,22 +226,45 @@ pub mod tests {
             impl<'a> ssz::view::DecodeView<'a> for BitvectorLenTestRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
                     use ssz::Decode;
-                    let bitvector_length = 2usize;
-                    if bytes.len() < bitvector_length {
-                        return Err(ssz::DecodeError::InvalidByteLength {
+                    let bitvector_bytes = bytes
+                        .get(..2usize)
+                        .ok_or(ssz::DecodeError::InvalidByteLength {
                             len: bytes.len(),
-                            expected: bitvector_length,
-                        });
-                    }
-                    let _bitvector = ssz_types::BitVector::<
+                            expected: 2usize,
+                        })?;
+                    let bitvector = ssz_types::BitVector::<
                         9usize,
-                    >::from_ssz_bytes(&bytes[0..bitvector_length])?;
-                    if bytes.len() < bitvector_length {
-                        return Err(ssz::DecodeError::InvalidByteLength {
-                            len: bytes.len(),
-                            expected: bitvector_length,
-                        });
+                    >::from_ssz_bytes(bitvector_bytes)?;
+                    let body = &bytes[2usize..];
+                    let field_active: &[bool] = &[
+                        bitvector.get(0usize).unwrap_or(false),
+                        bitvector.get(1usize).unwrap_or(false),
+                    ];
+                    let field_layout: &[ssz::layout::FieldInfo] = &[
+                        (
+                            <Optional<u8> as ssz::Encode>::is_ssz_fixed_len(),
+                            <Optional<u8> as ssz::Encode>::ssz_fixed_len(),
+                        ),
+                        (
+                            <Optional<u16> as ssz::Encode>::is_ssz_fixed_len(),
+                            <Optional<u16> as ssz::Encode>::ssz_fixed_len(),
+                        ),
+                    ];
+                    for index in 2usize..9usize {
+                        if bitvector.get(index).unwrap_or(false) {
+                            return Err(
+                                ssz::DecodeError::BytesInvalid(
+                                    "StableContainer has active_fields bits set beyond field count"
+                                        .to_string(),
+                                ),
+                            );
+                        }
                     }
+                    ssz::layout::validate_active_container(
+                        body,
+                        field_layout,
+                        |i| field_active[i],
+                    )?;
                     Ok(Self { bytes })
                 }
             }

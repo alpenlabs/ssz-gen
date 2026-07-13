@@ -1078,41 +1078,6 @@ impl ClassDef {
         }
     }
 
-    /// Computes the SSZ layout for this container.
-    ///
-    /// This determines field offsets and whether the container is fixed or variable-size.
-    ///
-    /// # Returns
-    ///
-    /// A tuple of:
-    /// - fixed_portion_size: size in bytes of the fixed portion
-    /// - fixed_size: `Some(size)` if all fields are fixed-size, `None` otherwise
-    /// - num_variable_fields: count of variable-length fields
-    fn compute_layout(&self) -> (usize, Option<usize>, usize) {
-        let mut fixed_offset = 0usize;
-        let mut num_variable_fields = 0usize;
-        let mut has_variable_fields = false;
-
-        for field in &self.fields {
-            if field.ty.is_fixed_size() {
-                fixed_offset += field.ty.fixed_size();
-            } else {
-                has_variable_fields = true;
-                num_variable_fields += 1;
-                // Variable-length fields add an offset pointer to the fixed portion
-                fixed_offset += 4; // BYTES_PER_LENGTH_OFFSET
-            }
-        }
-
-        let fixed_size = if has_variable_fields {
-            None
-        } else {
-            Some(fixed_offset)
-        };
-
-        (fixed_offset, fixed_size, num_variable_fields)
-    }
-
     /// Sums a list of `usize` expressions, or `0usize` when empty.
     fn sum_expr(terms: &[TokenStream]) -> TokenStream {
         if terms.is_empty() {
@@ -1178,62 +1143,94 @@ impl ClassDef {
         }
     }
 
-    /// Generates field layout information for a given field index.
-    ///
-    /// Only used for StableContainer/Profile views; plain containers use
-    /// [`Self::field_bytes_expr`].
-    ///
-    /// FIXME: this path still computes the layout at codegen time and reads
-    /// variable offsets via the end-packed [`ssz::layout::read_variable_offset`],
-    /// which is correct for all-`Optional` StableContainers (every field is
-    /// variable) but wrong for Profiles mixing required fixed-size fields
-    /// after variable-size ones; it also ignores `#[ssz(with = ...)]`
-    /// overrides. Migrating it to the per-field layout table used by plain
-    /// containers would fix both.
-    ///
-    /// Returns (offset_expr, is_fixed, size_expr) where:
-    /// - offset_expr: TokenStream to compute the field's byte offset
-    /// - is_fixed: whether the field is at a fixed offset
-    /// - size_expr: TokenStream to compute the field's size (or None for variable fields)
-    fn generate_field_layout(
-        &self,
-        field_index: usize,
-    ) -> (TokenStream, bool, Option<TokenStream>) {
-        let field = &self.fields[field_index];
+    /// Number of `Optional`-typed fields.
+    fn optional_field_count(&self) -> usize {
+        self.fields
+            .iter()
+            .filter(|f| matches!(f.ty.resolution, TypeResolutionKind::Optional(_)))
+            .count()
+    }
 
-        // Calculate the offset based on preceding fields
-        let mut offset = 0usize;
-        let mut variable_index = 0usize;
-
-        for (i, f) in self.fields.iter().enumerate() {
-            if i == field_index {
-                break;
-            }
-            if f.ty.is_fixed_size() {
-                offset += f.ty.fixed_size();
-            } else {
-                variable_index += 1;
-                offset += 4; // BYTES_PER_LENGTH_OFFSET
-            }
+    /// Byte length of the leading active-fields bitvector in the
+    /// StableContainer/Profile encoding.
+    ///
+    /// A StableContainer always serializes a `BitVector[max_fields]`; a
+    /// Profile serializes a `BitVector[optional_count]` only when it has
+    /// optional fields.
+    fn active_bitvector_length(&self) -> usize {
+        match self.base {
+            BaseClass::StableContainer(Some(max_fields)) => (max_fields as usize).div_ceil(8),
+            BaseClass::Profile(Some(_)) => self.optional_field_count().div_ceil(8),
+            _ => 0,
         }
+    }
 
-        if field.ty.is_fixed_size() {
-            let size = field.ty.fixed_size();
-            (quote! { #offset }, true, Some(quote! { #size }))
+    /// Tokens binding `body`, `field_active`, and `field_layout` for a
+    /// StableContainer/Profile view, reading from the `&[u8]` expression
+    /// `source`.
+    ///
+    /// The encoding serializes only the *active* fields after the leading
+    /// bitvector (EIP-7495): a StableContainer field is active when its bit
+    /// is set, a Profile field when it is required or its optional bit is
+    /// set. Layout facts come from the fields' owned encoding (their
+    /// `ssz::Encode` impls, or the `#[ssz(with = ...)]` module when
+    /// overridden), so views agree with `ssz_derive` by construction.
+    fn active_layout_preamble(&self, source: TokenStream) -> TokenStream {
+        let bitvector_length = self.active_bitvector_length();
+
+        let bitvector_bits = match self.base {
+            BaseClass::StableContainer(Some(max_fields)) => max_fields as usize,
+            BaseClass::Profile(Some(_)) => self.optional_field_count(),
+            _ => panic!("active layout only applies to StableContainer/Profile"),
+        };
+
+        let mut optional_index = 0usize;
+        let active_exprs: Vec<TokenStream> = self
+            .fields
+            .iter()
+            .enumerate()
+            .map(|(idx, field)| {
+                let is_optional = matches!(field.ty.resolution, TypeResolutionKind::Optional(_));
+                if !is_optional {
+                    return quote! { true };
+                }
+                let bit = match self.base {
+                    // StableContainer bits cover every declared field.
+                    BaseClass::StableContainer(_) => idx,
+                    // Profile bits cover only the optional fields, in order.
+                    _ => optional_index,
+                };
+                optional_index += 1;
+                quote! { bitvector.get(#bit).unwrap_or(false) }
+            })
+            .collect();
+
+        let table = self.field_layout_table_expr();
+
+        let parse_bitvector = if bitvector_length == 0 {
+            quote! {
+                let body = #source;
+            }
         } else {
-            let (fixed_portion_size, _, num_variable_fields) = self.compute_layout();
-            (
-                quote! {
-                    ssz::layout::read_variable_offset(
-                        self.bytes,
-                        #fixed_portion_size,
-                        #num_variable_fields,
-                        #variable_index
-                    )?
-                },
-                false,
-                None,
-            )
+            quote! {
+                use ssz::Decode;
+                let bitvector_bytes = #source
+                    .get(..#bitvector_length)
+                    .ok_or(ssz::DecodeError::InvalidByteLength {
+                        len: #source.len(),
+                        expected: #bitvector_length,
+                    })?;
+                let bitvector = ssz_types::BitVector::<#bitvector_bits>::from_ssz_bytes(
+                    bitvector_bytes
+                )?;
+                let body = &#source[#bitvector_length..];
+            }
+        };
+
+        quote! {
+            #parse_bitvector
+            let field_active: &[bool] = &[ #(#active_exprs),* ];
+            let field_layout: &[ssz::layout::FieldInfo] = #table;
         }
     }
 
@@ -1556,9 +1553,7 @@ impl ClassDef {
                             use ssz_types::BitVector;
 
                             #(
-                                {
-                                    let #field_names = self.#field_names().expect("valid view");
-                                }
+                                let #field_names = self.#field_names().expect("valid view");
                             )*
                             let mut active_fields = BitVector::<#max>::new();
                             #(
@@ -1779,6 +1774,117 @@ impl ClassDef {
         }
     }
 
+    /// Union-with-null selector decode for an `Option` value in `bytes_expr`.
+    fn option_selector_decode(inner_view_ty: &Type, bytes_expr: TokenStream) -> TokenStream {
+        quote! {
+            {
+                let bytes = #bytes_expr;
+                if bytes.is_empty() {
+                    return Err(ssz::DecodeError::InvalidByteLength {
+                        len: 0,
+                        expected: 1,
+                    });
+                }
+                let selector = bytes[0];
+                match selector {
+                    0 => Ok(None),
+                    1 => {
+                        let inner = <#inner_view_ty as ssz::view::DecodeView>::from_ssz_bytes(&bytes[1..])?;
+                        Ok(Some(inner))
+                    }
+                    _ => Err(ssz::DecodeError::BytesInvalid(
+                        format!("Invalid union selector for Option: {}", selector)
+                    ))
+                }
+            }
+        }
+    }
+
+    /// Generates a single view getter for a StableContainer/Profile field.
+    ///
+    /// The field slice is obtained via
+    /// [`ssz::layout::read_active_field_bytes`] with the active set read from
+    /// the leading bitvector and the layout facts derived from the fields'
+    /// owned encoding (see [`Self::active_layout_preamble`]), so the accessor
+    /// agrees with the owned `ssz_derive` encoding by construction. An
+    /// inactive `Optional` field decodes to `Optional::None` without touching
+    /// the body.
+    fn stable_view_getter(&self, idx: usize, field: &ClassFieldDef) -> TokenStream {
+        let field_name = Ident::new(&field.name, Span::call_site());
+        let preamble = self.active_layout_preamble(quote! { self.bytes });
+        let read_field = quote! {
+            ssz::layout::read_active_field_bytes(body, field_layout, |i| field_active[i], #idx)?
+        };
+
+        // `#[ssz(with = ...)]` fields have a module-defined encoding with no
+        // view-side counterpart, so their getter decodes the slice to the
+        // owned field type through `module::decode`, mirroring the
+        // `ssz_derive` `Decode` impl.
+        if let Some(module) = field.ssz_with_module() {
+            let owned_ty = field.ty.unwrap_type();
+            let absent = if matches!(field.ty.resolution, TypeResolutionKind::Optional(_)) {
+                quote! { return Ok(ssz_types::Optional::None) }
+            } else {
+                quote! { unreachable!("required field is always active") }
+            };
+            return quote! {
+                pub fn #field_name(&self) -> Result<#owned_ty, ssz::DecodeError> {
+                    #preamble
+                    let field_bytes = match #read_field {
+                        Some(bytes) => bytes,
+                        None => #absent,
+                    };
+                    #module::decode::from_ssz_bytes(field_bytes)
+                }
+            };
+        }
+
+        let view_ty = field.ty.to_view_type_with_pragmas(&field.pragmas);
+
+        match &field.ty.resolution {
+            TypeResolutionKind::Optional(inner_ty) => {
+                let inner_view_ty = inner_ty.to_view_type_with_pragmas(&field.pragmas);
+                quote! {
+                    pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
+                        #preamble
+                        let field_bytes = match #read_field {
+                            Some(bytes) => bytes,
+                            None => return Ok(ssz_types::Optional::None),
+                        };
+                        let inner = <#inner_view_ty as ssz::view::DecodeView>::from_ssz_bytes(field_bytes)?;
+                        Ok(ssz_types::Optional::Some(inner))
+                    }
+                }
+            }
+            // Option (from Union[null, T]): encoded as a union with a
+            // selector byte.
+            TypeResolutionKind::Option(inner_ty) => {
+                let inner_view_ty = inner_ty.to_view_type_with_pragmas(&field.pragmas);
+                let decode = Self::option_selector_decode(&inner_view_ty, quote! { field_bytes });
+                quote! {
+                    pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
+                        #preamble
+                        let field_bytes = match #read_field {
+                            Some(bytes) => bytes,
+                            None => unreachable!("required field is always active"),
+                        };
+                        #decode
+                    }
+                }
+            }
+            _ => quote! {
+                pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
+                    #preamble
+                    let field_bytes = match #read_field {
+                        Some(bytes) => bytes,
+                        None => unreachable!("required field is always active"),
+                    };
+                    ssz::view::DecodeView::from_ssz_bytes(field_bytes)
+                }
+            },
+        }
+    }
+
     /// Generates getter methods for view struct fields.
     ///
     /// Each field gets a method that computes its position and decodes on-demand.
@@ -1813,300 +1919,14 @@ impl ClassDef {
             };
         }
 
-        let (fixed_portion_size, _, num_variable_fields) = self.compute_layout();
-
-        // Check if we need to account for bitvector (StableContainer/Profile with Optional fields)
-        let optional_count = self
-            .fields
-            .iter()
-            .filter(|f| matches!(f.ty.resolution, TypeResolutionKind::Optional(_)))
-            .count();
-
-        let bitvector_offset = match self.base {
-            BaseClass::StableContainer(Some(max_fields))
-            | BaseClass::Profile(Some((_, max_fields)))
-                if optional_count > 0 =>
-            {
-                (max_fields as usize).div_ceil(8)
-            }
-            _ => 0,
-        };
-
+        // StableContainer/Profile: only active fields are serialized after
+        // the leading bitvector, so getters derive the layout at runtime from
+        // the bitvector plus the fields' owned encoding.
         let getters: Vec<TokenStream> = self
             .fields
             .iter()
             .enumerate()
-            .map(|(idx, field)| {
-                let field_name = Ident::new(&field.name, Span::call_site());
-                let view_ty = field.ty.to_view_type_with_pragmas(&field.pragmas);
-                let (offset_expr, is_fixed, size_expr) = self.generate_field_layout(idx);
-
-                // Special handling for Option types (from Union[null, T])
-                // These are encoded as unions with a selector byte
-                if matches!(field.ty.resolution, TypeResolutionKind::Option(_)) {
-                    let inner_ty = match &field.ty.resolution {
-                        TypeResolutionKind::Option(inner) => inner,
-                        _ => unreachable!(),
-                    };
-                    let inner_view_ty = inner_ty.to_view_type_with_pragmas(&field.pragmas);
-
-                    if is_fixed {
-                        let size = size_expr.unwrap();
-                        if bitvector_offset > 0 {
-                            quote! {
-                                pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
-                                    let bitvector_offset = #bitvector_offset;
-                                    let offset = bitvector_offset + #offset_expr;
-                                    let end = offset + #size;
-                                    if end > self.bytes.len() {
-                                        return Err(ssz::DecodeError::InvalidByteLength {
-                                            len: self.bytes.len(),
-                                            expected: end,
-                                        });
-                                    }
-                                    let bytes = &self.bytes[offset..end];
-                                    if bytes.is_empty() {
-                                        return Err(ssz::DecodeError::InvalidByteLength {
-                                            len: 0,
-                                            expected: 1,
-                                        });
-                                    }
-                                    let selector = bytes[0];
-                                    match selector {
-                                        0 => Ok(None),
-                                        1 => {
-                                            let inner = <#inner_view_ty as ssz::view::DecodeView>::from_ssz_bytes(&bytes[1..])?;
-                                            Ok(Some(inner))
-                                        }
-                                        _ => Err(ssz::DecodeError::BytesInvalid(
-                                            format!("Invalid union selector for Option: {}", selector)
-                                        ))
-                                    }
-                                }
-                            }
-                        } else {
-                            quote! {
-                                pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
-                                    let offset = #offset_expr;
-                                    let end = offset + #size;
-                                    if end > self.bytes.len() {
-                                        return Err(ssz::DecodeError::InvalidByteLength {
-                                            len: self.bytes.len(),
-                                            expected: end,
-                                        });
-                                    }
-                                    let bytes = &self.bytes[offset..end];
-                                    if bytes.is_empty() {
-                                        return Err(ssz::DecodeError::InvalidByteLength {
-                                            len: 0,
-                                            expected: 1,
-                                        });
-                                    }
-                                    let selector = bytes[0];
-                                    match selector {
-                                        0 => Ok(None),
-                                        1 => {
-                                            let inner = <#inner_view_ty as ssz::view::DecodeView>::from_ssz_bytes(&bytes[1..])?;
-                                            Ok(Some(inner))
-                                        }
-                                        _ => Err(ssz::DecodeError::BytesInvalid(
-                                            format!("Invalid union selector for Option: {}", selector)
-                                        ))
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        // Variable-length Option field
-                        let mut variable_index = 0usize;
-                        for (i, f) in self.fields.iter().enumerate() {
-                            if i == idx {
-                                break;
-                            }
-                            if !f.ty.is_fixed_size() {
-                                variable_index += 1;
-                            }
-                        }
-                        let next_variable_index = variable_index + 1;
-
-                        if bitvector_offset > 0 {
-                            quote! {
-                                pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
-                                    let bitvector_offset = #bitvector_offset;
-                                    let container_bytes = &self.bytes[bitvector_offset..];
-                                    let start = ssz::layout::read_variable_offset(
-                                        container_bytes,
-                                        #fixed_portion_size,
-                                        #num_variable_fields,
-                                        #variable_index
-                                    )?;
-                                    let end = ssz::layout::read_variable_offset_or_end(
-                                        container_bytes,
-                                        #fixed_portion_size,
-                                        #num_variable_fields,
-                                        #next_variable_index
-                                    )?;
-                                    if start > end || end > container_bytes.len() {
-                                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                                    }
-                                    let bytes = &container_bytes[start..end];
-                                    if bytes.is_empty() {
-                                        return Err(ssz::DecodeError::InvalidByteLength {
-                                            len: 0,
-                                            expected: 1,
-                                        });
-                                    }
-                                    let selector = bytes[0];
-                                    match selector {
-                                        0 => Ok(None),
-                                        1 => {
-                                            let inner = <#inner_view_ty as ssz::view::DecodeView>::from_ssz_bytes(&bytes[1..])?;
-                                            Ok(Some(inner))
-                                        }
-                                        _ => Err(ssz::DecodeError::BytesInvalid(
-                                            format!("Invalid union selector for Option: {}", selector)
-                                        ))
-                                    }
-                                }
-                            }
-                        } else {
-                            quote! {
-                                pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
-                                    let start = ssz::layout::read_variable_offset(
-                                        self.bytes,
-                                        #fixed_portion_size,
-                                        #num_variable_fields,
-                                        #variable_index
-                                    )?;
-                                    let end = ssz::layout::read_variable_offset_or_end(
-                                        self.bytes,
-                                        #fixed_portion_size,
-                                        #num_variable_fields,
-                                        #next_variable_index
-                                    )?;
-                                    if start > end || end > self.bytes.len() {
-                                        return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                                    }
-                                    let bytes = &self.bytes[start..end];
-                                    if bytes.is_empty() {
-                                        return Err(ssz::DecodeError::InvalidByteLength {
-                                            len: 0,
-                                            expected: 1,
-                                        });
-                                    }
-                                    let selector = bytes[0];
-                                    match selector {
-                                        0 => Ok(None),
-                                        1 => {
-                                            let inner = <#inner_view_ty as ssz::view::DecodeView>::from_ssz_bytes(&bytes[1..])?;
-                                            Ok(Some(inner))
-                                        }
-                                        _ => Err(ssz::DecodeError::BytesInvalid(
-                                            format!("Invalid union selector for Option: {}", selector)
-                                        ))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } else if is_fixed {
-                    let size = size_expr.unwrap();
-                    if bitvector_offset > 0 {
-                        // Account for bitvector at start
-                        quote! {
-                            pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
-                                let bitvector_offset = #bitvector_offset;
-                                let offset = bitvector_offset + #offset_expr;
-                                let end = offset + #size;
-                                if end > self.bytes.len() {
-                                    return Err(ssz::DecodeError::InvalidByteLength {
-                                        len: self.bytes.len(),
-                                        expected: end,
-                                    });
-                                }
-                                let bytes = &self.bytes[offset..end];
-                                ssz::view::DecodeView::from_ssz_bytes(bytes)
-                            }
-                        }
-                    } else {
-                        quote! {
-                            pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
-                                let offset = #offset_expr;
-                                let end = offset + #size;
-                                if end > self.bytes.len() {
-                                    return Err(ssz::DecodeError::InvalidByteLength {
-                                        len: self.bytes.len(),
-                                        expected: end,
-                                    });
-                                }
-                                let bytes = &self.bytes[offset..end];
-                                ssz::view::DecodeView::from_ssz_bytes(bytes)
-                            }
-                        }
-                    }
-                } else {
-                    // Variable-length field
-                    let mut variable_index = 0usize;
-                    for (i, f) in self.fields.iter().enumerate() {
-                        if i == idx {
-                            break;
-                        }
-                        if !f.ty.is_fixed_size() {
-                            variable_index += 1;
-                        }
-                    }
-                    let next_variable_index = variable_index + 1;
-
-                    if bitvector_offset > 0 {
-                        // Account for bitvector at start
-                        quote! {
-                            pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
-                                let bitvector_offset = #bitvector_offset;
-                                let container_bytes = &self.bytes[bitvector_offset..];
-                                let start = ssz::layout::read_variable_offset(
-                                    container_bytes,
-                                    #fixed_portion_size,
-                                    #num_variable_fields,
-                                    #variable_index
-                                )?;
-                                let end = ssz::layout::read_variable_offset_or_end(
-                                    container_bytes,
-                                    #fixed_portion_size,
-                                    #num_variable_fields,
-                                    #next_variable_index
-                                )?;
-                                if start > end || end > container_bytes.len() {
-                                    return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                                }
-                                let bytes = &container_bytes[start..end];
-                                ssz::view::DecodeView::from_ssz_bytes(bytes)
-                            }
-                        }
-                    } else {
-                        quote! {
-                            pub fn #field_name(&self) -> Result<#view_ty, ssz::DecodeError> {
-                                let start = ssz::layout::read_variable_offset(
-                                    self.bytes,
-                                    #fixed_portion_size,
-                                    #num_variable_fields,
-                                    #variable_index
-                                )?;
-                                let end = ssz::layout::read_variable_offset_or_end(
-                                    self.bytes,
-                                    #fixed_portion_size,
-                                    #num_variable_fields,
-                                    #next_variable_index
-                                )?;
-                                if start > end || end > self.bytes.len() {
-                                    return Err(ssz::DecodeError::OffsetsAreDecreasing(end));
-                                }
-                                let bytes = &self.bytes[start..end];
-                                ssz::view::DecodeView::from_ssz_bytes(bytes)
-                            }
-                        }
-                    }
-                }
-            })
+            .map(|(idx, field)| self.stable_view_getter(idx, field))
             .collect();
 
         quote! {
@@ -2149,108 +1969,37 @@ impl ClassDef {
             }
             BaseClass::StableContainer(Some(max_fields))
             | BaseClass::Profile(Some((_, max_fields))) => {
-                let max_fields_usize = max_fields as usize;
+                let preamble = self.active_layout_preamble(quote! { bytes });
 
-                // Count Optional fields for bitvector
-                let optional_count = self
-                    .fields
-                    .iter()
-                    .filter(|f| matches!(f.ty.resolution, TypeResolutionKind::Optional(_)))
-                    .count();
-
-                let bitvector_length = if optional_count == 0 {
-                    0
-                } else {
-                    max_fields_usize.div_ceil(8)
-                };
-
-                // Generate validation for StableContainer/Profile
-                let validation = if bitvector_length == 0 {
-                    // No Optional fields - validate like a regular container
-                    let (fixed_portion_size, fixed_size, num_variable_fields) =
-                        self.compute_layout();
-
-                    if let Some(expected_size) = fixed_size {
-                        quote! {
-                            if bytes.len() != #expected_size {
-                                return Err(ssz::DecodeError::InvalidByteLength {
-                                    len: bytes.len(),
-                                    expected: #expected_size,
-                                });
-                            }
-                        }
-                    } else {
-                        quote! {
-                            if bytes.len() < #fixed_portion_size {
-                                return Err(ssz::DecodeError::InvalidByteLength {
-                                    len: bytes.len(),
-                                    expected: #fixed_portion_size,
-                                });
-                            }
-
-                            // Validate offset table
-                            let mut prev_offset: Option<usize> = None;
-                            for i in 0..#num_variable_fields {
-                                let offset = ssz::layout::read_variable_offset(
-                                    bytes,
-                                    #fixed_portion_size,
-                                    #num_variable_fields,
-                                    i
-                                )?;
-
-                                if i == 0 && offset != #fixed_portion_size {
-                                    return Err(ssz::DecodeError::OffsetIntoFixedPortion(offset));
-                                }
-
-                                if let Some(prev) = prev_offset && offset < prev {
-                                    return Err(ssz::DecodeError::OffsetsAreDecreasing(offset));
-                                }
-
-                                if offset > bytes.len() {
-                                    return Err(ssz::DecodeError::OffsetOutOfBounds(offset));
-                                }
-
-                                prev_offset = Some(offset);
-                            }
-                        }
-                    }
-                } else {
-                    // Has Optional fields - parse bitvector and validate
+                // Mirror the owned decode: a StableContainer rejects active
+                // bits set beyond its declared field count.
+                let extra_bits_check = if self.base.is_stable_container() {
+                    let max_fields_usize = max_fields as usize;
+                    let num_fields = self.fields.len();
                     quote! {
-                        // Import Decode trait for BitVector::from_ssz_bytes
-                        use ssz::Decode;
-
-                        // Parse bitvector
-                        let bitvector_length = #bitvector_length;
-                        if bytes.len() < bitvector_length {
-                            return Err(ssz::DecodeError::InvalidByteLength {
-                                len: bytes.len(),
-                                expected: bitvector_length,
-                            });
-                        }
-
-                        // Validate bitvector structure (don't need to store it)
-                        let _bitvector = ssz_types::BitVector::<#max_fields_usize>::from_ssz_bytes(
-                            &bytes[0..bitvector_length]
-                        )?;
-
-                        // Validate the container portion after the bitvector
-                        // Note: More specific offset table validation based on active fields
-                        // could be added here as a future optimization, but current validation
-                        // is sufficient - getters will validate offsets when fields are accessed.
-                        if bytes.len() < bitvector_length {
-                            return Err(ssz::DecodeError::InvalidByteLength {
-                                len: bytes.len(),
-                                expected: bitvector_length,
-                            });
+                        for index in #num_fields..#max_fields_usize {
+                            if bitvector.get(index).unwrap_or(false) {
+                                return Err(ssz::DecodeError::BytesInvalid(
+                                    "StableContainer has active_fields bits set beyond field count"
+                                        .to_string(),
+                                ));
+                            }
                         }
                     }
+                } else {
+                    quote! {}
                 };
 
                 quote! {
                     impl<'a> ssz::view::DecodeView<'a> for #ref_ident<'a> {
                         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
-                            #validation
+                            #preamble
+                            #extra_bits_check
+                            ssz::layout::validate_active_container(
+                                body,
+                                field_layout,
+                                |i| field_active[i],
+                            )?;
                             Ok(Self { bytes })
                         }
                     }
@@ -2303,35 +2052,40 @@ impl ClassDef {
             };
         }
 
-        let (_, fixed_size, _) = self.compute_layout();
+        // A StableContainer is always variable-size (EIP-7495), as is a
+        // Profile with optional fields (the presence bitvector makes the
+        // length depend on runtime values). A Profile without optional
+        // fields derives fixedness from the fields' owned encoding, like a
+        // plain container.
+        if self.base.is_profile() && self.optional_field_count() == 0 {
+            let fixed_portion_expr = self.fixed_portion_size_expr();
+            let num_variable_expr = self.num_variable_fields_expr();
 
-        match fixed_size {
-            Some(size) => {
-                // Fixed-size container
-                quote! {
-                    impl<'a> ssz::view::SszTypeInfo for #ref_ident<'a> {
-                        fn is_ssz_fixed_len() -> bool {
-                            true
-                        }
-
-                        fn ssz_fixed_len() -> usize {
-                            #size
-                        }
+            return quote! {
+                impl<'a> ssz::view::SszTypeInfo for #ref_ident<'a> {
+                    fn is_ssz_fixed_len() -> bool {
+                        #num_variable_expr == 0
                     }
-                }
-            }
-            None => {
-                // Variable-size container
-                quote! {
-                    impl<'a> ssz::view::SszTypeInfo for #ref_ident<'a> {
-                        fn is_ssz_fixed_len() -> bool {
-                            false
-                        }
 
-                        fn ssz_fixed_len() -> usize {
+                    fn ssz_fixed_len() -> usize {
+                        if <Self as ssz::view::SszTypeInfo>::is_ssz_fixed_len() {
+                            #fixed_portion_expr
+                        } else {
                             0
                         }
                     }
+                }
+            };
+        }
+
+        quote! {
+            impl<'a> ssz::view::SszTypeInfo for #ref_ident<'a> {
+                fn is_ssz_fixed_len() -> bool {
+                    false
+                }
+
+                fn ssz_fixed_len() -> usize {
+                    0
                 }
             }
         }
@@ -2393,9 +2147,9 @@ impl ClassDef {
                 let field_name = Ident::new(&field.name, Span::call_site());
                 let is_optional = matches!(field.ty.resolution, TypeResolutionKind::Optional(_));
 
-                // Plain-container `#[ssz(with = ...)]` getters already decode
-                // to the owned field type, so no view conversion is needed.
-                if !is_stable_container && field.ssz_with_module().is_some() {
+                // `#[ssz(with = ...)]` getters already decode to the owned
+                // field type, so no view conversion is needed.
+                if field.ssz_with_module().is_some() {
                     return quote! {
                         #field_name: self.#field_name().expect("valid view")
                     };
