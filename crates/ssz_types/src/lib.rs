@@ -39,6 +39,12 @@
 //! assert_eq!(&example.fixed_vector[..], &[2, 3, 0, 0, 0, 0, 0, 0]);
 //! ```
 
+#![feature(generic_const_exprs)]
+#![allow(
+    incomplete_features,
+    reason = "we need generic const exprs for BitVectorRef"
+)]
+
 #[macro_use]
 mod fixed_vector;
 mod optional;

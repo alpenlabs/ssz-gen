@@ -195,6 +195,21 @@ impl<'a, const N: usize> ToOwnedSsz<VariableList<u8, N>> for ssz::view::BytesRef
     }
 }
 
+impl<'a, const N: usize> ToOwnedSsz<crate::BitList<N>> for ssz::view::BitListRef<'a, N> {
+    fn to_owned(&self) -> crate::BitList<N> {
+        ssz::view::BitListRef::to_owned(self)
+    }
+}
+
+impl<'a, const N: usize> ToOwnedSsz<crate::BitVector<N>> for ssz::view::BitVectorRef<'a, N>
+where
+    [(); ssz::view::bytes_for_bits(N)]:,
+{
+    fn to_owned(&self) -> crate::BitVector<N> {
+        ssz::view::BitVectorRef::to_owned(self)
+    }
+}
+
 impl<'a, TRef, T, const N: usize> ToOwnedSsz<VariableList<T, N>> for ssz::view::ListRef<'a, TRef, N>
 where
     TRef: DecodeView<'a> + SszTypeInfo + ToOwnedSsz<T>,
