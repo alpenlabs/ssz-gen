@@ -205,13 +205,11 @@ fn validate_offset_table(
 ///
 /// Assumes the offset entries form a contiguous table at the end of the
 /// fixed portion, which holds only when no fixed-size field follows a
-/// variable-size one (e.g. all-`Optional` StableContainers). In canonical
-/// SSZ each offset entry sits at its field's own position in the fixed
-/// portion; use [`read_field_bytes`] with a field table for such layouts.
-///
-/// FIXME: the StableContainer/Profile codegen path still relies on this
-/// end-packed assumption, which is wrong for Profiles that mix required
-/// fixed-size fields after variable-size ones (pre-existing).
+/// variable-size one. In canonical SSZ each offset entry sits at its
+/// field's own position in the fixed portion; use [`read_field_bytes`]
+/// (or [`read_active_field_bytes`] for StableContainer/Profile bodies)
+/// with a field table for such layouts. Generated view code no longer
+/// uses this helper; it is kept for compatibility.
 ///
 /// # Arguments
 ///
@@ -332,10 +330,46 @@ pub fn read_field_bytes<'a>(
     fields: &[FieldInfo],
     index: usize,
 ) -> Result<&'a [u8], DecodeError> {
+    let field = read_active_field_bytes(bytes, fields, |_| true, index)?;
+    Ok(field.expect("every field is active"))
+}
+
+/// Slices the field at `index` out of a container body in which only *active*
+/// fields are serialized (EIP-7495 `StableContainer`/`Profile` semantics).
+///
+/// `bytes` is the container body *after* the leading active-fields bitvector;
+/// `fields` holds the layout facts for **all declared fields** and `active(i)`
+/// reports whether field `i` is present. An inactive field contributes
+/// neither inline data nor an offset slot to the body, so positions are
+/// computed over active fields only. Offset entries stay interleaved at their
+/// (active) field's own position, exactly as in [`read_field_bytes`].
+///
+/// Returns `Ok(None)` when field `index` itself is inactive.
+///
+/// # Arguments
+///
+/// * `bytes` - The container body after the bitvector
+/// * `fields` - Per-field layout facts for all declared fields, in field order
+/// * `active` - Presence predicate, typically backed by the bitvector
+/// * `index` - The index of the field to slice
+pub fn read_active_field_bytes<'a>(
+    bytes: &'a [u8],
+    fields: &[FieldInfo],
+    active: impl Fn(usize) -> bool,
+    index: usize,
+) -> Result<Option<&'a [u8]>, DecodeError> {
     let &(is_fixed, fixed_len) = fields
         .get(index)
         .ok_or(DecodeError::OutOfBoundsByte { i: index })?;
-    let pos: usize = fields[..index].iter().map(|&(_, len)| len).sum();
+    if !active(index) {
+        return Ok(None);
+    }
+    let pos: usize = fields[..index]
+        .iter()
+        .enumerate()
+        .filter(|&(i, _)| active(i))
+        .map(|(_, &(_, len))| len)
+        .sum();
 
     if is_fixed {
         let end = pos
@@ -347,15 +381,19 @@ pub fn read_field_bytes<'a>(
                 expected: end,
             });
         }
-        Ok(&bytes[pos..end])
+        Ok(Some(&bytes[pos..end]))
     } else {
         let start = read_offset_at(bytes, pos)?;
 
-        // The field ends where the next variable-size field begins, whose
-        // offset entry sits after the intervening fixed-size fields.
+        // The field ends where the next active variable-size field begins,
+        // whose offset entry sits after the intervening active fixed-size
+        // fields.
         let mut next_pos = pos + BYTES_PER_LENGTH_OFFSET;
         let mut end = bytes.len();
-        for &(next_is_fixed, next_len) in &fields[index + 1..] {
+        for (i, &(next_is_fixed, next_len)) in fields.iter().enumerate().skip(index + 1) {
+            if !active(i) {
+                continue;
+            }
             if next_is_fixed {
                 next_pos += next_len;
             } else {
@@ -367,7 +405,7 @@ pub fn read_field_bytes<'a>(
         if start > end || end > bytes.len() {
             return Err(DecodeError::OffsetsAreDecreasing(end));
         }
-        Ok(&bytes[start..end])
+        Ok(Some(&bytes[start..end]))
     }
 }
 
@@ -384,8 +422,37 @@ pub fn read_field_bytes<'a>(
 /// * `bytes` - The complete container bytes
 /// * `fields` - Per-field layout facts, in field order
 pub fn validate_container(bytes: &[u8], fields: &[FieldInfo]) -> Result<(), DecodeError> {
-    let fixed_portion_size: usize = fields.iter().map(|&(_, len)| len).sum();
-    let num_variable_fields = fields.iter().filter(|&&(is_fixed, _)| !is_fixed).count();
+    validate_active_container(bytes, fields, |_| true)
+}
+
+/// Validates a container body in which only *active* fields are serialized
+/// (EIP-7495 `StableContainer`/`Profile` semantics; see
+/// [`read_active_field_bytes`] for the layout).
+///
+/// Performs the same structural checks as [`validate_container`], computed
+/// over the active fields only.
+///
+/// # Arguments
+///
+/// * `bytes` - The container body after the bitvector
+/// * `fields` - Per-field layout facts for all declared fields, in field order
+/// * `active` - Presence predicate, typically backed by the bitvector
+pub fn validate_active_container(
+    bytes: &[u8],
+    fields: &[FieldInfo],
+    active: impl Fn(usize) -> bool,
+) -> Result<(), DecodeError> {
+    let fixed_portion_size: usize = fields
+        .iter()
+        .enumerate()
+        .filter(|&(i, _)| active(i))
+        .map(|(_, &(_, len))| len)
+        .sum();
+    let num_variable_fields = fields
+        .iter()
+        .enumerate()
+        .filter(|&(i, &(is_fixed, _))| active(i) && !is_fixed)
+        .count();
 
     if num_variable_fields == 0 {
         if bytes.len() != fixed_portion_size {
@@ -406,7 +473,10 @@ pub fn validate_container(bytes: &[u8], fields: &[FieldInfo]) -> Result<(), Deco
 
     let mut pos = 0usize;
     let mut prev_offset: Option<usize> = None;
-    for &(is_fixed, fixed_len) in fields {
+    for (i, &(is_fixed, fixed_len)) in fields.iter().enumerate() {
+        if !active(i) {
+            continue;
+        }
         if !is_fixed {
             let offset = read_offset_at(bytes, pos)?;
 
@@ -671,6 +741,97 @@ mod tests {
             0xBB, 0xCC,
         ];
         assert!(validate_container(&invalid, fields).is_err());
+    }
+
+    #[test]
+    fn read_active_field_bytes_inactive_field() {
+        // StableContainer body: [u8?][u16?] with field 1 inactive -> only the
+        // u8 is serialized.
+        let fields: &[FieldInfo] = &[(true, 1), (true, 2)];
+        let bytes = vec![0xAA];
+
+        assert_eq!(
+            read_active_field_bytes(&bytes, fields, |i| i == 0, 0).unwrap(),
+            Some(&[0xAA][..])
+        );
+        assert_eq!(
+            read_active_field_bytes(&bytes, fields, |i| i == 0, 1).unwrap(),
+            None
+        );
+    }
+
+    #[test]
+    fn read_active_field_bytes_positions_skip_inactive() {
+        // [u8?][u32?][u16?] with the u32 inactive: the u16 starts right after
+        // the u8 instead of at offset 5.
+        let fields: &[FieldInfo] = &[(true, 1), (true, 4), (true, 2)];
+        let bytes = vec![0xAA, 0xBB, 0xCC];
+        let active = |i: usize| i != 1;
+
+        assert_eq!(
+            read_active_field_bytes(&bytes, fields, active, 0).unwrap(),
+            Some(&[0xAA][..])
+        );
+        assert_eq!(
+            read_active_field_bytes(&bytes, fields, active, 2).unwrap(),
+            Some(&[0xBB, 0xCC][..])
+        );
+    }
+
+    #[test]
+    fn read_active_field_bytes_variable_skips_inactive_successors() {
+        // [list?][list?][list?] with field 1 inactive: field 0's end is field
+        // 2's offset, read from the second (not third) slot.
+        let fields: &[FieldInfo] = &[
+            (false, BYTES_PER_LENGTH_OFFSET),
+            (false, BYTES_PER_LENGTH_OFFSET),
+            (false, BYTES_PER_LENGTH_OFFSET),
+        ];
+        let active = |i: usize| i != 1;
+        let bytes = vec![
+            0x08, 0x00, 0x00, 0x00, // offset for field 0 = 8
+            0x0A, 0x00, 0x00, 0x00, // offset for field 2 = 10
+            0xAA, 0xBB, // field 0 contents
+            0xCC, // field 2 contents
+        ];
+
+        assert_eq!(
+            read_active_field_bytes(&bytes, fields, active, 0).unwrap(),
+            Some(&[0xAA, 0xBB][..])
+        );
+        assert_eq!(
+            read_active_field_bytes(&bytes, fields, active, 1).unwrap(),
+            None
+        );
+        assert_eq!(
+            read_active_field_bytes(&bytes, fields, active, 2).unwrap(),
+            Some(&[0xCC][..])
+        );
+    }
+
+    #[test]
+    fn validate_active_container_skips_inactive() {
+        // [u8?][list?][u32?] with the list inactive: all-fixed body of 5
+        // bytes, no offset table.
+        let fields: &[FieldInfo] = &[(true, 1), (false, BYTES_PER_LENGTH_OFFSET), (true, 4)];
+        let active = |i: usize| i != 1;
+
+        assert!(validate_active_container(&[0; 5], fields, active).is_ok());
+        assert!(validate_active_container(&[0; 4], fields, active).is_err());
+        assert!(validate_active_container(&[0; 6], fields, active).is_err());
+    }
+
+    #[test]
+    fn validate_active_container_checks_active_offsets() {
+        // [u8?][list?] with both active: offset entry at position 1 must
+        // point to the end of the 5-byte fixed portion.
+        let fields: &[FieldInfo] = &[(true, 1), (false, BYTES_PER_LENGTH_OFFSET)];
+
+        let valid = vec![0xAA, 0x05, 0x00, 0x00, 0x00, 0xBB];
+        assert!(validate_active_container(&valid, fields, |_| true).is_ok());
+
+        let invalid = vec![0xAA, 0x03, 0x00, 0x00, 0x00, 0xBB];
+        assert!(validate_active_container(&invalid, fields, |_| true).is_err());
     }
 
     #[test]

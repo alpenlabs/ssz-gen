@@ -636,6 +636,10 @@ fn ssz_encode_derive_stable_container(
 }
 
 /// Derive ssz::Encode for a struct as a Profile[B] as per EIP-7495.
+///
+/// A `true` bit in the leading bitvector indicates the corresponding
+/// `Optional` field is `Some`; a `None` field contributes neither data nor an
+/// offset slot to the container body, mirroring `StableContainer`.
 fn ssz_encode_derive_profile_container(
     derive_input: &DeriveInput,
     struct_data: &DataStruct,
@@ -645,10 +649,11 @@ fn ssz_encode_derive_profile_container(
 
     let field_is_ssz_fixed_len = &mut vec![];
     let field_fixed_len = &mut vec![];
-    let field_ssz_bytes_len = &mut vec![];
-    let field_encoder_append = &mut vec![];
+    let fixed_portion_terms = &mut vec![];
+    let bytes_len_terms = &mut vec![];
+    let encoder_appends = &mut vec![];
+    let set_bitvector_bits = &mut vec![];
 
-    let mut optional_field_names: Vec<&Ident> = vec![];
     let mut optional_count: usize = 0;
 
     for (ty, ident, field_opts) in parse_ssz_fields(struct_data) {
@@ -663,41 +668,123 @@ fn ssz_encode_derive_profile_container(
             }
         };
 
-        // Check if field is an Option;
-        if ty_inner_type("Option", ty).is_some() {
-            optional_field_names.push(ident);
-            optional_count += 1;
-        }
+        let is_optional = ty_inner_type("Optional", ty).is_some();
 
+        let is_fixed_expr;
+        let fixed_len_expr;
+        let bytes_len_expr;
+        let append_expr;
         if let Some(module) = field_opts.with {
             let module = quote! { #module::encode };
-            field_is_ssz_fixed_len.push(quote! { #module::is_ssz_fixed_len() });
-            field_fixed_len.push(quote! { #module::ssz_fixed_len() });
-            field_ssz_bytes_len.push(quote! { #module::ssz_bytes_len(&self.#ident) });
-            field_encoder_append.push(quote! {
+            is_fixed_expr = quote! { #module::is_ssz_fixed_len() };
+            fixed_len_expr = quote! { #module::ssz_fixed_len() };
+            bytes_len_expr = quote! { #module::ssz_bytes_len(&self.#ident) };
+            append_expr = quote! {
                 encoder.append_parameterized(
                     #module::is_ssz_fixed_len(),
                     |buf| #module::ssz_append(&self.#ident, buf)
                 )
-            });
+            };
         } else {
-            field_is_ssz_fixed_len.push(quote! { <#ty as ssz::Encode>::is_ssz_fixed_len() });
-            field_fixed_len.push(quote! { <#ty as ssz::Encode>::ssz_fixed_len() });
-            field_ssz_bytes_len.push(quote! { self.#ident.ssz_bytes_len() });
-            field_encoder_append.push(quote! { encoder.append(&self.#ident) });
+            is_fixed_expr = quote! { <#ty as ssz::Encode>::is_ssz_fixed_len() };
+            fixed_len_expr = quote! { <#ty as ssz::Encode>::ssz_fixed_len() };
+            bytes_len_expr = quote! { self.#ident.ssz_bytes_len() };
+            append_expr = quote! { encoder.append(&self.#ident) };
         }
+
+        // A variable-size field's `ssz_fixed_len` is `BYTES_PER_LENGTH_OFFSET`
+        // - the offset slot it occupies in the fixed portion - so summing
+        // `ssz_fixed_len` over the serialized fields yields the fixed-portion
+        // size.
+        let fixed_portion_term = quote! {
+            offset = offset
+                .checked_add(#fixed_len_expr)
+                .expect("encode ssz_append offset overflow");
+        };
+        let bytes_len_term = quote! {
+            if #is_fixed_expr {
+                len = len
+                    .checked_add(#fixed_len_expr)
+                    .expect("encode ssz_bytes_len length overflow");
+            } else {
+                len = len
+                    .checked_add(ssz::BYTES_PER_LENGTH_OFFSET)
+                    .expect("encode ssz_bytes_len length overflow for offset");
+                len = len
+                    .checked_add(#bytes_len_expr)
+                    .expect("encode ssz_bytes_len length overflow for bytes");
+            }
+        };
+
+        if is_optional {
+            let bit_index = optional_count;
+            set_bitvector_bits.push(quote! {
+                if self.#ident.is_some() {
+                    optional_fields
+                        .set(#bit_index, true)
+                        .expect("Should not be out of bounds");
+                }
+            });
+            fixed_portion_terms.push(quote! {
+                if self.#ident.is_some() {
+                    #fixed_portion_term
+                }
+            });
+            bytes_len_terms.push(quote! {
+                if self.#ident.is_some() {
+                    #bytes_len_term
+                }
+            });
+            encoder_appends.push(quote! {
+                if self.#ident.is_some() {
+                    #append_expr;
+                }
+            });
+            optional_count += 1;
+        } else {
+            fixed_portion_terms.push(fixed_portion_term);
+            bytes_len_terms.push(bytes_len_term);
+            encoder_appends.push(quote! { #append_expr; });
+        }
+
+        field_is_ssz_fixed_len.push(is_fixed_expr);
+        field_fixed_len.push(fixed_len_expr);
     }
 
-    // We can infer the constant required for the BitVector from the number of optional fields.
-    let max_optional_fields: usize = optional_count;
+    let bitvector_len_bytes: usize = optional_count.div_ceil(8);
+
+    // The presence bitvector makes the encoding length depend on runtime
+    // values, so a Profile with optional fields is always variable-size.
+    let is_fixed_len_body = if optional_count == 0 {
+        quote! {
+            #(
+                #field_is_ssz_fixed_len &&
+            )*
+                true
+        }
+    } else {
+        quote! { false }
+    };
+
+    let append_bitvector = if optional_count == 0 {
+        quote! {}
+    } else {
+        quote! {
+            // Construct the BitVector. This should only contain the bits of
+            // Optional values. A `true` value indicates the Optional is
+            // `Some`; a `false` value indicates the Optional is `None`.
+            let mut optional_fields = ssz_types::BitVector::<#optional_count>::new();
+            #(
+                #set_bitvector_bits
+            )*
+            buf.extend_from_slice(&optional_fields.as_ssz_bytes());
+        }
+    };
 
     let output = quote! {
         impl #impl_generics ssz::Encode for #name #ty_generics #where_clause {
             fn is_ssz_fixed_len() -> bool {
-                #(
-                    #field_is_ssz_fixed_len &&
-                )*
-                    true
+                #is_fixed_len_body
             }
 
             fn ssz_fixed_len() -> usize {
@@ -718,20 +805,9 @@ fn ssz_encode_derive_profile_container(
                 if <Self as ssz::Encode>::is_ssz_fixed_len() {
                     <Self as ssz::Encode>::ssz_fixed_len()
                 } else {
-                    let mut len: usize = 0;
+                    let mut len: usize = #bitvector_len_bytes;
                     #(
-                        if #field_is_ssz_fixed_len {
-                            len = len
-                                .checked_add(#field_fixed_len)
-                                .expect("encode ssz_bytes_len length overflow");
-                        } else {
-                            len = len
-                                .checked_add(ssz::BYTES_PER_LENGTH_OFFSET)
-                                .expect("encode ssz_bytes_len length overflow for offset");
-                            len = len
-                                .checked_add(#field_ssz_bytes_len)
-                                .expect("encode ssz_bytes_len length overflow for bytes");
-                        }
+                        #bytes_len_terms
                     )*
 
                     len
@@ -739,58 +815,18 @@ fn ssz_encode_derive_profile_container(
             }
 
             fn ssz_append(&self, buf: &mut Vec<u8>) {
-                if #optional_count == 0 {
-                    let mut offset: usize = 0;
-
-                    #(
-                        offset = offset
-                            .checked_add(#field_fixed_len)
-                            .expect("encode ssz_append offset overflow");
-                    )*
-
-                    let mut encoder = ssz::SszEncoder::container(buf, offset);
-
-                    #(
-                        #field_encoder_append;
-                    )*
-
-                    encoder.finalize();
-                    return;
-                }
-
-                // Construct the BitVector. This should only contain the bits of Optional values. A
-                // `true` value indicates the Optional is `Some`. A `false ` value indicates the
-                // Optional is `None`.
-                let mut optional_fields = ssz_types::BitVector::<#max_optional_fields>::new();
-
-                // Iterate through the list of optional fields and check if they are Some.
-                // If it is, set the appropriate bit in the bitvector to true.
-                // Otherwise it is None and therefore stays false.
-                // This assumes the field names in `optional_field_names` are in order.
-                let mut working_index: usize = 0;
-
-                #(
-                    if self.#optional_field_names.is_some() {
-                        optional_fields.set(working_index, true).expect("Should not be out of bounds");
-                    }
-                    working_index += 1;
-                )*
-
-                // Append bitvector to output
-                buf.extend_from_slice(&optional_fields.as_ssz_bytes());
+                #append_bitvector
 
                 let mut offset: usize = 0;
 
                 #(
-                    offset = offset
-                        .checked_add(#field_fixed_len)
-                        .expect("encode ssz_append offset overflow");
+                    #fixed_portion_terms
                 )*
 
                 let mut encoder = ssz::SszEncoder::container(buf, offset);
 
                 #(
-                    #field_encoder_append;
+                    #encoder_appends
                 )*
 
                 encoder.finalize();
@@ -1430,11 +1466,19 @@ fn ssz_decode_derive_stable_container(
             ssz_fixed_len = quote! { #module::ssz_fixed_len() };
             from_ssz_bytes = quote! { #module::from_ssz_bytes(slice) };
 
+            // The encode side only serializes `Some` fields, so an inactive
+            // field's type must not be registered with the decoder.
             register_types.push(quote! {
-                builder.register_type_parameterized(#is_ssz_fixed_len, #ssz_fixed_len)?;
+                if bitvector.get(#working_index).unwrap_or(false) {
+                    builder.register_type_parameterized(#is_ssz_fixed_len, #ssz_fixed_len)?;
+                }
             });
             decodes.push(quote! {
-                let #ident = decoder.decode_next_with(|slice| #module::from_ssz_bytes(slice))?;
+                let #ident = if bitvector.get(#working_index).unwrap_or(false) {
+                    decoder.decode_next_with(|slice| #module::from_ssz_bytes(slice))?
+                } else {
+                    <_>::default()
+                };
             });
         } else {
             let inner_ty =
@@ -1620,29 +1664,58 @@ fn ssz_decode_derive_profile_container(
             ssz_fixed_len = quote! { #module::ssz_fixed_len() };
             from_ssz_bytes = quote! { #module::from_ssz_bytes(slice) };
 
-            register_types.push(quote! {
-                builder.register_type_parameterized(#is_ssz_fixed_len, #ssz_fixed_len)?;
-            });
-            decodes.push(quote! {
-                let #ident = decoder.decode_next_with(|slice| #module::from_ssz_bytes(slice))?;
-            });
-        } else {
-            is_ssz_fixed_len = quote! { <#ty as ssz::Decode>::is_ssz_fixed_len() };
-            ssz_fixed_len = quote! { <#ty as ssz::Decode>::ssz_fixed_len() };
-            from_ssz_bytes = quote! { <#ty as ssz::Decode>::from_ssz_bytes(slice) };
-
-            register_types.push(quote! {
-                builder.register_type::<#ty>()?;
-            });
+            // An inactive optional field is not serialized at all, so its
+            // type must not be registered with the decoder.
             if is_optional {
+                register_types.push(quote! {
+                    if bitvector.get(#working_optional_index).unwrap_or(false) {
+                        builder.register_type_parameterized(#is_ssz_fixed_len, #ssz_fixed_len)?;
+                    }
+                });
                 decodes.push(quote! {
-                    let #ident = if bitvector.get(#working_optional_index).unwrap() {
-                        decoder.decode_next()?
+                    let #ident = if bitvector.get(#working_optional_index).unwrap_or(false) {
+                        decoder.decode_next_with(|slice| #module::from_ssz_bytes(slice))?
                     } else {
                         <_>::default()
                     };
                 });
             } else {
+                register_types.push(quote! {
+                    builder.register_type_parameterized(#is_ssz_fixed_len, #ssz_fixed_len)?;
+                });
+                decodes.push(quote! {
+                    let #ident = decoder.decode_next_with(|slice| #module::from_ssz_bytes(slice))?;
+                });
+            }
+        } else {
+            is_ssz_fixed_len = quote! { <#ty as ssz::Decode>::is_ssz_fixed_len() };
+            ssz_fixed_len = quote! { <#ty as ssz::Decode>::ssz_fixed_len() };
+            from_ssz_bytes = quote! { <#ty as ssz::Decode>::from_ssz_bytes(slice) };
+
+            if is_optional {
+                // An inactive optional field is not serialized at all, so its
+                // type must not be registered with the decoder. An active one
+                // is serialized as its inner type, so decode that and wrap it
+                // (like StableContainer): decoding `Optional<T>` directly
+                // would turn a zero-length inner encoding, e.g. `Some` of an
+                // empty list, back into `None`.
+                let inner_ty = inner_ty.expect("optional Profile fields use Optional<T>");
+                register_types.push(quote! {
+                    if bitvector.get(#working_optional_index).unwrap_or(false) {
+                        builder.register_type::<#inner_ty>()?;
+                    }
+                });
+                decodes.push(quote! {
+                    let #ident = if bitvector.get(#working_optional_index).unwrap_or(false) {
+                        Optional::Some(decoder.decode_next()?)
+                    } else {
+                        Optional::None
+                    };
+                });
+            } else {
+                register_types.push(quote! {
+                    builder.register_type::<#ty>()?;
+                });
                 decodes.push(quote! {
                     let #ident = decoder.decode_next()?;
                 });
@@ -1704,13 +1777,23 @@ fn ssz_decode_derive_profile_container(
     // We can infer the constant required for the BitVector from the number of optional fields.
     let max_optional_fields: usize = working_optional_index;
 
+    // The presence bitvector makes the encoding length depend on runtime
+    // values, so a Profile with optional fields is always variable-size.
+    let is_fixed_len_body = if max_optional_fields == 0 {
+        quote! {
+            #(
+                #is_fixed_lens &&
+            )*
+                true
+        }
+    } else {
+        quote! { false }
+    };
+
     let output = quote! {
         impl #impl_generics ssz::Decode for #name #ty_generics #where_clause {
             fn is_ssz_fixed_len() -> bool {
-                #(
-                    #is_fixed_lens &&
-                )*
-                    true
+                #is_fixed_len_body
             }
 
             fn ssz_fixed_len() -> usize {
@@ -1730,10 +1813,16 @@ fn ssz_decode_derive_profile_container(
             fn from_ssz_bytes(bytes: &[u8]) -> std::result::Result<Self, ssz::DecodeError> {
                 // Decode the leading BitVector first.
                 let bitvector_length: usize = #max_optional_fields.div_ceil(8);
+                if bytes.len() < bitvector_length {
+                    return Err(ssz::DecodeError::InvalidByteLength {
+                        len: bytes.len(),
+                        expected: bitvector_length,
+                    });
+                }
                 let bitvector = if bitvector_length == 0 {
                     ssz_types::BitVector::<#max_optional_fields>::new()
                 } else {
-                    ssz_types::BitVector::<#max_optional_fields>::from_ssz_bytes(&bytes[0..bitvector_length]).unwrap()
+                    ssz_types::BitVector::<#max_optional_fields>::from_ssz_bytes(&bytes[0..bitvector_length])?
                 };
 
                 let bytes = &bytes[bitvector_length..];

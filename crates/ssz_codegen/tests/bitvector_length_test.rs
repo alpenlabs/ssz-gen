@@ -20,7 +20,11 @@ fn test_view_bitvector_length_uses_max_fields() {
         fs::read_to_string("tests/output/test_bitvector_len.rs").expect("Failed to read output");
 
     assert!(
-        actual_output.contains("let bitvector_length = 2usize;"),
-        "Expected bitvector_length to use max_fields (9 -> 2 bytes)"
+        actual_output.contains(".get(..2usize)"),
+        "Expected bitvector length to use max_fields (9 -> 2 bytes)"
+    );
+    assert!(
+        actual_output.contains("&self.bytes[2usize..]"),
+        "Expected container body to start after the max_fields bitvector"
     );
 }

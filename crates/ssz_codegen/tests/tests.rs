@@ -1133,12 +1133,12 @@ fn test_stable_container_optional_bitvector_length() {
         .expect("Failed to read actual output");
 
     assert!(
-        actual_output.contains("let bitvector_length = 2usize;"),
+        actual_output.contains(".get(..2usize)"),
         "Expected bitvector length based on max_fields"
     );
     assert!(
-        actual_output.contains("let bitvector_offset = 2usize;"),
-        "Expected bitvector offset based on max_fields"
+        actual_output.contains("&self.bytes[2usize..]"),
+        "Expected container body to start after the max_fields bitvector"
     );
 }
 
