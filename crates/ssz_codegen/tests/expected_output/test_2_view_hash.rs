@@ -259,16 +259,6 @@ pub mod tests {
                             <Optional<BitList<32usize>> as ssz::Encode>::ssz_fixed_len(),
                         ),
                     ];
-                    for index in 2usize..2usize {
-                        if bitvector.get(index).unwrap_or(false) {
-                            return Err(
-                                ssz::DecodeError::BytesInvalid(
-                                    "StableContainer has active_fields bits set beyond field count"
-                                        .to_string(),
-                                ),
-                            );
-                        }
-                    }
                     ssz::layout::validate_active_container(
                         body,
                         field_layout,
@@ -3911,16 +3901,6 @@ pub mod tests {
                             <Optional<u8> as ssz::Encode>::ssz_fixed_len(),
                         ),
                     ];
-                    for index in 8usize..8usize {
-                        if bitvector.get(index).unwrap_or(false) {
-                            return Err(
-                                ssz::DecodeError::BytesInvalid(
-                                    "StableContainer has active_fields bits set beyond field count"
-                                        .to_string(),
-                                ),
-                            );
-                        }
-                    }
                     ssz::layout::validate_active_container(
                         body,
                         field_layout,

@@ -1972,10 +1972,13 @@ impl ClassDef {
                 let preamble = self.active_layout_preamble(quote! { bytes });
 
                 // Mirror the owned decode: a StableContainer rejects active
-                // bits set beyond its declared field count.
-                let extra_bits_check = if self.base.is_stable_container() {
-                    let max_fields_usize = max_fields as usize;
-                    let num_fields = self.fields.len();
+                // bits set beyond its declared field count. Skipped when the
+                // declared fields fill every slot (the range would be empty).
+                let max_fields_usize = max_fields as usize;
+                let num_fields = self.fields.len();
+                let extra_bits_check = if self.base.is_stable_container()
+                    && num_fields < max_fields_usize
+                {
                     quote! {
                         for index in #num_fields..#max_fields_usize {
                             if bitvector.get(index).unwrap_or(false) {
