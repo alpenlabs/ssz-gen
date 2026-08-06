@@ -1266,7 +1266,7 @@ pub mod test_1 {
     }
     impl<'a> tree_hash::TreeHash for AlphaRef<'a> {
         fn tree_hash_type() -> tree_hash::TreeHashType {
-            tree_hash::TreeHashType::StableContainer
+            tree_hash::TreeHashType::Container
         }
         fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
             unreachable!("Container should never be packed")
@@ -1490,7 +1490,7 @@ pub mod test_1 {
     }
     impl<'a> tree_hash::TreeHash for BetaRef<'a> {
         fn tree_hash_type() -> tree_hash::TreeHashType {
-            tree_hash::TreeHashType::StableContainer
+            tree_hash::TreeHashType::Container
         }
         fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
             unreachable!("Container should never be packed")
@@ -1969,7 +1969,7 @@ pub mod test_1 {
     }
     impl<'a> tree_hash::TreeHash for DeltaRef<'a> {
         fn tree_hash_type() -> tree_hash::TreeHashType {
-            tree_hash::TreeHashType::StableContainer
+            tree_hash::TreeHashType::Container
         }
         fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
             unreachable!("Container should never be packed")
@@ -3020,7 +3020,7 @@ pub mod test_1 {
     }
     impl<'a> tree_hash::TreeHash for TestTypeRef<'a> {
         fn tree_hash_type() -> tree_hash::TreeHashType {
-            tree_hash::TreeHashType::StableContainer
+            tree_hash::TreeHashType::Container
         }
         fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
             unreachable!("Container should never be packed")
@@ -3283,7 +3283,7 @@ pub mod test_1 {
     }
     impl<'a> tree_hash::TreeHash for EtaRef<'a> {
         fn tree_hash_type() -> tree_hash::TreeHashType {
-            tree_hash::TreeHashType::StableContainer
+            tree_hash::TreeHashType::Container
         }
         fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
             unreachable!("Container should never be packed")
@@ -3516,7 +3516,7 @@ pub mod test_1 {
     }
     impl<'a> tree_hash::TreeHash for ThetaRef<'a> {
         fn tree_hash_type() -> tree_hash::TreeHashType {
-            tree_hash::TreeHashType::StableContainer
+            tree_hash::TreeHashType::Container
         }
         fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
             unreachable!("Container should never be packed")
@@ -4444,7 +4444,7 @@ pub mod test_1 {
     }
     impl<'a> tree_hash::TreeHash for KappaRef<'a> {
         fn tree_hash_type() -> tree_hash::TreeHashType {
-            tree_hash::TreeHashType::StableContainer
+            tree_hash::TreeHashType::Container
         }
         fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
             unreachable!("Container should never be packed")
@@ -4906,7 +4906,7 @@ pub mod test_1 {
     }
     impl<'a> tree_hash::TreeHash for MuRef<'a> {
         fn tree_hash_type() -> tree_hash::TreeHashType {
-            tree_hash::TreeHashType::StableContainer
+            tree_hash::TreeHashType::Container
         }
         fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
             unreachable!("Container should never be packed")
@@ -5194,7 +5194,7 @@ pub mod test_1 {
     }
     impl<'a> tree_hash::TreeHash for NuRef<'a> {
         fn tree_hash_type() -> tree_hash::TreeHashType {
-            tree_hash::TreeHashType::StableContainer
+            tree_hash::TreeHashType::Container
         }
         fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
             unreachable!("Container should never be packed")

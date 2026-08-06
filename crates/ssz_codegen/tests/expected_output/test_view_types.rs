@@ -96,7 +96,7 @@ impl<'a> ExportEntryRef<'a> {
 }
 impl<'a> tree_hash::TreeHash for ExportEntryRef<'a> {
     fn tree_hash_type() -> tree_hash::TreeHashType {
-        tree_hash::TreeHashType::StableContainer
+        tree_hash::TreeHashType::Container
     }
     fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
         unreachable!("Container should never be packed")
@@ -320,7 +320,7 @@ impl<'a> ViewTypeTestRef<'a> {
 }
 impl<'a> tree_hash::TreeHash for ViewTypeTestRef<'a> {
     fn tree_hash_type() -> tree_hash::TreeHashType {
-        tree_hash::TreeHashType::StableContainer
+        tree_hash::TreeHashType::Container
     }
     fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
         unreachable!("Container should never be packed")

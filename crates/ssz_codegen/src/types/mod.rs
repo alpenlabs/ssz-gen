@@ -1397,7 +1397,7 @@ impl ClassDef {
                 quote! {
                     impl<'a> tree_hash::TreeHash for #ref_ident<'a> {
                         fn tree_hash_type() -> tree_hash::TreeHashType {
-                            tree_hash::TreeHashType::StableContainer
+                            tree_hash::TreeHashType::Container
                         }
 
                         fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
@@ -1537,7 +1537,7 @@ impl ClassDef {
                 quote! {
                     impl<'a> tree_hash::TreeHash for #ref_ident<'a> {
                         fn tree_hash_type() -> tree_hash::TreeHashType {
-                            tree_hash::TreeHashType::Container
+                            tree_hash::TreeHashType::StableContainer
                         }
 
                         fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {

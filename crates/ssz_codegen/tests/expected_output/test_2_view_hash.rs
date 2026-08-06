@@ -1207,7 +1207,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for InnerProfile1Ref<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Profile should never be packed")
@@ -1617,7 +1617,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for InnerProfile2Ref<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Profile should never be packed")
@@ -1919,7 +1919,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for AlphaProfileRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Profile should never be packed")
@@ -2133,7 +2133,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for InnerProfile3Ref<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Profile should never be packed")
@@ -2356,7 +2356,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for InnerProfile4Ref<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Profile should never be packed")
@@ -2635,7 +2635,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for InnerProfile5Ref<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Profile should never be packed")
@@ -2916,7 +2916,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for ProfileProfileRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::Container
+                    tree_hash::TreeHashType::StableContainer
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Profile should never be packed")
