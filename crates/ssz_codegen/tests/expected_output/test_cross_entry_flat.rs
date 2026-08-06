@@ -170,15 +170,22 @@ pub mod test_cross_entry_state {
         fn to_owned(&self) -> State {
             <StateRef<'a>>::to_owned(self)
         }
+        fn try_to_owned(&self) -> Result<State, ssz::DecodeError> {
+            <StateRef<'a>>::try_to_owned(self)
+        }
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> StateRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> State {
-            State {
-                data: ssz_types::FixedBytes(self.data().expect("valid view").to_owned()),
-                counter: self.counter().expect("valid view"),
-            }
+            <StateRef<'a>>::try_to_owned(self).expect("valid view")
+        }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+        pub fn try_to_owned(&self) -> Result<State, ssz::DecodeError> {
+            Ok(State {
+                data: ssz_types::FixedBytes(self.data()?.to_owned()),
+                counter: self.counter()?,
+            })
         }
     }
 }
@@ -411,22 +418,27 @@ pub mod test_cross_entry_update {
         fn to_owned(&self) -> Update {
             <UpdateRef<'a>>::to_owned(self)
         }
+        fn try_to_owned(&self) -> Result<Update, ssz::DecodeError> {
+            <UpdateRef<'a>>::try_to_owned(self)
+        }
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> UpdateRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> Update {
-            Update {
+            <UpdateRef<'a>>::try_to_owned(self).expect("valid view")
+        }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+        pub fn try_to_owned(&self) -> Result<Update, ssz::DecodeError> {
+            Ok(Update {
                 state: {
-                    let view = self.state().expect("valid view");
-                    ssz_types::view::ToOwnedSsz::to_owned(&view)
+                    let view = self.state()?;
+                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                 },
-                timestamp: self.timestamp().expect("valid view"),
-                updates: ssz_types::VariableList::new(
-                        self.updates().expect("valid view").to_owned(),
-                    )
-                    .expect("valid view"),
-            }
+                timestamp: self.timestamp()?,
+                updates: ssz_types::VariableList::new(self.updates()?.to_owned())
+                    .map_err(|e| ssz::DecodeError::BytesInvalid(format!("{e:?}")))?,
+            })
         }
     }
 }

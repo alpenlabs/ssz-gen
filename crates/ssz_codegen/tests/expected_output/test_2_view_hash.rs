@@ -284,6 +284,9 @@ pub mod tests {
                 fn to_owned(&self) -> Alpha {
                     <AlphaRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<Alpha, ssz::DecodeError> {
+                    <AlphaRef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> AlphaRef<'a> {
@@ -292,17 +295,24 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> Alpha {
-                    Alpha {
-                        a: self.a().expect("valid view"),
-                        b: match self.b().expect("valid view") {
+                    <AlphaRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<Alpha, ssz::DecodeError> {
+                    Ok(Alpha {
+                        a: self.a()?,
+                        b: match self.b()? {
                             ssz_types::Optional::Some(inner) => {
                                 ssz_types::Optional::Some(
-                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&inner)?,
                                 )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
-                    }
+                    })
                 }
             }
             #[derive(
@@ -805,6 +815,9 @@ pub mod tests {
                 fn to_owned(&self) -> InnerBase {
                     <InnerBaseRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<InnerBase, ssz::DecodeError> {
+                    <InnerBaseRef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> InnerBaseRef<'a> {
@@ -813,33 +826,40 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> InnerBase {
-                    InnerBase {
-                        x: self.x().expect("valid view"),
-                        y: match self.y().expect("valid view") {
+                    <InnerBaseRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<InnerBase, ssz::DecodeError> {
+                    Ok(InnerBase {
+                        x: self.x()?,
+                        y: match self.y()? {
                             ssz_types::Optional::Some(inner) => {
                                 ssz_types::Optional::Some(
-                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&inner)?,
                                 )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
-                        z: match self.z().expect("valid view") {
+                        z: match self.z()? {
                             ssz_types::Optional::Some(inner) => {
                                 ssz_types::Optional::Some(
-                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&inner)?,
                                 )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
-                        w: match self.w().expect("valid view") {
+                        w: match self.w()? {
                             ssz_types::Optional::Some(inner) => {
                                 ssz_types::Optional::Some(
-                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&inner)?,
                                 )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
-                    }
+                    })
                 }
             }
             #[derive(
@@ -1318,6 +1338,9 @@ pub mod tests {
                 fn to_owned(&self) -> InnerProfile1 {
                     <InnerProfile1Ref<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<InnerProfile1, ssz::DecodeError> {
+                    <InnerProfile1Ref<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> InnerProfile1Ref<'a> {
@@ -1326,33 +1349,40 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> InnerProfile1 {
-                    InnerProfile1 {
-                        x: self.x().expect("valid view"),
-                        y: match self.y().expect("valid view") {
+                    <InnerProfile1Ref<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<InnerProfile1, ssz::DecodeError> {
+                    Ok(InnerProfile1 {
+                        x: self.x()?,
+                        y: match self.y()? {
                             ssz_types::Optional::Some(inner) => {
                                 ssz_types::Optional::Some(
-                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&inner)?,
                                 )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
-                        z: match self.z().expect("valid view") {
+                        z: match self.z()? {
                             ssz_types::Optional::Some(inner) => {
                                 ssz_types::Optional::Some(
-                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&inner)?,
                                 )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
-                        w: match self.w().expect("valid view") {
+                        w: match self.w()? {
                             ssz_types::Optional::Some(inner) => {
                                 ssz_types::Optional::Some(
-                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&inner)?,
                                 )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
-                    }
+                    })
                 }
             }
             #[derive(
@@ -1687,6 +1717,9 @@ pub mod tests {
                 fn to_owned(&self) -> InnerProfile2 {
                     <InnerProfile2Ref<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<InnerProfile2, ssz::DecodeError> {
+                    <InnerProfile2Ref<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> InnerProfile2Ref<'a> {
@@ -1695,14 +1728,21 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> InnerProfile2 {
-                    InnerProfile2 {
-                        x: self.x().expect("valid view"),
-                        y: ssz_types::VariableList::new(
-                                self.y().expect("valid view").to_owned(),
-                            )
-                            .expect("valid view"),
-                        z: self.z().expect("valid view").to_owned(),
-                    }
+                    <InnerProfile2Ref<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<InnerProfile2, ssz::DecodeError> {
+                    Ok(InnerProfile2 {
+                        x: self.x()?,
+                        y: ssz_types::VariableList::new(self.y()?.to_owned())
+                            .map_err(|e| ssz::DecodeError::BytesInvalid(
+                                format!("{e:?}"),
+                            ))?,
+                        z: self.z()?.to_owned(),
+                    })
                 }
             }
             #[derive(
@@ -1963,6 +2003,9 @@ pub mod tests {
                 fn to_owned(&self) -> AlphaProfile {
                     <AlphaProfileRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<AlphaProfile, ssz::DecodeError> {
+                    <AlphaProfileRef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> AlphaProfileRef<'a> {
@@ -1971,17 +2014,24 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> AlphaProfile {
-                    AlphaProfile {
-                        a: self.a().expect("valid view"),
-                        b: match self.b().expect("valid view") {
+                    <AlphaProfileRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<AlphaProfile, ssz::DecodeError> {
+                    Ok(AlphaProfile {
+                        a: self.a()?,
+                        b: match self.b()? {
                             ssz_types::Optional::Some(inner) => {
                                 ssz_types::Optional::Some(
-                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&inner)?,
                                 )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
-                    }
+                    })
                 }
             }
             #[derive(
@@ -2138,6 +2188,9 @@ pub mod tests {
                 fn to_owned(&self) -> InnerProfile3 {
                     <InnerProfile3Ref<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<InnerProfile3, ssz::DecodeError> {
+                    <InnerProfile3Ref<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> InnerProfile3Ref<'a> {
@@ -2146,12 +2199,19 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> InnerProfile3 {
-                    InnerProfile3 {
+                    <InnerProfile3Ref<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<InnerProfile3, ssz::DecodeError> {
+                    Ok(InnerProfile3 {
                         w: {
-                            let view = self.w().expect("valid view");
-                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            let view = self.w()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                         },
-                    }
+                    })
                 }
             }
             #[derive(
@@ -2367,6 +2427,9 @@ pub mod tests {
                 fn to_owned(&self) -> InnerProfile4 {
                     <InnerProfile4Ref<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<InnerProfile4, ssz::DecodeError> {
+                    <InnerProfile4Ref<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> InnerProfile4Ref<'a> {
@@ -2375,13 +2438,20 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> InnerProfile4 {
-                    InnerProfile4 {
-                        y: ssz_types::VariableList::new(
-                                self.y().expect("valid view").to_owned(),
-                            )
-                            .expect("valid view"),
-                        z: self.z().expect("valid view").to_owned(),
-                    }
+                    <InnerProfile4Ref<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<InnerProfile4, ssz::DecodeError> {
+                    Ok(InnerProfile4 {
+                        y: ssz_types::VariableList::new(self.y()?.to_owned())
+                            .map_err(|e| ssz::DecodeError::BytesInvalid(
+                                format!("{e:?}"),
+                            ))?,
+                        z: self.z()?.to_owned(),
+                    })
                 }
             }
             #[derive(
@@ -2639,6 +2709,9 @@ pub mod tests {
                 fn to_owned(&self) -> InnerProfile5 {
                     <InnerProfile5Ref<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<InnerProfile5, ssz::DecodeError> {
+                    <InnerProfile5Ref<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> InnerProfile5Ref<'a> {
@@ -2647,14 +2720,21 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> InnerProfile5 {
-                    InnerProfile5 {
-                        x: self.x().expect("valid view"),
-                        z: self.z().expect("valid view").to_owned(),
+                    <InnerProfile5Ref<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<InnerProfile5, ssz::DecodeError> {
+                    Ok(InnerProfile5 {
+                        x: self.x()?,
+                        z: self.z()?.to_owned(),
                         w: {
-                            let view = self.w().expect("valid view");
-                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            let view = self.w()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                         },
-                    }
+                    })
                 }
             }
             #[derive(
@@ -2907,6 +2987,9 @@ pub mod tests {
                 fn to_owned(&self) -> ProfileProfile {
                     <ProfileProfileRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<ProfileProfile, ssz::DecodeError> {
+                    <ProfileProfileRef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ProfileProfileRef<'a> {
@@ -2915,13 +2998,20 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> ProfileProfile {
-                    ProfileProfile {
-                        x: self.x().expect("valid view"),
+                    <ProfileProfileRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<ProfileProfile, ssz::DecodeError> {
+                    Ok(ProfileProfile {
+                        x: self.x()?,
                         w: {
-                            let view = self.w().expect("valid view");
-                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            let view = self.w()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                         },
-                    }
+                    })
                 }
             }
             #[derive(
@@ -3927,6 +4017,9 @@ pub mod tests {
                 fn to_owned(&self) -> ContainerContainer {
                     <ContainerContainerRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<ContainerContainer, ssz::DecodeError> {
+                    <ContainerContainerRef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ContainerContainerRef<'a> {
@@ -3935,37 +4028,46 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> ContainerContainer {
-                    ContainerContainer {
-                        x: self.x().expect("valid view"),
-                        y: match self.y().expect("valid view") {
+                    <ContainerContainerRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(
+                    &self,
+                ) -> Result<ContainerContainer, ssz::DecodeError> {
+                    Ok(ContainerContainer {
+                        x: self.x()?,
+                        y: match self.y()? {
                             ssz_types::Optional::Some(inner) => {
                                 ssz_types::Optional::Some(
-                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&inner)?,
                                 )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
-                        z: match self.z().expect("valid view") {
+                        z: match self.z()? {
                             ssz_types::Optional::Some(inner) => {
                                 ssz_types::Optional::Some(
-                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&inner)?,
                                 )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
-                        w: match self.w().expect("valid view") {
+                        w: match self.w()? {
                             ssz_types::Optional::Some(inner) => {
                                 ssz_types::Optional::Some(
-                                    ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&inner)?,
                                 )
                             }
                             ssz_types::Optional::None => ssz_types::Optional::None,
                         },
-                        a: self.a().expect("valid view"),
-                        b: self.b().expect("valid view"),
-                        c: self.c().expect("valid view"),
-                        d: self.d().expect("valid view"),
-                    }
+                        a: self.a()?,
+                        b: self.b()?,
+                        c: self.c()?,
+                        d: self.d()?,
+                    })
                 }
             }
         }

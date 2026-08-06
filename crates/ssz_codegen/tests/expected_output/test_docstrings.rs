@@ -101,6 +101,9 @@ pub mod tests {
                 fn to_owned(&self) -> Foo {
                     <FooRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<Foo, ssz::DecodeError> {
+                    <FooRef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> FooRef<'a> {
@@ -109,7 +112,14 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> Foo {
-                    Foo {}
+                    <FooRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<Foo, ssz::DecodeError> {
+                    Ok(Foo {})
                 }
             }
             /// This is a docstring that should come first.
@@ -285,6 +295,9 @@ pub mod tests {
                 fn to_owned(&self) -> PointWithBoth {
                     <PointWithBothRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<PointWithBoth, ssz::DecodeError> {
+                    <PointWithBothRef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> PointWithBothRef<'a> {
@@ -293,10 +306,17 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> PointWithBoth {
-                    PointWithBoth {
-                        x: self.x().expect("valid view"),
-                        y: self.y().expect("valid view"),
-                    }
+                    <PointWithBothRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<PointWithBoth, ssz::DecodeError> {
+                    Ok(PointWithBoth {
+                        x: self.x()?,
+                        y: self.y()?,
+                    })
                 }
             }
             /// First comes the docstring. It has multiple lines.
@@ -428,6 +448,9 @@ pub mod tests {
                 fn to_owned(&self) -> TestMerge {
                     <TestMergeRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<TestMerge, ssz::DecodeError> {
+                    <TestMergeRef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> TestMergeRef<'a> {
@@ -436,9 +459,14 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> TestMerge {
-                    TestMerge {
-                        field: self.field().expect("valid view"),
-                    }
+                    <TestMergeRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<TestMerge, ssz::DecodeError> {
+                    Ok(TestMerge { field: self.field()? })
                 }
             }
         }

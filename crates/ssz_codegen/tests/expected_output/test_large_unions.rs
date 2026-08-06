@@ -146,6 +146,10 @@ pub mod tests {
                     }
                     ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
                 }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> BigUnion {
                     match self.selector() {
                         0u8 => {
@@ -181,6 +185,29 @@ pub mod tests {
                         _ => panic!("Invalid union selector: {}", self.selector()),
                     }
                 }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<BigUnion, ssz::DecodeError> {
+                    Ok(
+                        match self.selector() {
+                            0u8 => BigUnion::Selector0(self.as_selector0()?),
+                            1u8 => BigUnion::Selector1(self.as_selector1()?),
+                            2u8 => BigUnion::Selector2(self.as_selector2()?),
+                            3u8 => BigUnion::Selector3(self.as_selector3()?),
+                            4u8 => BigUnion::Selector4(self.as_selector4()?),
+                            5u8 => BigUnion::Selector5(self.as_selector5()?),
+                            other => {
+                                return Err(
+                                    ssz::DecodeError::BytesInvalid(
+                                        format!("Invalid union selector: {}", other),
+                                    ),
+                                );
+                            }
+                        },
+                    )
+                }
             }
             impl<'a> ssz::view::DecodeView<'a> for BigUnionRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
@@ -199,6 +226,9 @@ pub mod tests {
             impl<'a> ssz_types::view::ToOwnedSsz<BigUnion> for BigUnionRef<'a> {
                 fn to_owned(&self) -> BigUnion {
                     <BigUnionRef<'a>>::to_owned(self)
+                }
+                fn try_to_owned(&self) -> Result<BigUnion, ssz::DecodeError> {
+                    <BigUnionRef<'a>>::try_to_owned(self)
                 }
             }
             impl<'a> tree_hash::TreeHash for BigUnionRef<'a> {
@@ -382,6 +412,10 @@ pub mod tests {
                     }
                     ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
                 }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> MixedUnion {
                     match self.selector() {
                         0u8 => {
@@ -410,6 +444,42 @@ pub mod tests {
                         _ => panic!("Invalid union selector: {}", self.selector()),
                     }
                 }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<MixedUnion, ssz::DecodeError> {
+                    Ok(
+                        match self.selector() {
+                            0u8 => MixedUnion::Selector0(self.as_selector0()?),
+                            1u8 => {
+                                MixedUnion::Selector1({
+                                    let view = self.as_selector1()?;
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
+                                })
+                            }
+                            2u8 => {
+                                MixedUnion::Selector2({
+                                    let view = self.as_selector2()?;
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
+                                })
+                            }
+                            3u8 => {
+                                MixedUnion::Selector3({
+                                    let view = self.as_selector3()?;
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
+                                })
+                            }
+                            other => {
+                                return Err(
+                                    ssz::DecodeError::BytesInvalid(
+                                        format!("Invalid union selector: {}", other),
+                                    ),
+                                );
+                            }
+                        },
+                    )
+                }
             }
             impl<'a> ssz::view::DecodeView<'a> for MixedUnionRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
@@ -428,6 +498,9 @@ pub mod tests {
             impl<'a> ssz_types::view::ToOwnedSsz<MixedUnion> for MixedUnionRef<'a> {
                 fn to_owned(&self) -> MixedUnion {
                     <MixedUnionRef<'a>>::to_owned(self)
+                }
+                fn try_to_owned(&self) -> Result<MixedUnion, ssz::DecodeError> {
+                    <MixedUnionRef<'a>>::try_to_owned(self)
                 }
             }
             impl<'a> tree_hash::TreeHash for MixedUnionRef<'a> {
@@ -585,6 +658,10 @@ pub mod tests {
                     }
                     ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
                 }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> SameTypeUnion {
                     match self.selector() {
                         0u8 => {
@@ -610,6 +687,27 @@ pub mod tests {
                         _ => panic!("Invalid union selector: {}", self.selector()),
                     }
                 }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<SameTypeUnion, ssz::DecodeError> {
+                    Ok(
+                        match self.selector() {
+                            0u8 => SameTypeUnion::Selector0(self.as_selector0()?),
+                            1u8 => SameTypeUnion::Selector1(self.as_selector1()?),
+                            2u8 => SameTypeUnion::Selector2(self.as_selector2()?),
+                            3u8 => SameTypeUnion::Selector3(self.as_selector3()?),
+                            other => {
+                                return Err(
+                                    ssz::DecodeError::BytesInvalid(
+                                        format!("Invalid union selector: {}", other),
+                                    ),
+                                );
+                            }
+                        },
+                    )
+                }
             }
             impl<'a> ssz::view::DecodeView<'a> for SameTypeUnionRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
@@ -629,6 +727,9 @@ pub mod tests {
             for SameTypeUnionRef<'a> {
                 fn to_owned(&self) -> SameTypeUnion {
                     <SameTypeUnionRef<'a>>::to_owned(self)
+                }
+                fn try_to_owned(&self) -> Result<SameTypeUnion, ssz::DecodeError> {
+                    <SameTypeUnionRef<'a>>::try_to_owned(self)
                 }
             }
             impl<'a> tree_hash::TreeHash for SameTypeUnionRef<'a> {
@@ -906,6 +1007,11 @@ pub mod tests {
                 fn to_owned(&self) -> ContainerWithBigUnions {
                     <ContainerWithBigUnionsRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(
+                    &self,
+                ) -> Result<ContainerWithBigUnions, ssz::DecodeError> {
+                    <ContainerWithBigUnionsRef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ContainerWithBigUnionsRef<'a> {
@@ -914,20 +1020,30 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> ContainerWithBigUnions {
-                    ContainerWithBigUnions {
+                    <ContainerWithBigUnionsRef<'a>>::try_to_owned(self)
+                        .expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(
+                    &self,
+                ) -> Result<ContainerWithBigUnions, ssz::DecodeError> {
+                    Ok(ContainerWithBigUnions {
                         big: {
-                            let view = self.big().expect("valid view");
-                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            let view = self.big()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                         },
                         same: {
-                            let view = self.same().expect("valid view");
-                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            let view = self.same()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                         },
                         mixed: {
-                            let view = self.mixed().expect("valid view");
-                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            let view = self.mixed()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                         },
-                    }
+                    })
                 }
             }
         }

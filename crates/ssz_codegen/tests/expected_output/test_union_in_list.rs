@@ -79,6 +79,10 @@ pub mod tests {
                     }
                     ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
                 }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> UnionClass {
                     match self.selector() {
                         0u8 => {
@@ -95,6 +99,35 @@ pub mod tests {
                         }
                         _ => panic!("Invalid union selector: {}", self.selector()),
                     }
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<UnionClass, ssz::DecodeError> {
+                    Ok(
+                        match self.selector() {
+                            0u8 => {
+                                UnionClass::Variant1({
+                                    let view = self.as_selector0()?;
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
+                                })
+                            }
+                            1u8 => {
+                                UnionClass::Variant2({
+                                    let view = self.as_selector1()?;
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
+                                })
+                            }
+                            other => {
+                                return Err(
+                                    ssz::DecodeError::BytesInvalid(
+                                        format!("Invalid union selector: {}", other),
+                                    ),
+                                );
+                            }
+                        },
+                    )
                 }
             }
             impl<'a> ssz::view::DecodeView<'a> for UnionClassRef<'a> {
@@ -114,6 +147,9 @@ pub mod tests {
             impl<'a> ssz_types::view::ToOwnedSsz<UnionClass> for UnionClassRef<'a> {
                 fn to_owned(&self) -> UnionClass {
                     <UnionClassRef<'a>>::to_owned(self)
+                }
+                fn try_to_owned(&self) -> Result<UnionClass, ssz::DecodeError> {
+                    <UnionClassRef<'a>>::try_to_owned(self)
                 }
             }
             impl<'a> tree_hash::TreeHash for UnionClassRef<'a> {
@@ -201,6 +237,10 @@ pub mod tests {
                     }
                     ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
                 }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> UnionClassWithExternal {
                     match self.selector() {
                         0u8 => {
@@ -211,6 +251,31 @@ pub mod tests {
                         }
                         _ => panic!("Invalid union selector: {}", self.selector()),
                     }
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(
+                    &self,
+                ) -> Result<UnionClassWithExternal, ssz::DecodeError> {
+                    Ok(
+                        match self.selector() {
+                            0u8 => {
+                                UnionClassWithExternal::Deposit({
+                                    let view = self.as_selector0()?;
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
+                                })
+                            }
+                            other => {
+                                return Err(
+                                    ssz::DecodeError::BytesInvalid(
+                                        format!("Invalid union selector: {}", other),
+                                    ),
+                                );
+                            }
+                        },
+                    )
                 }
             }
             impl<'a> ssz::view::DecodeView<'a> for UnionClassWithExternalRef<'a> {
@@ -231,6 +296,11 @@ pub mod tests {
             for UnionClassWithExternalRef<'a> {
                 fn to_owned(&self) -> UnionClassWithExternal {
                     <UnionClassWithExternalRef<'a>>::to_owned(self)
+                }
+                fn try_to_owned(
+                    &self,
+                ) -> Result<UnionClassWithExternal, ssz::DecodeError> {
+                    <UnionClassWithExternalRef<'a>>::try_to_owned(self)
                 }
             }
             impl<'a> tree_hash::TreeHash for UnionClassWithExternalRef<'a> {
@@ -328,6 +398,10 @@ pub mod tests {
                     }
                     ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
                 }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> UnionTypeAlias {
                     match self.selector() {
                         0u8 => {
@@ -344,6 +418,35 @@ pub mod tests {
                         }
                         _ => panic!("Invalid union selector: {}", self.selector()),
                     }
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<UnionTypeAlias, ssz::DecodeError> {
+                    Ok(
+                        match self.selector() {
+                            0u8 => {
+                                UnionTypeAlias::TypeAliasVariant1({
+                                    let view = self.as_selector0()?;
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
+                                })
+                            }
+                            1u8 => {
+                                UnionTypeAlias::TypeAliasVariant2({
+                                    let view = self.as_selector1()?;
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
+                                })
+                            }
+                            other => {
+                                return Err(
+                                    ssz::DecodeError::BytesInvalid(
+                                        format!("Invalid union selector: {}", other),
+                                    ),
+                                );
+                            }
+                        },
+                    )
                 }
             }
             impl<'a> ssz::view::DecodeView<'a> for UnionTypeAliasRef<'a> {
@@ -364,6 +467,9 @@ pub mod tests {
             for UnionTypeAliasRef<'a> {
                 fn to_owned(&self) -> UnionTypeAlias {
                     <UnionTypeAliasRef<'a>>::to_owned(self)
+                }
+                fn try_to_owned(&self) -> Result<UnionTypeAlias, ssz::DecodeError> {
+                    <UnionTypeAliasRef<'a>>::try_to_owned(self)
                 }
             }
             impl<'a> tree_hash::TreeHash for UnionTypeAliasRef<'a> {
@@ -532,6 +638,11 @@ pub mod tests {
                 fn to_owned(&self) -> UnionTypeAliasVariant1 {
                     <UnionTypeAliasVariant1Ref<'a>>::to_owned(self)
                 }
+                fn try_to_owned(
+                    &self,
+                ) -> Result<UnionTypeAliasVariant1, ssz::DecodeError> {
+                    <UnionTypeAliasVariant1Ref<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> UnionTypeAliasVariant1Ref<'a> {
@@ -540,9 +651,19 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> UnionTypeAliasVariant1 {
-                    UnionTypeAliasVariant1 {
-                        value: self.value().expect("valid view"),
-                    }
+                    <UnionTypeAliasVariant1Ref<'a>>::try_to_owned(self)
+                        .expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(
+                    &self,
+                ) -> Result<UnionTypeAliasVariant1, ssz::DecodeError> {
+                    Ok(UnionTypeAliasVariant1 {
+                        value: self.value()?,
+                    })
                 }
             }
             #[derive(
@@ -672,6 +793,11 @@ pub mod tests {
                 fn to_owned(&self) -> UnionTypeAliasVariant2 {
                     <UnionTypeAliasVariant2Ref<'a>>::to_owned(self)
                 }
+                fn try_to_owned(
+                    &self,
+                ) -> Result<UnionTypeAliasVariant2, ssz::DecodeError> {
+                    <UnionTypeAliasVariant2Ref<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> UnionTypeAliasVariant2Ref<'a> {
@@ -680,9 +806,19 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> UnionTypeAliasVariant2 {
-                    UnionTypeAliasVariant2 {
-                        value: self.value().expect("valid view"),
-                    }
+                    <UnionTypeAliasVariant2Ref<'a>>::try_to_owned(self)
+                        .expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(
+                    &self,
+                ) -> Result<UnionTypeAliasVariant2, ssz::DecodeError> {
+                    Ok(UnionTypeAliasVariant2 {
+                        value: self.value()?,
+                    })
                 }
             }
             /// Container using class Name(Union): syntax in a List
@@ -838,6 +974,11 @@ pub mod tests {
                 fn to_owned(&self) -> ContainerWithUnionClass {
                     <ContainerWithUnionClassRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(
+                    &self,
+                ) -> Result<ContainerWithUnionClass, ssz::DecodeError> {
+                    <ContainerWithUnionClassRef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ContainerWithUnionClassRef<'a> {
@@ -846,20 +987,31 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> ContainerWithUnionClass {
-                    ContainerWithUnionClass {
+                    <ContainerWithUnionClassRef<'a>>::try_to_owned(self)
+                        .expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(
+                    &self,
+                ) -> Result<ContainerWithUnionClass, ssz::DecodeError> {
+                    Ok(ContainerWithUnionClass {
                         items: {
-                            let view = self.items().expect("valid view");
-                            let items: Result<Vec<_>, _> = view
+                            let view = self.items()?;
+                            let items = view
                                 .iter()
                                 .map(|item_result| {
-                                    item_result
-                                        .map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&item_result?)
                                 })
-                                .collect();
-                            let items = items.expect("valid view");
-                            ssz_types::VariableList::new(items).expect("valid view")
+                                .collect::<Result<Vec<_>, ssz::DecodeError>>()?;
+                            ssz_types::VariableList::new(items)
+                                .map_err(|e| ssz::DecodeError::BytesInvalid(
+                                    format!("{e:?}"),
+                                ))?
                         },
-                    }
+                    })
                 }
             }
             /// Container using class Name(Union): syntax with external in a List
@@ -1016,6 +1168,11 @@ pub mod tests {
                 fn to_owned(&self) -> ContainerWithUnionClassExternal {
                     <ContainerWithUnionClassExternalRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(
+                    &self,
+                ) -> Result<ContainerWithUnionClassExternal, ssz::DecodeError> {
+                    <ContainerWithUnionClassExternalRef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ContainerWithUnionClassExternalRef<'a> {
@@ -1024,20 +1181,31 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> ContainerWithUnionClassExternal {
-                    ContainerWithUnionClassExternal {
+                    <ContainerWithUnionClassExternalRef<'a>>::try_to_owned(self)
+                        .expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(
+                    &self,
+                ) -> Result<ContainerWithUnionClassExternal, ssz::DecodeError> {
+                    Ok(ContainerWithUnionClassExternal {
                         items: {
-                            let view = self.items().expect("valid view");
-                            let items: Result<Vec<_>, _> = view
+                            let view = self.items()?;
+                            let items = view
                                 .iter()
                                 .map(|item_result| {
-                                    item_result
-                                        .map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&item_result?)
                                 })
-                                .collect();
-                            let items = items.expect("valid view");
-                            ssz_types::VariableList::new(items).expect("valid view")
+                                .collect::<Result<Vec<_>, ssz::DecodeError>>()?;
+                            ssz_types::VariableList::new(items)
+                                .map_err(|e| ssz::DecodeError::BytesInvalid(
+                                    format!("{e:?}"),
+                                ))?
                         },
-                    }
+                    })
                 }
             }
             pub type TypeAliasVariant1 = UnionTypeAliasVariant1;
@@ -1195,6 +1363,11 @@ pub mod tests {
                 fn to_owned(&self) -> ContainerWithUnionTypeAlias {
                     <ContainerWithUnionTypeAliasRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(
+                    &self,
+                ) -> Result<ContainerWithUnionTypeAlias, ssz::DecodeError> {
+                    <ContainerWithUnionTypeAliasRef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ContainerWithUnionTypeAliasRef<'a> {
@@ -1203,20 +1376,31 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> ContainerWithUnionTypeAlias {
-                    ContainerWithUnionTypeAlias {
+                    <ContainerWithUnionTypeAliasRef<'a>>::try_to_owned(self)
+                        .expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(
+                    &self,
+                ) -> Result<ContainerWithUnionTypeAlias, ssz::DecodeError> {
+                    Ok(ContainerWithUnionTypeAlias {
                         items: {
-                            let view = self.items().expect("valid view");
-                            let items: Result<Vec<_>, _> = view
+                            let view = self.items()?;
+                            let items = view
                                 .iter()
                                 .map(|item_result| {
-                                    item_result
-                                        .map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&item_result?)
                                 })
-                                .collect();
-                            let items = items.expect("valid view");
-                            ssz_types::VariableList::new(items).expect("valid view")
+                                .collect::<Result<Vec<_>, ssz::DecodeError>>()?;
+                            ssz_types::VariableList::new(items)
+                                .map_err(|e| ssz::DecodeError::BytesInvalid(
+                                    format!("{e:?}"),
+                                ))?
                         },
-                    }
+                    })
                 }
             }
         }

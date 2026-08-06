@@ -311,6 +311,11 @@ pub mod tests {
                 fn to_owned(&self) -> NestedAliasContainer {
                     <NestedAliasContainerRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(
+                    &self,
+                ) -> Result<NestedAliasContainer, ssz::DecodeError> {
+                    <NestedAliasContainerRef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> NestedAliasContainerRef<'a> {
@@ -319,26 +324,28 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> NestedAliasContainer {
-                    NestedAliasContainer {
-                        field1: ssz_types::VariableList::new(
-                                self.field1().expect("valid view").to_owned(),
-                            )
-                            .expect("valid view"),
-                        field2: self
-                            .field2()
-                            .expect("valid view")
-                            .to_owned()
-                            .expect("valid view"),
-                        field3: ssz_types::VariableList::new(
-                                self.field3().expect("valid view").to_owned(),
-                            )
-                            .expect("valid view"),
-                        field4: self
-                            .field4()
-                            .expect("valid view")
-                            .to_owned()
-                            .expect("valid view"),
-                    }
+                    <NestedAliasContainerRef<'a>>::try_to_owned(self)
+                        .expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(
+                    &self,
+                ) -> Result<NestedAliasContainer, ssz::DecodeError> {
+                    Ok(NestedAliasContainer {
+                        field1: ssz_types::VariableList::new(self.field1()?.to_owned())
+                            .map_err(|e| ssz::DecodeError::BytesInvalid(
+                                format!("{e:?}"),
+                            ))?,
+                        field2: self.field2()?.try_to_owned()?,
+                        field3: ssz_types::VariableList::new(self.field3()?.to_owned())
+                            .map_err(|e| ssz::DecodeError::BytesInvalid(
+                                format!("{e:?}"),
+                            ))?,
+                        field4: self.field4()?.try_to_owned()?,
+                    })
                 }
             }
         }

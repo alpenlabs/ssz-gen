@@ -230,6 +230,9 @@ pub mod tests {
                 fn to_owned(&self) -> Point {
                     <PointRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<Point, ssz::DecodeError> {
+                    <PointRef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> PointRef<'a> {
@@ -238,11 +241,18 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> Point {
-                    Point {
-                        x: self.x().expect("valid view"),
-                        y: self.y().expect("valid view"),
-                        z: self.z().expect("valid view"),
-                    }
+                    <PointRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<Point, ssz::DecodeError> {
+                    Ok(Point {
+                        x: self.x()?,
+                        y: self.y()?,
+                        z: self.z()?,
+                    })
                 }
             }
             /// A container for coordinates
@@ -416,6 +426,9 @@ pub mod tests {
                 fn to_owned(&self) -> CoordinateContainer {
                     <CoordinateContainerRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<CoordinateContainer, ssz::DecodeError> {
+                    <CoordinateContainerRef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> CoordinateContainerRef<'a> {
@@ -424,10 +437,19 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> CoordinateContainer {
-                    CoordinateContainer {
-                        lat: self.lat().expect("valid view"),
-                        lon: self.lon().expect("valid view"),
-                    }
+                    <CoordinateContainerRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(
+                    &self,
+                ) -> Result<CoordinateContainer, ssz::DecodeError> {
+                    Ok(CoordinateContainer {
+                        lat: self.lat()?,
+                        lon: self.lon()?,
+                    })
                 }
             }
         }

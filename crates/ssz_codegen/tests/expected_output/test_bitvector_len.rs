@@ -286,6 +286,9 @@ pub mod tests {
                 fn to_owned(&self) -> BitvectorLenTest {
                     <BitvectorLenTestRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<BitvectorLenTest, ssz::DecodeError> {
+                    <BitvectorLenTestRef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BitvectorLenTestRef<'a> {
@@ -294,10 +297,19 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> BitvectorLenTest {
-                    BitvectorLenTest {
-                        a: self.a().expect("valid view"),
-                        b: self.b().expect("valid view"),
-                    }
+                    <BitvectorLenTestRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(
+                    &self,
+                ) -> Result<BitvectorLenTest, ssz::DecodeError> {
+                    Ok(BitvectorLenTest {
+                        a: self.a()?,
+                        b: self.b()?,
+                    })
                 }
             }
         }

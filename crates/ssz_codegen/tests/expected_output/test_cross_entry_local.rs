@@ -137,6 +137,9 @@ pub mod tests {
                 fn to_owned(&self) -> CommonTypeA {
                     <CommonTypeARef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<CommonTypeA, ssz::DecodeError> {
+                    <CommonTypeARef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> CommonTypeARef<'a> {
@@ -145,9 +148,16 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> CommonTypeA {
-                    CommonTypeA {
-                        value: self.value().expect("valid view"),
-                    }
+                    <CommonTypeARef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<CommonTypeA, ssz::DecodeError> {
+                    Ok(CommonTypeA {
+                        value: self.value()?,
+                    })
                 }
             }
             #[derive(
@@ -276,6 +286,9 @@ pub mod tests {
                 fn to_owned(&self) -> CommonTypeB {
                     <CommonTypeBRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<CommonTypeB, ssz::DecodeError> {
+                    <CommonTypeBRef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> CommonTypeBRef<'a> {
@@ -284,9 +297,16 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> CommonTypeB {
-                    CommonTypeB {
-                        value: self.value().expect("valid view"),
-                    }
+                    <CommonTypeBRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<CommonTypeB, ssz::DecodeError> {
+                    Ok(CommonTypeB {
+                        value: self.value()?,
+                    })
                 }
             }
         }
@@ -511,6 +531,9 @@ pub mod tests {
                 fn to_owned(&self) -> ContainerA {
                     <ContainerARef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<ContainerA, ssz::DecodeError> {
+                    <ContainerARef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ContainerARef<'a> {
@@ -519,24 +542,32 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> ContainerA {
-                    ContainerA {
+                    <ContainerARef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<ContainerA, ssz::DecodeError> {
+                    Ok(ContainerA {
                         field: {
-                            let view = self.field().expect("valid view");
-                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            let view = self.field()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                         },
                         list: {
-                            let view = self.list().expect("valid view");
-                            let items: Result<Vec<_>, _> = view
+                            let view = self.list()?;
+                            let items = view
                                 .iter()
                                 .map(|item_result| {
-                                    item_result
-                                        .map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&item_result?)
                                 })
-                                .collect();
-                            let items = items.expect("valid view");
-                            ssz_types::VariableList::new(items).expect("valid view")
+                                .collect::<Result<Vec<_>, ssz::DecodeError>>()?;
+                            ssz_types::VariableList::new(items)
+                                .map_err(|e| ssz::DecodeError::BytesInvalid(
+                                    format!("{e:?}"),
+                                ))?
                         },
-                    }
+                    })
                 }
             }
         }

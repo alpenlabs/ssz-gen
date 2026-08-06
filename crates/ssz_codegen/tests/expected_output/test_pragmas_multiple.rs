@@ -185,6 +185,11 @@ pub mod tests {
                 fn to_owned(&self) -> MultiPragmaContainer {
                     <MultiPragmaContainerRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(
+                    &self,
+                ) -> Result<MultiPragmaContainer, ssz::DecodeError> {
+                    <MultiPragmaContainerRef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> MultiPragmaContainerRef<'a> {
@@ -193,10 +198,20 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> MultiPragmaContainer {
-                    MultiPragmaContainer {
-                        x: self.x().expect("valid view"),
-                        y: self.y().expect("valid view"),
-                    }
+                    <MultiPragmaContainerRef<'a>>::try_to_owned(self)
+                        .expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(
+                    &self,
+                ) -> Result<MultiPragmaContainer, ssz::DecodeError> {
+                    Ok(MultiPragmaContainer {
+                        x: self.x()?,
+                        y: self.y()?,
+                    })
                 }
             }
         }

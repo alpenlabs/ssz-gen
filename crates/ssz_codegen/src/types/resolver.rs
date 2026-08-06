@@ -626,6 +626,8 @@ impl<'a> TypeResolver<'a> {
                         .collect();
                     let to_owned_arms =
                         self.generate_union_to_owned_arms(&ident, &args, &variant_names);
+                    let try_to_owned_arms =
+                        self.generate_union_try_to_owned_arms(&ident, &args, &variant_names);
 
                     let tree_hash_arms = self.generate_union_tree_hash_arms(&args);
 
@@ -635,6 +637,7 @@ impl<'a> TypeResolver<'a> {
                         view_type_aliases,
                         selector_methods,
                         to_owned_arms,
+                        try_to_owned_arms,
                         tree_hash_arms,
                     );
 
@@ -1231,6 +1234,8 @@ impl<'a> TypeResolver<'a> {
             self.generate_union_selector_methods(union_name, args, &variant_view_types);
 
         let to_owned_arms = self.generate_union_to_owned_arms(union_ident, args, variant_names);
+        let try_to_owned_arms =
+            self.generate_union_try_to_owned_arms(union_ident, args, variant_names);
 
         let tree_hash_arms = self.generate_union_tree_hash_arms(args);
 
@@ -1240,6 +1245,7 @@ impl<'a> TypeResolver<'a> {
             view_type_aliases,
             selector_methods,
             to_owned_arms,
+            try_to_owned_arms,
             tree_hash_arms,
         )
     }
@@ -1302,6 +1308,10 @@ impl<'a> TypeResolver<'a> {
         }
     }
 
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "each argument is a distinct token stream spliced into the emitted view"
+    )]
     fn generate_union_view_struct_impl(
         &self,
         ref_ident: Ident,
@@ -1309,6 +1319,7 @@ impl<'a> TypeResolver<'a> {
         view_type_aliases: Vec<TokenStream>,
         selector_methods: Vec<TokenStream>,
         to_owned_arms: Vec<TokenStream>,
+        try_to_owned_arms: Vec<TokenStream>,
         tree_hash_arms: Vec<TokenStream>,
     ) -> TokenStream {
         quote! {
@@ -1326,11 +1337,26 @@ impl<'a> TypeResolver<'a> {
 
                 #(#selector_methods)*
 
+                #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
                 pub fn to_owned(&self) -> #union_ident {
                     match self.selector() {
                         #(#to_owned_arms,)*
                         _ => panic!("Invalid union selector: {}", self.selector()),
                     }
+                }
+
+                #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+                pub fn try_to_owned(&self) -> Result<#union_ident, ssz::DecodeError> {
+                    Ok(match self.selector() {
+                        #(#try_to_owned_arms,)*
+                        other => {
+                            return Err(
+                                ssz::DecodeError::BytesInvalid(
+                                    format!("Invalid union selector: {}", other),
+                                ),
+                            );
+                        }
+                    })
                 }
             }
 
@@ -1354,6 +1380,10 @@ impl<'a> TypeResolver<'a> {
             impl<'a> ssz_types::view::ToOwnedSsz<#union_ident> for #ref_ident<'a> {
                 fn to_owned(&self) -> #union_ident {
                     <#ref_ident<'a>>::to_owned(self)
+                }
+
+                fn try_to_owned(&self) -> Result<#union_ident, ssz::DecodeError> {
+                    <#ref_ident<'a>>::try_to_owned(self)
                 }
             }
 
@@ -1531,6 +1561,51 @@ impl<'a> TypeResolver<'a> {
                             #selector_value => #union_ident::#variant_ident({
                                 let view = self.#method_name().expect("valid selector");
                                 ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            })
+                        }
+                    }
+                }
+            })
+            .collect()
+    }
+
+    /// Generates match arms for a union view's fallible owned conversion.
+    pub fn generate_union_try_to_owned_arms(
+        &self,
+        union_ident: &Ident,
+        args: &[TypeResolution],
+        variant_names: &[String],
+    ) -> Vec<TokenStream> {
+        args.iter()
+            .enumerate()
+            .map(|(i, ty)| {
+                let selector_value = i as u8;
+                let variant_name = variant_names
+                    .get(i)
+                    .cloned()
+                    .unwrap_or_else(|| format!("Selector{i}"));
+                let variant_ident = Ident::new(&variant_name, Span::call_site());
+                let method_name = Ident::new(&format!("as_selector{i}"), Span::call_site());
+
+                match ty.resolution {
+                    TypeResolutionKind::None => {
+                        quote! {
+                            #selector_value => {
+                                self.#method_name()?;
+                                #union_ident::#variant_ident
+                            }
+                        }
+                    }
+                    TypeResolutionKind::Boolean | TypeResolutionKind::UInt(_) => {
+                        quote! {
+                            #selector_value => #union_ident::#variant_ident(self.#method_name()?)
+                        }
+                    }
+                    _ => {
+                        quote! {
+                            #selector_value => #union_ident::#variant_ident({
+                                let view = self.#method_name()?;
+                                ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                             })
                         }
                     }

@@ -66,6 +66,7 @@ pub mod test_1 {
             }
             ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
         }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> AliasOptionUnion {
             match self.selector() {
                 0u8 => {
@@ -81,6 +82,27 @@ pub mod test_1 {
                 }
                 _ => panic!("Invalid union selector: {}", self.selector()),
             }
+        }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+        pub fn try_to_owned(&self) -> Result<AliasOptionUnion, ssz::DecodeError> {
+            Ok(
+                match self.selector() {
+                    0u8 => AliasOptionUnion::Selector0(self.as_selector0()?),
+                    1u8 => {
+                        AliasOptionUnion::Selector1({
+                            let view = self.as_selector1()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
+                        })
+                    }
+                    other => {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                format!("Invalid union selector: {}", other),
+                            ),
+                        );
+                    }
+                },
+            )
         }
     }
     impl<'a> ssz::view::DecodeView<'a> for AliasOptionUnionRef<'a> {
@@ -100,6 +122,9 @@ pub mod test_1 {
     impl<'a> ssz_types::view::ToOwnedSsz<AliasOptionUnion> for AliasOptionUnionRef<'a> {
         fn to_owned(&self) -> AliasOptionUnion {
             <AliasOptionUnionRef<'a>>::to_owned(self)
+        }
+        fn try_to_owned(&self) -> Result<AliasOptionUnion, ssz::DecodeError> {
+            <AliasOptionUnionRef<'a>>::try_to_owned(self)
         }
     }
     impl<'a> tree_hash::TreeHash for AliasOptionUnionRef<'a> {
@@ -191,6 +216,7 @@ pub mod test_1 {
             }
             ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
         }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> FirstUnion {
             match self.selector() {
                 0u8 => {
@@ -201,6 +227,22 @@ pub mod test_1 {
                 }
                 _ => panic!("Invalid union selector: {}", self.selector()),
             }
+        }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+        pub fn try_to_owned(&self) -> Result<FirstUnion, ssz::DecodeError> {
+            Ok(
+                match self.selector() {
+                    0u8 => FirstUnion::Selector0(self.as_selector0()?),
+                    1u8 => FirstUnion::Selector1(self.as_selector1()?),
+                    other => {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                format!("Invalid union selector: {}", other),
+                            ),
+                        );
+                    }
+                },
+            )
         }
     }
     impl<'a> ssz::view::DecodeView<'a> for FirstUnionRef<'a> {
@@ -220,6 +262,9 @@ pub mod test_1 {
     impl<'a> ssz_types::view::ToOwnedSsz<FirstUnion> for FirstUnionRef<'a> {
         fn to_owned(&self) -> FirstUnion {
             <FirstUnionRef<'a>>::to_owned(self)
+        }
+        fn try_to_owned(&self) -> Result<FirstUnion, ssz::DecodeError> {
+            <FirstUnionRef<'a>>::try_to_owned(self)
         }
     }
     impl<'a> tree_hash::TreeHash for FirstUnionRef<'a> {
@@ -327,6 +372,7 @@ pub mod test_1 {
             }
             ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
         }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> TestUnion {
             match self.selector() {
                 0u8 => {
@@ -337,6 +383,26 @@ pub mod test_1 {
                 2u8 => TestUnion::Selector2(self.as_selector2().expect("valid selector")),
                 _ => panic!("Invalid union selector: {}", self.selector()),
             }
+        }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+        pub fn try_to_owned(&self) -> Result<TestUnion, ssz::DecodeError> {
+            Ok(
+                match self.selector() {
+                    0u8 => {
+                        self.as_selector0()?;
+                        TestUnion::Selector0
+                    }
+                    1u8 => TestUnion::Selector1(self.as_selector1()?),
+                    2u8 => TestUnion::Selector2(self.as_selector2()?),
+                    other => {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                format!("Invalid union selector: {}", other),
+                            ),
+                        );
+                    }
+                },
+            )
         }
     }
     impl<'a> ssz::view::DecodeView<'a> for TestUnionRef<'a> {
@@ -356,6 +422,9 @@ pub mod test_1 {
     impl<'a> ssz_types::view::ToOwnedSsz<TestUnion> for TestUnionRef<'a> {
         fn to_owned(&self) -> TestUnion {
             <TestUnionRef<'a>>::to_owned(self)
+        }
+        fn try_to_owned(&self) -> Result<TestUnion, ssz::DecodeError> {
+            <TestUnionRef<'a>>::try_to_owned(self)
         }
     }
     impl<'a> tree_hash::TreeHash for TestUnionRef<'a> {
@@ -468,6 +537,7 @@ pub mod test_1 {
             }
             ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
         }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> UnionA {
             match self.selector() {
                 0u8 => UnionA::Selector0(self.as_selector0().expect("valid selector")),
@@ -475,6 +545,23 @@ pub mod test_1 {
                 2u8 => UnionA::Selector2(self.as_selector2().expect("valid selector")),
                 _ => panic!("Invalid union selector: {}", self.selector()),
             }
+        }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+        pub fn try_to_owned(&self) -> Result<UnionA, ssz::DecodeError> {
+            Ok(
+                match self.selector() {
+                    0u8 => UnionA::Selector0(self.as_selector0()?),
+                    1u8 => UnionA::Selector1(self.as_selector1()?),
+                    2u8 => UnionA::Selector2(self.as_selector2()?),
+                    other => {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                format!("Invalid union selector: {}", other),
+                            ),
+                        );
+                    }
+                },
+            )
         }
     }
     impl<'a> ssz::view::DecodeView<'a> for UnionARef<'a> {
@@ -494,6 +581,9 @@ pub mod test_1 {
     impl<'a> ssz_types::view::ToOwnedSsz<UnionA> for UnionARef<'a> {
         fn to_owned(&self) -> UnionA {
             <UnionARef<'a>>::to_owned(self)
+        }
+        fn try_to_owned(&self) -> Result<UnionA, ssz::DecodeError> {
+            <UnionARef<'a>>::try_to_owned(self)
         }
     }
     impl<'a> tree_hash::TreeHash for UnionARef<'a> {
@@ -624,6 +714,7 @@ pub mod test_1 {
             }
             ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
         }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> UnionB {
             match self.selector() {
                 0u8 => UnionB::Selector0(self.as_selector0().expect("valid selector")),
@@ -643,6 +734,34 @@ pub mod test_1 {
                 _ => panic!("Invalid union selector: {}", self.selector()),
             }
         }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+        pub fn try_to_owned(&self) -> Result<UnionB, ssz::DecodeError> {
+            Ok(
+                match self.selector() {
+                    0u8 => UnionB::Selector0(self.as_selector0()?),
+                    1u8 => {
+                        UnionB::UnionA({
+                            let view = self.as_selector1()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
+                        })
+                    }
+                    2u8 => UnionB::Selector2(self.as_selector2()?),
+                    3u8 => {
+                        UnionB::Selector3({
+                            let view = self.as_selector3()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
+                        })
+                    }
+                    other => {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                format!("Invalid union selector: {}", other),
+                            ),
+                        );
+                    }
+                },
+            )
+        }
     }
     impl<'a> ssz::view::DecodeView<'a> for UnionBRef<'a> {
         fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
@@ -661,6 +780,9 @@ pub mod test_1 {
     impl<'a> ssz_types::view::ToOwnedSsz<UnionB> for UnionBRef<'a> {
         fn to_owned(&self) -> UnionB {
             <UnionBRef<'a>>::to_owned(self)
+        }
+        fn try_to_owned(&self) -> Result<UnionB, ssz::DecodeError> {
+            <UnionBRef<'a>>::try_to_owned(self)
         }
     }
     impl<'a> tree_hash::TreeHash for UnionBRef<'a> {
@@ -766,6 +888,7 @@ pub mod test_1 {
             }
             ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
         }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> UnionC {
             match self.selector() {
                 0u8 => {
@@ -776,6 +899,22 @@ pub mod test_1 {
                 }
                 _ => panic!("Invalid union selector: {}", self.selector()),
             }
+        }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+        pub fn try_to_owned(&self) -> Result<UnionC, ssz::DecodeError> {
+            Ok(
+                match self.selector() {
+                    0u8 => UnionC::AliasUintAlias(self.as_selector0()?),
+                    1u8 => UnionC::AliasUintAlias(self.as_selector1()?),
+                    other => {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                format!("Invalid union selector: {}", other),
+                            ),
+                        );
+                    }
+                },
+            )
         }
     }
     impl<'a> ssz::view::DecodeView<'a> for UnionCRef<'a> {
@@ -795,6 +934,9 @@ pub mod test_1 {
     impl<'a> ssz_types::view::ToOwnedSsz<UnionC> for UnionCRef<'a> {
         fn to_owned(&self) -> UnionC {
             <UnionCRef<'a>>::to_owned(self)
+        }
+        fn try_to_owned(&self) -> Result<UnionC, ssz::DecodeError> {
+            <UnionCRef<'a>>::try_to_owned(self)
         }
     }
     impl<'a> tree_hash::TreeHash for UnionCRef<'a> {
@@ -886,6 +1028,7 @@ pub mod test_1 {
             }
             ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
         }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> UnionD {
             match self.selector() {
                 0u8 => {
@@ -896,6 +1039,22 @@ pub mod test_1 {
                 }
                 _ => panic!("Invalid union selector: {}", self.selector()),
             }
+        }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+        pub fn try_to_owned(&self) -> Result<UnionD, ssz::DecodeError> {
+            Ok(
+                match self.selector() {
+                    0u8 => UnionD::AliasUintAlias(self.as_selector0()?),
+                    1u8 => UnionD::AliasUintAlias(self.as_selector1()?),
+                    other => {
+                        return Err(
+                            ssz::DecodeError::BytesInvalid(
+                                format!("Invalid union selector: {}", other),
+                            ),
+                        );
+                    }
+                },
+            )
         }
     }
     impl<'a> ssz::view::DecodeView<'a> for UnionDRef<'a> {
@@ -915,6 +1074,9 @@ pub mod test_1 {
     impl<'a> ssz_types::view::ToOwnedSsz<UnionD> for UnionDRef<'a> {
         fn to_owned(&self) -> UnionD {
             <UnionDRef<'a>>::to_owned(self)
+        }
+        fn try_to_owned(&self) -> Result<UnionD, ssz::DecodeError> {
+            <UnionDRef<'a>>::try_to_owned(self)
         }
     }
     impl<'a> tree_hash::TreeHash for UnionDRef<'a> {
@@ -1162,16 +1324,23 @@ pub mod test_1 {
         fn to_owned(&self) -> Alpha {
             <AlphaRef<'a>>::to_owned(self)
         }
+        fn try_to_owned(&self) -> Result<Alpha, ssz::DecodeError> {
+            <AlphaRef<'a>>::try_to_owned(self)
+        }
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> AlphaRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> Alpha {
-            Alpha {
-                a: self.a().expect("valid view"),
-                b: self.b().expect("valid view"),
-                c: ssz_types::FixedBytes(self.c().expect("valid view").to_owned()),
-            }
+            <AlphaRef<'a>>::try_to_owned(self).expect("valid view")
+        }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+        pub fn try_to_owned(&self) -> Result<Alpha, ssz::DecodeError> {
+            Ok(Alpha {
+                a: self.a()?,
+                b: self.b()?,
+                c: ssz_types::FixedBytes(self.c()?.to_owned()),
+            })
         }
     }
     #[derive(
@@ -1376,17 +1545,24 @@ pub mod test_1 {
         fn to_owned(&self) -> Beta {
             <BetaRef<'a>>::to_owned(self)
         }
+        fn try_to_owned(&self) -> Result<Beta, ssz::DecodeError> {
+            <BetaRef<'a>>::try_to_owned(self)
+        }
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> BetaRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> Beta {
-            Beta {
-                d: ssz_types::VariableList::new(self.d().expect("valid view").to_owned())
-                    .expect("valid view"),
-                e: self.e().expect("valid view"),
-                f: self.f().expect("valid view"),
-            }
+            <BetaRef<'a>>::try_to_owned(self).expect("valid view")
+        }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+        pub fn try_to_owned(&self) -> Result<Beta, ssz::DecodeError> {
+            Ok(Beta {
+                d: ssz_types::VariableList::new(self.d()?.to_owned())
+                    .map_err(|e| ssz::DecodeError::BytesInvalid(format!("{e:?}")))?,
+                e: self.e()?,
+                f: self.f()?,
+            })
         }
     }
     #[derive(
@@ -1648,22 +1824,29 @@ pub mod test_1 {
         fn to_owned(&self) -> Gamma {
             <GammaRef<'a>>::to_owned(self)
         }
+        fn try_to_owned(&self) -> Result<Gamma, ssz::DecodeError> {
+            <GammaRef<'a>>::try_to_owned(self)
+        }
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> GammaRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> Gamma {
-            Gamma {
-                g: self.g().expect("valid view"),
-                h: match self.h().expect("valid view") {
+            <GammaRef<'a>>::try_to_owned(self).expect("valid view")
+        }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+        pub fn try_to_owned(&self) -> Result<Gamma, ssz::DecodeError> {
+            Ok(Gamma {
+                g: self.g()?,
+                h: match self.h()? {
                     ssz_types::Optional::Some(inner) => {
                         ssz_types::Optional::Some(
-                            ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&inner)?,
                         )
                     }
                     ssz_types::Optional::None => ssz_types::Optional::None,
                 },
-            }
+            })
         }
     }
     #[derive(
@@ -1822,15 +2005,22 @@ pub mod test_1 {
         fn to_owned(&self) -> Delta {
             <DeltaRef<'a>>::to_owned(self)
         }
+        fn try_to_owned(&self) -> Result<Delta, ssz::DecodeError> {
+            <DeltaRef<'a>>::try_to_owned(self)
+        }
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> DeltaRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> Delta {
-            Delta {
-                z: self.z().expect("valid view"),
-                w: self.w().expect("valid view"),
-            }
+            <DeltaRef<'a>>::try_to_owned(self).expect("valid view")
+        }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+        pub fn try_to_owned(&self) -> Result<Delta, ssz::DecodeError> {
+            Ok(Delta {
+                z: self.z()?,
+                w: self.w()?,
+            })
         }
     }
     #[derive(
@@ -2256,24 +2446,31 @@ pub mod test_1 {
         fn to_owned(&self) -> Epsilon {
             <EpsilonRef<'a>>::to_owned(self)
         }
+        fn try_to_owned(&self) -> Result<Epsilon, ssz::DecodeError> {
+            <EpsilonRef<'a>>::try_to_owned(self)
+        }
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> EpsilonRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> Epsilon {
-            Epsilon {
-                g: self.g().expect("valid view"),
-                h: match self.h().expect("valid view") {
+            <EpsilonRef<'a>>::try_to_owned(self).expect("valid view")
+        }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+        pub fn try_to_owned(&self) -> Result<Epsilon, ssz::DecodeError> {
+            Ok(Epsilon {
+                g: self.g()?,
+                h: match self.h()? {
                     ssz_types::Optional::Some(inner) => {
                         ssz_types::Optional::Some(
-                            ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&inner)?,
                         )
                     }
                     ssz_types::Optional::None => ssz_types::Optional::None,
                 },
-                i: self.i().expect("valid view"),
-                j: self.j().expect("valid view"),
-            }
+                i: self.i()?,
+                j: self.j()?,
+            })
         }
     }
     #[derive(
@@ -2527,29 +2724,36 @@ pub mod test_1 {
         fn to_owned(&self) -> Zeta {
             <ZetaRef<'a>>::to_owned(self)
         }
+        fn try_to_owned(&self) -> Result<Zeta, ssz::DecodeError> {
+            <ZetaRef<'a>>::try_to_owned(self)
+        }
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> ZetaRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> Zeta {
-            Zeta {
-                u: match self.u().expect("valid view") {
+            <ZetaRef<'a>>::try_to_owned(self).expect("valid view")
+        }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+        pub fn try_to_owned(&self) -> Result<Zeta, ssz::DecodeError> {
+            Ok(Zeta {
+                u: match self.u()? {
                     ssz_types::Optional::Some(inner) => {
                         ssz_types::Optional::Some(
-                            ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&inner)?,
                         )
                     }
                     ssz_types::Optional::None => ssz_types::Optional::None,
                 },
-                v: match self.v().expect("valid view") {
+                v: match self.v()? {
                     ssz_types::Optional::Some(inner) => {
                         ssz_types::Optional::Some(
-                            ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&inner)?,
                         )
                     }
                     ssz_types::Optional::None => ssz_types::Optional::None,
                 },
-            }
+            })
         }
     }
     #[derive(
@@ -2883,29 +3087,35 @@ pub mod test_1 {
         fn to_owned(&self) -> TestType {
             <TestTypeRef<'a>>::to_owned(self)
         }
+        fn try_to_owned(&self) -> Result<TestType, ssz::DecodeError> {
+            <TestTypeRef<'a>>::try_to_owned(self)
+        }
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> TestTypeRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> TestType {
-            TestType {
-                ccc: self.ccc().expect("valid view"),
-                ddd: self.ddd().expect("valid view"),
+            <TestTypeRef<'a>>::try_to_owned(self).expect("valid view")
+        }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+        pub fn try_to_owned(&self) -> Result<TestType, ssz::DecodeError> {
+            Ok(TestType {
+                ccc: self.ccc()?,
+                ddd: self.ddd()?,
                 eee: {
-                    let view = self.eee().expect("valid view");
-                    let items: Result<Vec<_>, _> = view
+                    let view = self.eee()?;
+                    let items = view
                         .iter()
                         .map(|item_result| {
-                            item_result
-                                .map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&item_result?)
                         })
-                        .collect();
-                    let items = items.expect("valid view");
-                    ssz_types::VariableList::new(items).expect("valid view")
+                        .collect::<Result<Vec<_>, ssz::DecodeError>>()?;
+                    ssz_types::VariableList::new(items)
+                        .map_err(|e| ssz::DecodeError::BytesInvalid(format!("{e:?}")))?
                 },
-                large_int_128: self.large_int_128().expect("valid view"),
-                large_int_256: self.large_int_256().expect("valid view"),
-            }
+                large_int_128: self.large_int_128()?,
+                large_int_256: self.large_int_256()?,
+            })
         }
     }
     #[derive(
@@ -3110,25 +3320,32 @@ pub mod test_1 {
         fn to_owned(&self) -> Eta {
             <EtaRef<'a>>::to_owned(self)
         }
+        fn try_to_owned(&self) -> Result<Eta, ssz::DecodeError> {
+            <EtaRef<'a>>::try_to_owned(self)
+        }
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> EtaRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> Eta {
-            Eta {
+            <EtaRef<'a>>::try_to_owned(self).expect("valid view")
+        }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+        pub fn try_to_owned(&self) -> Result<Eta, ssz::DecodeError> {
+            Ok(Eta {
                 l: {
-                    let view = self.l().expect("valid view");
-                    ssz_types::view::ToOwnedSsz::to_owned(&view)
+                    let view = self.l()?;
+                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                 },
                 m: {
-                    let view = self.m().expect("valid view");
-                    ssz_types::view::ToOwnedSsz::to_owned(&view)
+                    let view = self.m()?;
+                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                 },
                 n: {
-                    let view = self.n().expect("valid view");
-                    ssz_types::view::ToOwnedSsz::to_owned(&view)
+                    let view = self.n()?;
+                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                 },
-            }
+            })
         }
     }
     #[derive(
@@ -3333,22 +3550,29 @@ pub mod test_1 {
         fn to_owned(&self) -> Theta {
             <ThetaRef<'a>>::to_owned(self)
         }
+        fn try_to_owned(&self) -> Result<Theta, ssz::DecodeError> {
+            <ThetaRef<'a>>::try_to_owned(self)
+        }
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> ThetaRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> Theta {
-            Theta {
+            <ThetaRef<'a>>::try_to_owned(self).expect("valid view")
+        }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+        pub fn try_to_owned(&self) -> Result<Theta, ssz::DecodeError> {
+            Ok(Theta {
                 o: {
-                    let view = self.o().expect("valid view");
-                    ssz_types::view::ToOwnedSsz::to_owned(&view)
+                    let view = self.o()?;
+                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                 },
                 p: {
-                    let view = self.p().expect("valid view");
-                    ssz_types::view::ToOwnedSsz::to_owned(&view)
+                    let view = self.p()?;
+                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                 },
-                q: ssz_types::FixedBytes(self.q().expect("valid view").to_owned()),
-            }
+                q: ssz_types::FixedBytes(self.q()?.to_owned()),
+            })
         }
     }
     #[derive(
@@ -4010,33 +4234,40 @@ pub mod test_1 {
         fn to_owned(&self) -> Iota {
             <IotaRef<'a>>::to_owned(self)
         }
+        fn try_to_owned(&self) -> Result<Iota, ssz::DecodeError> {
+            <IotaRef<'a>>::try_to_owned(self)
+        }
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> IotaRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> Iota {
-            Iota {
-                g: self.g().expect("valid view"),
-                h: match self.h().expect("valid view") {
+            <IotaRef<'a>>::try_to_owned(self).expect("valid view")
+        }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+        pub fn try_to_owned(&self) -> Result<Iota, ssz::DecodeError> {
+            Ok(Iota {
+                g: self.g()?,
+                h: match self.h()? {
                     ssz_types::Optional::Some(inner) => {
                         ssz_types::Optional::Some(
-                            ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&inner)?,
                         )
                     }
                     ssz_types::Optional::None => ssz_types::Optional::None,
                 },
-                i: self.i().expect("valid view"),
-                j: self.j().expect("valid view"),
-                r: match self.r().expect("valid view") {
+                i: self.i()?,
+                j: self.j()?,
+                r: match self.r()? {
                     ssz_types::Optional::Some(inner) => {
                         ssz_types::Optional::Some(
-                            ssz_types::view::ToOwnedSsz::to_owned(&inner),
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&inner)?,
                         )
                     }
                     ssz_types::Optional::None => ssz_types::Optional::None,
                 },
-                s: self.s().expect("valid view"),
-            }
+                s: self.s()?,
+            })
         }
     }
     #[derive(
@@ -4242,22 +4473,29 @@ pub mod test_1 {
         fn to_owned(&self) -> Kappa {
             <KappaRef<'a>>::to_owned(self)
         }
+        fn try_to_owned(&self) -> Result<Kappa, ssz::DecodeError> {
+            <KappaRef<'a>>::try_to_owned(self)
+        }
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> KappaRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> Kappa {
-            Kappa {
+            <KappaRef<'a>>::try_to_owned(self).expect("valid view")
+        }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+        pub fn try_to_owned(&self) -> Result<Kappa, ssz::DecodeError> {
+            Ok(Kappa {
                 t: {
-                    let view = self.t().expect("valid view");
-                    ssz_types::view::ToOwnedSsz::to_owned(&view)
+                    let view = self.t()?;
+                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                 },
                 u: {
-                    let view = self.u().expect("valid view");
-                    ssz_types::view::ToOwnedSsz::to_owned(&view)
+                    let view = self.u()?;
+                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                 },
-                v: self.v().expect("valid view").to_owned(),
-            }
+                v: self.v()?.to_owned(),
+            })
         }
     }
     #[derive(
@@ -4503,15 +4741,22 @@ pub mod test_1 {
         fn to_owned(&self) -> Lambda {
             <LambdaRef<'a>>::to_owned(self)
         }
+        fn try_to_owned(&self) -> Result<Lambda, ssz::DecodeError> {
+            <LambdaRef<'a>>::try_to_owned(self)
+        }
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> LambdaRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> Lambda {
-            Lambda {
-                w: self.w().expect("valid view"),
-                x: self.x().expect("valid view"),
-            }
+            <LambdaRef<'a>>::try_to_owned(self).expect("valid view")
+        }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+        pub fn try_to_owned(&self) -> Result<Lambda, ssz::DecodeError> {
+            Ok(Lambda {
+                w: self.w()?,
+                x: self.x()?,
+            })
         }
     }
     #[derive(
@@ -4670,21 +4915,28 @@ pub mod test_1 {
         fn to_owned(&self) -> Mu {
             <MuRef<'a>>::to_owned(self)
         }
+        fn try_to_owned(&self) -> Result<Mu, ssz::DecodeError> {
+            <MuRef<'a>>::try_to_owned(self)
+        }
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> MuRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> Mu {
-            Mu {
+            <MuRef<'a>>::try_to_owned(self).expect("valid view")
+        }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+        pub fn try_to_owned(&self) -> Result<Mu, ssz::DecodeError> {
+            Ok(Mu {
                 y: {
-                    let view = self.y().expect("valid view");
-                    ssz_types::view::ToOwnedSsz::to_owned(&view)
+                    let view = self.y()?;
+                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                 },
                 z: {
-                    let view = self.z().expect("valid view");
-                    ssz_types::view::ToOwnedSsz::to_owned(&view)
+                    let view = self.z()?;
+                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                 },
-            }
+            })
         }
     }
     pub type AliasMu = Mu;
@@ -4975,23 +5227,32 @@ pub mod test_1 {
         fn to_owned(&self) -> Nu {
             <NuRef<'a>>::to_owned(self)
         }
+        fn try_to_owned(&self) -> Result<Nu, ssz::DecodeError> {
+            <NuRef<'a>>::try_to_owned(self)
+        }
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> NuRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
         pub fn to_owned(&self) -> Nu {
-            Nu {
+            <NuRef<'a>>::try_to_owned(self).expect("valid view")
+        }
+        #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+        pub fn try_to_owned(&self) -> Result<Nu, ssz::DecodeError> {
+            Ok(Nu {
                 zz: {
-                    let view = self.zz().expect("valid view");
-                    ssz_types::view::ToOwnedSsz::to_owned(&view)
+                    let view = self.zz()?;
+                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                 },
-                aaa: self.aaa().expect("valid view").to_owned().expect("valid view"),
-                bbb: self.bbb().expect("valid view").to_owned(),
-                test: self
-                    .test()
-                    .expect("valid view")
-                    .map(|inner| ssz_types::view::ToOwnedSsz::to_owned(&inner)),
-            }
+                aaa: self.aaa()?.try_to_owned()?,
+                bbb: self.bbb()?.to_owned(),
+                test: match self.test()? {
+                    Some(inner) => {
+                        Some(ssz_types::view::ToOwnedSsz::try_to_owned(&inner)?)
+                    }
+                    None => None,
+                },
+            })
         }
     }
 }

@@ -469,6 +469,9 @@ pub mod tests {
                 fn to_owned(&self) -> BitfieldContainer {
                     <BitfieldContainerRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<BitfieldContainer, ssz::DecodeError> {
+                    <BitfieldContainerRef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BitfieldContainerRef<'a> {
@@ -477,14 +480,23 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> BitfieldContainer {
-                    BitfieldContainer {
-                        tiny_list: self.tiny_list().expect("valid view").to_owned(),
-                        std_list: self.std_list().expect("valid view").to_owned(),
-                        large_list: self.large_list().expect("valid view").to_owned(),
-                        tiny_vec: self.tiny_vec().expect("valid view").to_owned(),
-                        std_vec: self.std_vec().expect("valid view").to_owned(),
-                        large_vec: self.large_vec().expect("valid view").to_owned(),
-                    }
+                    <BitfieldContainerRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(
+                    &self,
+                ) -> Result<BitfieldContainer, ssz::DecodeError> {
+                    Ok(BitfieldContainer {
+                        tiny_list: self.tiny_list()?.to_owned(),
+                        std_list: self.std_list()?.to_owned(),
+                        large_list: self.large_list()?.to_owned(),
+                        tiny_vec: self.tiny_vec()?.to_owned(),
+                        std_vec: self.std_vec()?.to_owned(),
+                        large_vec: self.large_vec()?.to_owned(),
+                    })
                 }
             }
         }

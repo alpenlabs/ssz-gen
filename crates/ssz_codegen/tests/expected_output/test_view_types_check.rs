@@ -178,6 +178,9 @@ pub mod tests {
                 fn to_owned(&self) -> ExportEntry {
                     <ExportEntryRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<ExportEntry, ssz::DecodeError> {
+                    <ExportEntryRef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ExportEntryRef<'a> {
@@ -186,10 +189,17 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> ExportEntry {
-                    ExportEntry {
-                        key: self.key().expect("valid view"),
-                        value: self.value().expect("valid view"),
-                    }
+                    <ExportEntryRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<ExportEntry, ssz::DecodeError> {
+                    Ok(ExportEntry {
+                        key: self.key()?,
+                        value: self.value()?,
+                    })
                 }
             }
             #[derive(
@@ -481,6 +491,9 @@ pub mod tests {
                 fn to_owned(&self) -> ViewTypeTest {
                     <ViewTypeTestRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<ViewTypeTest, ssz::DecodeError> {
+                    <ViewTypeTestRef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ViewTypeTestRef<'a> {
@@ -489,27 +502,33 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> ViewTypeTest {
-                    ViewTypeTest {
-                        payload: ssz_types::VariableList::new(
-                                self.payload().expect("valid view").to_owned(),
-                            )
-                            .expect("valid view"),
+                    <ViewTypeTestRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<ViewTypeTest, ssz::DecodeError> {
+                    Ok(ViewTypeTest {
+                        payload: ssz_types::VariableList::new(self.payload()?.to_owned())
+                            .map_err(|e| ssz::DecodeError::BytesInvalid(
+                                format!("{e:?}"),
+                            ))?,
                         entries: {
-                            let view = self.entries().expect("valid view");
-                            let items: Result<Vec<_>, _> = view
+                            let view = self.entries()?;
+                            let items = view
                                 .iter()
                                 .map(|item_result| {
-                                    item_result
-                                        .map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&item_result?)
                                 })
-                                .collect();
-                            let items = items.expect("valid view");
-                            ssz_types::VariableList::new(items).expect("valid view")
+                                .collect::<Result<Vec<_>, ssz::DecodeError>>()?;
+                            ssz_types::VariableList::new(items)
+                                .map_err(|e| ssz::DecodeError::BytesInvalid(
+                                    format!("{e:?}"),
+                                ))?
                         },
-                        hash: ssz_types::FixedBytes(
-                            self.hash().expect("valid view").to_owned(),
-                        ),
-                    }
+                        hash: ssz_types::FixedBytes(self.hash()?.to_owned()),
+                    })
                 }
             }
         }

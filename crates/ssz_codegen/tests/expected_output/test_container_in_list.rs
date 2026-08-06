@@ -161,15 +161,22 @@ impl<'a> ssz_types::view::ToOwnedSsz<ExportEntry> for ExportEntryRef<'a> {
     fn to_owned(&self) -> ExportEntry {
         <ExportEntryRef<'a>>::to_owned(self)
     }
+    fn try_to_owned(&self) -> Result<ExportEntry, ssz::DecodeError> {
+        <ExportEntryRef<'a>>::try_to_owned(self)
+    }
 }
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ExportEntryRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> ExportEntry {
-        ExportEntry {
-            value: self.value().expect("valid view"),
-            data: self.data().expect("valid view"),
-        }
+        <ExportEntryRef<'a>>::try_to_owned(self).expect("valid view")
+    }
+    #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    pub fn try_to_owned(&self) -> Result<ExportEntry, ssz::DecodeError> {
+        Ok(ExportEntry {
+            value: self.value()?,
+            data: self.data()?,
+        })
     }
 }
 #[derive(
@@ -351,25 +358,31 @@ impl<'a> ssz_types::view::ToOwnedSsz<ExportContainer> for ExportContainerRef<'a>
     fn to_owned(&self) -> ExportContainer {
         <ExportContainerRef<'a>>::to_owned(self)
     }
+    fn try_to_owned(&self) -> Result<ExportContainer, ssz::DecodeError> {
+        <ExportContainerRef<'a>>::try_to_owned(self)
+    }
 }
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ExportContainerRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> ExportContainer {
-        ExportContainer {
+        <ExportContainerRef<'a>>::try_to_owned(self).expect("valid view")
+    }
+    #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    pub fn try_to_owned(&self) -> Result<ExportContainer, ssz::DecodeError> {
+        Ok(ExportContainer {
             entries: {
-                let view = self.entries().expect("valid view");
-                let items: Result<Vec<_>, _> = view
+                let view = self.entries()?;
+                let items = view
                     .iter()
                     .map(|item_result| {
-                        item_result
-                            .map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                        ssz_types::view::ToOwnedSsz::try_to_owned(&item_result?)
                     })
-                    .collect();
-                let items = items.expect("valid view");
-                ssz_types::VariableList::new(items).expect("valid view")
+                    .collect::<Result<Vec<_>, ssz::DecodeError>>()?;
+                ssz_types::VariableList::new(items)
+                    .map_err(|e| ssz::DecodeError::BytesInvalid(format!("{e:?}")))?
             },
-            name: self.name().expect("valid view"),
-        }
+            name: self.name()?,
+        })
     }
 }

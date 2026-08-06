@@ -185,6 +185,9 @@ pub mod tests {
                 fn to_owned(&self) -> BlockCommitment {
                     <BlockCommitmentRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<BlockCommitment, ssz::DecodeError> {
+                    <BlockCommitmentRef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BlockCommitmentRef<'a> {
@@ -193,12 +196,17 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> BlockCommitment {
-                    BlockCommitment {
-                        height: self.height().expect("valid view"),
-                        block_hash: ssz_types::FixedBytes(
-                            self.block_hash().expect("valid view").to_owned(),
-                        ),
-                    }
+                    <BlockCommitmentRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<BlockCommitment, ssz::DecodeError> {
+                    Ok(BlockCommitment {
+                        height: self.height()?,
+                        block_hash: ssz_types::FixedBytes(self.block_hash()?.to_owned()),
+                    })
                 }
             }
         }
@@ -392,6 +400,9 @@ pub mod tests {
                 fn to_owned(&self) -> BlockRange {
                     <BlockRangeRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<BlockRange, ssz::DecodeError> {
+                    <BlockRangeRef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BlockRangeRef<'a> {
@@ -400,16 +411,23 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> BlockRange {
-                    BlockRange {
+                    <BlockRangeRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<BlockRange, ssz::DecodeError> {
+                    Ok(BlockRange {
                         start: {
-                            let view = self.start().expect("valid view");
-                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            let view = self.start()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                         },
                         end: {
-                            let view = self.end().expect("valid view");
-                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            let view = self.end()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                         },
-                    }
+                    })
                 }
             }
         }

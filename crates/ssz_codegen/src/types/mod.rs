@@ -2118,13 +2118,18 @@ impl ClassDef {
                 fn to_owned(&self) -> #ident {
                     <#ref_ident<'a>>::to_owned(self)
                 }
+
+                fn try_to_owned(&self) -> Result<#ident, ssz::DecodeError> {
+                    <#ref_ident<'a>>::try_to_owned(self)
+                }
             }
         }
     }
 
-    /// Generates the to_owned implementation for converting view to owned
+    /// Generates owned conversion methods for a generated view.
     ///
-    /// Now uses getter methods instead of direct field access.
+    /// `try_to_owned` propagates getter and materialization errors; `to_owned`
+    /// delegates to it and panics on failure.
     ///
     /// # Arguments
     ///
@@ -2132,11 +2137,11 @@ impl ClassDef {
     ///
     /// # Returns
     ///
-    /// A [`TokenStream`] containing the `to_owned` method implementation.
+    /// A [`TokenStream`] containing the owned conversion methods.
     pub fn to_view_to_owned_impl(&self, ident: &Ident) -> TokenStream {
         let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
 
-        // Check if this is a StableContainer
+        // StableContainer and Profile use `ssz_types::Optional<T>` for optional fields.
         let is_stable_container = matches!(
             self.base,
             BaseClass::StableContainer(_) | BaseClass::Profile(_)
@@ -2154,13 +2159,11 @@ impl ClassDef {
                 // field type, so no view conversion is needed.
                 if field.ssz_with_module().is_some() {
                     return quote! {
-                        #field_name: self.#field_name().expect("valid view")
+                        #field_name: self.#field_name()?
                     };
                 }
 
-                // For StableContainer, fields are wrapped in ssz_types::Optional<T>
-                // Getter returns Result<Optional<TRef>, Error>
-                // We need to convert Optional<TRef> to Optional<T>
+                // Optional getters for StableContainer and Profile return Optional<TRef>; convert inner views as needed.
                 if is_stable_container && is_optional {
                     let inner_resolution = match &field.ty.resolution {
                         TypeResolutionKind::Optional(inner) => &inner.resolution,
@@ -2170,7 +2173,7 @@ impl ClassDef {
                         TypeResolutionKind::Boolean | TypeResolutionKind::UInt(_) => {
                             // Primitives: Optional<T> -> Optional<T> (just copy)
                             quote! {
-                                #field_name: self.#field_name().expect("valid view")
+                                #field_name: self.#field_name()?
                             }
                         }
                         TypeResolutionKind::Union(_, _) => {
@@ -2178,8 +2181,8 @@ impl ClassDef {
                             // Need to map the Optional and convert UnionRef to Union
                             // Use ToOwnedSsz trait method for proper type resolution with external types
                             quote! {
-                                #field_name: match self.#field_name().expect("valid view") {
-                                    ssz_types::Optional::Some(inner) => ssz_types::Optional::Some(ssz_types::view::ToOwnedSsz::to_owned(&inner)),
+                                #field_name: match self.#field_name()? {
+                                    ssz_types::Optional::Some(inner) => ssz_types::Optional::Some(ssz_types::view::ToOwnedSsz::try_to_owned(&inner)?),
                                     ssz_types::Optional::None => ssz_types::Optional::None,
                                 }
                             }
@@ -2189,8 +2192,8 @@ impl ClassDef {
                             // Use match to convert inner TRef to T
                             // Use ToOwnedSsz trait method for proper type resolution with external types
                             quote! {
-                                #field_name: match self.#field_name().expect("valid view") {
-                                    ssz_types::Optional::Some(inner) => ssz_types::Optional::Some(ssz_types::view::ToOwnedSsz::to_owned(&inner)),
+                                #field_name: match self.#field_name()? {
+                                    ssz_types::Optional::Some(inner) => ssz_types::Optional::Some(ssz_types::view::ToOwnedSsz::try_to_owned(&inner)?),
                                     ssz_types::Optional::None => ssz_types::Optional::None,
                                 }
                             }
@@ -2204,13 +2207,16 @@ impl ClassDef {
                             // Need to convert Option<TRef> to Option<T> by calling to_owned() on inner if Some
                             // Use ToOwnedSsz trait method for proper type resolution with external types
                             quote! {
-                                #field_name: self.#field_name().expect("valid view").map(|inner| ssz_types::view::ToOwnedSsz::to_owned(&inner))
+                                #field_name: match self.#field_name()? {
+                                    Some(inner) => Some(ssz_types::view::ToOwnedSsz::try_to_owned(&inner)?),
+                                    None => None,
+                                }
                             }
                         }
                         TypeResolutionKind::Boolean | TypeResolutionKind::UInt(_) => {
                             // Primitives can be copied directly from getter
                             quote! {
-                                #field_name: self.#field_name().expect("valid view")
+                                #field_name: self.#field_name()?
                             }
                         }
                         TypeResolutionKind::List(ty, _size) => {
@@ -2218,22 +2224,22 @@ impl ClassDef {
                             if matches!(inner.resolution, TypeResolutionKind::UInt(8)) {
                                 quote! {
                                     #field_name: ssz_types::VariableList::new(
-                                        self.#field_name().expect("valid view").to_owned(),
+                                        self.#field_name()?.to_owned(),
                                     )
-                                    .expect("valid view")
+                                    .map_err(|e| ssz::DecodeError::BytesInvalid(format!("{e:?}")))?
                                 }
                             } else {
                                 quote! {
                                     #field_name: {
-                                        let view = self.#field_name().expect("valid view");
-                                        let items: Result<Vec<_>, _> = view
+                                        let view = self.#field_name()?;
+                                        let items = view
                                             .iter()
                                             .map(|item_result| {
-                                                item_result.map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                                                ssz_types::view::ToOwnedSsz::try_to_owned(&item_result?)
                                             })
-                                            .collect();
-                                        let items = items.expect("valid view");
-                                        ssz_types::VariableList::new(items).expect("valid view")
+                                            .collect::<Result<Vec<_>, ssz::DecodeError>>()?;
+                                        ssz_types::VariableList::new(items)
+                                            .map_err(|e| ssz::DecodeError::BytesInvalid(format!("{e:?}")))?
                                     }
                                 }
                             }
@@ -2244,25 +2250,25 @@ impl ClassDef {
                             if matches!(inner.resolution, TypeResolutionKind::UInt(8)) {
                                 // FixedBytesRef::to_owned() returns [u8; N], need to wrap in FixedBytes<N>
                                 quote! {
-                                    #field_name: ssz_types::FixedBytes(self.#field_name().expect("valid view").to_owned())
+                                    #field_name: ssz_types::FixedBytes(self.#field_name()?.to_owned())
                                 }
                             } else {
-                                // FixedVectorRef::to_owned() returns Result<FixedVector<T, N>, Error>
+                                // Use fallible vector conversion so element materialization errors propagate.
                                 quote! {
-                                    #field_name: self.#field_name().expect("valid view").to_owned().expect("valid view")
+                                    #field_name: self.#field_name()?.try_to_owned()?
                                 }
                             }
                         }
                         TypeResolutionKind::Bitlist(_) | TypeResolutionKind::Bitvector(_) => {
                             // BitListRef/BitVectorRef have inherent to_owned() methods
                             quote! {
-                                #field_name: self.#field_name().expect("valid view").to_owned()
+                                #field_name: self.#field_name()?.to_owned()
                             }
                         }
                         TypeResolutionKind::Bytes(_) => {
                             // FixedBytesRef has inherent to_owned() method
                             quote! {
-                                #field_name: ssz_types::FixedBytes(self.#field_name().expect("valid view").to_owned())
+                                #field_name: ssz_types::FixedBytes(self.#field_name()?.to_owned())
                             }
                         }
                         TypeResolutionKind::Class(_)
@@ -2272,15 +2278,15 @@ impl ClassDef {
                             // for proper type resolution with external types
                             quote! {
                                 #field_name: {
-                                    let view = self.#field_name().expect("valid view");
-                                    ssz_types::view::ToOwnedSsz::to_owned(&view)
+                                    let view = self.#field_name()?;
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                                 }
                             }
                         }
                         _ => {
                             // Fallback for any other types - use inherent to_owned()
                             quote! {
-                                #field_name: self.#field_name().expect("valid view").to_owned()
+                                #field_name: self.#field_name()?.to_owned()
                             }
                         }
                     }
@@ -2293,9 +2299,14 @@ impl ClassDef {
             impl<'a> #ref_ident<'a> {
                 #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
                 pub fn to_owned(&self) -> #ident {
-                    #ident {
+                    <#ref_ident<'a>>::try_to_owned(self).expect("valid view")
+                }
+
+                #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+                pub fn try_to_owned(&self) -> Result<#ident, ssz::DecodeError> {
+                    Ok(#ident {
                         #(#field_conversions),*
-                    }
+                    })
                 }
             }
         }

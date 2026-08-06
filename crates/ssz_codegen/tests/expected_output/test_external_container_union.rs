@@ -60,6 +60,10 @@ pub mod tests {
                     }
                     ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
                 }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> PendingInputEntry {
                     match self.selector() {
                         0u8 => {
@@ -70,6 +74,31 @@ pub mod tests {
                         }
                         _ => panic!("Invalid union selector: {}", self.selector()),
                     }
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(
+                    &self,
+                ) -> Result<PendingInputEntry, ssz::DecodeError> {
+                    Ok(
+                        match self.selector() {
+                            0u8 => {
+                                PendingInputEntry::Deposit({
+                                    let view = self.as_selector0()?;
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
+                                })
+                            }
+                            other => {
+                                return Err(
+                                    ssz::DecodeError::BytesInvalid(
+                                        format!("Invalid union selector: {}", other),
+                                    ),
+                                );
+                            }
+                        },
+                    )
                 }
             }
             impl<'a> ssz::view::DecodeView<'a> for PendingInputEntryRef<'a> {
@@ -90,6 +119,9 @@ pub mod tests {
             for PendingInputEntryRef<'a> {
                 fn to_owned(&self) -> PendingInputEntry {
                     <PendingInputEntryRef<'a>>::to_owned(self)
+                }
+                fn try_to_owned(&self) -> Result<PendingInputEntry, ssz::DecodeError> {
+                    <PendingInputEntryRef<'a>>::try_to_owned(self)
                 }
             }
             impl<'a> tree_hash::TreeHash for PendingInputEntryRef<'a> {
@@ -274,6 +306,9 @@ pub mod tests {
                 fn to_owned(&self) -> TestContainer {
                     <TestContainerRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<TestContainer, ssz::DecodeError> {
+                    <TestContainerRef<'a>>::try_to_owned(self)
+                }
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> TestContainerRef<'a> {
@@ -282,20 +317,28 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> TestContainer {
-                    TestContainer {
+                    <TestContainerRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<TestContainer, ssz::DecodeError> {
+                    Ok(TestContainer {
                         pending_inputs: {
-                            let view = self.pending_inputs().expect("valid view");
-                            let items: Result<Vec<_>, _> = view
+                            let view = self.pending_inputs()?;
+                            let items = view
                                 .iter()
                                 .map(|item_result| {
-                                    item_result
-                                        .map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&item_result?)
                                 })
-                                .collect();
-                            let items = items.expect("valid view");
-                            ssz_types::VariableList::new(items).expect("valid view")
+                                .collect::<Result<Vec<_>, ssz::DecodeError>>()?;
+                            ssz_types::VariableList::new(items)
+                                .map_err(|e| ssz::DecodeError::BytesInvalid(
+                                    format!("{e:?}"),
+                                ))?
                         },
-                    }
+                    })
                 }
             }
         }

@@ -171,18 +171,25 @@ impl<'a> ssz_types::view::ToOwnedSsz<ContainerA> for ContainerARef<'a> {
     fn to_owned(&self) -> ContainerA {
         <ContainerARef<'a>>::to_owned(self)
     }
+    fn try_to_owned(&self) -> Result<ContainerA, ssz::DecodeError> {
+        <ContainerARef<'a>>::try_to_owned(self)
+    }
 }
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ContainerARef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> ContainerA {
-        ContainerA {
-            value: self.value().expect("valid view"),
+        <ContainerARef<'a>>::try_to_owned(self).expect("valid view")
+    }
+    #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    pub fn try_to_owned(&self) -> Result<ContainerA, ssz::DecodeError> {
+        Ok(ContainerA {
+            value: self.value()?,
             b_ref: {
-                let view = self.b_ref().expect("valid view");
-                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                let view = self.b_ref()?;
+                ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
             },
-        }
+        })
     }
 }
 #[allow(dead_code, reason = "generated code using ssz-gen")]
@@ -350,18 +357,25 @@ impl<'a> ssz_types::view::ToOwnedSsz<ContainerB> for ContainerBRef<'a> {
     fn to_owned(&self) -> ContainerB {
         <ContainerBRef<'a>>::to_owned(self)
     }
+    fn try_to_owned(&self) -> Result<ContainerB, ssz::DecodeError> {
+        <ContainerBRef<'a>>::try_to_owned(self)
+    }
 }
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ContainerBRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> ContainerB {
-        ContainerB {
-            value: self.value().expect("valid view"),
+        <ContainerBRef<'a>>::try_to_owned(self).expect("valid view")
+    }
+    #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    pub fn try_to_owned(&self) -> Result<ContainerB, ssz::DecodeError> {
+        Ok(ContainerB {
+            value: self.value()?,
             c_ref: {
-                let view = self.c_ref().expect("valid view");
-                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                let view = self.c_ref()?;
+                ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
             },
-        }
+        })
     }
 }
 #[allow(dead_code, reason = "generated code using ssz-gen")]
@@ -484,13 +498,18 @@ impl<'a> ssz_types::view::ToOwnedSsz<ContainerC> for ContainerCRef<'a> {
     fn to_owned(&self) -> ContainerC {
         <ContainerCRef<'a>>::to_owned(self)
     }
+    fn try_to_owned(&self) -> Result<ContainerC, ssz::DecodeError> {
+        <ContainerCRef<'a>>::try_to_owned(self)
+    }
 }
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> ContainerCRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> ContainerC {
-        ContainerC {
-            value: self.value().expect("valid view"),
-        }
+        <ContainerCRef<'a>>::try_to_owned(self).expect("valid view")
+    }
+    #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    pub fn try_to_owned(&self) -> Result<ContainerC, ssz::DecodeError> {
+        Ok(ContainerC { value: self.value()? })
     }
 }

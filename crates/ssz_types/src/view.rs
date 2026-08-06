@@ -129,6 +129,19 @@ where
 
         VariableList::new(items)
     }
+
+    /// Converts this view to an owned list, reporting element and length-bound failures.
+    pub fn try_to_owned<T>(&self) -> Result<VariableList<T, N>, ssz::DecodeError>
+    where
+        TRef: ToOwnedSsz<T>,
+    {
+        let items = self
+            .iter()
+            .map(|item_result| ToOwnedSsz::try_to_owned(&item_result?))
+            .collect::<Result<Vec<T>, ssz::DecodeError>>()?;
+
+        VariableList::new(items).map_err(|e| ssz::DecodeError::BytesInvalid(format!("{e:?}")))
+    }
 }
 
 /// Convert a view type to its owned equivalent.
@@ -168,7 +181,20 @@ where
 ///   need a `Ref` variant.
 pub trait ToOwnedSsz<T> {
     /// Converts this view to an owned value.
+    ///
+    /// # Panics
+    ///
+    /// Panics if materialization fails after view decoding. Prefer
+    /// [`ToOwnedSsz::try_to_owned`].
     fn to_owned(&self) -> T;
+
+    /// Fallible owned conversion.
+    ///
+    /// The default delegates to [`ToOwnedSsz::to_owned`]; override this when
+    /// materialization can fail after view decoding.
+    fn try_to_owned(&self) -> Result<T, ssz::DecodeError> {
+        Ok(self.to_owned())
+    }
 }
 
 /// Blanket implementation for all [`Copy`] types.
@@ -192,6 +218,11 @@ impl<'a, const N: usize> ToOwnedSsz<FixedBytes<N>> for ssz::view::FixedBytesRef<
 impl<'a, const N: usize> ToOwnedSsz<VariableList<u8, N>> for ssz::view::BytesRef<'a, N> {
     fn to_owned(&self) -> VariableList<u8, N> {
         VariableList::new(self.to_owned()).expect("valid view")
+    }
+
+    fn try_to_owned(&self) -> Result<VariableList<u8, N>, ssz::DecodeError> {
+        VariableList::new(self.to_owned())
+            .map_err(|e| ssz::DecodeError::BytesInvalid(format!("{e:?}")))
     }
 }
 
@@ -223,6 +254,39 @@ where
             })
             .collect();
         VariableList::new(items).expect("valid view")
+    }
+
+    fn try_to_owned(&self) -> Result<VariableList<T, N>, ssz::DecodeError> {
+        let items = self
+            .iter()
+            .map(|item_result| ToOwnedSsz::try_to_owned(&item_result?))
+            .collect::<Result<Vec<T>, ssz::DecodeError>>()?;
+        VariableList::new(items).map_err(|e| ssz::DecodeError::BytesInvalid(format!("{e:?}")))
+    }
+}
+
+/// Allows generated conversions to materialize `Vector[T, N]` through `ToOwnedSsz`.
+impl<'a, TRef, T, const N: usize> ToOwnedSsz<FixedVector<T, N>> for FixedVectorRef<'a, TRef, N>
+where
+    TRef: DecodeView<'a> + SszTypeInfo + ToOwnedSsz<T>,
+{
+    fn to_owned(&self) -> FixedVector<T, N> {
+        let items: Vec<T> = self
+            .iter()
+            .map(|item_result| {
+                let item = item_result.expect("valid view");
+                ToOwnedSsz::to_owned(&item)
+            })
+            .collect();
+        FixedVector::new(items).expect("valid view")
+    }
+
+    fn try_to_owned(&self) -> Result<FixedVector<T, N>, ssz::DecodeError> {
+        let items = self
+            .iter()
+            .map(|item_result| ToOwnedSsz::try_to_owned(&item_result?))
+            .collect::<Result<Vec<T>, ssz::DecodeError>>()?;
+        FixedVector::new(items).map_err(|e| ssz::DecodeError::BytesInvalid(format!("{e:?}")))
     }
 }
 
@@ -330,6 +394,19 @@ where
         let items = items.map_err(|_| Error::OutOfBounds { i: 0, len: N })?;
 
         FixedVector::new(items)
+    }
+
+    /// Converts this view to an owned vector, reporting element and length-bound failures.
+    pub fn try_to_owned<T>(&self) -> Result<FixedVector<T, N>, ssz::DecodeError>
+    where
+        TRef: ToOwnedSsz<T>,
+    {
+        let items = self
+            .iter()
+            .map(|item_result| ToOwnedSsz::try_to_owned(&item_result?))
+            .collect::<Result<Vec<T>, ssz::DecodeError>>()?;
+
+        FixedVector::new(items).map_err(|e| ssz::DecodeError::BytesInvalid(format!("{e:?}")))
     }
 }
 
