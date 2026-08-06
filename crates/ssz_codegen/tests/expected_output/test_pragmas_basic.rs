@@ -145,6 +145,9 @@ pub mod tests {
                     <BasicContainerRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for BasicContainer {
+                type Ref<'a> = BasicContainerRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BasicContainerRef<'a> {
                 #[allow(

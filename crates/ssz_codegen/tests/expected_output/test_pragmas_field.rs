@@ -245,6 +245,9 @@ pub mod tests {
                     <FieldPragmaContainerRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for FieldPragmaContainer {
+                type Ref<'a> = FieldPragmaContainerRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> FieldPragmaContainerRef<'a> {
                 #[allow(

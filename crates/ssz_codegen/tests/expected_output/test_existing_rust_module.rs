@@ -201,6 +201,9 @@ pub mod tests {
                     <TestExistingModuleRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for TestExistingModule {
+                type Ref<'a> = TestExistingModuleRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> TestExistingModuleRef<'a> {
                 #[allow(

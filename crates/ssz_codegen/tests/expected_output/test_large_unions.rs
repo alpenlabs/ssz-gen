@@ -231,6 +231,9 @@ pub mod tests {
                     <BigUnionRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for BigUnion {
+                type Ref<'a> = BigUnionRef<'a>;
+            }
             impl<'a> tree_hash::TreeHash for BigUnionRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Vector
@@ -503,6 +506,9 @@ pub mod tests {
                     <MixedUnionRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for MixedUnion {
+                type Ref<'a> = MixedUnionRef<'a>;
+            }
             impl<'a> tree_hash::TreeHash for MixedUnionRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Vector
@@ -731,6 +737,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<SameTypeUnion, ssz::DecodeError> {
                     <SameTypeUnionRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for SameTypeUnion {
+                type Ref<'a> = SameTypeUnionRef<'a>;
             }
             impl<'a> tree_hash::TreeHash for SameTypeUnionRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -1012,6 +1021,9 @@ pub mod tests {
                 ) -> Result<ContainerWithBigUnions, ssz::DecodeError> {
                     <ContainerWithBigUnionsRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for ContainerWithBigUnions {
+                type Ref<'a> = ContainerWithBigUnionsRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ContainerWithBigUnionsRef<'a> {

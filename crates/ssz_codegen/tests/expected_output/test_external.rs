@@ -174,6 +174,9 @@ pub mod tests {
                     <ExternalUnionARef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for ExternalUnionA {
+                type Ref<'a> = ExternalUnionARef<'a>;
+            }
             impl<'a> tree_hash::TreeHash for ExternalUnionARef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Vector
@@ -375,6 +378,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<ExternalUnionB, ssz::DecodeError> {
                     <ExternalUnionBRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for ExternalUnionB {
+                type Ref<'a> = ExternalUnionBRef<'a>;
             }
             impl<'a> tree_hash::TreeHash for ExternalUnionBRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -598,6 +604,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<ExternalContainer, ssz::DecodeError> {
                     <ExternalContainerRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for ExternalContainer {
+                type Ref<'a> = ExternalContainerRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ExternalContainerRef<'a> {

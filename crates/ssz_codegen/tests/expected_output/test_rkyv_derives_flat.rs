@@ -185,6 +185,9 @@ pub mod test_rkyv_derives {
             <BlockCommitmentRef<'a>>::try_to_owned(self)
         }
     }
+    impl ssz_types::view::SszHasView for BlockCommitment {
+        type Ref<'a> = BlockCommitmentRef<'a>;
+    }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> BlockCommitmentRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
@@ -322,6 +325,9 @@ pub mod test_rkyv_derives {
         fn try_to_owned(&self) -> Result<OtherType, ssz::DecodeError> {
             <OtherTypeRef<'a>>::try_to_owned(self)
         }
+    }
+    impl ssz_types::view::SszHasView for OtherType {
+        type Ref<'a> = OtherTypeRef<'a>;
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> OtherTypeRef<'a> {

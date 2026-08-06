@@ -124,6 +124,9 @@ pub mod tests {
                     <PendingInputEntryRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for PendingInputEntry {
+                type Ref<'a> = PendingInputEntryRef<'a>;
+            }
             impl<'a> tree_hash::TreeHash for PendingInputEntryRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Vector
@@ -309,6 +312,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<TestContainer, ssz::DecodeError> {
                     <TestContainerRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for TestContainer {
+                type Ref<'a> = TestContainerRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> TestContainerRef<'a> {

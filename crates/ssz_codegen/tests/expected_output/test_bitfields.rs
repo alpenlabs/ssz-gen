@@ -473,6 +473,9 @@ pub mod tests {
                     <BitfieldContainerRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for BitfieldContainer {
+                type Ref<'a> = BitfieldContainerRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BitfieldContainerRef<'a> {
                 #[allow(

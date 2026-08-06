@@ -145,6 +145,9 @@ pub mod tests {
                     <TestUnionRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for TestUnion {
+                type Ref<'a> = TestUnionRef<'a>;
+            }
             impl<'a> tree_hash::TreeHash for TestUnionRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Vector
@@ -309,6 +312,9 @@ pub mod tests {
                     <DataVariantRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for DataVariant {
+                type Ref<'a> = DataVariantRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> DataVariantRef<'a> {
                 #[allow(
@@ -459,6 +465,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<TestContainer, ssz::DecodeError> {
                     <TestContainerRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for TestContainer {
+                type Ref<'a> = TestContainerRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> TestContainerRef<'a> {

@@ -186,6 +186,9 @@ pub mod tests {
                     <InnerDataRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for InnerData {
+                type Ref<'a> = InnerDataRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> InnerDataRef<'a> {
                 #[allow(
@@ -405,6 +408,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<OuterContainer, ssz::DecodeError> {
                     <OuterContainerRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for OuterContainer {
+                type Ref<'a> = OuterContainerRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> OuterContainerRef<'a> {

@@ -189,6 +189,9 @@ pub mod tests {
                     <TypeARef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for TypeA {
+                type Ref<'a> = TypeARef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> TypeARef<'a> {
                 #[allow(
@@ -456,6 +459,9 @@ pub mod tests {
                     <TypeBRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for TypeB {
+                type Ref<'a> = TypeBRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> TypeBRef<'a> {
                 #[allow(
@@ -623,6 +629,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<BaseType, ssz::DecodeError> {
                     <BaseTypeRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for BaseType {
+                type Ref<'a> = BaseTypeRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BaseTypeRef<'a> {

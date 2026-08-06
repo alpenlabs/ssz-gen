@@ -288,6 +288,9 @@ pub mod tests {
                     <AlphaRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for Alpha {
+                type Ref<'a> = AlphaRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> AlphaRef<'a> {
                 #[allow(
@@ -819,6 +822,9 @@ pub mod tests {
                     <InnerBaseRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for InnerBase {
+                type Ref<'a> = InnerBaseRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> InnerBaseRef<'a> {
                 #[allow(
@@ -1342,6 +1348,9 @@ pub mod tests {
                     <InnerProfile1Ref<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for InnerProfile1 {
+                type Ref<'a> = InnerProfile1Ref<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> InnerProfile1Ref<'a> {
                 #[allow(
@@ -1721,6 +1730,9 @@ pub mod tests {
                     <InnerProfile2Ref<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for InnerProfile2 {
+                type Ref<'a> = InnerProfile2Ref<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> InnerProfile2Ref<'a> {
                 #[allow(
@@ -2007,6 +2019,9 @@ pub mod tests {
                     <AlphaProfileRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for AlphaProfile {
+                type Ref<'a> = AlphaProfileRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> AlphaProfileRef<'a> {
                 #[allow(
@@ -2191,6 +2206,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<InnerProfile3, ssz::DecodeError> {
                     <InnerProfile3Ref<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for InnerProfile3 {
+                type Ref<'a> = InnerProfile3Ref<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> InnerProfile3Ref<'a> {
@@ -2430,6 +2448,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<InnerProfile4, ssz::DecodeError> {
                     <InnerProfile4Ref<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for InnerProfile4 {
+                type Ref<'a> = InnerProfile4Ref<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> InnerProfile4Ref<'a> {
@@ -2713,6 +2734,9 @@ pub mod tests {
                     <InnerProfile5Ref<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for InnerProfile5 {
+                type Ref<'a> = InnerProfile5Ref<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> InnerProfile5Ref<'a> {
                 #[allow(
@@ -2990,6 +3014,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<ProfileProfile, ssz::DecodeError> {
                     <ProfileProfileRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for ProfileProfile {
+                type Ref<'a> = ProfileProfileRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ProfileProfileRef<'a> {
@@ -4020,6 +4047,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<ContainerContainer, ssz::DecodeError> {
                     <ContainerContainerRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for ContainerContainer {
+                type Ref<'a> = ContainerContainerRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ContainerContainerRef<'a> {

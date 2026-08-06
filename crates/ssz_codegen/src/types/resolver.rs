@@ -1387,6 +1387,10 @@ impl<'a> TypeResolver<'a> {
                 }
             }
 
+            impl ssz_types::view::SszHasView for #union_ident {
+                type Ref<'a> = #ref_ident<'a>;
+            }
+
             impl<'a> tree_hash::TreeHash for #ref_ident<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Vector

@@ -191,6 +191,9 @@ pub mod tests {
                     <MultiPragmaContainerRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for MultiPragmaContainer {
+                type Ref<'a> = MultiPragmaContainerRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> MultiPragmaContainerRef<'a> {
                 #[allow(

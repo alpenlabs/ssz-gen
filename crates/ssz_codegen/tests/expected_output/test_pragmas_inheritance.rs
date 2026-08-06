@@ -292,6 +292,9 @@ pub mod tests {
                     <ParentRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for Parent {
+                type Ref<'a> = ParentRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ParentRef<'a> {
                 #[allow(
@@ -677,6 +680,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<Child, ssz::DecodeError> {
                     <ChildRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for Child {
+                type Ref<'a> = ChildRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ChildRef<'a> {

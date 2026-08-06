@@ -170,6 +170,9 @@ impl<'a> ssz_types::view::ToOwnedSsz<State> for StateRef<'a> {
         <StateRef<'a>>::try_to_owned(self)
     }
 }
+impl ssz_types::view::SszHasView for State {
+    type Ref<'a> = StateRef<'a>;
+}
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> StateRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
@@ -403,6 +406,9 @@ impl<'a> ssz_types::view::ToOwnedSsz<Update> for UpdateRef<'a> {
     fn try_to_owned(&self) -> Result<Update, ssz::DecodeError> {
         <UpdateRef<'a>>::try_to_owned(self)
     }
+}
+impl ssz_types::view::SszHasView for Update {
+    type Ref<'a> = UpdateRef<'a>;
 }
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> UpdateRef<'a> {

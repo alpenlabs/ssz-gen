@@ -174,6 +174,9 @@ pub mod test_cross_entry_state {
             <StateRef<'a>>::try_to_owned(self)
         }
     }
+    impl ssz_types::view::SszHasView for State {
+        type Ref<'a> = StateRef<'a>;
+    }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> StateRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
@@ -421,6 +424,9 @@ pub mod test_cross_entry_update {
         fn try_to_owned(&self) -> Result<Update, ssz::DecodeError> {
             <UpdateRef<'a>>::try_to_owned(self)
         }
+    }
+    impl ssz_types::view::SszHasView for Update {
+        type Ref<'a> = UpdateRef<'a>;
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> UpdateRef<'a> {

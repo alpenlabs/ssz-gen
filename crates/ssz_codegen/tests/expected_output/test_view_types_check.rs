@@ -182,6 +182,9 @@ pub mod tests {
                     <ExportEntryRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for ExportEntry {
+                type Ref<'a> = ExportEntryRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ExportEntryRef<'a> {
                 #[allow(
@@ -494,6 +497,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<ViewTypeTest, ssz::DecodeError> {
                     <ViewTypeTestRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for ViewTypeTest {
+                type Ref<'a> = ViewTypeTestRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ViewTypeTestRef<'a> {

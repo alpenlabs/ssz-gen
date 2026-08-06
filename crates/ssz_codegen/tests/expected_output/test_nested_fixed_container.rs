@@ -144,6 +144,9 @@ pub mod tests {
                     <FixedInnerRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for FixedInner {
+                type Ref<'a> = FixedInnerRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> FixedInnerRef<'a> {
                 #[allow(
@@ -332,6 +335,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<FixedPair, ssz::DecodeError> {
                     <FixedPairRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for FixedPair {
+                type Ref<'a> = FixedPairRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> FixedPairRef<'a> {
@@ -651,6 +657,9 @@ pub mod tests {
                     <MixedOuterRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for MixedOuter {
+                type Ref<'a> = MixedOuterRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> MixedOuterRef<'a> {
                 #[allow(
@@ -855,6 +864,9 @@ pub mod tests {
                     <FixedOuterRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for FixedOuter {
+                type Ref<'a> = FixedOuterRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> FixedOuterRef<'a> {
                 #[allow(
@@ -1053,6 +1065,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<BasicPair, ssz::DecodeError> {
                     <BasicPairRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for BasicPair {
+                type Ref<'a> = BasicPairRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BasicPairRef<'a> {
@@ -1260,6 +1275,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<VarThenFixed, ssz::DecodeError> {
                     <VarThenFixedRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for VarThenFixed {
+                type Ref<'a> = VarThenFixedRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> VarThenFixedRef<'a> {
@@ -1534,6 +1552,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<Interleaved, ssz::DecodeError> {
                     <InterleavedRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for Interleaved {
+                type Ref<'a> = InterleavedRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> InterleavedRef<'a> {

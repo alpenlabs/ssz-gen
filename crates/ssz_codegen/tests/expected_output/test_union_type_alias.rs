@@ -120,6 +120,9 @@ pub mod tests {
                     <TestUnionRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for TestUnion {
+                type Ref<'a> = TestUnionRef<'a>;
+            }
             impl<'a> tree_hash::TreeHash for TestUnionRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Vector
@@ -277,6 +280,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<UnderlyingType, ssz::DecodeError> {
                     <UnderlyingTypeRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for UnderlyingType {
+                type Ref<'a> = UnderlyingTypeRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> UnderlyingTypeRef<'a> {

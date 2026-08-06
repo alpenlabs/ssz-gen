@@ -285,6 +285,9 @@ pub mod tests {
                     <ContainerWithExternalRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for ContainerWithExternal {
+                type Ref<'a> = ContainerWithExternalRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ContainerWithExternalRef<'a> {
                 #[allow(

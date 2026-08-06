@@ -189,6 +189,9 @@ pub mod tests {
                     <StateRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for State {
+                type Ref<'a> = StateRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> StateRef<'a> {
                 #[allow(
@@ -469,6 +472,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<Update, ssz::DecodeError> {
                     <UpdateRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for Update {
+                type Ref<'a> = UpdateRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> UpdateRef<'a> {

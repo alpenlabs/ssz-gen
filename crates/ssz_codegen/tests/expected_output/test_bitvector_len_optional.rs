@@ -290,6 +290,9 @@ pub mod tests {
                     <BitvectorLenTestRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for BitvectorLenTest {
+                type Ref<'a> = BitvectorLenTestRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BitvectorLenTestRef<'a> {
                 #[allow(

@@ -317,6 +317,9 @@ pub mod tests {
                     <NestedAliasContainerRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for NestedAliasContainer {
+                type Ref<'a> = NestedAliasContainerRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> NestedAliasContainerRef<'a> {
                 #[allow(

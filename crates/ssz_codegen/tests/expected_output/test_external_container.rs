@@ -189,6 +189,9 @@ pub mod tests {
                     <BlockCommitmentRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for BlockCommitment {
+                type Ref<'a> = BlockCommitmentRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BlockCommitmentRef<'a> {
                 #[allow(
@@ -403,6 +406,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<BlockRange, ssz::DecodeError> {
                     <BlockRangeRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for BlockRange {
+                type Ref<'a> = BlockRangeRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BlockRangeRef<'a> {

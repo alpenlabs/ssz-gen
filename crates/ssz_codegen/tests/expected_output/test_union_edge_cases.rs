@@ -136,6 +136,9 @@ pub mod tests {
                     <AnotherSimpleRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for AnotherSimple {
+                type Ref<'a> = AnotherSimpleRef<'a>;
+            }
             impl<'a> tree_hash::TreeHash for AnotherSimpleRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Vector
@@ -376,6 +379,9 @@ pub mod tests {
                     <ComplexUnionRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for ComplexUnion {
+                type Ref<'a> = ComplexUnionRef<'a>;
+            }
             impl<'a> tree_hash::TreeHash for ComplexUnionRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Vector
@@ -580,6 +586,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<MixedOptional, ssz::DecodeError> {
                     <MixedOptionalRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for MixedOptional {
+                type Ref<'a> = MixedOptionalRef<'a>;
             }
             impl<'a> tree_hash::TreeHash for MixedOptionalRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -786,6 +795,9 @@ pub mod tests {
                     <NestedUnionRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for NestedUnion {
+                type Ref<'a> = NestedUnionRef<'a>;
+            }
             impl<'a> tree_hash::TreeHash for NestedUnionRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Vector
@@ -955,6 +967,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<SimpleUnion, ssz::DecodeError> {
                     <SimpleUnionRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for SimpleUnion {
+                type Ref<'a> = SimpleUnionRef<'a>;
             }
             impl<'a> tree_hash::TreeHash for SimpleUnionRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -1497,6 +1512,9 @@ pub mod tests {
                     <UnionEdgeCasesRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for UnionEdgeCases {
+                type Ref<'a> = UnionEdgeCasesRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> UnionEdgeCasesRef<'a> {
                 #[allow(
@@ -1788,6 +1806,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<AllUnions, ssz::DecodeError> {
                     <AllUnionsRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for AllUnions {
+                type Ref<'a> = AllUnionsRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> AllUnionsRef<'a> {

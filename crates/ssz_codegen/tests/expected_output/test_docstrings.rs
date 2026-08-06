@@ -105,6 +105,9 @@ pub mod tests {
                     <FooRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for Foo {
+                type Ref<'a> = FooRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> FooRef<'a> {
                 #[allow(
@@ -299,6 +302,9 @@ pub mod tests {
                     <PointWithBothRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for PointWithBoth {
+                type Ref<'a> = PointWithBothRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> PointWithBothRef<'a> {
                 #[allow(
@@ -451,6 +457,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<TestMerge, ssz::DecodeError> {
                     <TestMergeRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for TestMerge {
+                type Ref<'a> = TestMergeRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> TestMergeRef<'a> {

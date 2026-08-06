@@ -523,6 +523,9 @@ pub mod tests {
                     <ExternalPragmaTestRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for ExternalPragmaTest {
+                type Ref<'a> = ExternalPragmaTestRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ExternalPragmaTestRef<'a> {
                 #[allow(

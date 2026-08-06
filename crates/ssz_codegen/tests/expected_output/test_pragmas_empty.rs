@@ -145,6 +145,9 @@ pub mod tests {
                     <EmptyPragmaContainerRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for EmptyPragmaContainer {
+                type Ref<'a> = EmptyPragmaContainerRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> EmptyPragmaContainerRef<'a> {
                 #[allow(
@@ -297,6 +300,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<EmptyValueContainer, ssz::DecodeError> {
                     <EmptyValueContainerRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for EmptyValueContainer {
+                type Ref<'a> = EmptyValueContainerRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> EmptyValueContainerRef<'a> {

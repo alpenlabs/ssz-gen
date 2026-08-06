@@ -234,6 +234,9 @@ pub mod tests {
                     <PointRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for Point {
+                type Ref<'a> = PointRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> PointRef<'a> {
                 #[allow(
@@ -429,6 +432,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<CoordinateContainer, ssz::DecodeError> {
                     <CoordinateContainerRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for CoordinateContainer {
+                type Ref<'a> = CoordinateContainerRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> CoordinateContainerRef<'a> {

@@ -141,6 +141,9 @@ pub mod tests {
                     <CommonTypeARef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for CommonTypeA {
+                type Ref<'a> = CommonTypeARef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> CommonTypeARef<'a> {
                 #[allow(
@@ -289,6 +292,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<CommonTypeB, ssz::DecodeError> {
                     <CommonTypeBRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for CommonTypeB {
+                type Ref<'a> = CommonTypeBRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> CommonTypeBRef<'a> {
@@ -534,6 +540,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<ContainerA, ssz::DecodeError> {
                     <ContainerARef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for ContainerA {
+                type Ref<'a> = ContainerARef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ContainerARef<'a> {

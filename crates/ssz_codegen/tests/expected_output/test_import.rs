@@ -142,6 +142,9 @@ pub mod tests {
                     <AliasUnionUnionRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for AliasUnionUnion {
+                type Ref<'a> = AliasUnionUnionRef<'a>;
+            }
             impl<'a> tree_hash::TreeHash for AliasUnionUnionRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Vector
@@ -464,6 +467,9 @@ pub mod tests {
                     <StableContainerClassRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for StableContainerClass {
+                type Ref<'a> = StableContainerClassRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> StableContainerClassRef<'a> {
                 #[allow(
@@ -658,6 +664,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<AliasUnionUnion, ssz::DecodeError> {
                     <AliasUnionUnionRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for AliasUnionUnion {
+                type Ref<'a> = AliasUnionUnionRef<'a>;
             }
             impl<'a> tree_hash::TreeHash for AliasUnionUnionRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -931,6 +940,9 @@ pub mod tests {
                 ) -> Result<StableContainerClass, ssz::DecodeError> {
                     <StableContainerClassRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for StableContainerClass {
+                type Ref<'a> = StableContainerClassRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> StableContainerClassRef<'a> {
@@ -1217,6 +1229,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<ProfileInehritance, ssz::DecodeError> {
                     <ProfileInehritanceRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for ProfileInehritance {
+                type Ref<'a> = ProfileInehritanceRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ProfileInehritanceRef<'a> {

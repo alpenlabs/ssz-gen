@@ -178,6 +178,9 @@ impl<'a> ssz_types::view::ToOwnedSsz<BlockCommitment> for BlockCommitmentRef<'a>
         <BlockCommitmentRef<'a>>::try_to_owned(self)
     }
 }
+impl ssz_types::view::SszHasView for BlockCommitment {
+    type Ref<'a> = BlockCommitmentRef<'a>;
+}
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> BlockCommitmentRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
@@ -313,6 +316,9 @@ impl<'a> ssz_types::view::ToOwnedSsz<OtherType> for OtherTypeRef<'a> {
     fn try_to_owned(&self) -> Result<OtherType, ssz::DecodeError> {
         <OtherTypeRef<'a>>::try_to_owned(self)
     }
+}
+impl ssz_types::view::SszHasView for OtherType {
+    type Ref<'a> = OtherTypeRef<'a>;
 }
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> OtherTypeRef<'a> {

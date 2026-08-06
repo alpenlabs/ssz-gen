@@ -152,6 +152,9 @@ pub mod tests {
                     <UnionClassRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for UnionClass {
+                type Ref<'a> = UnionClassRef<'a>;
+            }
             impl<'a> tree_hash::TreeHash for UnionClassRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
                     tree_hash::TreeHashType::Vector
@@ -302,6 +305,9 @@ pub mod tests {
                 ) -> Result<UnionClassWithExternal, ssz::DecodeError> {
                     <UnionClassWithExternalRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for UnionClassWithExternal {
+                type Ref<'a> = UnionClassWithExternalRef<'a>;
             }
             impl<'a> tree_hash::TreeHash for UnionClassWithExternalRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -471,6 +477,9 @@ pub mod tests {
                 fn try_to_owned(&self) -> Result<UnionTypeAlias, ssz::DecodeError> {
                     <UnionTypeAliasRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for UnionTypeAlias {
+                type Ref<'a> = UnionTypeAliasRef<'a>;
             }
             impl<'a> tree_hash::TreeHash for UnionTypeAliasRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -644,6 +653,9 @@ pub mod tests {
                     <UnionTypeAliasVariant1Ref<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for UnionTypeAliasVariant1 {
+                type Ref<'a> = UnionTypeAliasVariant1Ref<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> UnionTypeAliasVariant1Ref<'a> {
                 #[allow(
@@ -798,6 +810,9 @@ pub mod tests {
                 ) -> Result<UnionTypeAliasVariant2, ssz::DecodeError> {
                     <UnionTypeAliasVariant2Ref<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for UnionTypeAliasVariant2 {
+                type Ref<'a> = UnionTypeAliasVariant2Ref<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> UnionTypeAliasVariant2Ref<'a> {
@@ -979,6 +994,9 @@ pub mod tests {
                 ) -> Result<ContainerWithUnionClass, ssz::DecodeError> {
                     <ContainerWithUnionClassRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for ContainerWithUnionClass {
+                type Ref<'a> = ContainerWithUnionClassRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ContainerWithUnionClassRef<'a> {
@@ -1174,6 +1192,9 @@ pub mod tests {
                     <ContainerWithUnionClassExternalRef<'a>>::try_to_owned(self)
                 }
             }
+            impl ssz_types::view::SszHasView for ContainerWithUnionClassExternal {
+                type Ref<'a> = ContainerWithUnionClassExternalRef<'a>;
+            }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ContainerWithUnionClassExternalRef<'a> {
                 #[allow(
@@ -1368,6 +1389,9 @@ pub mod tests {
                 ) -> Result<ContainerWithUnionTypeAlias, ssz::DecodeError> {
                     <ContainerWithUnionTypeAliasRef<'a>>::try_to_owned(self)
                 }
+            }
+            impl ssz_types::view::SszHasView for ContainerWithUnionTypeAlias {
+                type Ref<'a> = ContainerWithUnionTypeAliasRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ContainerWithUnionTypeAliasRef<'a> {

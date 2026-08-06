@@ -127,6 +127,9 @@ pub mod test_1 {
             <AliasOptionUnionRef<'a>>::try_to_owned(self)
         }
     }
+    impl ssz_types::view::SszHasView for AliasOptionUnion {
+        type Ref<'a> = AliasOptionUnionRef<'a>;
+    }
     impl<'a> tree_hash::TreeHash for AliasOptionUnionRef<'a> {
         fn tree_hash_type() -> tree_hash::TreeHashType {
             tree_hash::TreeHashType::Vector
@@ -266,6 +269,9 @@ pub mod test_1 {
         fn try_to_owned(&self) -> Result<FirstUnion, ssz::DecodeError> {
             <FirstUnionRef<'a>>::try_to_owned(self)
         }
+    }
+    impl ssz_types::view::SszHasView for FirstUnion {
+        type Ref<'a> = FirstUnionRef<'a>;
     }
     impl<'a> tree_hash::TreeHash for FirstUnionRef<'a> {
         fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -427,6 +433,9 @@ pub mod test_1 {
             <TestUnionRef<'a>>::try_to_owned(self)
         }
     }
+    impl ssz_types::view::SszHasView for TestUnion {
+        type Ref<'a> = TestUnionRef<'a>;
+    }
     impl<'a> tree_hash::TreeHash for TestUnionRef<'a> {
         fn tree_hash_type() -> tree_hash::TreeHashType {
             tree_hash::TreeHashType::Vector
@@ -585,6 +594,9 @@ pub mod test_1 {
         fn try_to_owned(&self) -> Result<UnionA, ssz::DecodeError> {
             <UnionARef<'a>>::try_to_owned(self)
         }
+    }
+    impl ssz_types::view::SszHasView for UnionA {
+        type Ref<'a> = UnionARef<'a>;
     }
     impl<'a> tree_hash::TreeHash for UnionARef<'a> {
         fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -785,6 +797,9 @@ pub mod test_1 {
             <UnionBRef<'a>>::try_to_owned(self)
         }
     }
+    impl ssz_types::view::SszHasView for UnionB {
+        type Ref<'a> = UnionBRef<'a>;
+    }
     impl<'a> tree_hash::TreeHash for UnionBRef<'a> {
         fn tree_hash_type() -> tree_hash::TreeHashType {
             tree_hash::TreeHashType::Vector
@@ -939,6 +954,9 @@ pub mod test_1 {
             <UnionCRef<'a>>::try_to_owned(self)
         }
     }
+    impl ssz_types::view::SszHasView for UnionC {
+        type Ref<'a> = UnionCRef<'a>;
+    }
     impl<'a> tree_hash::TreeHash for UnionCRef<'a> {
         fn tree_hash_type() -> tree_hash::TreeHashType {
             tree_hash::TreeHashType::Vector
@@ -1078,6 +1096,9 @@ pub mod test_1 {
         fn try_to_owned(&self) -> Result<UnionD, ssz::DecodeError> {
             <UnionDRef<'a>>::try_to_owned(self)
         }
+    }
+    impl ssz_types::view::SszHasView for UnionD {
+        type Ref<'a> = UnionDRef<'a>;
     }
     impl<'a> tree_hash::TreeHash for UnionDRef<'a> {
         fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -1328,6 +1349,9 @@ pub mod test_1 {
             <AlphaRef<'a>>::try_to_owned(self)
         }
     }
+    impl ssz_types::view::SszHasView for Alpha {
+        type Ref<'a> = AlphaRef<'a>;
+    }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> AlphaRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
@@ -1548,6 +1572,9 @@ pub mod test_1 {
         fn try_to_owned(&self) -> Result<Beta, ssz::DecodeError> {
             <BetaRef<'a>>::try_to_owned(self)
         }
+    }
+    impl ssz_types::view::SszHasView for Beta {
+        type Ref<'a> = BetaRef<'a>;
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> BetaRef<'a> {
@@ -1828,6 +1855,9 @@ pub mod test_1 {
             <GammaRef<'a>>::try_to_owned(self)
         }
     }
+    impl ssz_types::view::SszHasView for Gamma {
+        type Ref<'a> = GammaRef<'a>;
+    }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> GammaRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
@@ -2008,6 +2038,9 @@ pub mod test_1 {
         fn try_to_owned(&self) -> Result<Delta, ssz::DecodeError> {
             <DeltaRef<'a>>::try_to_owned(self)
         }
+    }
+    impl ssz_types::view::SszHasView for Delta {
+        type Ref<'a> = DeltaRef<'a>;
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> DeltaRef<'a> {
@@ -2450,6 +2483,9 @@ pub mod test_1 {
             <EpsilonRef<'a>>::try_to_owned(self)
         }
     }
+    impl ssz_types::view::SszHasView for Epsilon {
+        type Ref<'a> = EpsilonRef<'a>;
+    }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> EpsilonRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
@@ -2727,6 +2763,9 @@ pub mod test_1 {
         fn try_to_owned(&self) -> Result<Zeta, ssz::DecodeError> {
             <ZetaRef<'a>>::try_to_owned(self)
         }
+    }
+    impl ssz_types::view::SszHasView for Zeta {
+        type Ref<'a> = ZetaRef<'a>;
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> ZetaRef<'a> {
@@ -3091,6 +3130,9 @@ pub mod test_1 {
             <TestTypeRef<'a>>::try_to_owned(self)
         }
     }
+    impl ssz_types::view::SszHasView for TestType {
+        type Ref<'a> = TestTypeRef<'a>;
+    }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> TestTypeRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
@@ -3324,6 +3366,9 @@ pub mod test_1 {
             <EtaRef<'a>>::try_to_owned(self)
         }
     }
+    impl ssz_types::view::SszHasView for Eta {
+        type Ref<'a> = EtaRef<'a>;
+    }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> EtaRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
@@ -3553,6 +3598,9 @@ pub mod test_1 {
         fn try_to_owned(&self) -> Result<Theta, ssz::DecodeError> {
             <ThetaRef<'a>>::try_to_owned(self)
         }
+    }
+    impl ssz_types::view::SszHasView for Theta {
+        type Ref<'a> = ThetaRef<'a>;
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> ThetaRef<'a> {
@@ -4238,6 +4286,9 @@ pub mod test_1 {
             <IotaRef<'a>>::try_to_owned(self)
         }
     }
+    impl ssz_types::view::SszHasView for Iota {
+        type Ref<'a> = IotaRef<'a>;
+    }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> IotaRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
@@ -4476,6 +4527,9 @@ pub mod test_1 {
         fn try_to_owned(&self) -> Result<Kappa, ssz::DecodeError> {
             <KappaRef<'a>>::try_to_owned(self)
         }
+    }
+    impl ssz_types::view::SszHasView for Kappa {
+        type Ref<'a> = KappaRef<'a>;
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> KappaRef<'a> {
@@ -4745,6 +4799,9 @@ pub mod test_1 {
             <LambdaRef<'a>>::try_to_owned(self)
         }
     }
+    impl ssz_types::view::SszHasView for Lambda {
+        type Ref<'a> = LambdaRef<'a>;
+    }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> LambdaRef<'a> {
         #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
@@ -4918,6 +4975,9 @@ pub mod test_1 {
         fn try_to_owned(&self) -> Result<Mu, ssz::DecodeError> {
             <MuRef<'a>>::try_to_owned(self)
         }
+    }
+    impl ssz_types::view::SszHasView for Mu {
+        type Ref<'a> = MuRef<'a>;
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> MuRef<'a> {
@@ -5230,6 +5290,9 @@ pub mod test_1 {
         fn try_to_owned(&self) -> Result<Nu, ssz::DecodeError> {
             <NuRef<'a>>::try_to_owned(self)
         }
+    }
+    impl ssz_types::view::SszHasView for Nu {
+        type Ref<'a> = NuRef<'a>;
     }
     #[allow(dead_code, reason = "generated code using ssz-gen")]
     impl<'a> NuRef<'a> {

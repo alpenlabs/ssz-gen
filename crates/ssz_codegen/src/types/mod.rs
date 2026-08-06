@@ -2126,6 +2126,26 @@ impl ClassDef {
         }
     }
 
+    /// Generates the [`SszHasView`](ssz_types::view::SszHasView) implementation
+    /// linking the owned type to its generated view.
+    ///
+    /// # Arguments
+    ///
+    /// * `ident` - The base identifier for the class
+    ///
+    /// # Returns
+    ///
+    /// A [`TokenStream`] containing the `SszHasView` implementation.
+    pub fn to_owned_has_view_impl(&self, ident: &Ident) -> TokenStream {
+        let ref_ident = Ident::new(&format!("{}Ref", ident), Span::call_site());
+
+        quote! {
+            impl ssz_types::view::SszHasView for #ident {
+                type Ref<'a> = #ref_ident<'a>;
+            }
+        }
+    }
+
     /// Generates owned conversion methods for a generated view.
     ///
     /// `try_to_owned` propagates getter and materialization errors; `to_owned`

@@ -29,7 +29,7 @@ use ssz::{
     DecodeError,
     view::{DecodeView, ListRef, SszTypeInfo, VectorRef},
 };
-use ssz_primitives::FixedBytes;
+use ssz_primitives::{FixedBytes, U128, U256};
 use tree_hash::{PackedEncoding, TreeHash, TreeHashDigest, TreeHashType};
 
 use crate::{Error, FixedVector, VariableList};
@@ -214,6 +214,76 @@ impl<'a, const N: usize> ToOwnedSsz<FixedBytes<N>> for ssz::view::FixedBytesRef<
         FixedBytes(*self.as_bytes())
     }
 }
+
+/// Lets a `Vector[byte, N]` be materialized as a plain array, which is
+/// wire-identical to [`FixedBytes<N>`] but is what hand-written types hold.
+impl<'a, const N: usize> ToOwnedSsz<[u8; N]> for ssz::view::FixedBytesRef<'a, N> {
+    fn to_owned(&self) -> [u8; N] {
+        *self.as_bytes()
+    }
+}
+
+/// Associates an owned SSZ type with its canonical borrowed view.
+///
+/// This lets generic code name the correct view type from the owned type.
+///
+/// Implemented for generated containers/unions and non-generic SSZ shapes that
+/// can appear as whole encodings: fixed-width primitives, `[u8; N]`,
+/// [`FixedBytes<N>`], `VariableList<u8, N>`, and [`BitVector<N>`](crate::BitVector).
+///
+/// Generic `VariableList<T, N>` and `FixedVector<T, N>` are omitted because byte
+/// vectors use `BytesRef`/`FixedBytesRef` while other element types use
+/// `ListRef`/`FixedVectorRef`; expressing both would need specialization.
+pub trait SszHasView: Sized {
+    /// Borrowed view for this type's SSZ encoding.
+    ///
+    /// The bounds match what generated container views require for field views.
+    type Ref<'a>: ssz::view::DecodeView<'a>
+        + ssz::view::SszTypeInfo
+        + tree_hash::TreeHash
+        + ToOwnedSsz<Self>;
+}
+
+macro_rules! impl_ssz_has_view_for_primitive {
+    ($($ty:ty),* $(,)?) => {
+        $(
+            impl SszHasView for $ty {
+                type Ref<'a> = $ty;
+            }
+        )*
+    };
+}
+
+// Primitives are their own view: `DecodeView` reads them directly and the
+// `Copy` blanket supplies `ToOwnedSsz`.
+//
+// `usize` is omitted because its `Encode`/`Decode` width is target-dependent
+// while its `DecodeView`/`TreeHash` width is fixed at 8.
+impl_ssz_has_view_for_primitive!(u8, u16, u32, u64, bool, U128, U256);
+
+impl<const N: usize> SszHasView for [u8; N] {
+    type Ref<'a> = ssz::view::FixedBytesRef<'a, N>;
+}
+
+impl<const N: usize> SszHasView for FixedBytes<N> {
+    type Ref<'a> = ssz::view::FixedBytesRef<'a, N>;
+}
+
+// `List[byte, N]` views as `BytesRef` rather than `ListRef<u8>`, matching what
+// generated container getters return.
+impl<const N: usize> SszHasView for VariableList<u8, N> {
+    type Ref<'a> = ssz::view::BytesRef<'a, N>;
+}
+
+impl<const N: usize> SszHasView for crate::BitVector<N>
+where
+    [(); ssz::view::bytes_for_bits(N)]:,
+{
+    type Ref<'a> = ssz::view::BitVectorRef<'a, N>;
+}
+
+// `BitList<N>` is omitted: `BitListRef` has no `SszTypeInfo` implementation, so
+// it cannot describe its own layout to an enclosing view.
 
 impl<'a, const N: usize> ToOwnedSsz<VariableList<u8, N>> for ssz::view::BytesRef<'a, N> {
     fn to_owned(&self) -> VariableList<u8, N> {
