@@ -84,7 +84,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for FixedInnerRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::StableContainer
+                    tree_hash::TreeHashType::Container
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -140,6 +140,12 @@ pub mod tests {
                 fn to_owned(&self) -> FixedInner {
                     <FixedInnerRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<FixedInner, ssz::DecodeError> {
+                    <FixedInnerRef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for FixedInner {
+                type Ref<'a> = FixedInnerRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> FixedInnerRef<'a> {
@@ -148,9 +154,14 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> FixedInner {
-                    FixedInner {
-                        tag: self.tag().expect("valid view"),
-                    }
+                    <FixedInnerRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<FixedInner, ssz::DecodeError> {
+                    Ok(FixedInner { tag: self.tag()? })
                 }
             }
             /// A larger fixed-size inner container (8 bytes).
@@ -252,7 +263,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for FixedPairRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::StableContainer
+                    tree_hash::TreeHashType::Container
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -321,6 +332,12 @@ pub mod tests {
                 fn to_owned(&self) -> FixedPair {
                     <FixedPairRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<FixedPair, ssz::DecodeError> {
+                    <FixedPairRef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for FixedPair {
+                type Ref<'a> = FixedPairRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> FixedPairRef<'a> {
@@ -329,10 +346,17 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> FixedPair {
-                    FixedPair {
-                        x: self.x().expect("valid view"),
-                        y: self.y().expect("valid view"),
-                    }
+                    <FixedPairRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<FixedPair, ssz::DecodeError> {
+                    Ok(FixedPair {
+                        x: self.x()?,
+                        y: self.y()?,
+                    })
                 }
             }
             /// Mixed container: fixed containers inline, one variable tail.
@@ -526,7 +550,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for MixedOuterRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::StableContainer
+                    tree_hash::TreeHashType::Container
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -629,6 +653,12 @@ pub mod tests {
                 fn to_owned(&self) -> MixedOuter {
                     <MixedOuterRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<MixedOuter, ssz::DecodeError> {
+                    <MixedOuterRef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for MixedOuter {
+                type Ref<'a> = MixedOuterRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> MixedOuterRef<'a> {
@@ -637,21 +667,28 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> MixedOuter {
-                    MixedOuter {
+                    <MixedOuterRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<MixedOuter, ssz::DecodeError> {
+                    Ok(MixedOuter {
                         inner: {
-                            let view = self.inner().expect("valid view");
-                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            let view = self.inner()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                         },
-                        count: self.count().expect("valid view"),
+                        count: self.count()?,
                         pair: {
-                            let view = self.pair().expect("valid view");
-                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            let view = self.pair()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                         },
-                        tail: ssz_types::VariableList::new(
-                                self.tail().expect("valid view").to_owned(),
-                            )
-                            .expect("valid view"),
-                    }
+                        tail: ssz_types::VariableList::new(self.tail()?.to_owned())
+                            .map_err(|e| ssz::DecodeError::BytesInvalid(
+                                format!("{e:?}"),
+                            ))?,
+                    })
                 }
             }
             /// Fully fixed container nesting fixed containers.
@@ -753,7 +790,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for FixedOuterRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::StableContainer
+                    tree_hash::TreeHashType::Container
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -823,6 +860,12 @@ pub mod tests {
                 fn to_owned(&self) -> FixedOuter {
                     <FixedOuterRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<FixedOuter, ssz::DecodeError> {
+                    <FixedOuterRef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for FixedOuter {
+                type Ref<'a> = FixedOuterRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> FixedOuterRef<'a> {
@@ -831,16 +874,23 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> FixedOuter {
-                    FixedOuter {
+                    <FixedOuterRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<FixedOuter, ssz::DecodeError> {
+                    Ok(FixedOuter {
                         inner: {
-                            let view = self.inner().expect("valid view");
-                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            let view = self.inner()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                         },
                         pair: {
-                            let view = self.pair().expect("valid view");
-                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            let view = self.pair()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                         },
-                    }
+                    })
                 }
             }
             /// Basic-fields-only container: decodes fine either way, but exercises the view
@@ -943,7 +993,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for BasicPairRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::StableContainer
+                    tree_hash::TreeHashType::Container
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -1012,6 +1062,12 @@ pub mod tests {
                 fn to_owned(&self) -> BasicPair {
                     <BasicPairRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<BasicPair, ssz::DecodeError> {
+                    <BasicPairRef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for BasicPair {
+                type Ref<'a> = BasicPairRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BasicPairRef<'a> {
@@ -1020,10 +1076,17 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> BasicPair {
-                    BasicPair {
-                        tag: self.tag().expect("valid view"),
-                        b: self.b().expect("valid view"),
-                    }
+                    <BasicPairRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<BasicPair, ssz::DecodeError> {
+                    Ok(BasicPair {
+                        tag: self.tag()?,
+                        b: self.b()?,
+                    })
                 }
             }
             /// Variable-size field before a fixed-size one: the offset entry sits at the
@@ -1136,7 +1199,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for VarThenFixedRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::StableContainer
+                    tree_hash::TreeHashType::Container
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -1209,6 +1272,12 @@ pub mod tests {
                 fn to_owned(&self) -> VarThenFixed {
                     <VarThenFixedRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<VarThenFixed, ssz::DecodeError> {
+                    <VarThenFixedRef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for VarThenFixed {
+                type Ref<'a> = VarThenFixedRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> VarThenFixedRef<'a> {
@@ -1217,13 +1286,20 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> VarThenFixed {
-                    VarThenFixed {
-                        entries: ssz_types::VariableList::new(
-                                self.entries().expect("valid view").to_owned(),
-                            )
-                            .expect("valid view"),
-                        name: self.name().expect("valid view"),
-                    }
+                    <VarThenFixedRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<VarThenFixed, ssz::DecodeError> {
+                    Ok(VarThenFixed {
+                        entries: ssz_types::VariableList::new(self.entries()?.to_owned())
+                            .map_err(|e| ssz::DecodeError::BytesInvalid(
+                                format!("{e:?}"),
+                            ))?,
+                        name: self.name()?,
+                    })
                 }
             }
             /// Variable fields interleaved with fixed fields.
@@ -1379,7 +1455,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for InterleavedRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::StableContainer
+                    tree_hash::TreeHashType::Container
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -1473,6 +1549,12 @@ pub mod tests {
                 fn to_owned(&self) -> Interleaved {
                     <InterleavedRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<Interleaved, ssz::DecodeError> {
+                    <InterleavedRef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for Interleaved {
+                type Ref<'a> = InterleavedRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> InterleavedRef<'a> {
@@ -1481,17 +1563,24 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> Interleaved {
-                    Interleaved {
-                        head: ssz_types::VariableList::new(
-                                self.head().expect("valid view").to_owned(),
-                            )
-                            .expect("valid view"),
-                        mid: self.mid().expect("valid view"),
-                        tail: ssz_types::VariableList::new(
-                                self.tail().expect("valid view").to_owned(),
-                            )
-                            .expect("valid view"),
-                    }
+                    <InterleavedRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<Interleaved, ssz::DecodeError> {
+                    Ok(Interleaved {
+                        head: ssz_types::VariableList::new(self.head()?.to_owned())
+                            .map_err(|e| ssz::DecodeError::BytesInvalid(
+                                format!("{e:?}"),
+                            ))?,
+                        mid: self.mid()?,
+                        tail: ssz_types::VariableList::new(self.tail()?.to_owned())
+                            .map_err(|e| ssz::DecodeError::BytesInvalid(
+                                format!("{e:?}"),
+                            ))?,
+                    })
                 }
             }
         }

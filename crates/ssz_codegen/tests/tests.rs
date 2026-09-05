@@ -1088,15 +1088,20 @@ fn test_view_types_imports_and_to_owned() {
         "List<T, N> fields should use ListRef in view types"
     );
 
-    // Verify that list to_owned conversion builds VariableList from items
+    // Verify that list try_to_owned conversion builds VariableList from items,
+    // reporting a bound violation rather than panicking on it.
     assert!(
-        generated.contains("VariableList::new(items).expect(\"valid view\")"),
-        "ListRef to_owned conversion should build VariableList"
+        generated.contains("ssz_types::VariableList::new(items)"),
+        "ListRef try_to_owned conversion should build VariableList"
+    );
+    assert!(
+        !generated.contains("VariableList::new(items).expect(\"valid view\")"),
+        "ListRef conversion should report a bound violation, not panic"
     );
 
     // Verify that Vector[byte, N] uses FixedBytes conversion
     assert!(
-        generated.contains("FixedBytes(self.hash().expect(\"valid view\").to_owned())"),
+        generated.contains("FixedBytes(self.hash()?.to_owned())"),
         "Vector[byte, N] should convert via FixedBytes"
     );
 
@@ -2150,8 +2155,8 @@ fn test_external_container_to_owned_ssz() {
     // Verify that the generated code uses ToOwnedSsz trait method for complex types
     // This is the key change that enables custom type resolution
     assert!(
-        generated.contains("ssz_types::view::ToOwnedSsz::to_owned(&view)"),
-        "Generated to_owned() should use ToOwnedSsz trait method for complex types. Generated:\n{}",
+        generated.contains("ssz_types::view::ToOwnedSsz::try_to_owned(&view)?"),
+        "Generated try_to_owned() should use ToOwnedSsz trait method for complex types. Generated:\n{}",
         generated
     );
 
@@ -2167,8 +2172,8 @@ fn test_external_container_to_owned_ssz() {
     // and have the BlockRange conversion automatically use their custom type
     assert!(
         generated.contains("start: {")
-            && generated.contains("ssz_types::view::ToOwnedSsz::to_owned(&view)"),
-        "BlockRange.start should use trait-based to_owned for type resolution"
+            && generated.contains("ssz_types::view::ToOwnedSsz::try_to_owned(&view)?"),
+        "BlockRange.start should use trait-based try_to_owned for type resolution"
     );
 
     // Verify generated output matches expected output

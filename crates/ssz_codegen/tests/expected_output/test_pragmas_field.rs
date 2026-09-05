@@ -154,7 +154,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for FieldPragmaContainerRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::StableContainer
+                    tree_hash::TreeHashType::Container
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -239,6 +239,14 @@ pub mod tests {
                 fn to_owned(&self) -> FieldPragmaContainer {
                     <FieldPragmaContainerRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(
+                    &self,
+                ) -> Result<FieldPragmaContainer, ssz::DecodeError> {
+                    <FieldPragmaContainerRef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for FieldPragmaContainer {
+                type Ref<'a> = FieldPragmaContainerRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> FieldPragmaContainerRef<'a> {
@@ -247,13 +255,21 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> FieldPragmaContainer {
-                    FieldPragmaContainer {
-                        normal_field: self.normal_field().expect("valid view"),
-                        pragma_field: self.pragma_field().expect("valid view"),
-                        multi_pragma_field: self
-                            .multi_pragma_field()
-                            .expect("valid view"),
-                    }
+                    <FieldPragmaContainerRef<'a>>::try_to_owned(self)
+                        .expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(
+                    &self,
+                ) -> Result<FieldPragmaContainer, ssz::DecodeError> {
+                    Ok(FieldPragmaContainer {
+                        normal_field: self.normal_field()?,
+                        pragma_field: self.pragma_field()?,
+                        multi_pragma_field: self.multi_pragma_field()?,
+                    })
                 }
             }
         }

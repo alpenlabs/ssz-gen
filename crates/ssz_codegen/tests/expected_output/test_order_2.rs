@@ -100,7 +100,7 @@ impl<'a> StateRef<'a> {
 }
 impl<'a> tree_hash::TreeHash for StateRef<'a> {
     fn tree_hash_type() -> tree_hash::TreeHashType {
-        tree_hash::TreeHashType::StableContainer
+        tree_hash::TreeHashType::Container
     }
     fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
         unreachable!("Container should never be packed")
@@ -166,15 +166,25 @@ impl<'a> ssz_types::view::ToOwnedSsz<State> for StateRef<'a> {
     fn to_owned(&self) -> State {
         <StateRef<'a>>::to_owned(self)
     }
+    fn try_to_owned(&self) -> Result<State, ssz::DecodeError> {
+        <StateRef<'a>>::try_to_owned(self)
+    }
+}
+impl ssz_types::view::SszHasView for State {
+    type Ref<'a> = StateRef<'a>;
 }
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> StateRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> State {
-        State {
-            data: ssz_types::FixedBytes(self.data().expect("valid view").to_owned()),
-            counter: self.counter().expect("valid view"),
-        }
+        <StateRef<'a>>::try_to_owned(self).expect("valid view")
+    }
+    #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    pub fn try_to_owned(&self) -> Result<State, ssz::DecodeError> {
+        Ok(State {
+            data: ssz_types::FixedBytes(self.data()?.to_owned()),
+            counter: self.counter()?,
+        })
     }
 }
 #[allow(dead_code, reason = "generated code using ssz-gen")]
@@ -311,7 +321,7 @@ impl<'a> UpdateRef<'a> {
 }
 impl<'a> tree_hash::TreeHash for UpdateRef<'a> {
     fn tree_hash_type() -> tree_hash::TreeHashType {
-        tree_hash::TreeHashType::StableContainer
+        tree_hash::TreeHashType::Container
     }
     fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
         unreachable!("Container should never be packed")
@@ -393,21 +403,29 @@ impl<'a> ssz_types::view::ToOwnedSsz<Update> for UpdateRef<'a> {
     fn to_owned(&self) -> Update {
         <UpdateRef<'a>>::to_owned(self)
     }
+    fn try_to_owned(&self) -> Result<Update, ssz::DecodeError> {
+        <UpdateRef<'a>>::try_to_owned(self)
+    }
+}
+impl ssz_types::view::SszHasView for Update {
+    type Ref<'a> = UpdateRef<'a>;
 }
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> UpdateRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> Update {
-        Update {
+        <UpdateRef<'a>>::try_to_owned(self).expect("valid view")
+    }
+    #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    pub fn try_to_owned(&self) -> Result<Update, ssz::DecodeError> {
+        Ok(Update {
             state: {
-                let view = self.state().expect("valid view");
-                ssz_types::view::ToOwnedSsz::to_owned(&view)
+                let view = self.state()?;
+                ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
             },
-            timestamp: self.timestamp().expect("valid view"),
-            updates: ssz_types::VariableList::new(
-                    self.updates().expect("valid view").to_owned(),
-                )
-                .expect("valid view"),
-        }
+            timestamp: self.timestamp()?,
+            updates: ssz_types::VariableList::new(self.updates()?.to_owned())
+                .map_err(|e| ssz::DecodeError::BytesInvalid(format!("{e:?}")))?,
+        })
     }
 }
