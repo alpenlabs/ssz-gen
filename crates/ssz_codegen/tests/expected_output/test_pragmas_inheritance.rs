@@ -288,6 +288,12 @@ pub mod tests {
                 fn to_owned(&self) -> Parent {
                     <ParentRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<Parent, ssz::DecodeError> {
+                    <ParentRef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for Parent {
+                type Ref<'a> = ParentRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ParentRef<'a> {
@@ -296,10 +302,17 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> Parent {
-                    Parent {
-                        a: self.a().expect("valid view"),
-                        b: self.b().expect("valid view"),
-                    }
+                    <ParentRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<Parent, ssz::DecodeError> {
+                    Ok(Parent {
+                        a: self.a()?,
+                        b: self.b()?,
+                    })
                 }
             }
             #[derive(
@@ -664,6 +677,12 @@ pub mod tests {
                 fn to_owned(&self) -> Child {
                     <ChildRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<Child, ssz::DecodeError> {
+                    <ChildRef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for Child {
+                type Ref<'a> = ChildRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ChildRef<'a> {
@@ -672,11 +691,18 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> Child {
-                    Child {
-                        a: self.a().expect("valid view"),
-                        b: self.b().expect("valid view"),
-                        c: self.c().expect("valid view"),
-                    }
+                    <ChildRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<Child, ssz::DecodeError> {
+                    Ok(Child {
+                        a: self.a()?,
+                        b: self.b()?,
+                        c: self.c()?,
+                    })
                 }
             }
         }

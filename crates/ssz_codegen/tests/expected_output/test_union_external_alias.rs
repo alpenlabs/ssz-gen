@@ -78,6 +78,10 @@ pub mod tests {
                     }
                     ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
                 }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> ExternalUnion {
                     match self.selector() {
                         0u8 => {
@@ -94,6 +98,35 @@ pub mod tests {
                         }
                         _ => panic!("Invalid union selector: {}", self.selector()),
                     }
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<ExternalUnion, ssz::DecodeError> {
+                    Ok(
+                        match self.selector() {
+                            0u8 => {
+                                ExternalUnion::Type1({
+                                    let view = self.as_selector0()?;
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
+                                })
+                            }
+                            1u8 => {
+                                ExternalUnion::Type2({
+                                    let view = self.as_selector1()?;
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
+                                })
+                            }
+                            other => {
+                                return Err(
+                                    ssz::DecodeError::BytesInvalid(
+                                        format!("Invalid union selector: {}", other),
+                                    ),
+                                );
+                            }
+                        },
+                    )
                 }
             }
             impl<'a> ssz::view::DecodeView<'a> for ExternalUnionRef<'a> {
@@ -115,6 +148,12 @@ pub mod tests {
                 fn to_owned(&self) -> ExternalUnion {
                     <ExternalUnionRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<ExternalUnion, ssz::DecodeError> {
+                    <ExternalUnionRef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for ExternalUnion {
+                type Ref<'a> = ExternalUnionRef<'a>;
             }
             impl<'a> tree_hash::TreeHash for ExternalUnionRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -226,7 +265,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for TestContainerRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::StableContainer
+                    tree_hash::TreeHashType::Container
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -283,6 +322,12 @@ pub mod tests {
                 fn to_owned(&self) -> TestContainer {
                     <TestContainerRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<TestContainer, ssz::DecodeError> {
+                    <TestContainerRef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for TestContainer {
+                type Ref<'a> = TestContainerRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> TestContainerRef<'a> {
@@ -291,12 +336,19 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> TestContainer {
-                    TestContainer {
+                    <TestContainerRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<TestContainer, ssz::DecodeError> {
+                    Ok(TestContainer {
                         union_field: {
-                            let view = self.union_field().expect("valid view");
-                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            let view = self.union_field()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                         },
-                    }
+                    })
                 }
             }
         }

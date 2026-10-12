@@ -82,7 +82,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for EmptyPragmaContainerRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::StableContainer
+                    tree_hash::TreeHashType::Container
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -139,6 +139,14 @@ pub mod tests {
                 fn to_owned(&self) -> EmptyPragmaContainer {
                     <EmptyPragmaContainerRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(
+                    &self,
+                ) -> Result<EmptyPragmaContainer, ssz::DecodeError> {
+                    <EmptyPragmaContainerRef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for EmptyPragmaContainer {
+                type Ref<'a> = EmptyPragmaContainerRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> EmptyPragmaContainerRef<'a> {
@@ -147,9 +155,19 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> EmptyPragmaContainer {
-                    EmptyPragmaContainer {
-                        x: self.x().expect("valid view"),
-                    }
+                    <EmptyPragmaContainerRef<'a>>::try_to_owned(self)
+                        .expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(
+                    &self,
+                ) -> Result<EmptyPragmaContainer, ssz::DecodeError> {
+                    Ok(EmptyPragmaContainer {
+                        x: self.x()?,
+                    })
                 }
             }
             #[derive(
@@ -222,7 +240,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for EmptyValueContainerRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::StableContainer
+                    tree_hash::TreeHashType::Container
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -279,6 +297,12 @@ pub mod tests {
                 fn to_owned(&self) -> EmptyValueContainer {
                     <EmptyValueContainerRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<EmptyValueContainer, ssz::DecodeError> {
+                    <EmptyValueContainerRef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for EmptyValueContainer {
+                type Ref<'a> = EmptyValueContainerRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> EmptyValueContainerRef<'a> {
@@ -287,9 +311,18 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> EmptyValueContainer {
-                    EmptyValueContainer {
-                        y: self.y().expect("valid view"),
-                    }
+                    <EmptyValueContainerRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(
+                    &self,
+                ) -> Result<EmptyValueContainer, ssz::DecodeError> {
+                    Ok(EmptyValueContainer {
+                        y: self.y()?,
+                    })
                 }
             }
         }

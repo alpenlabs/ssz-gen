@@ -60,7 +60,7 @@ pub mod tests {
             impl<'a> FooRef<'a> {}
             impl<'a> tree_hash::TreeHash for FooRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::StableContainer
+                    tree_hash::TreeHashType::Container
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -101,6 +101,12 @@ pub mod tests {
                 fn to_owned(&self) -> Foo {
                     <FooRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<Foo, ssz::DecodeError> {
+                    <FooRef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for Foo {
+                type Ref<'a> = FooRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> FooRef<'a> {
@@ -109,7 +115,14 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> Foo {
-                    Foo {}
+                    <FooRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<Foo, ssz::DecodeError> {
+                    Ok(Foo {})
                 }
             }
             /// This is a docstring that should come first.
@@ -215,7 +228,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for PointWithBothRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::StableContainer
+                    tree_hash::TreeHashType::Container
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -285,6 +298,12 @@ pub mod tests {
                 fn to_owned(&self) -> PointWithBoth {
                     <PointWithBothRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<PointWithBoth, ssz::DecodeError> {
+                    <PointWithBothRef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for PointWithBoth {
+                type Ref<'a> = PointWithBothRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> PointWithBothRef<'a> {
@@ -293,10 +312,17 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> PointWithBoth {
-                    PointWithBoth {
-                        x: self.x().expect("valid view"),
-                        y: self.y().expect("valid view"),
-                    }
+                    <PointWithBothRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<PointWithBoth, ssz::DecodeError> {
+                    Ok(PointWithBoth {
+                        x: self.x()?,
+                        y: self.y()?,
+                    })
                 }
             }
             /// First comes the docstring. It has multiple lines.
@@ -372,7 +398,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for TestMergeRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::StableContainer
+                    tree_hash::TreeHashType::Container
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -428,6 +454,12 @@ pub mod tests {
                 fn to_owned(&self) -> TestMerge {
                     <TestMergeRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<TestMerge, ssz::DecodeError> {
+                    <TestMergeRef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for TestMerge {
+                type Ref<'a> = TestMergeRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> TestMergeRef<'a> {
@@ -436,9 +468,14 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> TestMerge {
-                    TestMerge {
-                        field: self.field().expect("valid view"),
-                    }
+                    <TestMergeRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<TestMerge, ssz::DecodeError> {
+                    Ok(TestMerge { field: self.field()? })
                 }
             }
         }

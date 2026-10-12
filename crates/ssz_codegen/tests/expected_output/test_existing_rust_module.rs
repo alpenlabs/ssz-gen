@@ -126,7 +126,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for TestExistingModuleRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::StableContainer
+                    tree_hash::TreeHashType::Container
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -197,6 +197,12 @@ pub mod tests {
                 fn to_owned(&self) -> TestExistingModule {
                     <TestExistingModuleRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<TestExistingModule, ssz::DecodeError> {
+                    <TestExistingModuleRef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for TestExistingModule {
+                type Ref<'a> = TestExistingModuleRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> TestExistingModuleRef<'a> {
@@ -205,13 +211,22 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> TestExistingModule {
-                    TestExistingModule {
+                    <TestExistingModuleRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(
+                    &self,
+                ) -> Result<TestExistingModule, ssz::DecodeError> {
+                    Ok(TestExistingModule {
                         existing_field: {
-                            let view = self.existing_field().expect("valid view");
-                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            let view = self.existing_field()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                         },
-                        slot: self.slot().expect("valid view"),
-                    }
+                        slot: self.slot()?,
+                    })
                 }
             }
         }

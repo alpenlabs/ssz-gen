@@ -92,6 +92,10 @@ pub mod tests {
                     }
                     ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
                 }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> ExternalUnionA {
                     match self.selector() {
                         0u8 => {
@@ -113,6 +117,39 @@ pub mod tests {
                         _ => panic!("Invalid union selector: {}", self.selector()),
                     }
                 }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<ExternalUnionA, ssz::DecodeError> {
+                    Ok(
+                        match self.selector() {
+                            0u8 => {
+                                self.as_selector0()?;
+                                ExternalUnionA::Selector0
+                            }
+                            1u8 => {
+                                ExternalUnionA::A({
+                                    let view = self.as_selector1()?;
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
+                                })
+                            }
+                            2u8 => {
+                                ExternalUnionA::B({
+                                    let view = self.as_selector2()?;
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
+                                })
+                            }
+                            other => {
+                                return Err(
+                                    ssz::DecodeError::BytesInvalid(
+                                        format!("Invalid union selector: {}", other),
+                                    ),
+                                );
+                            }
+                        },
+                    )
+                }
             }
             impl<'a> ssz::view::DecodeView<'a> for ExternalUnionARef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
@@ -133,6 +170,12 @@ pub mod tests {
                 fn to_owned(&self) -> ExternalUnionA {
                     <ExternalUnionARef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<ExternalUnionA, ssz::DecodeError> {
+                    <ExternalUnionARef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for ExternalUnionA {
+                type Ref<'a> = ExternalUnionARef<'a>;
             }
             impl<'a> tree_hash::TreeHash for ExternalUnionARef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -254,6 +297,10 @@ pub mod tests {
                     }
                     ssz::view::DecodeView::from_ssz_bytes(&self.bytes[1..])
                 }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
                 pub fn to_owned(&self) -> ExternalUnionB {
                     match self.selector() {
                         0u8 => {
@@ -275,6 +322,39 @@ pub mod tests {
                         _ => panic!("Invalid union selector: {}", self.selector()),
                     }
                 }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<ExternalUnionB, ssz::DecodeError> {
+                    Ok(
+                        match self.selector() {
+                            0u8 => {
+                                self.as_selector0()?;
+                                ExternalUnionB::Selector0
+                            }
+                            1u8 => {
+                                ExternalUnionB::TestA({
+                                    let view = self.as_selector1()?;
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
+                                })
+                            }
+                            2u8 => {
+                                ExternalUnionB::TestB({
+                                    let view = self.as_selector2()?;
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
+                                })
+                            }
+                            other => {
+                                return Err(
+                                    ssz::DecodeError::BytesInvalid(
+                                        format!("Invalid union selector: {}", other),
+                                    ),
+                                );
+                            }
+                        },
+                    )
+                }
             }
             impl<'a> ssz::view::DecodeView<'a> for ExternalUnionBRef<'a> {
                 fn from_ssz_bytes(bytes: &'a [u8]) -> Result<Self, ssz::DecodeError> {
@@ -295,6 +375,12 @@ pub mod tests {
                 fn to_owned(&self) -> ExternalUnionB {
                     <ExternalUnionBRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<ExternalUnionB, ssz::DecodeError> {
+                    <ExternalUnionBRef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for ExternalUnionB {
+                type Ref<'a> = ExternalUnionBRef<'a>;
             }
             impl<'a> tree_hash::TreeHash for ExternalUnionBRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
@@ -443,7 +529,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for ExternalContainerRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::StableContainer
+                    tree_hash::TreeHashType::Container
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -515,6 +601,12 @@ pub mod tests {
                 fn to_owned(&self) -> ExternalContainer {
                     <ExternalContainerRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<ExternalContainer, ssz::DecodeError> {
+                    <ExternalContainerRef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for ExternalContainer {
+                type Ref<'a> = ExternalContainerRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ExternalContainerRef<'a> {
@@ -523,16 +615,25 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> ExternalContainer {
-                    ExternalContainer {
+                    <ExternalContainerRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(
+                    &self,
+                ) -> Result<ExternalContainer, ssz::DecodeError> {
+                    Ok(ExternalContainer {
                         field_a: {
-                            let view = self.field_a().expect("valid view");
-                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            let view = self.field_a()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                         },
                         field_b: {
-                            let view = self.field_b().expect("valid view");
-                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            let view = self.field_b()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                         },
-                    }
+                    })
                 }
             }
         }
