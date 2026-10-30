@@ -364,7 +364,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for ExternalPragmaTestRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::StableContainer
+                    tree_hash::TreeHashType::Container
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -519,6 +519,12 @@ pub mod tests {
                 fn to_owned(&self) -> ExternalPragmaTest {
                     <ExternalPragmaTestRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<ExternalPragmaTest, ssz::DecodeError> {
+                    <ExternalPragmaTestRef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for ExternalPragmaTest {
+                type Ref<'a> = ExternalPragmaTestRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> ExternalPragmaTestRef<'a> {
@@ -527,45 +533,52 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> ExternalPragmaTest {
-                    ExternalPragmaTest {
+                    <ExternalPragmaTestRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(
+                    &self,
+                ) -> Result<ExternalPragmaTest, ssz::DecodeError> {
+                    Ok(ExternalPragmaTest {
                         state: {
-                            let view = self.state().expect("valid view");
-                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            let view = self.state()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                         },
                         balance: {
-                            let view = self.balance().expect("valid view");
-                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            let view = self.balance()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                         },
-                        headers: self
-                            .headers()
-                            .expect("valid view")
-                            .to_owned()
-                            .expect("valid view"),
+                        headers: self.headers()?.try_to_owned()?,
                         transactions: {
-                            let view = self.transactions().expect("valid view");
-                            let items: Result<Vec<_>, _> = view
+                            let view = self.transactions()?;
+                            let items = view
                                 .iter()
                                 .map(|item_result| {
-                                    item_result
-                                        .map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&item_result?)
                                 })
-                                .collect();
-                            let items = items.expect("valid view");
-                            ssz_types::VariableList::new(items).expect("valid view")
+                                .collect::<Result<Vec<_>, ssz::DecodeError>>()?;
+                            ssz_types::VariableList::new(items)
+                                .map_err(|e| ssz::DecodeError::BytesInvalid(
+                                    format!("{e:?}"),
+                                ))?
                         },
                         account_ids: {
-                            let view = self.account_ids().expect("valid view");
-                            let items: Result<Vec<_>, _> = view
+                            let view = self.account_ids()?;
+                            let items = view
                                 .iter()
                                 .map(|item_result| {
-                                    item_result
-                                        .map(|item| ssz_types::view::ToOwnedSsz::to_owned(&item))
+                                    ssz_types::view::ToOwnedSsz::try_to_owned(&item_result?)
                                 })
-                                .collect();
-                            let items = items.expect("valid view");
-                            ssz_types::VariableList::new(items).expect("valid view")
+                                .collect::<Result<Vec<_>, ssz::DecodeError>>()?;
+                            ssz_types::VariableList::new(items)
+                                .map_err(|e| ssz::DecodeError::BytesInvalid(
+                                    format!("{e:?}"),
+                                ))?
                         },
-                    }
+                    })
                 }
             }
         }

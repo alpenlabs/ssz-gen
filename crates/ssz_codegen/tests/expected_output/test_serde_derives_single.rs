@@ -108,7 +108,7 @@ impl<'a> BlockCommitmentRef<'a> {
 }
 impl<'a> tree_hash::TreeHash for BlockCommitmentRef<'a> {
     fn tree_hash_type() -> tree_hash::TreeHashType {
-        tree_hash::TreeHashType::StableContainer
+        tree_hash::TreeHashType::Container
     }
     fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
         unreachable!("Container should never be packed")
@@ -174,15 +174,25 @@ impl<'a> ssz_types::view::ToOwnedSsz<BlockCommitment> for BlockCommitmentRef<'a>
     fn to_owned(&self) -> BlockCommitment {
         <BlockCommitmentRef<'a>>::to_owned(self)
     }
+    fn try_to_owned(&self) -> Result<BlockCommitment, ssz::DecodeError> {
+        <BlockCommitmentRef<'a>>::try_to_owned(self)
+    }
+}
+impl ssz_types::view::SszHasView for BlockCommitment {
+    type Ref<'a> = BlockCommitmentRef<'a>;
 }
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> BlockCommitmentRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> BlockCommitment {
-        BlockCommitment {
-            slot: self.slot().expect("valid view"),
-            blkid: self.blkid().expect("valid view"),
-        }
+        <BlockCommitmentRef<'a>>::try_to_owned(self).expect("valid view")
+    }
+    #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    pub fn try_to_owned(&self) -> Result<BlockCommitment, ssz::DecodeError> {
+        Ok(BlockCommitment {
+            slot: self.slot()?,
+            blkid: self.blkid()?,
+        })
     }
 }
 #[derive(
@@ -250,7 +260,7 @@ impl<'a> OtherTypeRef<'a> {
 }
 impl<'a> tree_hash::TreeHash for OtherTypeRef<'a> {
     fn tree_hash_type() -> tree_hash::TreeHashType {
-        tree_hash::TreeHashType::StableContainer
+        tree_hash::TreeHashType::Container
     }
     fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
         unreachable!("Container should never be packed")
@@ -303,13 +313,21 @@ impl<'a> ssz_types::view::ToOwnedSsz<OtherType> for OtherTypeRef<'a> {
     fn to_owned(&self) -> OtherType {
         <OtherTypeRef<'a>>::to_owned(self)
     }
+    fn try_to_owned(&self) -> Result<OtherType, ssz::DecodeError> {
+        <OtherTypeRef<'a>>::try_to_owned(self)
+    }
+}
+impl ssz_types::view::SszHasView for OtherType {
+    type Ref<'a> = OtherTypeRef<'a>;
 }
 #[allow(dead_code, reason = "generated code using ssz-gen")]
 impl<'a> OtherTypeRef<'a> {
     #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
     pub fn to_owned(&self) -> OtherType {
-        OtherType {
-            value: self.value().expect("valid view"),
-        }
+        <OtherTypeRef<'a>>::try_to_owned(self).expect("valid view")
+    }
+    #[allow(clippy::wrong_self_convention, reason = "API convention for view types")]
+    pub fn try_to_owned(&self) -> Result<OtherType, ssz::DecodeError> {
+        Ok(OtherType { value: self.value()? })
     }
 }

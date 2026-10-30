@@ -115,7 +115,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for TypeARef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::StableContainer
+                    tree_hash::TreeHashType::Container
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -185,6 +185,12 @@ pub mod tests {
                 fn to_owned(&self) -> TypeA {
                     <TypeARef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<TypeA, ssz::DecodeError> {
+                    <TypeARef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for TypeA {
+                type Ref<'a> = TypeARef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> TypeARef<'a> {
@@ -193,13 +199,20 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> TypeA {
-                    TypeA {
+                    <TypeARef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<TypeA, ssz::DecodeError> {
+                    Ok(TypeA {
                         base: {
-                            let view = self.base().expect("valid view");
-                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            let view = self.base()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                         },
-                        data: self.data().expect("valid view"),
-                    }
+                        data: self.data()?,
+                    })
                 }
             }
         }
@@ -357,7 +370,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for TypeBRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::StableContainer
+                    tree_hash::TreeHashType::Container
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -442,6 +455,12 @@ pub mod tests {
                 fn to_owned(&self) -> TypeB {
                     <TypeBRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<TypeB, ssz::DecodeError> {
+                    <TypeBRef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for TypeB {
+                type Ref<'a> = TypeBRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> TypeBRef<'a> {
@@ -450,17 +469,24 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> TypeB {
-                    TypeB {
+                    <TypeBRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<TypeB, ssz::DecodeError> {
+                    Ok(TypeB {
                         base: {
-                            let view = self.base().expect("valid view");
-                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            let view = self.base()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                         },
                         type_a: {
-                            let view = self.type_a().expect("valid view");
-                            ssz_types::view::ToOwnedSsz::to_owned(&view)
+                            let view = self.type_a()?;
+                            ssz_types::view::ToOwnedSsz::try_to_owned(&view)?
                         },
-                        extra: self.extra().expect("valid view"),
-                    }
+                        extra: self.extra()?,
+                    })
                 }
             }
         }
@@ -544,7 +570,7 @@ pub mod tests {
             }
             impl<'a> tree_hash::TreeHash for BaseTypeRef<'a> {
                 fn tree_hash_type() -> tree_hash::TreeHashType {
-                    tree_hash::TreeHashType::StableContainer
+                    tree_hash::TreeHashType::Container
                 }
                 fn tree_hash_packed_encoding(&self) -> tree_hash::PackedEncoding {
                     unreachable!("Container should never be packed")
@@ -600,6 +626,12 @@ pub mod tests {
                 fn to_owned(&self) -> BaseType {
                     <BaseTypeRef<'a>>::to_owned(self)
                 }
+                fn try_to_owned(&self) -> Result<BaseType, ssz::DecodeError> {
+                    <BaseTypeRef<'a>>::try_to_owned(self)
+                }
+            }
+            impl ssz_types::view::SszHasView for BaseType {
+                type Ref<'a> = BaseTypeRef<'a>;
             }
             #[allow(dead_code, reason = "generated code using ssz-gen")]
             impl<'a> BaseTypeRef<'a> {
@@ -608,9 +640,14 @@ pub mod tests {
                     reason = "API convention for view types"
                 )]
                 pub fn to_owned(&self) -> BaseType {
-                    BaseType {
-                        value: self.value().expect("valid view"),
-                    }
+                    <BaseTypeRef<'a>>::try_to_owned(self).expect("valid view")
+                }
+                #[allow(
+                    clippy::wrong_self_convention,
+                    reason = "API convention for view types"
+                )]
+                pub fn try_to_owned(&self) -> Result<BaseType, ssz::DecodeError> {
+                    Ok(BaseType { value: self.value()? })
                 }
             }
         }

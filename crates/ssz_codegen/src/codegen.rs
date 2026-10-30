@@ -207,6 +207,10 @@ impl<'a> CircleBufferCodegen<'a> {
             self.tokens
                 .push(parent_class_def.to_view_to_owned_ssz_impl(&ident));
 
+            // Link the owned type to its view so generic code can name it
+            self.tokens
+                .push(parent_class_def.to_owned_has_view_impl(&ident));
+
             // Generate to_owned implementation (uses getters)
             self.tokens
                 .push(parent_class_def.to_view_to_owned_impl(&ident));
