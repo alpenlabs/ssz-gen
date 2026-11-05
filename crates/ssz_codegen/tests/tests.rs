@@ -2358,3 +2358,21 @@ fn test_nested_fixed_container_views() {
         .expect("Failed to read actual output");
     assert_eq!(expected_output, actual_output);
 }
+
+#[test]
+fn test_profile_fixed_size() {
+    build_ssz_files(
+        &["test_profile_fixed_size.ssz"],
+        "tests/input",
+        &[],
+        "tests/output/test_profile_fixed_size.rs",
+        ModuleGeneration::NestedModules,
+    )
+    .expect("Failed to generate SSZ types");
+
+    let expected_output = fs::read_to_string("tests/expected_output/test_profile_fixed_size.rs")
+        .expect("Failed to read expected output");
+    let actual_output = fs::read_to_string("tests/output/test_profile_fixed_size.rs")
+        .expect("Failed to read actual output");
+    assert_eq!(expected_output, actual_output);
+}

@@ -1828,6 +1828,14 @@ fn ssz_decode_derive_profile_container(
                 let bytes = &bytes[bitvector_length..];
 
                 if <Self as ssz::Decode>::is_ssz_fixed_len() {
+                    // A fixed-size Profile has no bitvector, so `bytes` is the
+                    // whole input and must be exactly the encoded length.
+                    if bytes.len() != <Self as ssz::Decode>::ssz_fixed_len() {
+                        return Err(ssz::DecodeError::InvalidByteLength {
+                            len: bytes.len(),
+                            expected: <Self as ssz::Decode>::ssz_fixed_len(),
+                        });
+                    }
 
                     let mut start: usize = 0;
                     let mut end = start;
