@@ -1,0 +1,17 @@
+# Profiles with only required fixed-size fields are fixed-size, so their
+# encoding has an exact length.
+
+class StateBase(StableContainer[8]):
+    balance: Optional[uint64]
+    nonce: Optional[uint64]
+    extra: Optional[uint64]
+
+### Fixed-size Profile: encoding is exactly 16 bytes.
+class StateV1(Profile[StateBase]):
+    balance: uint64
+    nonce: uint64
+
+### Fixed-size container embedding a fixed-size Profile.
+class StateWrapper(Container):
+    state: StateV1
+    tag: uint8
