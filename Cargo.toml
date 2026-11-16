@@ -64,7 +64,7 @@ itertools = "0.15.0"
 prettyplease = "0.2.37"
 proc-macro2 = "1.0.106"
 quote = "1.0.45"
-rand = "0.8.5"
+rand = "0.10.3"
 ruint = { version = "1.18.0", default-features = false, features = ["alloc"] }
 serde = "1.0.0"
 serde_derive = "1.0.0"
